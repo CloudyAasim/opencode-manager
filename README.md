@@ -189,21 +189,28 @@ OpenCode Manager creates a default `AGENTS.md` file in the workspace config dire
 
 This file is merged with any repository-specific `AGENTS.md` files, with repository instructions taking precedence for their respective codebases.
 
-### Option 2: Local Development
+### Option 2: Local Development (Contributors)
+
+For contributors who want to develop locally instead of using Docker.
+
+**Prerequisites:**
+- [pnpm](https://pnpm.io/installation) - Package manager (required for workspaces)
+- [Bun](https://bun.sh) - Backend runtime
+- [OpenCode TUI](https://opencode.ai) - `npm install -g @opencode/tui`
 
 ```bash
 # Clone the repository
 git clone https://github.com/chriswritescode-dev/opencode-manager.git
 cd opencode-manager
 
-# Install dependencies (uses Bun workspaces)
-bun install
+# Install dependencies (uses pnpm workspaces)
+pnpm install
 
 # Copy environment configuration
 cp .env.example .env
 
 # Start development servers (backend + frontend)
-npm run dev
+pnpm dev
 ```
 
 ## OAuth Provider Setup
