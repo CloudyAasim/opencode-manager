@@ -5,7 +5,7 @@ import type { Database } from 'bun:sqlite'
 import type { Repo, CreateRepoInput } from '../types/repo'
 import { logger } from '../utils/logger'
 import { SettingsService } from './settings'
-import { createGitEnvForRepoUrl, createNoPromptGitEnv, createGitHubGitEnv } from '../utils/git-auth'
+import { createGitEnv, createNoPromptGitEnv, createGitHubGitEnv, isGitHubHttpsUrl } from '../utils/git-auth'
 import { getReposPath } from '@opencode-manager/shared/config/env'
 import path from 'path'
 
@@ -34,27 +34,36 @@ async function executeGitWithFallback(
   options: GitCommandOptions = {}
 ): Promise<string> {
   const { cwd, env = createNoPromptGitEnv(), silent } = options
-  
+
   try {
     return await executeCommand(cmd, { cwd, env, silent })
   } catch (error: any) {
     if (!isAuthenticationError(error)) {
       throw error
     }
-    
-    logger.warn(`Git command failed with auth, trying gh auth fallback`)
-    try {
-      const ghToken = (await executeCommand(['gh', 'auth', 'token'])).trim()
-      const ghEnv = createGitHubGitEnv(ghToken)
-      return await executeCommand(cmd, { cwd, env: ghEnv, silent })
-    } catch (ghError: any) {
-      if (!isAuthenticationError(ghError)) {
-        throw ghError
-      }
-      
-      logger.warn(`Git command failed with gh auth, trying without auth (public repo)`)
+
+    logger.warn(`Git command failed with auth, trying CLI fallbacks`)
+
+    const url = cmd.find(arg => arg.includes('http://') || arg.includes('https://'))
+    if (!url) {
       return await executeCommand(cmd, { cwd, env: createNoPromptGitEnv(), silent })
     }
+
+    try {
+      if (isGitHubHttpsUrl(url)) {
+        logger.warn(`Detected GitHub URL, trying gh auth token`)
+        const ghToken = (await executeCommand(['gh', 'auth', 'token'])).trim()
+        const ghEnv = createGitHubGitEnv(ghToken)
+        return await executeCommand(cmd, { cwd, env: ghEnv, silent })
+      }
+
+
+    } catch (cliError: any) {
+      logger.warn(`CLI auth fallback failed:`, cliError.message)
+    }
+
+    logger.warn(`All auth fallbacks failed, trying without auth (public repo)`)
+    return await executeCommand(cmd, { cwd, env: createNoPromptGitEnv(), silent })
   }
 }
 
@@ -87,17 +96,13 @@ async function safeGetCurrentBranch(repoPath: string): Promise<string | null> {
   }
 }
 
-function getGitEnv(database: Database, repoUrl?: string | null): Record<string, string> {
+function getGitEnv(database: Database): Record<string, string> {
   try {
     const settingsService = new SettingsService(database)
     const settings = settingsService.getSettings('default')
-    const gitToken = settings.preferences.gitToken
+    const gitCredentials = settings.preferences.gitCredentials || []
 
-    if (!repoUrl) {
-      return createNoPromptGitEnv()
-    }
-
-    return createGitEnvForRepoUrl(repoUrl, gitToken)
+    return createGitEnv(gitCredentials)
   } catch {
     return createNoPromptGitEnv()
   }
@@ -225,7 +230,7 @@ export async function cloneRepo(
   const repo = db.createRepo(database, createRepoInput)
   
   try {
-    const env = getGitEnv(database, normalizedRepoUrl)
+    const env = getGitEnv(database)
 
     if (shouldUseWorktree) {
       logger.info(`Creating worktree for branch: ${branch}`)
@@ -408,7 +413,7 @@ export async function getCurrentBranch(repo: Repo): Promise<string | null> {
 export async function listBranches(database: Database, repo: Repo): Promise<{ local: string[], all: string[], current: string | null }> {
   try {
     const repoPath = path.resolve(getReposPath(), repo.localPath)
-    const env = getGitEnv(database, repo.repoUrl)
+    const env = getGitEnv(database)
 
     if (!repo.isLocal) {
       try {
@@ -457,7 +462,7 @@ export async function switchBranch(database: Database, repoId: number, branch: s
   
   try {
     const repoPath = path.resolve(getReposPath(), repo.localPath)
-    const env = getGitEnv(database, repo.repoUrl)
+    const env = getGitEnv(database)
 
     const sanitizedBranch = branch
       .replace(/^refs\/heads\//, '')
@@ -537,7 +542,7 @@ export async function pullRepo(database: Database, repoId: number): Promise<void
   }
   
   try {
-    const env = getGitEnv(database, repo.repoUrl)
+    const env = getGitEnv(database)
 
     logger.info(`Pulling repo: ${repo.repoUrl}`)
     await executeCommand(['git', '-C', path.resolve(getReposPath(), repo.localPath), 'pull'], { env })
