@@ -10,6 +10,11 @@ const TitleRequestSchema = z.object({
 
 const OPENCODE_SERVER_URL = `http://127.0.0.1:${ENV.OPENCODE.PORT}`
 
+function buildUrl(path: string, directory?: string): string {
+  const url = `${OPENCODE_SERVER_URL}${path}`
+  return directory ? `${url}${url.includes('?') ? '&' : '?'}directory=${encodeURIComponent(directory)}` : url
+}
+
 const TITLE_PROMPT = `You are a title generator. You output ONLY a thread title. Nothing else.
 
 <task>
@@ -58,7 +63,7 @@ export function createTitleRoutes() {
 
       logger.info('Generating session title via LLM', { sessionID, textLength: text.length })
 
-      const configResponse = await fetch(`${OPENCODE_SERVER_URL}/config`)
+      const configResponse = await fetch(buildUrl('/config', directory))
       if (!configResponse.ok) {
         logger.error('Failed to fetch OpenCode config')
         return c.json({ error: 'Failed to fetch config' }, 500)
@@ -68,12 +73,9 @@ export function createTitleRoutes() {
       const modelStr = config.small_model || config.model || 'anthropic/claude-3-haiku-20240307'
       const [providerID, modelID] = modelStr.split('/')
 
-      const titleSessionResponse = await fetch(`${OPENCODE_SERVER_URL}/session`, {
+      const titleSessionResponse = await fetch(buildUrl('/session', directory), {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(directory && { directory })
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Title Generation' })
       })
 
@@ -86,12 +88,9 @@ export function createTitleRoutes() {
       const titleSessionID = titleSession.id
 
       try {
-        const promptResponse = await fetch(`${OPENCODE_SERVER_URL}/session/${titleSessionID}/message`, {
+        const promptResponse = await fetch(buildUrl(`/session/${titleSessionID}/message`, directory), {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            ...(directory && { directory })
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             parts: [
               { 
@@ -128,12 +127,9 @@ export function createTitleRoutes() {
         }
 
         if (title) {
-          const updateResponse = await fetch(`${OPENCODE_SERVER_URL}/session/${sessionID}`, {
+          const updateResponse = await fetch(buildUrl(`/session/${sessionID}`, directory), {
             method: 'PATCH',
-            headers: { 
-              'Content-Type': 'application/json',
-              ...(directory && { directory })
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title })
           })
 
@@ -146,9 +142,8 @@ export function createTitleRoutes() {
         return c.json({ title })
 
       } finally {
-        fetch(`${OPENCODE_SERVER_URL}/session/${titleSessionID}`, {
-          method: 'DELETE',
-          headers: directory ? { directory } : {}
+        fetch(buildUrl(`/session/${titleSessionID}`, directory), {
+          method: 'DELETE'
         }).catch(() => {})
       }
 
