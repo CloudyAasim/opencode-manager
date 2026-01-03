@@ -32,7 +32,7 @@ export function RepoDetailHeader({
   const isNotMainBranch = currentBranch && currentBranch !== "main" && currentBranch !== "master"
 
   return (
-    <div className="flex-shrink-0 z-10 border-b border-border bg-gradient-to-b from-background via-background to-background backdrop-blur-sm px-4 py-2">
+    <div className="flex-shrink-0 z-10 bg-gradient-to-b from-background via-background to-background backdrop-blur-sm px-4 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <BackButton />
