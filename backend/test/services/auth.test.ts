@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { unlink, mkdir } from 'fs/promises'
+import { promises as fs } from 'fs'
 import { AuthService } from '../../src/services/auth'
-
-const readFile = vi.fn()
-const writeFile = vi.fn()
-const mkdirSpy = vi.fn()
 
 vi.mock('fs', () => ({
   promises: {
-    readFile,
-    writeFile,
-    mkdir: mkdirSpy,
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
+    mkdir: vi.fn(),
   },
 }))
+
+const readFile = fs.readFile as any
+const writeFile = fs.writeFile as any
+const mkdirSpy = fs.mkdir as any
 
 vi.mock('@opencode-manager/shared/config/env', () => ({
   getAuthPath: () => '/test/auth.json',

@@ -1,7 +1,7 @@
 import { spawn, execSync } from 'child_process'
 import path from 'path'
 import { logger } from '../utils/logger'
-import { createGitEnv, createNoPromptGitEnv } from '../utils/git-auth'
+import { createGitEnv, createGitIdentityEnv, resolveGitIdentity } from '../utils/git-auth'
 import { SettingsService } from './settings'
 import { getWorkspacePath, getOpenCodeConfigFilePath, ENV } from '@opencode-manager/shared/config/env'
 import type { Database } from 'bun:sqlite'
@@ -57,13 +57,20 @@ class OpenCodeServerManager {
     const isDevelopment = ENV.SERVER.NODE_ENV !== 'production'
 
     let gitCredentials: GitCredential[] = []
+    let gitIdentityEnv: Record<string, string> = {}
     if (this.db) {
       try {
         const settingsService = new SettingsService(this.db)
         const settings = settingsService.getSettings('default')
         gitCredentials = settings.preferences.gitCredentials || []
+        
+        const identity = await resolveGitIdentity(settings.preferences.gitIdentity, gitCredentials)
+        if (identity) {
+          gitIdentityEnv = createGitIdentityEnv(identity)
+          logger.info(`Git identity resolved: ${identity.name} <${identity.email}>`)
+        }
       } catch (error) {
-        logger.warn('Failed to get git credentials from settings:', error)
+        logger.warn('Failed to get git settings:', error)
       }
     }
 
@@ -120,6 +127,7 @@ class OpenCodeServerManager {
         env: {
           ...process.env,
           ...gitEnv,
+          ...gitIdentityEnv,
           XDG_DATA_HOME: path.join(OPENCODE_SERVER_DIRECTORY, '.opencode/state'),
           XDG_CONFIG_HOME: path.join(OPENCODE_SERVER_DIRECTORY, '.config'),
           OPENCODE_CONFIG: OPENCODE_CONFIG_PATH,

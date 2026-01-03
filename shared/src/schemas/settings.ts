@@ -77,7 +77,7 @@ export const GitIdentitySchema = z.object({
 export type GitIdentity = z.infer<typeof GitIdentitySchema>;
 
 export const DEFAULT_GIT_IDENTITY: GitIdentity = {
-  name: '',
+  name: 'OpenCode Agent',
   email: '',
 };
 

@@ -77,3 +77,110 @@ export function createGitEnv(credentials: GitCredential[]): Record<string, strin
 export function createGitHubGitEnv(gitToken: string): Record<string, string> {
   return createGitEnv([{ name: 'GitHub', host: 'https://github.com/', token: gitToken }])
 }
+
+export interface GitHubUserInfo {
+  name: string | null
+  email: string
+  login: string
+}
+
+export function findGitHubCredential(credentials: GitCredential[]): GitCredential | null {
+  if (!credentials || credentials.length === 0) return null
+  
+  return credentials.find(cred => {
+    try {
+      const parsed = new URL(cred.host)
+      return parsed.hostname.toLowerCase() === 'github.com'
+    } catch {
+      return false
+    }
+  }) || null
+}
+
+export interface GitIdentity {
+  name: string
+  email: string
+}
+
+export async function resolveGitIdentity(
+  manualIdentity: { name?: string; email?: string } | undefined,
+  credentials: GitCredential[]
+): Promise<GitIdentity | null> {
+  if (manualIdentity?.name && manualIdentity?.email) {
+    return { name: manualIdentity.name, email: manualIdentity.email }
+  }
+
+  const githubCred = findGitHubCredential(credentials)
+  if (githubCred) {
+    const githubUser = await fetchGitHubUserInfo(githubCred.token)
+    if (githubUser) {
+      return {
+        name: manualIdentity?.name || githubUser.name || githubUser.login,
+        email: manualIdentity?.email || githubUser.email
+      }
+    }
+  }
+
+  if (manualIdentity?.name || manualIdentity?.email) {
+    return {
+      name: manualIdentity.name || '',
+      email: manualIdentity.email || ''
+    }
+  }
+
+  return null
+}
+
+export function createGitIdentityEnv(identity: GitIdentity): Record<string, string> {
+  return {
+    GIT_AUTHOR_NAME: identity.name,
+    GIT_AUTHOR_EMAIL: identity.email,
+    GIT_COMMITTER_NAME: identity.name,
+    GIT_COMMITTER_EMAIL: identity.email
+  }
+}
+
+export async function fetchGitHubUserInfo(token: string): Promise<GitHubUserInfo | null> {
+  try {
+    const [userResponse, emailsResponse] = await Promise.all([
+      fetch('https://api.github.com/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      }),
+      fetch('https://api.github.com/user/emails', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      })
+    ])
+
+    if (!userResponse.ok) return null
+
+    const data = await userResponse.json() as { login: string; name: string | null; id: number }
+
+    if (!data.id || !data.login) return null
+
+    let email = `${data.id}+${data.login}@users.noreply.github.com`
+
+    if (emailsResponse.ok) {
+      const emails = await emailsResponse.json() as Array<{ email: string; primary: boolean; verified: boolean }>
+      const primaryEmail = emails.find(e => e.primary && e.verified)
+      if (primaryEmail?.email) {
+        email = primaryEmail.email
+      }
+    }
+
+    return {
+      name: data.name,
+      email,
+      login: data.login
+    }
+  } catch {
+    return null
+  }
+}

@@ -12,10 +12,6 @@ import {
 import { logger } from '../utils/logger'
 import { opencodeServerManager } from '../services/opencode-single-server'
 import { DEFAULT_AGENTS_MD } from '../index'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
-
-const execFileAsync = promisify(execFile)
 
 const UpdateSettingsSchema = z.object({
   preferences: UserPreferencesSchema.partial(),
@@ -83,32 +79,18 @@ export function createSettingsRoutes(db: Database) {
       const settings = settingsService.updateSettings(validated.preferences, userId)
       
       let serverRestarted = false
-      if (validated.preferences.gitCredentials !== undefined) {
-        const currentCreds = JSON.stringify(currentSettings.preferences.gitCredentials || [])
-        const newCreds = JSON.stringify(validated.preferences.gitCredentials)
-        if (currentCreds !== newCreds) {
-          logger.info('Git credentials changed, restarting OpenCode server')
-          await opencodeServerManager.restart()
-          serverRestarted = true
-        }
-      }
-
-      if (validated.preferences.gitIdentity !== undefined) {
-        const identity = validated.preferences.gitIdentity
-        if (identity.name) {
-          await execFileAsync('git', ['config', '--global', 'user.name', identity.name])
-          logger.info(`Set global git user.name: ${identity.name}`)
-        } else {
-          await execFileAsync('git', ['config', '--global', '--unset', 'user.name']).catch(() => {})
-          logger.info('Unset global git user.name')
-        }
-        if (identity.email) {
-          await execFileAsync('git', ['config', '--global', 'user.email', identity.email])
-          logger.info(`Set global git user.email: ${identity.email}`)
-        } else {
-          await execFileAsync('git', ['config', '--global', '--unset', 'user.email']).catch(() => {})
-          logger.info('Unset global git user.email')
-        }
+      
+      const credentialsChanged = validated.preferences.gitCredentials !== undefined &&
+        JSON.stringify(currentSettings.preferences.gitCredentials || []) !== JSON.stringify(validated.preferences.gitCredentials)
+      
+      const identityChanged = validated.preferences.gitIdentity !== undefined &&
+        JSON.stringify(currentSettings.preferences.gitIdentity || {}) !== JSON.stringify(validated.preferences.gitIdentity)
+      
+      if (credentialsChanged || identityChanged) {
+        const changeType = [credentialsChanged && 'credentials', identityChanged && 'identity'].filter(Boolean).join(' and ')
+        logger.info(`Git ${changeType} changed, restarting OpenCode server`)
+        await opencodeServerManager.restart()
+        serverRestarted = true
       }
 
       return c.json({ ...settings, serverRestarted })
