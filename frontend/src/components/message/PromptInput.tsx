@@ -10,9 +10,10 @@ import { useUserBash } from '@/stores/userBashStore'
 import { useMobile } from '@/hooks/useMobile'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
 import { usePermissionContext } from '@/contexts/PermissionContext'
-import { ChevronDown, Square, Upload, X } from 'lucide-react'
+import { ChevronDown, Upload, X } from 'lucide-react'
 
 import { CommandSuggestions } from '@/components/command/CommandSuggestions'
+import { SquareFill } from '@/components/ui/square-fill'
 import { MentionSuggestions, type MentionItem } from './MentionSuggestions'
 import { SessionStatusIndicator } from '@/components/ui/session-status-indicator'
 import { detectMentionTrigger, parsePromptToParts, getFilename, filterAgentsByQuery } from '@/lib/promptParser'
@@ -600,10 +601,10 @@ return (
         <button
           onClick={handleStop}
           disabled={disabled}
-          className="fixed bottom-19 right-0 md:hidden z-50 p-3 rounded-xl transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 shadow-lg shadow-red-500/30"
+          className="border border-white fixed bottom-19 right-0 md:hidden z-50 p-3 rounded-xl transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 shadow-lg shadow-red-500/30"
           title="Stop"
         >
-          <Square className="w-5 h-5" />
+          <SquareFill className="w-5 h-5" />
         </button>
       )}
 
@@ -693,7 +694,7 @@ return (
               className="hidden md:block p-1.5 px-5 md:p-2 md:px-6 rounded-lg transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 hover:border-red-400 shadow-md shadow-red-500/30 hover:shadow-red-500/40 ring-1 ring-red-500/20 hover:ring-red-500/30"
               title="Stop"
             >
-              <Square className="w-4 h-4 md:w-5 md:h-5" />
+              <SquareFill className="w-4 h-4 md:w-5 md:h-5" />
             </button>
 )}
           <input
