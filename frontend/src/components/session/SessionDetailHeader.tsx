@@ -166,7 +166,6 @@ export function SessionDetailHeader({
             repoUrl={repo.repoUrl}
             repoLocalPath={repo.localPath}
             className="hidden sm:flex max-w-[80px] sm:w-[140px] sm:max-w-[140px]"
-            iconOnly
           />
           <Button
             variant="ghost"
