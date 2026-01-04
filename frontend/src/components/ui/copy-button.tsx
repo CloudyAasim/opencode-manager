@@ -26,7 +26,21 @@ export function CopyButton({
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Clipboard access denied or not supported
+      const textArea = document.createElement('textarea')
+      textArea.value = content
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        const successful = document.execCommand('copy')
+        if (successful) {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        }
+      } finally {
+        document.body.removeChild(textArea)
+      }
     }
   }
 
