@@ -2,14 +2,14 @@ import axios, { type AxiosInstance } from 'axios'
 import type { paths } from './opencode-types'
 
 type SessionListResponse = paths['/session']['get']['responses']['200']['content']['application/json']
-type SessionResponse = paths['/session/{id}']['get']['responses']['200']['content']['application/json']
+type SessionResponse = paths['/session/{sessionID}']['get']['responses']['200']['content']['application/json']
 type CreateSessionRequest = NonNullable<paths['/session']['post']['requestBody']>['content']['application/json']
-type MessageListResponse = paths['/session/{id}/message']['get']['responses']['200']['content']['application/json']
-type SendPromptRequest = NonNullable<paths['/session/{id}/message']['post']['requestBody']>['content']['application/json']
+type MessageListResponse = paths['/session/{sessionID}/message']['get']['responses']['200']['content']['application/json']
+type SendPromptRequest = NonNullable<paths['/session/{sessionID}/message']['post']['requestBody']>['content']['application/json']
 type ConfigResponse = paths['/config']['get']['responses']['200']['content']['application/json']
 type CommandListResponse = paths['/command']['get']['responses']['200']['content']['application/json']
-type CommandRequest = NonNullable<paths['/session/{id}/command']['post']['requestBody']>['content']['application/json']
-type ShellRequest = NonNullable<paths['/session/{id}/shell']['post']['requestBody']>['content']['application/json']
+type CommandRequest = NonNullable<paths['/session/{sessionID}/command']['post']['requestBody']>['content']['application/json']
+type ShellRequest = NonNullable<paths['/session/{sessionID}/shell']['post']['requestBody']>['content']['application/json']
 type AgentListResponse = paths['/agent']['get']['responses']['200']['content']['application/json']
 
 export class OpenCodeClient {

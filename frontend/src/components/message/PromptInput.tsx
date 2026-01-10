@@ -5,6 +5,7 @@ import { useCommands } from '@/hooks/useCommands'
 import { useCommandHandler } from '@/hooks/useCommandHandler'
 import { useFileSearch } from '@/hooks/useFileSearch'
 import { useModelSelection } from '@/hooks/useModelSelection'
+import { useVariants } from '@/hooks/useVariants'
 
 import { useUserBash } from '@/stores/userBashStore'
 import { useMobile } from '@/hooks/useMobile'
@@ -16,6 +17,7 @@ import { CommandSuggestions } from '@/components/command/CommandSuggestions'
 import { SquareFill } from '@/components/ui/square-fill'
 import { MentionSuggestions, type MentionItem } from './MentionSuggestions'
 import { SessionStatusIndicator } from '@/components/ui/session-status-indicator'
+import { ModelQuickSelect } from '@/components/model/ModelQuickSelect'
 import { detectMentionTrigger, parsePromptToParts, getFilename, filterAgentsByQuery } from '@/lib/promptParser'
 
 
@@ -86,6 +88,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0)
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0)
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null)
+  const [isFocused, setIsFocused] = useState(false)
   
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -176,7 +179,8 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
         sessionID,
         parts,
         model: currentModel,
-        agent: selectedAgent || currentMode
+        agent: selectedAgent || currentMode,
+        variant: currentVariant
       })
       setPrompt('')
       setAttachedFiles(new Map())
@@ -228,7 +232,8 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
       sessionID,
       parts,
       model: currentModel,
-      agent: selectedAgent || currentMode
+      agent: selectedAgent || currentMode,
+      variant: currentVariant
     })
 
     setPrompt('')
@@ -596,6 +601,11 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
       }
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 't') {
+      e.preventDefault()
+      if (hasVariants) {
+        cycleVariant()
+      }
     }
   }
 
@@ -666,12 +676,13 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
   const modeBg = currentMode === 'plan' ? 'bg-yellow-500/20 border-yellow-400 hover:bg-yellow-500/30 hover:border-yellow-300' : 'bg-green-500/20 border-green-400 hover:bg-green-500/30 hover:border-green-300'
   const modeShadow = currentMode === 'plan' ? 'shadow-yellow-500/20 hover:shadow-yellow-500/30' : 'shadow-green-500/20 hover:shadow-green-500/30'
 
-  const { model, modelString } = useModelSelection(opcodeUrl, directory)
+const { model, modelString } = useModelSelection(opcodeUrl, directory)
   const currentModel = modelString || ''
   const displayModelName = model?.modelID || currentModel
   const isMobile = useMobile()
   const { setShowDialog, hasPermissionsForSession } = usePermissionContext()
   const hasPendingPermissionForSession = hasPermissionsForSession(sessionID)
+  const { hasVariants, currentVariant, cycleVariant } = useVariants(opcodeUrl, directory)
   const sessionStatus = useSessionStatusForSession(sessionID)
   const isSessionActive = sessionStatus.type === 'busy' || sessionStatus.type === 'retry'
   const hasActiveStream = hasIncompleteMessages && isSessionActive
@@ -694,7 +705,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
 
 return (
     <div className={`relative backdrop-blur-md bg-background opacity-95 border border-border dark:border-white/30 rounded-xl p-2 md:p-3 mb-4 md:mb-1 w-full transition-all ${hasPendingPermissionForSession ? 'border-orange-500/50 ring-1 ring-orange-500/30' : ''}`}>
-      {showStopButton && (
+      {showStopButton && !(isFocused && prompt.trim().length > 0) && (
         <button
           onClick={handleStop}
           disabled={disabled}
@@ -720,6 +731,8 @@ return (
             : "Send a message..."
         }
         disabled={disabled}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 text-[16px] text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed md:text-sm rounded-lg ${
           isBashMode
             ? 'border-purple-500/50 bg-purple-500/5 focus:bg-purple-500/10'
@@ -766,14 +779,22 @@ return (
               </div>
             ) : (
                !hideSecondaryButtons && (
-                 <button
-                   onClick={onShowModelsDialog}
-                   className="px-2.5 py-1.5 md:px-3 h-[36px] rounded-lg text-xs md:text-sm font-medium border bg-muted border-border text-muted-foreground hover:bg-muted-foreground/10 hover:border-foreground/30 transition-colors cursor-pointer max-w-[150px] md:max-w-[220px] truncate dark:border-white/30"
+                 <ModelQuickSelect
+                   opcodeUrl={opcodeUrl}
+                   directory={directory}
+                   onOpenFullDialog={() => onShowModelsDialog?.()}
                  >
-                   {displayModelName || 'Select model'}
-                 </button>
-               )
-            )}
+                   <button
+                     className="px-2.5 py-0.5 md:px-3 min-h-[36px] rounded-lg text-xs md:text-sm font-medium border bg-muted border-border text-muted-foreground hover:bg-muted-foreground/10 hover:border-foreground/30 transition-colors cursor-pointer max-w-[150px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center"
+                   >
+                     <span className="truncate w-full text-left">{displayModelName || 'Select model'}</span>
+{hasVariants && currentVariant && (
+                        <span className="text-[10px] text-orange-500 truncate w-full text-center capitalize">{currentVariant}</span>
+                      )}
+                   </button>
+                 </ModelQuickSelect>
+                )
+             )}
           
         </div>
 <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">

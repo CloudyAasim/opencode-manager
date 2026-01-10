@@ -60,6 +60,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: Record<string, string> = {
   closeSession: 'W',
   toggleSidebar: 'B',
   selectModel: 'M',
+  variantCycle: `${CMD_KEY}+T`,
 };
 
 export const GitCredentialSchema = z.object({

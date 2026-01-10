@@ -48,6 +48,7 @@ export interface OpenCodeModel {
       pdf: boolean;
     };
   };
+  variants?: Record<string, Record<string, unknown>>;
 }
 
 export interface OpenCodeProvider {
@@ -87,6 +88,7 @@ export interface Model {
   provider?: {
     npm: string;
   };
+  variants?: Record<string, Record<string, unknown>>;
 }
 
 export interface Provider {
@@ -187,6 +189,7 @@ async function getProvidersFromOpenCodeServer(): Promise<{ providers: Provider[]
             provider: {
               npm: openCodeModel.api.npm,
             },
+            variants: openCodeModel.variants,
           };
         });
 

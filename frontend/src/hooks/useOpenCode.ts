@@ -252,12 +252,14 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
       parts,
       model,
       agent,
+      variant,
     }: {
       sessionID: string;
       prompt?: string;
       parts?: ContentPart[];
       model?: string;
       agent?: string;
+      variant?: string;
     }) => {
       if (!client) throw new Error("No client available");
 
@@ -310,6 +312,10 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
 
       if (agent) {
         requestData.agent = agent;
+      }
+
+      if (variant) {
+        requestData.variant = variant;
       }
 
       const response = await client.sendPrompt(sessionID, requestData);

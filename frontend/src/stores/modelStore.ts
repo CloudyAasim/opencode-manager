@@ -9,11 +9,15 @@ export interface ModelSelection {
 interface ModelStore {
   model: ModelSelection | null
   recentModels: ModelSelection[]
+  variants: Record<string, string | undefined>
   isInitialized: boolean
-  
+
   setModel: (model: ModelSelection) => void
   initializeFromConfig: (configModel: string | undefined) => void
   getModelString: () => string | null
+  setVariant: (model: ModelSelection, variant: string | undefined) => void
+  getVariant: (model: ModelSelection) => string | undefined
+  clearVariant: (model: ModelSelection) => void
 }
 
 const MAX_RECENT_MODELS = 10
@@ -30,6 +34,7 @@ export const useModelStore = create<ModelStore>()(
     (set, get) => ({
       model: null,
       recentModels: [],
+      variants: {},
       isInitialized: false,
 
       setModel: (model: ModelSelection) => {
@@ -67,12 +72,42 @@ export const useModelStore = create<ModelStore>()(
         if (!model) return null
         return `${model.providerID}/${model.modelID}`
       },
+
+      setVariant: (model: ModelSelection, variant: string | undefined) => {
+        set((state) => {
+          const key = `${model.providerID}/${model.modelID}`
+          return {
+            variants: {
+              ...state.variants,
+              [key]: variant,
+            },
+          }
+        })
+      },
+
+      getVariant: (model: ModelSelection) => {
+        const state = get()
+        const key = `${model.providerID}/${model.modelID}`
+        return state.variants[key]
+      },
+
+      clearVariant: (model: ModelSelection) => {
+        set((state) => {
+          const key = `${model.providerID}/${model.modelID}`
+          const newVariants = { ...state.variants }
+          delete newVariants[key]
+          return {
+            variants: newVariants,
+          }
+        })
+      },
     }),
     {
       name: 'opencode-model-selection',
       partialize: (state) => ({
         model: state.model,
         recentModels: state.recentModels,
+        variants: state.variants,
       }),
     }
   )
