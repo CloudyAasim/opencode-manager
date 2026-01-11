@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import type { Permission } from '@/api/types'
+import type { PermissionRequest } from '@/api/types'
 
 type PermissionEventType = 'add' | 'remove'
 
 interface PermissionEvent {
   type: PermissionEventType
-  permission?: Permission
+  permission?: PermissionRequest
   sessionID?: string
   permissionID?: string
 }
@@ -26,7 +26,7 @@ export const permissionEvents = {
   }
 }
 
-type PermissionsBySession = Record<string, Permission[]>
+type PermissionsBySession = Record<string, PermissionRequest[]>
 
 export function usePermissionRequests(currentSessionID?: string) {
   const [permissionsBySession, setPermissionsBySession] = useState<PermissionsBySession>({})
@@ -116,9 +116,9 @@ export function usePermissionRequests(currentSessionID?: string) {
     setPermissionsBySession({})
   }, [])
 
-  const getPermissionForCallID = useCallback((callID: string, sessionID: string): Permission | null => {
+  const getPermissionForCallID = useCallback((callID: string, sessionID: string): PermissionRequest | null => {
     const sessionPermissions = permissionsBySession[sessionID] ?? []
-    return sessionPermissions.find(p => p.callID === callID) ?? null
+    return sessionPermissions.find(p => p.tool?.callID === callID) ?? null
   }, [permissionsBySession])
 
   const hasPermissionsForSession = useCallback((sessionID: string): boolean => {

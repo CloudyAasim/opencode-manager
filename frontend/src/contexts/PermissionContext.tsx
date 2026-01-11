@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { OpenCodeClient } from '@/api/opencode'
 import { permissionEvents, usePermissionRequests } from '@/hooks/usePermissionRequests'
-import type { Permission, PermissionResponse } from '@/api/types'
+import type { PermissionRequest, PermissionResponse } from '@/api/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { showToast } from '@/lib/toast'
 
@@ -19,7 +19,7 @@ type ActiveRepo = {
 }
 
 interface PermissionContextValue {
-  currentPermission: Permission | null
+  currentPermission: PermissionRequest | null
   pendingCount: number
   isFromDifferentSession: boolean
   respondToPermission: (permissionID: string, sessionID: string, response: PermissionResponse) => Promise<void>
@@ -27,7 +27,7 @@ interface PermissionContextValue {
   showDialog: boolean
   setShowDialog: (show: boolean) => void
   currentSessionId: string | null
-  getPermissionForCallID: (callID: string, sessionID: string) => Permission | null
+  getPermissionForCallID: (callID: string, sessionID: string) => PermissionRequest | null
   hasPermissionsForSession: (sessionID: string) => boolean
   currentRepoDirectory: string | null
   getRepoForSession: (sessionID: string) => ActiveRepo | null
@@ -281,10 +281,10 @@ prevPendingCountRef.current = pendingCount
       const es = new EventSource(url.toString())
       currentRefs.set(repoKey, es)
 
-      es.addEventListener('permission.updated', (e) => {
+      es.addEventListener('permission.asked', (e) => {
         try {
           const event = JSON.parse(e.data)
-          if ('id' in event.properties && 'sessionID' in event.properties) {
+          if ('permission' in event.properties && 'sessionID' in event.properties) {
             sessionRepoMapRef.current.set(event.properties.sessionID, {
               url: repo.url,
               directory: repo.directory,
@@ -292,18 +292,19 @@ prevPendingCountRef.current = pendingCount
             permissionEvents.emit({ type: 'add', permission: event.properties })
           }
         } catch (err) {
-          console.error('Failed to parse permission.updated event:', err)
+          console.error('Failed to parse permission.asked event:', err)
         }
       })
 
       es.addEventListener('permission.replied', (e) => {
         try {
           const event = JSON.parse(e.data)
-          if ('permissionID' in event.properties && 'sessionID' in event.properties) {
+          const requestID = event.properties.requestID || event.properties.permissionID
+          if (requestID && 'sessionID' in event.properties) {
             permissionEvents.emit({
               type: 'remove',
               sessionID: event.properties.sessionID,
-              permissionID: event.properties.permissionID,
+              permissionID: requestID,
             })
           }
         } catch (err) {

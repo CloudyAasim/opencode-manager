@@ -37,7 +37,7 @@ export function useTitleGenerating(sessionID: string | undefined) {
 type AssistantMessage = components["schemas"]["AssistantMessage"];
 
 type SendPromptRequest = NonNullable<
-  paths["/session/{id}/message"]["post"]["requestBody"]
+  paths["/session/{sessionID}/message"]["post"]["requestBody"]
 >["content"]["application/json"];
 
 export const useOpenCodeClient = (opcodeUrl: string | null | undefined, directory?: string) => {

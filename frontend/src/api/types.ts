@@ -18,7 +18,7 @@ import type { components } from './opencode-types'
 export type Message = components['schemas']['Message']
 export type Part = components['schemas']['Part']
 export type Session = components['schemas']['Session']
-export type Permission = components['schemas']['Permission']
+export type PermissionRequest = components['schemas']['PermissionRequest']
 export type PermissionResponse = 'once' | 'always' | 'reject'
 
 export type MessageWithParts = {
@@ -88,9 +88,9 @@ export interface SSETodoUpdatedEvent {
   }
 }
 
-export interface SSEPermissionUpdatedEvent {
-  type: 'permission.updated'
-  properties: Permission
+export interface SSEPermissionAskedEvent {
+  type: 'permission.asked'
+  properties: PermissionRequest
 }
 
 export interface SSEPermissionRepliedEvent {
@@ -151,7 +151,7 @@ export type SSEEvent =
   | SSESessionIdleEvent
   | SSESessionStatusEvent
   | SSETodoUpdatedEvent
-  | SSEPermissionUpdatedEvent
+  | SSEPermissionAskedEvent
   | SSEPermissionRepliedEvent
   | SSEInstallationUpdatedEvent
   | SSEInstallationUpdateAvailableEvent

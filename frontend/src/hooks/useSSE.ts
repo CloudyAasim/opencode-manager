@@ -311,18 +311,18 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string)
           break
         }
 
-        case 'permission.updated':
-          if ('id' in event.properties) {
+        case 'permission.asked':
+          if ('permission' in event.properties && 'sessionID' in event.properties) {
             permissionEvents.emit({ type: 'add', permission: event.properties })
           }
           break
 
         case 'permission.replied':
-          if ('permissionID' in event.properties && 'sessionID' in event.properties) {
+          if ('requestID' in event.properties && 'sessionID' in event.properties) {
             permissionEvents.emit({ 
               type: 'remove', 
-              sessionID: event.properties.sessionID,
-              permissionID: event.properties.permissionID 
+              sessionID: event.properties.sessionID as string,
+              permissionID: event.properties.requestID as string
             })
           }
           break

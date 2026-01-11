@@ -8,12 +8,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import type { Permission, PermissionResponse } from '@/api/types'
+import type { PermissionRequest, PermissionResponse } from '@/api/types'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 
 interface PermissionRequestDialogProps {
-  permission: Permission | null
+  permission: PermissionRequest | null
   pendingCount: number
   isFromDifferentSession?: boolean
   sessionTitle?: string
@@ -42,10 +42,10 @@ function getPermissionTypeLabel(type: string): string {
   }
 }
 
-function getPermissionDetails(permission: Permission): { primary: string; secondary?: string } {
+function getPermissionDetails(permission: PermissionRequest): { primary: string; secondary?: string } {
   const metadata = permission.metadata || {}
   
-  switch (permission.type) {
+  switch (permission.permission) {
     case 'bash': {
       const command = metadata.command as string | undefined
       if (command) {
@@ -96,11 +96,7 @@ function getPermissionDetails(permission: Permission): { primary: string; second
     }
   }
   
-  const patterns = Array.isArray(permission.pattern) 
-    ? permission.pattern 
-    : permission.pattern 
-      ? [permission.pattern] 
-      : []
+  const patterns = permission.patterns || []
   
   if (patterns.length > 0) {
     return { primary: patterns.join('\n') }
@@ -129,7 +125,7 @@ export function PermissionRequestDialog({
     setIsLoading(true)
     setLoadingAction(response)
     try {
-      await onRespond(permission.id, permission.sessionID, response)
+      await onRespond(permission.permission, permission.sessionID, response)
     } catch (error) {
       console.error('Failed to respond to permission:', error)
       showToast.error('Failed to respond to permission. Please try again.')
@@ -139,7 +135,7 @@ export function PermissionRequestDialog({
     }
   }
 
-  const typeLabel = getPermissionTypeLabel(permission.type)
+  const typeLabel = getPermissionTypeLabel(permission.permission)
   const details = getPermissionDetails(permission)
   const hasMultiple = pendingCount > 1
   const displaySessionName = sessionTitle || `Session ${permission.sessionID.slice(0, 8)}...`
@@ -157,7 +153,7 @@ export function PermissionRequestDialog({
             )}
           </DialogTitle>
           <DialogDescription className="break-all">
-            {permission.title || `Allow ${typeLabel.toLowerCase()}?`}
+            {`Allow ${typeLabel.toLowerCase()}?`}
           </DialogDescription>
         </DialogHeader>
 
@@ -187,7 +183,7 @@ export function PermissionRequestDialog({
           <div className="text-xs text-muted-foreground space-y-1">
             {repoDirectory && (
               <div className="truncate">
-                Repo: <span className="font-medium">{repoDirectory.split('/').pop() || repoDirectory}</span>
+                Repo: <span className="font-medium">{repoDirectory.split('/').pop() ?? repoDirectory}</span>
               </div>
             )}
             {isFromDifferentSession ? (
