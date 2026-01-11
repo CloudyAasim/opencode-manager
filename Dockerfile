@@ -33,11 +33,6 @@ RUN curl -fsSL https://bun.sh/install | bash && \
     chmod -R 755 /opt/bun && \
     ln -s /opt/bun/bin/bun /usr/local/bin/bun
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    mv /root/.local/bin/uv /usr/local/bin/uv && \
-    mv /root/.local/bin/uvx /usr/local/bin/uvx && \
-    chmod +x /usr/local/bin/uv /usr/local/bin/uvx
-
 WORKDIR /app
 
 FROM base AS deps
@@ -62,7 +57,15 @@ RUN pnpm --filter frontend build
 
 FROM base AS runner
 
-RUN curl -fsSL https://opencode.ai/install | bash && \
+ARG UV_VERSION=latest
+ARG OPENCODE_VERSION=latest
+
+RUN echo "Installing uv=${UV_VERSION} opencode=${OPENCODE_VERSION}" && \
+    curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx && \
+    chmod +x /usr/local/bin/uv /usr/local/bin/uvx && \
+    curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path && \
     mv /root/.opencode /opt/opencode && \
     chmod -R 755 /opt/opencode && \
     ln -s /opt/opencode/bin/opencode /usr/local/bin/opencode

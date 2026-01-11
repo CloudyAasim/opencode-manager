@@ -15,6 +15,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Get latest tool versions
+        id: versions
+        run: |
+          UV_VERSION=$(git ls-remote --tags --sort=-v:refname https://github.com/astral-sh/uv.git 'refs/tags/[0-9]*' | head -1 | sed 's/.*refs\/tags\///')
+          OPENCODE_VERSION=$(git ls-remote --tags --sort=-v:refname https://github.com/opencode-ai/opencode.git 'refs/tags/v*' | head -1 | sed 's/.*refs\/tags\///')
+          echo "uv=${UV_VERSION}" >> $GITHUB_OUTPUT
+          echo "opencode=${OPENCODE_VERSION}" >> $GITHUB_OUTPUT
+          echo "Detected versions: uv=${UV_VERSION}, opencode=${OPENCODE_VERSION}"
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -47,6 +56,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            UV_VERSION=${{ steps.versions.outputs.uv }}
+            OPENCODE_VERSION=${{ steps.versions.outputs.opencode }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           target: runner
