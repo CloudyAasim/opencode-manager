@@ -121,11 +121,39 @@ export function getRepoByLocalPath(db: Database, localPath: string): Repo | null
   return row ? rowToRepo(row) : null
 }
 
-export function listRepos(db: Database): Repo[] {
+export function listRepos(db: Database, repoOrder?: number[]): Repo[] {
   const stmt = db.prepare('SELECT * FROM repos ORDER BY cloned_at DESC')
   const rows = stmt.all() as RepoRow[]
-  
-  return rows.map(rowToRepo)
+  const repos = rows.map(rowToRepo)
+
+  if (!repoOrder || repoOrder.length === 0) {
+    return repos
+  }
+
+  const orderMap = new Map(repoOrder.map((id, index) => [id, index]))
+  const orderedRepos = repos
+    .filter((repo) => orderMap.has(repo.id))
+    .sort((a, b) => {
+      const indexA = orderMap.get(a.id)!
+      const indexB = orderMap.get(b.id)!
+      return indexA - indexB
+    })
+
+  const remainingRepos = repos
+    .filter((repo) => !orderMap.has(repo.id))
+    .sort((a, b) => {
+      const nameA = getRepoName(a).toLowerCase()
+      const nameB = getRepoName(b).toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+
+  return [...orderedRepos, ...remainingRepos]
+}
+
+function getRepoName(repo: Repo): string {
+  return repo.repoUrl
+    ? repo.repoUrl.split('/').slice(-1)[0]?.replace('.git', '') || repo.localPath
+    : repo.localPath
 }
 
 export function updateRepoStatus(db: Database, id: number, cloneStatus: Repo['cloneStatus']): void {

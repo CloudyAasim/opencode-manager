@@ -51,6 +51,7 @@ export interface UserPreferences {
   gitCredentials?: GitCredential[]
   gitIdentity?: GitIdentity
   tts?: TTSConfig
+  repoOrder?: number[]
 }
 
 export interface SettingsResponse {

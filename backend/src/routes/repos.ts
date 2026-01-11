@@ -63,9 +63,12 @@ export function createRepoRoutes(database: Database) {
     }
   })
   
-  app.get('/', async (c) => {
+app.get('/', async (c) => {
     try {
-      const repos = db.listRepos(database)
+      const settingsService = new SettingsService(database)
+      const settings = settingsService.getSettings()
+      const repos = db.listRepos(database, settings.preferences.repoOrder)
+
       const reposWithCurrentBranch = await Promise.all(
         repos.map(async (repo) => {
           const currentBranch = await repoService.getCurrentBranch(repo)
@@ -78,7 +81,27 @@ export function createRepoRoutes(database: Database) {
       return c.json({ error: getErrorMessage(error) }, 500)
     }
   })
-  
+
+  app.put('/order', async (c) => {
+    try {
+      const body = await c.req.json()
+
+      if (!Array.isArray(body.order) || body.order.some((id: unknown) => typeof id !== 'number')) {
+        return c.json({ error: 'order must be an array of numbers' }, 400)
+      }
+
+      const settingsService = new SettingsService(database)
+      settingsService.updateSettings({
+        repoOrder: body.order,
+      })
+
+      return c.json({ success: true })
+    } catch (error: unknown) {
+      logger.error('Failed to update repo order:', error)
+      return c.json({ error: getErrorMessage(error) }, 500)
+    }
+  })
+
   app.get('/:id', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))

@@ -102,6 +102,7 @@ export const UserPreferencesSchema = z.object({
   gitIdentity: GitIdentitySchema.optional(),
   tts: TTSConfigSchema.optional(),
   lastKnownGoodConfig: z.string().optional(),
+  repoOrder: z.array(z.number()).optional(),
 });
 
 export const DEFAULT_TTS_CONFIG: TTSConfig = {

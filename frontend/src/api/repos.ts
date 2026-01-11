@@ -188,3 +188,16 @@ export async function downloadRepo(id: number, repoName: string): Promise<void> 
   document.body.removeChild(a)
   window.URL.revokeObjectURL(url)
 }
+
+export async function updateRepoOrder(order: number[]): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/repos/order`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update repo order')
+  }
+}
