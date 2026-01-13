@@ -8,10 +8,8 @@ import { SettingsDialog } from './components/settings/SettingsDialog'
 import { useSettingsDialog } from './hooks/useSettingsDialog'
 import { useTheme } from './hooks/useTheme'
 import { TTSProvider } from './contexts/TTSContext'
-import { PermissionProvider } from '@/contexts/PermissionContext'
+import { EventProvider, usePermissions } from '@/contexts/EventContext'
 import { PermissionRequestDialog } from './components/session/PermissionRequestDialog'
-import { usePermissionContext } from './contexts/PermissionContext'
-import { GlobalPermissionNotification } from './components/permissions/GlobalPermissionNotification'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,19 +20,17 @@ const queryClient = new QueryClient({
   },
 })
 
-function AppContent() {
+function RouterContent() {
   const { isOpen, close } = useSettingsDialog()
   useTheme()
 
-return (
-    <BrowserRouter>
+  return (
+    <>
       <Routes>
         <Route path="/" element={<Repos />} />
         <Route path="/repos/:id" element={<RepoDetail />} />
         <Route path="/repos/:id/sessions/:sessionId" element={<SessionDetail />} />
-
       </Routes>
-      <GlobalPermissionNotification />
       <SettingsDialog open={isOpen} onOpenChange={close} />
       <Toaster
         position="bottom-right"
@@ -42,43 +38,42 @@ return (
         richColors
         closeButton
       />
-    </BrowserRouter>
+    </>
   )
 }
 
 function PermissionDialogWrapper() {
   const {
-    currentPermission,
+    current: currentPermission,
     pendingCount,
-    isFromDifferentSession,
-    respondToPermission,
+    respond: respondToPermission,
     showDialog,
     setShowDialog,
-    currentRepoDirectory,
-  } = usePermissionContext()
+  } = usePermissions()
 
   return (
     <PermissionRequestDialog
       permission={currentPermission}
       pendingCount={pendingCount}
-      isFromDifferentSession={isFromDifferentSession}
+      isFromDifferentSession={false}
       onRespond={respondToPermission}
       open={showDialog}
       onOpenChange={setShowDialog}
-      repoDirectory={currentRepoDirectory}
+      repoDirectory={null}
     />
   )
 }
 
 function App() {
-
   return (
     <QueryClientProvider client={queryClient}>
       <TTSProvider>
-        <PermissionProvider>
-          <AppContent />
-          <PermissionDialogWrapper />
-        </PermissionProvider>
+        <BrowserRouter>
+          <EventProvider>
+            <RouterContent />
+            <PermissionDialogWrapper />
+          </EventProvider>
+        </BrowserRouter>
       </TTSProvider>
     </QueryClientProvider>
   )

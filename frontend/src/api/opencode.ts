@@ -11,6 +11,7 @@ type CommandListResponse = paths['/command']['get']['responses']['200']['content
 type CommandRequest = NonNullable<paths['/session/{sessionID}/command']['post']['requestBody']>['content']['application/json']
 type ShellRequest = NonNullable<paths['/session/{sessionID}/shell']['post']['requestBody']>['content']['application/json']
 type AgentListResponse = paths['/agent']['get']['responses']['200']['content']['application/json']
+type QuestionListResponse = paths['/question']['get']['responses']['200']['content']['application/json']
 
 export class OpenCodeClient {
   private client: AxiosInstance
@@ -128,6 +129,21 @@ export class OpenCodeClient {
   async respondToPermission(sessionID: string, permissionID: string, response: 'once' | 'always' | 'reject') {
     const result = await this.client.post(`/session/${sessionID}/permissions/${permissionID}`, { response })
     return result.data
+  }
+
+  async replyToQuestion(requestID: string, answers: string[][]) {
+    const result = await this.client.post(`/question/${requestID}/reply`, { answers })
+    return result.data
+  }
+
+  async rejectQuestion(requestID: string) {
+    const result = await this.client.post(`/question/${requestID}/reject`)
+    return result.data
+  }
+
+  async listPendingQuestions() {
+    const response = await this.client.get<QuestionListResponse>('/question')
+    return response.data
   }
 
   async listAgents() {

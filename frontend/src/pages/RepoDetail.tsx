@@ -8,15 +8,15 @@ import { Header } from "@/components/ui/header";
 import { SwitchConfigDialog } from "@/components/repo/SwitchConfigDialog";
 import { RepoMcpDialog } from "@/components/repo/RepoMcpDialog";
 import { useCreateSession } from "@/hooks/useOpenCode";
+import { useSSE } from "@/hooks/useSSE";
 import { OPENCODE_API_ENDPOINT, API_BASE_URL } from "@/config";
 import { useSwipeBack } from "@/hooks/useMobile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BranchSwitcher } from "@/components/repo/BranchSwitcher";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Plug, FolderOpen, Plus, GitBranch } from "lucide-react";
-
-import { Loader2 } from "lucide-react";
+import { Plug, FolderOpen, Plus, GitBranch, Loader2 } from "lucide-react";
+import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
 
 export function RepoDetail() {
   const { id } = useParams<{ id: string }>();
@@ -58,6 +58,8 @@ export function RepoDetail() {
   const opcodeUrl = OPENCODE_API_ENDPOINT;
   
   const repoDirectory = repo?.fullPath;
+
+  useSSE(opcodeUrl, repoDirectory);
 
   const createSessionMutation = useCreateSession(opcodeUrl, repoDirectory);
 
@@ -140,6 +142,9 @@ export function RepoDetail() {
         ) : null}
       </div>
       <Header.Actions>
+        <div className="hidden sm:flex items-center gap-1">
+          <PendingActionsGroup />
+        </div>
         <Button
           variant="outline"
           onClick={() => setMcpDialogOpen(true)}

@@ -33,6 +33,9 @@ import { showToast } from "@/lib/toast";
 import { RepoMcpDialog } from "@/components/repo/RepoMcpDialog";
 import { createOpenCodeClient } from "@/api/opencode";
 import { useSessionStatus } from "@/stores/sessionStatusStore";
+import { useQuestions } from "@/contexts/EventContext";
+import { QuestionPrompt } from "@/components/session/QuestionPrompt";
+import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
 
 export function SessionDetail() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -112,6 +115,7 @@ export function SessionDetail() {
   const isEditingMessage = useUIState((state) => state.isEditingMessage);
   const { isPlaying, stop } = useTTS();
   const setSessionStatus = useSessionStatus((state) => state.setStatus);
+  const { current: currentQuestion, reply: replyToQuestion, reject: rejectQuestion } = useQuestions();
 
   const handleNewSession = useCallback(async () => {
     try {
@@ -332,6 +336,9 @@ export function SessionDetail() {
           />
         </div>
         <Header.Actions className="gap-2 sm:gap-4">
+          <div className="hidden sm:flex items-center gap-1">
+            <PendingActionsGroup />
+          </div>
           <ContextUsageIndicator
             opcodeUrl={opcodeUrl}
             sessionID={sessionId}
@@ -457,6 +464,14 @@ export function SessionDetail() {
                   <VolumeX className="w-6 h-6" />
                   <span className="text-sm font-medium hidden sm:inline">Stop Audio</span>
                 </button>
+              )}
+              {currentQuestion && currentQuestion.sessionID === sessionId && (
+                <QuestionPrompt
+                  key={currentQuestion.id}
+                  question={currentQuestion}
+                  onReply={replyToQuestion}
+                  onReject={rejectQuestion}
+                />
               )}
               <PromptInput
                 ref={promptInputRef}

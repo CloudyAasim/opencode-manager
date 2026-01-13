@@ -13,6 +13,8 @@ import { createFileRoutes } from './routes/files'
 import { createProvidersRoutes } from './routes/providers'
 import { createOAuthRoutes } from './routes/oauth'
 import { createTitleRoutes } from './routes/title'
+import { createSSERoutes } from './routes/sse'
+import { sseAggregator } from './services/sse-aggregator'
 import { ensureDirectoryExists, writeFileContent, fileExists, readFileContent } from './services/file-operations'
 import { SettingsService } from './services/settings'
 import { opencodeServerManager } from './services/opencode-single-server'
@@ -230,6 +232,7 @@ app.route('/api/providers', createProvidersRoutes())
 app.route('/api/oauth', createOAuthRoutes())
 app.route('/api/tts', createTTSRoutes(db))
 app.route('/api/generate-title', createTitleRoutes())
+app.route('/api/sse', createSSERoutes())
 
 app.all('/api/opencode/*', async (c) => {
   const request = c.req.raw
@@ -302,10 +305,12 @@ const shutdown = async (signal: string) => {
   
   logger.info(`${signal} received, shutting down gracefully...`)
   try {
+    sseAggregator.shutdown()
+    logger.info('SSE Aggregator stopped')
     await opencodeServerManager.stop()
     logger.info('OpenCode server stopped')
   } catch (error) {
-    logger.error('Error stopping OpenCode server:', error)
+    logger.error('Error during shutdown:', error)
   }
   process.exit(0)
 }

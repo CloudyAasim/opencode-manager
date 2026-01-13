@@ -1,5 +1,14 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { gitReuseDir, setupGitTestRepo, cleanupTestRepo, createTestFile, stageAndCommitTestFile } from '../fixtures/git-helpers'
+
+vi.mock('bun:sqlite', () => ({
+  Database: vi.fn()
+}))
+
+vi.mock('../../src/services/settings', () => ({
+  SettingsService: vi.fn()
+}))
+
 import { getFileDiff } from '../../src/services/git-operations'
 
 const testRepoPath = gitReuseDir('git-operations-test')

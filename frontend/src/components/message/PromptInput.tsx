@@ -10,7 +10,7 @@ import { useVariants } from '@/hooks/useVariants'
 import { useUserBash } from '@/stores/userBashStore'
 import { useMobile } from '@/hooks/useMobile'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
-import { usePermissionContext } from '@/contexts/PermissionContext'
+import { usePermissions } from '@/contexts/EventContext'
 import { ChevronDown, Upload, X } from 'lucide-react'
 
 import { CommandSuggestions } from '@/components/command/CommandSuggestions'
@@ -680,7 +680,7 @@ const { model, modelString } = useModelSelection(opcodeUrl, directory)
   const currentModel = modelString || ''
   const displayModelName = model?.modelID || currentModel
   const isMobile = useMobile()
-  const { setShowDialog, hasPermissionsForSession } = usePermissionContext()
+  const { setShowDialog, hasForSession: hasPermissionsForSession } = usePermissions()
   const hasPendingPermissionForSession = hasPermissionsForSession(sessionID)
   const { hasVariants, currentVariant, cycleVariant } = useVariants(opcodeUrl, directory)
   const sessionStatus = useSessionStatusForSession(sessionID)

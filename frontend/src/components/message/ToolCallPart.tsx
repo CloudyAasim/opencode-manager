@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { components } from '@/api/opencode-types'
 import { useSettings } from '@/hooks/useSettings'
 import { useUserBash } from '@/stores/userBashStore'
-import { usePermissionContext } from '@/contexts/PermissionContext'
+import { usePermissions, useQuestions } from '@/contexts/EventContext'
 import { detectFileReferences } from '@/lib/fileReferences'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
@@ -72,7 +72,8 @@ function parseTodoOutput(output: string): Todo[] | null {
 export function ToolCallPart({ part, onFileClick, onChildSessionClick }: ToolCallPartProps) {
   const { preferences } = useSettings()
   const { userBashCommands } = useUserBash()
-  const { getPermissionForCallID } = usePermissionContext()
+  const { getForCallID: getPermissionForCallID } = usePermissions()
+  const { getForCallID: getQuestionForCallID } = useQuestions()
   const outputRef = useRef<HTMLDivElement>(null)
   const isUserBashCommand = part.tool === 'bash' &&
     part.state.status === 'completed' &&
@@ -83,6 +84,8 @@ export function ToolCallPart({ part, onFileClick, onChildSessionClick }: ToolCal
 
   const pendingPermission = getPermissionForCallID(part.callID, part.sessionID)
   const isWaitingPermission = part.state.status === 'running' && !!pendingPermission
+  const pendingQuestion = getQuestionForCallID(part.callID, part.sessionID)
+  const isWaitingQuestion = part.state.status === 'running' && !!pendingQuestion
 
   useEffect(() => {
     if (part.tool === 'bash' && expanded && outputRef.current) {
@@ -97,7 +100,9 @@ export function ToolCallPart({ part, onFileClick, onChildSessionClick }: ToolCal
       case 'error':
         return 'text-red-600 dark:text-red-400'
       case 'running':
-        return isWaitingPermission ? 'text-orange-600 dark:text-orange-400' : 'text-yellow-600 dark:text-yellow-400'
+        if (isWaitingPermission) return 'text-orange-600 dark:text-orange-400'
+        if (isWaitingQuestion) return 'text-blue-600 dark:text-blue-400'
+        return 'text-yellow-600 dark:text-yellow-400'
       default:
         return 'text-muted-foreground'
     }
@@ -255,7 +260,9 @@ export function ToolCallPart({ part, onFileClick, onChildSessionClick }: ToolCal
   const getBorderStyle = () => {
     switch (part.state.status) {
       case 'running':
-        return isWaitingPermission ? 'border-orange-500/50 shadow-sm shadow-orange-500/20' : 'border-yellow-500/50 shadow-sm shadow-yellow-500/10'
+        if (isWaitingPermission) return 'border-orange-500/50 shadow-sm shadow-orange-500/20'
+        if (isWaitingQuestion) return 'border-blue-500/50 shadow-sm shadow-blue-500/20'
+        return 'border-yellow-500/50 shadow-sm shadow-yellow-500/10'
       case 'pending':
         return 'border-blue-500/30'
       case 'error':
@@ -312,7 +319,7 @@ export function ToolCallPart({ part, onFileClick, onChildSessionClick }: ToolCal
             </span>
           ) : null
         })()}
-         <span className="text-muted-foreground text-xs ml-auto">({isWaitingPermission ? 'waiting' : part.state.status})</span>
+         <span className="text-muted-foreground text-xs ml-auto">({isWaitingPermission ? 'awaiting permission' : isWaitingQuestion ? 'awaiting answer' : part.state.status})</span>
       </button>
 
       {expanded && (

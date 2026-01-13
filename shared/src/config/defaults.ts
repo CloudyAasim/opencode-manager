@@ -42,6 +42,12 @@ export const DEFAULTS = {
     DEBUG: false,
     LOG_LEVEL: 'info',
   },
+
+  SSE: {
+    RECONNECT_DELAY_MS: 1000,
+    MAX_RECONNECT_DELAY_MS: 30000,
+    IDLE_GRACE_PERIOD_MS: 5000,
+  },
 } as const
 
 export const ALLOWED_MIME_TYPES = [

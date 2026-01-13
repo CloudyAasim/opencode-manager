@@ -1,17 +1,17 @@
-import { Settings } from "lucide-react";
+import { Settings, Bell, HelpCircle, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { useSettingsDialog } from "@/hooks/useSettingsDialog";
 import { useTheme } from "@/hooks/useTheme";
 import { EditSessionTitleDialog } from "@/components/session/EditSessionTitleDialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { useMobile } from "@/hooks/useMobile";
 import { Loader2, X } from "lucide-react";
+import { usePermissions, useQuestions } from "@/contexts/EventContext";
 
 interface HeaderProps {
   children: ReactNode;
@@ -173,6 +173,10 @@ function HeaderActions({ children, className }: { children: ReactNode; className
 
 function HeaderMobileDropdown({ children, className }: { children: ReactNode; className?: string }) {
   const isMobile = useMobile();
+  const { pendingCount: permissionCount, setShowDialog } = usePermissions();
+  const { pendingCount: questionCount, navigateToCurrent } = useQuestions();
+
+  const totalPending = permissionCount + questionCount;
 
   if (!isMobile) return null;
 
@@ -182,13 +186,33 @@ function HeaderMobileDropdown({ children, className }: { children: ReactNode; cl
         <Button
           variant="outline"
           size="icon"
-          className={cn("text-foreground border-border hover:bg-accent transition-all duration-200 h-8 w-8", className)}
-          title="Options"
+          className={cn("text-foreground border-border hover:bg-accent transition-all duration-200 h-8 w-8 relative", className)}
+          title={totalPending > 0 ? `${totalPending} pending notification${totalPending > 1 ? 's' : ''}` : "Options"}
         >
-          <MoreVertical className="w-4 h-4" />
+          {totalPending > 0 ? (
+            <>
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            </>
+          ) : (
+            <MoreVertical className="w-4 h-4" />
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {permissionCount > 0 && (
+          <DropdownMenuItem onClick={() => setShowDialog(true)} className="gap-2">
+            <Bell className="w-4 h-4 text-orange-500" />
+            <span>{permissionCount} pending permission{permissionCount > 1 ? 's' : ''}</span>
+          </DropdownMenuItem>
+        )}
+        {questionCount > 0 && (
+          <DropdownMenuItem onClick={navigateToCurrent} className="gap-2">
+            <HelpCircle className="w-4 h-4 text-blue-500" />
+            <span>{questionCount} pending question{questionCount > 1 ? 's' : ''}</span>
+          </DropdownMenuItem>
+        )}
+        {totalPending > 0 && children && <DropdownMenuSeparator />}
         {children}
       </DropdownMenuContent>
     </DropdownMenu>

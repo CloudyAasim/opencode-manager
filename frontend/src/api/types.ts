@@ -21,6 +21,11 @@ export type Session = components['schemas']['Session']
 export type PermissionRequest = components['schemas']['PermissionRequest']
 export type PermissionResponse = 'once' | 'always' | 'reject'
 
+export type QuestionOption = components['schemas']['QuestionOption']
+export type QuestionInfo = components['schemas']['QuestionInfo']
+export type QuestionRequest = components['schemas']['QuestionRequest']
+export type QuestionAnswer = components['schemas']['QuestionAnswer']
+
 export type MessageWithParts = {
   info: Message
   parts: Part[]
@@ -102,6 +107,28 @@ export interface SSEPermissionRepliedEvent {
   }
 }
 
+export interface SSEQuestionAskedEvent {
+  type: 'question.asked'
+  properties: QuestionRequest
+}
+
+export interface SSEQuestionRepliedEvent {
+  type: 'question.replied'
+  properties: {
+    sessionID: string
+    requestID: string
+    answers: QuestionAnswer[]
+  }
+}
+
+export interface SSEQuestionRejectedEvent {
+  type: 'question.rejected'
+  properties: {
+    sessionID: string
+    requestID: string
+  }
+}
+
 export interface SSEInstallationUpdatedEvent {
   type: 'installation.updated'
   properties: {
@@ -153,6 +180,9 @@ export type SSEEvent =
   | SSETodoUpdatedEvent
   | SSEPermissionAskedEvent
   | SSEPermissionRepliedEvent
+  | SSEQuestionAskedEvent
+  | SSEQuestionRepliedEvent
+  | SSEQuestionRejectedEvent
   | SSEInstallationUpdatedEvent
   | SSEInstallationUpdateAvailableEvent
 

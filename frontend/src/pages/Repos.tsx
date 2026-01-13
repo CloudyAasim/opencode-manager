@@ -5,6 +5,7 @@ import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { Plus, FolderOpen } from "lucide-react";
+import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
 
 export function Repos() {
   const [addRepoOpen, setAddRepoOpen] = useState(false);
@@ -21,6 +22,7 @@ export function Repos() {
           <Header.Title logo>OpenCode</Header.Title>
         </div>
         <Header.Actions>
+          <PendingActionsGroup />
           <Button
             variant="ghost"
             size="icon"
