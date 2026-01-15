@@ -65,7 +65,7 @@ export function RepoCard({
           : "border-border bg-card"
       }`}
     >
-      <div className="p-4">
+      <div className="p-2">
         <div>
           <div className="flex items-start gap-3 mb-1">
             {onSelect && (

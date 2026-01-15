@@ -237,7 +237,7 @@ export function RepoList() {
   return (
     <>
       <div className="px-0 md:p-4 h-full flex flex-col">
-        <div className="mb-4 md:mb-6 px-2 md:px-0">
+        <div className=" px-2 md:px-0">
           <ListToolbar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -254,7 +254,7 @@ export function RepoList() {
         </div>
 
         <div className="mx-2 md:mx-0 flex-1 min-h-0">
-          <div className="h-full overflow-y-auto py-2 md:py-0">
+          <div className="h-full overflow-y-auto pt-4 pb-2 md:pb-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
             {filteredRepos.length === 0 ? (
               <div className="text-center p-12">
                 <Search className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
@@ -269,7 +269,7 @@ export function RepoList() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext items={filteredRepos.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 md:gap-4 w-full pb-20 md:pb-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 md:gap-4 w-full  md:pb-0">
                     {filteredRepos.map((repo) => (
                       <SortableRepoCard
                         key={repo.id}
