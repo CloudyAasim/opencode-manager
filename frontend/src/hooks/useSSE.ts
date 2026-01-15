@@ -39,7 +39,7 @@ const handleRestartServer = async () => {
 }
 
 
-export const useSSE = (opcodeUrl: string | null | undefined, directory?: string) => {
+export const useSSE = (opcodeUrl: string | null | undefined, directory?: string, currentSessionId?: string) => {
   const client = useOpenCodeClient(opcodeUrl, directory)
   const queryClient = useQueryClient()
   const mountedRef = useRef(true)
@@ -292,6 +292,7 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string)
 
       case 'session.error': {
         if (!('error' in event.properties)) break
+        if ('sessionID' in event.properties && event.properties.sessionID === currentSessionId) break
         
         const parsed = parseOpenCodeError(event.properties.error)
         if (parsed) {
@@ -306,7 +307,7 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string)
       default:
         break
     }
-  }, [queryClient, opcodeUrl, directory, setSessionStatus, setSessionTodos])
+  }, [queryClient, opcodeUrl, directory, setSessionStatus, setSessionTodos, currentSessionId])
 
   const fetchInitialData = useCallback(async () => {
     if (!client || !mountedRef.current) return

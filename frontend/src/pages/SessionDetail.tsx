@@ -112,7 +112,7 @@ export function SessionDetail() {
     onScrollStateChange: setShowScrollButton
   });
 
-  const { isConnected, isReconnecting } = useSSE(opcodeUrl, repoDirectory);
+  const { isConnected, isReconnecting } = useSSE(opcodeUrl, repoDirectory, sessionId);
   const abortSession = useAbortSession(opcodeUrl, repoDirectory, sessionId);
   const updateSession = useUpdateSession(opcodeUrl, repoDirectory);
   const createSession = useCreateSession(opcodeUrl, repoDirectory);
