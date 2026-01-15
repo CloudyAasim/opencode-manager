@@ -57,17 +57,6 @@ Push notifications are fully supported on iOS/iPadOS 16.4+ when the app is insta
 - Push subscription storage per user/device
 - App manifest for PWA installability
 
----
-
-## Future Considerations
-
-Items being explored for future phases:
-
-- Multi-tenant workspace support
-- Plugin/extension system
-- Advanced analytics and metrics
-- Team collaboration features
-- API rate limiting and quotas
 
 ---
 
