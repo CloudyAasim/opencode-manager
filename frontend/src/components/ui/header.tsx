@@ -175,6 +175,7 @@ function HeaderMobileDropdown({ children, className }: { children: ReactNode; cl
   const isMobile = useMobile();
   const { pendingCount: permissionCount, setShowDialog } = usePermissions();
   const { pendingCount: questionCount, navigateToCurrent } = useQuestions();
+  const { open: openSettings } = useSettingsDialog();
 
   const totalPending = permissionCount + questionCount;
 
@@ -214,6 +215,11 @@ function HeaderMobileDropdown({ children, className }: { children: ReactNode; cl
         )}
         {totalPending > 0 && children && <DropdownMenuSeparator />}
         {children}
+        {children && <DropdownMenuSeparator />}
+        <DropdownMenuItem onClick={openSettings} className="gap-2">
+          <Settings className="w-4 h-4" />
+          <span>Settings</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

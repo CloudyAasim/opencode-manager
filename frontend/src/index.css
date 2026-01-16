@@ -333,11 +333,3 @@ body {
     color: var(--color-foreground);
   }
 }
-
-:root:not(.dark) .hljs-dark {
-  display: none;
-}
-
-.dark .hljs:not(.hljs-dark) {
-  display: none;
-}
