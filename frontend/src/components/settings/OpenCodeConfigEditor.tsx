@@ -61,7 +61,7 @@ export function OpenCodeConfigEditor({
         setEditErrorLine(line)
         setEditError('Invalid JSON/JSONC format')
       } else {
-        setEditError(error instanceof Error ? error.message : 'Failed to update config')
+        setEditError('Failed to save. Please check your changes and try again.')
       }
     }
   }
@@ -70,14 +70,14 @@ export function OpenCodeConfigEditor({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent mobileFullscreen className="h-[90vh] max-w-6xl gap-0 flex flex-col p-0 sm:p-6">
+      <DialogContent mobileFullscreen className="gap-0 flex flex-col p-0 md:p-6 w-full min-w-0 sm:max-w-4xl">
         <DialogHeader className="p-4 sm:p-6 border-b flex flex-row items-center justify-between space-y-0">
           <DialogTitle className="text-lg sm:text-xl font-semibold">
             {`Edit Config: ${config.name}`}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 p-0 sm:p-4 overflow-hidden relative">
+        <div className="flex-1 p-0 sm:p-4 overflow-hidden relative w-full">
           <Textarea
             id="edit-config-content"
             ref={editTextareaRef}

@@ -153,7 +153,10 @@ export function createSettingsRoutes(db: Database) {
         await writeFileContent(configPath, config.rawContent)
         logger.info(`Wrote default config to: ${configPath}`)
         
-        await patchOpenCodeConfig(config.content)
+        const patchResult = await patchOpenCodeConfig(config.content)
+        if (!patchResult.success) {
+          return c.json({ error: 'Config saved but failed to apply', details: patchResult.error }, 500)
+        }
       }
       
       return c.json(config)
@@ -186,7 +189,10 @@ export function createSettingsRoutes(db: Database) {
         await writeFileContent(configPath, config.rawContent)
         logger.info(`Wrote default config to: ${configPath}`)
         
-        await patchOpenCodeConfig(config.content)
+        const patchResult = await patchOpenCodeConfig(config.content)
+        if (!patchResult.success) {
+          return c.json({ error: 'Config saved but failed to apply', details: patchResult.error }, 500)
+        }
       }
       
       return c.json(config)
@@ -232,7 +238,10 @@ export function createSettingsRoutes(db: Database) {
       await writeFileContent(configPath, config.rawContent)
       logger.info(`Wrote default config '${configName}' to: ${configPath}`)
 
-      await patchOpenCodeConfig(config.content)
+      const patchResult = await patchOpenCodeConfig(config.content)
+      if (!patchResult.success) {
+        return c.json({ error: 'Config saved but failed to apply', details: patchResult.error }, 500)
+      }
       
       return c.json(config)
     } catch (error) {
@@ -276,7 +285,7 @@ export function createSettingsRoutes(db: Database) {
   app.post('/opencode-reload', async (c) => {
     try {
       logger.info('OpenCode configuration reload requested')
-      await fetch(`http://${ENV.OPENCODE.HOST}:${ENV.OPENCODE.PORT}/config/`, {
+      await fetch(`http://${ENV.OPENCODE.HOST}:${ENV.OPENCODE.PORT}/config`, {
         method: 'GET'
       })
       await opencodeServerManager.reloadConfig()
