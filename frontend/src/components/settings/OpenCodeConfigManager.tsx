@@ -115,12 +115,16 @@ export function OpenCodeConfigManager() {
     },
   })
 
+  const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const response = (error as { response?: { data?: { details?: string; error?: string } } }).response
+      return response?.data?.details || response?.data?.error || fallback
+    }
+    return fallback
+  }
+
   const getRestartErrorMessage = (error: unknown): string => {
-    return error && typeof error === 'object' && 'response' in error
-      ? ((error as { response?: { data?: { details?: string; error?: string } } }).response?.data?.details
-         || (error as { response?: { data?: { details?: string; error?: string } } }).response?.data?.error
-         || 'Failed to restart OpenCode server')
-      : 'Failed to restart OpenCode server'
+    return getApiErrorMessage(error, 'Failed to restart OpenCode server')
   }
 
   const rollbackMutation = useMutation({
@@ -184,7 +188,7 @@ export function OpenCodeConfigManager() {
       queryClient.invalidateQueries({ queryKey: ['opencode', 'agents'] })
     } catch (error) {
       console.error('Failed to update config:', error)
-      showToast.error('Failed to update config', { id: 'update-restart' })
+      showToast.error(getApiErrorMessage(error, 'Failed to update config'), { id: 'update-restart' })
     } finally {
       setIsUpdating(false)
     }
@@ -238,7 +242,7 @@ export function OpenCodeConfigManager() {
       queryClient.invalidateQueries({ queryKey: ['opencode', 'agents'] })
     } catch (error) {
       console.error('Failed to create config:', error)
-      showToast.error('Failed to create configuration', { id: 'create-config' })
+      showToast.error(getApiErrorMessage(error, 'Failed to create configuration'), { id: 'create-config' })
       throw error
     } finally {
       setIsUpdating(false)
@@ -272,12 +276,7 @@ export function OpenCodeConfigManager() {
       showToast.success('Default config updated and server reloaded', { id: 'set-default' })
     } catch (error) {
       console.error('Failed to set default config:', error)
-      const errorMessage = error && typeof error === 'object' && 'response' in error
-        ? ((error as { response?: { data?: { details?: string; error?: string } } }).response?.data?.details
-           || (error as { response?: { data?: { details?: string; error?: string } } }).response?.data?.error
-           || 'Failed to set default config')
-        : 'Failed to set default config'
-      showToast.error(errorMessage, { id: 'set-default' })
+      showToast.error(getApiErrorMessage(error, 'Failed to set default config'), { id: 'set-default' })
     } finally {
       setIsUpdating(false)
     }
@@ -504,11 +503,8 @@ export function OpenCodeConfigManager() {
             showToast.success(successMsg, { id: 'edit-config' })
             queryClient.invalidateQueries({ queryKey: ['opencode', 'agents'] })
           } catch (error) {
-            if (error instanceof Error && error.message.includes('restart')) {
-              showToast.error(getRestartErrorMessage(error), { id: 'edit-config' })
-            } else {
-              showToast.error('Failed to save configuration', { id: 'edit-config' })
-            }
+            showToast.error(getApiErrorMessage(error, 'Failed to save configuration'), { id: 'edit-config' })
+            throw error
           }
         }}
         isUpdating={isUpdating}

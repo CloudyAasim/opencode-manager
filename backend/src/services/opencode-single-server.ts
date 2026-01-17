@@ -210,7 +210,7 @@ class OpenCodeServerManager {
   async reloadConfig(): Promise<void> {
     logger.info('Reloading OpenCode configuration (via API)')
     try {
-      const response = await fetch(`http://${OPENCODE_SERVER_HOST}:${OPENCODE_SERVER_PORT}/config/`, {
+      const response = await fetch(`http://${OPENCODE_SERVER_HOST}:${OPENCODE_SERVER_PORT}/config`, {
         method: 'GET'
       })
 
@@ -220,7 +220,7 @@ class OpenCodeServerManager {
 
       const currentConfig = await response.json()
       logger.info('Triggering OpenCode config reload via PATCH')
-      const patchResponse = await fetch(`http://${OPENCODE_SERVER_HOST}:${OPENCODE_SERVER_PORT}/config/`, {
+      const patchResponse = await fetch(`http://${OPENCODE_SERVER_HOST}:${OPENCODE_SERVER_PORT}/config`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(currentConfig)
