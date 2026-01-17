@@ -9,8 +9,31 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import type { PermissionRequest, PermissionResponse } from '@/api/types'
+import type { components } from '@/api/opencode-types'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
+
+type PermissionConfig = components['schemas']['PermissionConfig']
+type KnownPermissionType = keyof Exclude<PermissionConfig, string> & string
+
+const PERMISSION_LABELS: Record<KnownPermissionType, string> = {
+  read: 'Read File',
+  edit: 'Edit File',
+  glob: 'Search Files',
+  grep: 'Search Content',
+  list: 'List Directory',
+  bash: 'Run Command',
+  task: 'Run Task',
+  external_directory: 'External Access',
+  todowrite: 'Write Todo',
+  todoread: 'Read Todo',
+  question: 'Ask Question',
+  webfetch: 'Fetch URL',
+  websearch: 'Web Search',
+  codesearch: 'Code Search',
+  lsp: 'LSP Action',
+  doom_loop: 'Repeated Action',
+}
 
 interface PermissionRequestDialogProps {
   permission: PermissionRequest | null
@@ -24,22 +47,10 @@ interface PermissionRequestDialogProps {
 }
 
 function getPermissionTypeLabel(type: string): string {
-  switch (type) {
-    case 'bash':
-      return 'Run Command'
-    case 'edit':
-      return 'Edit File'
-    case 'write':
-      return 'Write File'
-    case 'webfetch':
-      return 'Fetch URL'
-    case 'external_directory':
-      return 'External Access'
-    case 'doom_loop':
-      return 'Repeated Action'
-    default:
-      return type.charAt(0).toUpperCase() + type.slice(1)
+  if (type in PERMISSION_LABELS) {
+    return PERMISSION_LABELS[type as KnownPermissionType]
   }
+  return type.charAt(0).toUpperCase() + type.slice(1)
 }
 
 function getPermissionDetails(permission: PermissionRequest): { primary: string; secondary?: string } {
@@ -125,9 +136,8 @@ export function PermissionRequestDialog({
     setIsLoading(true)
     setLoadingAction(response)
     try {
-      await onRespond(permission.permission, permission.sessionID, response)
-    } catch (error) {
-      console.error('Failed to respond to permission:', error)
+      await onRespond(permission.id, permission.sessionID, response)
+    } catch {
       showToast.error('Failed to respond to permission. Please try again.')
     } finally {
       setIsLoading(false)
