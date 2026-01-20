@@ -322,7 +322,7 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
     const range = calculateVisibleRange(scrollTopRef.current)
     currentVisibleRangeRef.current = range
     return range
-  }, [calculateVisibleRange, renderTrigger])
+  }, [calculateVisibleRange])
   
   useEffect(() => {
     const { start, end } = visibleRange

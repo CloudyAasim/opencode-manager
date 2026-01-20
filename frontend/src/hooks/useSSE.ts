@@ -123,9 +123,7 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string,
         
         if (info.role === 'assistant') {
           const isComplete = 'completed' in info.time && info.time.completed
-          if (!isComplete) {
-            setSessionStatus(sessionID, { type: 'busy' })
-          }
+          setSessionStatus(sessionID, isComplete ? { type: 'idle' } : { type: 'busy' })
         }
         
         const currentData = queryClient.getQueryData<MessageListResponse>(['opencode', 'messages', opcodeUrl, sessionID, directory])

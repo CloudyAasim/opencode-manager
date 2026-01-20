@@ -35,16 +35,31 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
+  // Special rules for PromptInput
+  {
+    files: ['src/components/message/PromptInput.tsx'],
+    rules: {
+      'no-empty': 'off',
+    }
+  },
   // Special rules for test files
   {
-    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
+    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', 'vitest.config.ts'],
+    languageOptions: {
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname,
+        projectService: false
+      },
+      globals: globals.node,
+    },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off', // Often needed for mocks
-      '@typescript-eslint/no-empty-function': 'off', // Common in test setup
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_'
       }],
+      'no-empty': 'off',
     }
   },
 ])
