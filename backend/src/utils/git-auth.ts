@@ -14,17 +14,11 @@ export function isGitHubHttpsUrl(repoUrl: string): boolean {
   }
 }
 
-export function createNoPromptGitEnv(): Record<string, string> {
-  return {
-    GIT_TERMINAL_PROMPT: '0'
-  }
-}
-
-function getDefaultUsername(host: string): string {
+export function getDefaultUsername(host: string): string {
   try {
     const parsed = new URL(host)
     const hostname = parsed.hostname.toLowerCase()
-    
+
     if (hostname === 'github.com') {
       return 'x-access-token'
     }
@@ -37,7 +31,7 @@ function getDefaultUsername(host: string): string {
   }
 }
 
-function normalizeHost(host: string): string {
+export function normalizeHost(host: string): string {
   if (!host.endsWith('/')) {
     return `${host}/`
   }
@@ -45,8 +39,11 @@ function normalizeHost(host: string): string {
 }
 
 export function createGitEnv(credentials: GitCredential[]): Record<string, string> {
-  const env: Record<string, string> = { GIT_TERMINAL_PROMPT: '0' }
-  
+  const env: Record<string, string> = {
+    GIT_TERMINAL_PROMPT: '0',
+    GIT_CONFIG_COUNT: '0'
+  }
+
   if (!credentials || credentials.length === 0) {
     return env
   }
@@ -67,9 +64,7 @@ export function createGitEnv(credentials: GitCredential[]): Record<string, strin
     configIndex++
   }
 
-  if (configIndex > 0) {
-    env.GIT_CONFIG_COUNT = String(configIndex)
-  }
+  env.GIT_CONFIG_COUNT = String(configIndex)
 
   return env
 }
@@ -78,15 +73,9 @@ export function createGitHubGitEnv(gitToken: string): Record<string, string> {
   return createGitEnv([{ name: 'GitHub', host: 'https://github.com/', token: gitToken }])
 }
 
-export interface GitHubUserInfo {
-  name: string | null
-  email: string
-  login: string
-}
-
 export function findGitHubCredential(credentials: GitCredential[]): GitCredential | null {
   if (!credentials || credentials.length === 0) return null
-  
+
   return credentials.find(cred => {
     try {
       const parsed = new URL(cred.host)
@@ -95,6 +84,23 @@ export function findGitHubCredential(credentials: GitCredential[]): GitCredentia
       return false
     }
   }) || null
+}
+
+export function getCredentialForHost(credentials: GitCredential[], host: string): GitCredential | undefined {
+  return credentials.find(cred => {
+    try {
+      const parsed = new URL(cred.host)
+      return parsed.hostname.toLowerCase() === host.toLowerCase()
+    } catch {
+      return false
+    }
+  })
+}
+
+export interface GitHubUserInfo {
+  name: string | null
+  email: string
+  login: string
 }
 
 export interface GitIdentity {

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/components/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/components/message/PromptInput";
-import { X, VolumeX, FolderOpen, Plug, Settings, CornerUpLeft } from "lucide-react";
+import { X, VolumeX, FolderOpen, Plug, Settings, CornerUpLeft, GitCommitHorizontal } from "lucide-react";
 import { ModelSelectDialog } from "@/components/model/ModelSelectDialog";
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/components/session/SessionList";
@@ -12,7 +12,6 @@ import { SessionList } from "@/components/session/SessionList";
 import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { BranchSwitcher } from "@/components/repo/BranchSwitcher";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ContextUsageIndicator } from "@/components/session/ContextUsageIndicator";
 import { useSession, useAbortSession, useUpdateSession, useMessages, useTitleGenerating, useCreateSession } from "@/hooks/useOpenCode";
@@ -36,6 +35,7 @@ import { useSessionStatus } from "@/stores/sessionStatusStore";
 import { useQuestions } from "@/contexts/EventContext";
 import { QuestionPrompt } from "@/components/session/QuestionPrompt";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
+import { SourceControlPanel } from "@/components/source-control";
 
 const compareMessageIds = (id1: string, id2: string): number => {
   const num1 = parseInt(id1, 10)
@@ -56,6 +56,7 @@ export function SessionDetail() {
   const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
   const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
   const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
+  const [sourceControlOpen, setSourceControlOpen] = useState(false);
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>();
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasPromptContent, setHasPromptContent] = useState(false);
@@ -351,14 +352,6 @@ export function SessionDetail() {
             isConnected={isConnected}
             isReconnecting={isReconnecting}
           />
-          <BranchSwitcher
-            repoId={repoId}
-            currentBranch={repo.currentBranch || "main"}
-            isWorktree={repo.isWorktree}
-            repoUrl={repo.repoUrl}
-            repoLocalPath={repo.localPath}
-            className="hidden sm:flex max-w-[80px] sm:w-[140px] sm:max-w-[140px]"
-          />
           <Button
             variant="outline"
             size="sm"
@@ -380,6 +373,15 @@ export function SessionDetail() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setSourceControlOpen(true)}
+            className="hidden md:flex text-foreground border-border hover:bg-accent transition-all duration-200 hover:scale-105"
+          >
+            <GitCommitHorizontal className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Source</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={openSettings}
             className="hidden md:flex text-foreground border-border hover:bg-accent transition-all duration-200 hover:scale-105"
           >
@@ -387,24 +389,11 @@ export function SessionDetail() {
             <span className="hidden sm:inline">Settings</span>
           </Button>
           <Header.MobileDropdown>
-            {!(repo.isWorktree) && (repo.currentBranch || repo.branch) && (
-              <>
-                <div className="px-2 py-1.5">
-                  <BranchSwitcher
-                    repoId={repoId}
-                    currentBranch={repo.currentBranch || repo.branch || "main"}
-                    isWorktree={repo.isWorktree}
-                    repoUrl={repo.repoUrl}
-                    repoLocalPath={repo.localPath}
-                    iconOnly={false}
-                    className="w-full"
-                  />
-                </div>
-                <div className="h-px bg-border my-1" />
-              </>
-            )}
             <DropdownMenuItem onClick={() => setMcpDialogOpen(true)}>
               <Plug className="w-4 h-4 mr-2" /> MCP
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSourceControlOpen(true)}>
+              <GitCommitHorizontal className="w-4 h-4 mr-2" /> Source Control
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setFileBrowserOpen(true)}>
               <FolderOpen className="w-4 h-4 mr-2" /> Files
@@ -538,6 +527,13 @@ export function SessionDetail() {
         onOpenChange={setMcpDialogOpen}
         config={settings}
         directory={repoDirectory}
+      />
+
+      <SourceControlPanel
+        repoId={repoId}
+        isOpen={sourceControlOpen}
+        onClose={() => setSourceControlOpen(false)}
+        currentBranch={repo.currentBranch || repo.branch || "main"}
       />
     </div>
   );

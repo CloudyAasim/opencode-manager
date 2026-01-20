@@ -40,6 +40,14 @@
 ### General
 
 - DRY principles, follow existing patterns
+- Use SOLID principles throughout design and implementation:
+  - **Single Responsibility**: Each module/class/function should have one reason to change—keep responsibilities focused.
+  - **Open/Closed**: Entities should be open for extension, closed for modification—prefer adding new code over altering stable code.
+  - **Liskov Substitution**: Subtypes must be substitutable for their base types—no breaking expected behavior when swapping implementations.
+  - **Interface Segregation**: Prefer small, specific interfaces over large, general ones—clients shouldn’t depend on methods they don’t use.
+  - **Dependency Inversion**: Depend on abstractions, not concretions—inject dependencies and avoid hard-coding implementations.
+- YAGNI: Don’t build or keep code you don’t need. If you change something, remove the unused parts. use the new code or keep the old, but don’t keep both.
+- Never leave dead code: remove unused code, commented-out blocks, and unused variables/imports.
 - ./temp/opencode is reference only, never commit has opencode src
 - Use shared types from workspace package (@opencode-manager/shared)
 - OpenCode server runs on port 5551, backend API on port 5001

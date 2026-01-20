@@ -10,9 +10,10 @@ Mobile-first web interface for OpenCode AI agents. Manage, control, and code wit
 - **Worktree Support** - Create and manage Git worktrees for working on multiple branches
 
 ### Git Integration
+- **Source Control Panel** - Comprehensive Git operations in a modal interface with tabs for Changes, Commits, and Branches
 - **Git Diff Viewer** - View file changes with unified diff, line numbers, and addition/deletion counts
 - **Git Status Panel** - See all uncommitted changes (modified, added, deleted, renamed, untracked)
-- **Branch Switching** - Switch between branches via dropdown
+- **Branch Management** - Switch, create, and manage branches through the Source Control Panel
 - **Branch/Worktree Creation** - Create new branch workspaces from any repository
 - **Ahead/Behind Tracking** - Shows commits ahead/behind remote
 - **Push PRs to GitHub** - Create and push pull requests directly from your phone

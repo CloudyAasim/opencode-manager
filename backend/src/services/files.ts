@@ -340,15 +340,6 @@ export async function getFileRange(userPath: string, startLine: number, endLine:
   }
 }
 
-export async function getFileTotalLines(userPath: string): Promise<number> {
-  const validatedPath = validatePath(userPath)
-  const exists = await fileExists(validatedPath)
-  if (!exists) {
-    throw { message: 'File does not exist', statusCode: 404 }
-  }
-  return countFileLines(validatedPath)
-}
-
 export async function applyFilePatches(userPath: string, patches: PatchOperation[]): Promise<{ success: boolean; totalLines: number }> {
   const validatedPath = validatePath(userPath)
   logger.info(`Applying ${patches.length} patches to: ${userPath}`)

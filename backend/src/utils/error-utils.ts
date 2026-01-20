@@ -1,4 +1,4 @@
-export function isError(error: unknown): error is Error {
+function isError(error: unknown): error is Error {
   return error instanceof Error
 }
 
@@ -9,12 +9,6 @@ export function getErrorMessage(error: unknown): string {
   return String(error)
 }
 
-export function getErrorStack(error: unknown): string | undefined {
-  if (isError(error)) {
-    return error.stack
-  }
-  return undefined
-}
 
 interface ErrorWithStatusCode {
   statusCode?: number

@@ -7,13 +7,13 @@ import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
 import { Header } from "@/components/ui/header";
 import { SwitchConfigDialog } from "@/components/repo/SwitchConfigDialog";
 import { RepoMcpDialog } from "@/components/repo/RepoMcpDialog";
+import { SourceControlPanel } from "@/components/source-control";
 import { useCreateSession } from "@/hooks/useOpenCode";
 import { useSSE } from "@/hooks/useSSE";
 import { OPENCODE_API_ENDPOINT, API_BASE_URL } from "@/config";
 import { useSwipeBack } from "@/hooks/useMobile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BranchSwitcher } from "@/components/repo/BranchSwitcher";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plug, FolderOpen, Plus, GitBranch, Loader2, ShieldOff } from "lucide-react";
+import { Plug, FolderOpen, Plus, GitBranch, Loader2, GitCommitHorizontal, ShieldOff } from "lucide-react";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
 import { showToast } from "@/lib/toast";
 
@@ -35,6 +35,7 @@ export function RepoDetail() {
   const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
   const [switchConfigOpen, setSwitchConfigOpen] = useState(false);
   const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
+  const [sourceControlOpen, setSourceControlOpen] = useState(false);
   const [resetPermissionsOpen, setResetPermissionsOpen] = useState(false);
   const pageRef = useRef<HTMLDivElement>(null);
   
@@ -153,14 +154,6 @@ export function RepoDetail() {
             <GitBranch className="h-3 w-3 sm:mr-1" />
             <span className="hidden sm:inline">WT: {currentBranch}</span>
           </Badge>
-        ) : !isWorktree && currentBranch ? (
-          <BranchSwitcher
-            repoId={repoId}
-            currentBranch={currentBranch}
-            isWorktree={false}
-            repoUrl={repo.repoUrl}
-            className="hidden sm:flex w-[140px] max-w-[140px]"
-          />
         ) : null}
       </div>
       <Header.Actions>
@@ -175,6 +168,15 @@ export function RepoDetail() {
         >
           <Plug className="w-4 h-4 sm:mr-2" />
           <span className="hidden sm:inline">MCP</span>
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setSourceControlOpen(true)}
+          size="sm"
+          className="hidden md:flex text-foreground border-border hover:bg-accent transition-all duration-200 hover:scale-105"
+        >
+          <GitCommitHorizontal className="w-4 h-4 sm:mr-2" />
+          <span className="hidden sm:inline">Source</span>
         </Button>
         <Button
           variant="outline"
@@ -195,21 +197,9 @@ export function RepoDetail() {
           <span className="hidden sm:inline">Reset Permissions</span>
         </Button>
         <Header.MobileDropdown>
-          {!isWorktree && currentBranch && (
-            <>
-              <div className="px-2 py-1.5">
-                <BranchSwitcher
-                  repoId={repoId}
-                  currentBranch={currentBranch}
-                  isWorktree={false}
-                  repoUrl={repo.repoUrl}
-                  iconOnly={false}
-                  className="w-full"
-                />
-              </div>
-              <div className="h-px bg-border my-1" />
-            </>
-          )}
+          <DropdownMenuItem onClick={() => setSourceControlOpen(true)}>
+            <GitCommitHorizontal className="w-4 h-4 mr-2" /> Source Control
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMcpDialogOpen(true)}>
             <Plug className="w-4 h-4 mr-2" /> MCP
           </DropdownMenuItem>
@@ -254,6 +244,13 @@ export function RepoDetail() {
         onOpenChange={setMcpDialogOpen}
         config={settings}
         directory={repoDirectory}
+      />
+
+      <SourceControlPanel
+        repoId={repoId}
+        isOpen={sourceControlOpen}
+        onClose={() => setSourceControlOpen(false)}
+        currentBranch={currentBranch}
       />
 
 {repo && (

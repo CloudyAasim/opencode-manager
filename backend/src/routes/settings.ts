@@ -61,6 +61,7 @@ const ConnectMcpDirectorySchema = z.object({
   directory: z.string().min(1),
 })
 
+
 async function extractOpenCodeError(response: Response, defaultError: string): Promise<string> {
   const errorObj = await response.json().catch(() => null)
   return (errorObj && typeof errorObj === 'object' && 'error' in errorObj)
