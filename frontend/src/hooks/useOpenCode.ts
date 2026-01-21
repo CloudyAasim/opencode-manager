@@ -320,9 +320,9 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
         requestData.variant = variant;
       }
 
-      const response = await client.sendPrompt(sessionID, requestData);
+      await client.sendPrompt(sessionID, requestData);
 
-      return { optimisticUserID, response, userPromptText };
+      return { optimisticUserID, userPromptText };
     },
     onError: (error, variables) => {
       const { sessionID } = variables;
