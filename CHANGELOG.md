@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-01-23
+
+### Bug Fixes
+- Fix git porcelain output parsing and deduplicate staged/unstaged file entries
+- Reduce toast notification duration to 2500ms and suppress MessageAbortedError toasts
+
+### Other
+- [353b9d4](https://github.com/anomalyco/opencode-manager/commit/353b9d4) - Fix git porcelain output parsing and deduplicate staged/unstaged file entries
+- [82ccacb](https://github.com/anomalyco/opencode-manager/commit/82ccacb) - Reduce toast notification duration to 2500ms and suppress MessageAbortedError toasts
+
 ## [0.7.1] - 2026-01-22
 
 ### Features
