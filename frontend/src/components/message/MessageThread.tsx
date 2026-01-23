@@ -82,11 +82,6 @@ export const MessageThread = memo(function MessageThread({
     return findLastMessageByRole(messages, 'assistant', isMessageStreaming)
   }, [messages])
 
-  const lastAssistantId = useMemo(() => {
-    if (!messages) return undefined
-    return findLastMessageByRole(messages, 'assistant')
-  }, [messages])
-
   const lastUserMessageId = useMemo(() => {
     if (!messages) return undefined
     return findLastMessageByRole(messages, 'user')
@@ -162,7 +157,7 @@ const state = latestTodoPart.state
 
         const nextAssistantMessage = messages.slice(index + 1).find(m => m.info.role === 'assistant')
         const isUserBeforeAssistant = msg.info.role === 'user' && nextAssistantMessage
-        const canEditUserMessage = isUserBeforeAssistant && nextAssistantMessage?.info.id === lastAssistantId && !isSessionBusy
+        const canEditUserMessage = isLastUserMessage && isUserBeforeAssistant && !isSessionBusy
         const canUndoUserMessage = isLastUserMessage && nextAssistantMessage && !isSessionBusy && onUndoMessage
 
         const isEditingThisMessage = editingUserMessageId === msg.info.id
