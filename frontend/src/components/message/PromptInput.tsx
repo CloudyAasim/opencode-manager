@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, type KeyboardEvent } from 'react'
 import { useSendPrompt, useAbortSession, useMessages, useSendShell, useAgents } from '@/hooks/useOpenCode'
-import { useSettings } from '@/hooks/useSettings'
 import { useCommands } from '@/hooks/useCommands'
 import { useCommandHandler } from '@/hooks/useCommandHandler'
 import { useFileSearch } from '@/hooks/useFileSearch'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { useVariants } from '@/hooks/useVariants'
+import { useSessionAgent } from '@/hooks/useSessionAgent'
 
 import { useUserBash } from '@/stores/userBashStore'
 import { useMobile } from '@/hooks/useMobile'
@@ -88,6 +88,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0)
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0)
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null)
+  const [localMode, setLocalMode] = useState<string | null>(null)
   const [isFocused, setIsFocused] = useState(false)
   
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -121,7 +122,6 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
   const sendShell = useSendShell(opcodeUrl, directory)
   const abortSession = useAbortSession(opcodeUrl, directory, sessionID)
   const { data: messages } = useMessages(opcodeUrl, sessionID, directory)
-  const { preferences, updateSettings } = useSettings()
   const { filterCommands } = useCommands(opcodeUrl)
   const { executeCommand } = useCommandHandler({
     opcodeUrl,
@@ -348,7 +348,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
 
   const handleModeToggle = () => {
     const newMode = currentMode === 'plan' ? 'build' : 'plan'
-    updateSettings({ mode: newMode })
+    setLocalMode(newMode)
   }
 
   const addImageAttachment = (file: File) => {
@@ -680,7 +680,8 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
   const lastAssistantMessage = messages?.filter(msg => msg.info.role === 'assistant').at(-1)
   const hasIncompleteMessages = lastAssistantMessage ? isMessageIncomplete(lastAssistantMessage) : false
 
-  const currentMode = preferences?.mode || 'build'
+  const sessionAgent = useSessionAgent(opcodeUrl, sessionID, directory)
+  const currentMode = localMode ?? sessionAgent.agent
   const modeColor = currentMode === 'plan' ? 'text-yellow-600 dark:text-yellow-500' : 'text-green-600 dark:text-green-500'
   const modeBg = currentMode === 'plan' ? 'bg-yellow-500/20 border-yellow-400 hover:bg-yellow-500/30 hover:border-yellow-300' : 'bg-green-500/20 border-green-400 hover:bg-green-500/30 hover:border-green-300'
   const modeShadow = currentMode === 'plan' ? 'shadow-yellow-500/20 hover:shadow-yellow-500/30' : 'shadow-green-500/20 hover:shadow-green-500/30'
@@ -707,6 +708,10 @@ const { model, modelString } = useModelSelection(opcodeUrl, directory)
   useEffect(() => {
     onPromptChange?.(prompt.trim().length > 0)
   }, [prompt, onPromptChange])
+
+  useEffect(() => {
+    setLocalMode(null)
+  }, [sessionID])
 
   
 
@@ -773,6 +778,7 @@ return (
       <div className="flex gap-1.5 md:gap-2 items-center justify-between">
         <div className="flex gap-1.5 md:gap-2 items-center">
            <button
+            data-toggle-mode
             onClick={handleModeToggle}
             className={`px-3 md:px-3.5 py-1 h-[36px] rounded-lg text-sm font-medium border w-14 flex items-center justify-center transition-all duration-200 active:scale-95 hover:scale-105 shadow-md ${
               isBashMode 

@@ -29,7 +29,6 @@ interface MessageThreadProps {
   onChildSessionClick?: (sessionId: string) => void
   onUndoMessage?: (restoredPrompt: string) => void
   model?: string
-  agent?: string
 }
 
 const isMessageStreaming = (msg: MessageWithParts): boolean => {
@@ -70,8 +69,7 @@ export const MessageThread = memo(function MessageThread({
   onFileClick, 
   onChildSessionClick,
   onUndoMessage,
-  model,
-  agent
+  model
 }: MessageThreadProps) {
   const [editingUserMessageId, setEditingUserMessageId] = useState<string | null>(null)
   const [editingForAssistantId, setEditingForAssistantId] = useState<string | null>(null)
@@ -229,7 +227,6 @@ const state = latestTodoPart.state
                     assistantMessageId={editingForAssistantId}
                     onCancel={handleCancelEdit}
                     model={model}
-                    agent={agent}
                   />
                 ) : msg.info.role === 'user' && canEditUserMessage && nextAssistantMessage ? (
                   <ClickableUserMessage
