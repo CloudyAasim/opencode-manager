@@ -29,7 +29,11 @@ export function createAuth(db: Database) {
     }
   }
 
+  const baseURL = ENV.AUTH.TRUSTED_ORIGINS.split(',')[0]?.trim() || `http://localhost:${ENV.SERVER.PORT}`
+  
   const auth = betterAuth({
+    baseURL,
+    basePath: '/api/auth',
     database: db,
     secret: ENV.AUTH.SECRET,
     trustedOrigins: ENV.AUTH.TRUSTED_ORIGINS.split(',').map((o: string) => o.trim()),
