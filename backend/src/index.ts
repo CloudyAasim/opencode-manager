@@ -44,9 +44,10 @@ const DB_PATH = getDatabasePath()
 const app = new Hono()
 
 app.use('/*', cors({
-  origin: '*',
+  origin: (origin) => origin || '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }))
 
 const db = initializeDatabase(DB_PATH)
