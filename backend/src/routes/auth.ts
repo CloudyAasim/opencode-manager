@@ -8,7 +8,17 @@ export function createAuthRoutes(auth: AuthInstance, _db: Database) {
   const app = new Hono()
 
   app.all('/*', async (c) => {
-    return auth.handler(c.req.raw)
+    const response = await auth.handler(c.req.raw)
+    
+    const setCookie = response.headers.get('set-cookie')
+    if (c.req.path.includes('sign-in')) {
+      logger.info(`Sign-in response - Status: ${response.status}, Set-Cookie: ${setCookie ? 'present' : 'missing'}`)
+      if (setCookie) {
+        logger.debug(`Set-Cookie header: ${setCookie.substring(0, 100)}...`)
+      }
+    }
+    
+    return response
   })
 
   return app

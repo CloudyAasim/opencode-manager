@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory'
 import type { AuthInstance, Session } from './index'
+import { logger } from '../utils/logger'
 
 export function createAuthMiddleware(auth: AuthInstance) {
   return createMiddleware<{
@@ -8,9 +9,20 @@ export function createAuthMiddleware(auth: AuthInstance) {
       user: Session['user']
     }
   }>(async (c, next) => {
+    const cookies = c.req.header('cookie')
+    const origin = c.req.header('origin')
+    
+    logger.debug(`Auth check - Path: ${c.req.path}, Origin: ${origin}, Has cookies: ${!!cookies}`)
+    if (cookies) {
+      const cookieNames = cookies.split(';').map(c => c.trim().split('=')[0]).join(', ')
+      logger.debug(`Cookie names: ${cookieNames}`)
+    }
+    
     const session = await auth.api.getSession({
       headers: c.req.raw.headers,
     })
+
+    logger.debug(`Session result: ${session ? 'found' : 'not found'}`)
 
     if (!session) {
       return c.json({ error: 'Unauthorized' }, 401)

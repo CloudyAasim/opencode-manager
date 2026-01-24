@@ -71,7 +71,7 @@ export function createAuth(db: Database) {
     },
     advanced: {
       cookiePrefix: 'opencode',
-      useSecureCookies: ENV.SERVER.NODE_ENV === 'production',
+      useSecureCookies: ENV.AUTH.SECURE_COOKIES,
     },
   })
 
