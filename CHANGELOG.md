@@ -7,17 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-01-24
+
 ### Features
-- Add single-user authentication system with first-run admin setup
-- Add dedicated Setup page for initial admin account creation
-- Add environment variable support for pre-configured admin (`ADMIN_EMAIL`, `ADMIN_PASSWORD`)
-- Add password reset via `ADMIN_PASSWORD_RESET=true` environment flag
-- Add `adminConfigured` flag to auth config API for frontend routing
-- Login page now redirects to Setup when no users exist and admin is not pre-configured
-- Registration is automatically disabled when admin credentials are configured via environment
+- Add single-user authentication system using Better Auth
+- First-run setup flow for admin account creation
+- Pre-configured admin support via environment variables (`ADMIN_EMAIL`, `ADMIN_PASSWORD`)
+- Password reset via `ADMIN_PASSWORD_RESET=true` flag
+- Multiple authentication methods: email/password, passkeys (WebAuthn), and OAuth (GitHub, Google, Discord)
+- Auth middleware for protected API routes
+- Auth context and hooks for React
+- Login, Register, and Setup pages
+- Account settings with passkey management
+- Session status tracking for UI state during async operations
 
 ### Changed
+- Updated pnpm from 9.15.0 to 10.28.1
 - Auth config endpoint now returns `adminConfigured` boolean indicating env-based admin setup
+- Registration is automatically disabled when admin credentials are configured via environment
 
 ## [0.7.4] - 2026-01-24
 
