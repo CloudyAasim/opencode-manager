@@ -257,6 +257,25 @@ ADMIN_PASSWORD_RESET=true
 3. Log in with the new password
 4. **Important:** Remove `ADMIN_PASSWORD_RESET=true` from your environment after resetting
 
+#### Remote/LAN Access (HTTP)
+
+When deploying OpenCode Manager on a local network without HTTPS (e.g., accessing via `http://192.168.1.*:5003`), configure these environment variables:
+
+```bash
+# Trusted origins for authentication (comma-separated)
+# Include all URLs you'll use to access the application
+AUTH_TRUSTED_ORIGINS=http://localhost:5003,http://192.168.1.*:5003
+
+# Disable secure cookies for HTTP (required for non-HTTPS)
+AUTH_SECURE_COOKIES=false
+```
+
+**Defaults:**
+- `AUTH_TRUSTED_ORIGINS`: `http://localhost:5003`
+- `AUTH_SECURE_COOKIES`: `true` in production, `false` in development
+
+**Important:** For production deployments with HTTPS, leave `AUTH_SECURE_COOKIES` at its default (`true`) for security. Only set to `false` when using HTTP on a trusted local network.
+
 #### OAuth Providers (Optional)
 
 To enable social login, configure OAuth credentials:
