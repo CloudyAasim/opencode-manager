@@ -6,12 +6,13 @@ import { useFileSearch } from '@/hooks/useFileSearch'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { useVariants } from '@/hooks/useVariants'
 import { useSessionAgent } from '@/hooks/useSessionAgent'
+import { useSTT } from '@/hooks/useSTT'
 
 import { useUserBash } from '@/stores/userBashStore'
 import { useMobile } from '@/hooks/useMobile'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
 import { usePermissions } from '@/contexts/EventContext'
-import { ChevronDown, Upload, X } from 'lucide-react'
+import { ChevronDown, Upload, X, Mic } from 'lucide-react'
 
 import { CommandSuggestions } from '@/components/command/CommandSuggestions'
 import { SquareFill } from '@/components/ui/square-fill'
@@ -91,6 +92,18 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null)
   const [localMode, setLocalMode] = useState<string | null>(null)
   const [isFocused, setIsFocused] = useState(false)
+
+  const {
+    isRecording,
+    startRecording,
+    stopRecording,
+    abortRecording,
+    isSupported: sttSupported,
+    isEnabled: sttEnabled,
+    interimTranscript,
+    transcript,
+    clear: clearSTT,
+  } = useSTT()
   
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -98,11 +111,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
   useImperativeHandle(ref, () => ({
     setPromptValue: (value: string) => {
       setPrompt(value)
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-        textareaRef.current.focus()
-      }
+      textareaRef.current?.focus()
     },
     clearPrompt: () => {
       setPrompt('')
@@ -110,15 +119,17 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
       revokeBlobUrls(imageAttachments)
       setImageAttachments([])
       setSelectedAgent(null)
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-        textareaRef.current.focus()
+      if (isRecording) {
+        abortRecording()
+      } else {
+        clearSTT()
       }
+      textareaRef.current?.focus()
     },
     triggerFileUpload: () => {
       fileInputRef.current?.click()
     }
-  }), [imageAttachments])
+  }), [imageAttachments, clearSTT, isRecording, abortRecording])
   const sendPrompt = useSendPrompt(opcodeUrl, directory)
   const sendShell = useSendShell(opcodeUrl, directory)
   const abortSession = useAbortSession(opcodeUrl, directory, sessionID)
@@ -188,9 +199,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
       revokeBlobUrls(imageAttachments)
       setImageAttachments([])
       setSelectedAgent(null)
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-      }
+      clearSTT()
       return
     }
 
@@ -204,9 +213,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
       })
       setPrompt('')
       setIsBashMode(false)
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-      }
+      clearSTT()
       return
     }
 
@@ -220,9 +227,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
       if (command) {
         executeCommand(command, commandArgs?.trim() || '')
         setPrompt('')
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto'
-        }
+        clearSTT()
         return
       }
     }
@@ -242,9 +247,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
     revokeBlobUrls(imageAttachments)
     setImageAttachments([])
     setSelectedAgent(null)
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-    }
+    clearSTT()
   }
 
   const handleStop = () => {
@@ -269,8 +272,6 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
         if (textareaRef.current) {
           textareaRef.current.focus()
           textareaRef.current.setSelectionRange(cleanedTemplate.length, cleanedTemplate.length)
-          textareaRef.current.style.height = 'auto'
-          textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
         }
       }, 0)
     } else {
@@ -350,6 +351,28 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
   const handleAgentChange = (agent: string) => {
     setLocalMode(agent)
   }
+
+  const handleVoiceToggle = async () => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      await startRecording()
+      if (textareaRef.current) {
+        textareaRef.current.blur()
+      }
+    }
+  }
+
+  useEffect(() => {
+    const textToUse = transcript || interimTranscript
+    if (!isRecording && textToUse && textToUse !== 'Processing...' && textToUse !== 'Recording...') {
+      const trimmedTranscript = textToUse.trim()
+      if (trimmedTranscript && (prompt === '' || prompt === 'Processing...' || prompt === 'Recording...')) {
+        setPrompt(trimmedTranscript)
+        textareaRef.current?.focus()
+      }
+    }
+  }, [isRecording, interimTranscript, transcript, prompt])
 
   const addImageAttachment = (file: File) => {
     const generateId = () => {
@@ -607,9 +630,7 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
       setPrompt('')
       revokeBlobUrls(imageAttachments)
       setImageAttachments([])
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-      }
+      clearSTT()
     } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 't') {
       e.preventDefault()
       if (hasVariants) {
@@ -632,11 +653,6 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
     }
     
     setPrompt(value)
-    
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-    }
 
     if (isBashMode) {
       return
@@ -744,7 +760,7 @@ return (
         disabled={disabled}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 text-[16px] text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed md:text-sm rounded-lg ${
+        className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 text-[16px] text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed md:text-sm rounded-lg [field-sizing:content] ${
           isBashMode
             ? 'border-purple-500/50 bg-purple-500/5 focus:bg-purple-500/10'
             : isDragging ? 'border-blue-500/50 border-dashed bg-blue-500/5' : ''
@@ -839,19 +855,49 @@ return (
           >
             <Upload className="w-5 h-5" />
           </button>
+          {sttEnabled && sttSupported && (
             <button
-               data-submit-prompt
-               onClick={hasPendingPermissionForSession ? () => setShowDialog(true) : handleSubmit}
-               disabled={hasPendingPermissionForSession ? false : ((!prompt.trim() && imageAttachments.length === 0) || disabled)}
-               className={`px-4 md:px-5 py-1.5 md:py-2 rounded-lg text-sm font-medium transition-colors dark:border flex-shrink-0 min-w-[52px] ${
-                 hasPendingPermissionForSession
-                   ? 'bg-orange-500 hover:bg-orange-600 border-orange-400 text-primary-foreground ring-orange-500/20'
-                   : 'bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground border-white/30'
-               }`}
-               title={hasPendingPermissionForSession ? 'View pending permission' : (hasActiveStream ? 'Queue message' : 'Send')}
-             >
-               <span className="whitespace-nowrap">{hasPendingPermissionForSession ? 'View' : (hasActiveStream ? 'Queue' : 'Send')}</span>
+              type="button"
+              onClick={handleVoiceToggle}
+              disabled={disabled}
+              className={`hidden md:flex p-2 rounded-lg transition-all duration-200 active:scale-95 hover:scale-105 shadow-md border items-center justify-center ${
+                isRecording
+                  ? 'bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border-red-500/60 animate-pulse'
+                  : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground border-border'
+              }`}
+              title={isRecording ? 'Stop recording' : 'Voice input'}
+            >
+              {isRecording ? <SquareFill className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
+          )}
+          {isMobile && !prompt.trim() && imageAttachments.length === 0 && sttEnabled && sttSupported && !hasPendingPermissionForSession ? (
+            <button
+              onClick={handleVoiceToggle}
+              disabled={disabled}
+              className={`px-4 py-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center justify-center min-w-[52px] ${
+                isRecording
+                  ? 'bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border-2 border-red-500/60 shadow-lg shadow-red-500/30 animate-pulse'
+                  : 'bg-primary hover:bg-primary/90 text-primary-foreground border border-white/30'
+              }`}
+              title={isRecording ? 'Stop recording' : 'Voice input'}
+            >
+              {isRecording ? <SquareFill className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
+          ) : (
+            <button
+              data-submit-prompt
+              onClick={hasPendingPermissionForSession ? () => setShowDialog(true) : handleSubmit}
+              disabled={hasPendingPermissionForSession ? false : ((!prompt.trim() && imageAttachments.length === 0) || disabled)}
+              className={`px-4 md:px-5 py-1.5 md:py-2 rounded-lg text-sm font-medium transition-colors dark:border flex-shrink-0 min-w-[52px] ${
+                hasPendingPermissionForSession
+                  ? 'bg-orange-500 hover:bg-orange-600 border-orange-400 text-primary-foreground ring-orange-500/20'
+                  : 'bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground border-white/30'
+              }`}
+              title={hasPendingPermissionForSession ? 'View pending permission' : (hasActiveStream ? 'Queue message' : 'Send')}
+            >
+              <span className="whitespace-nowrap">{hasPendingPermissionForSession ? 'View' : (hasActiveStream ? 'Queue' : 'Send')}</span>
+            </button>
+          )}
         </div>
       </div>
       
