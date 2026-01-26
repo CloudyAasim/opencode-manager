@@ -85,32 +85,5 @@ export function createSSERoutes() {
     })
   })
 
-  app.get('/test-stream', async (c) => {
-    return stream(c, async (writer) => {
-      const writeSSE = (event: string, data: string) => {
-        const lines = []
-        if (event) lines.push(`event: ${event}`)
-        lines.push(`data: ${data}`)
-        lines.push('')
-        lines.push('')
-        writer.write(new TextEncoder().encode(lines.join('\n')))
-      }
-
-      writeSSE('test', JSON.stringify({ message: 'SSE working', timestamp: Date.now() }))
-
-      let count = 0
-      const interval = setInterval(async () => {
-        count++
-        try {
-          writeSSE('ping', JSON.stringify({ count, timestamp: Date.now() }))
-        } catch {
-          clearInterval(interval)
-        }
-      }, 1000)
-
-      await new Promise(() => {})
-    })
-  })
-
   return app
 }
