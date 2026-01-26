@@ -51,14 +51,14 @@ export const SessionList = ({
     if (!filteredSessions) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return filteredSessions.filter((session) => new Date(session.time.updated) >= today);
+    return filteredSessions.filter((session) => new Date(session.time.updated * 1000) >= today);
   }, [filteredSessions]);
 
   const olderSessions = useMemo(() => {
     if (!filteredSessions) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return filteredSessions.filter((session) => new Date(session.time.updated) < today);
+    return filteredSessions.filter((session) => new Date(session.time.updated * 1000) < today);
   }, [filteredSessions]);
 
   if (isLoading) {
