@@ -3,6 +3,9 @@ import { stream } from 'hono/streaming'
 import { sseAggregator } from '../services/sse-aggregator'
 import { SSESubscribeSchema } from '@opencode-manager/shared/schemas'
 import { logger } from '../utils/logger'
+import { DEFAULTS } from '@opencode-manager/shared/config'
+
+const { HEARTBEAT_INTERVAL_MS } = DEFAULTS.SSE
 
 export function createSSERoutes() {
   const app = new Hono()
@@ -36,7 +39,16 @@ export function createSSERoutes() {
         directories
       )
 
+      const heartbeatInterval = setInterval(() => {
+        try {
+          writeSSE('heartbeat', JSON.stringify({ timestamp: Date.now() }))
+        } catch {
+          clearInterval(heartbeatInterval)
+        }
+      }, HEARTBEAT_INTERVAL_MS)
+
       writer.onAbort(() => {
+        clearInterval(heartbeatInterval)
         cleanup()
       })
 

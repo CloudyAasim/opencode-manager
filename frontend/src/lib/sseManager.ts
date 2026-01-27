@@ -207,6 +207,10 @@ class SSEManager {
         // Ignore
       }
     })
+
+    this.eventSource.addEventListener('heartbeat', () => {
+      // Heartbeat received - connection is alive
+    })
   }
 
   private disconnect(): void {
