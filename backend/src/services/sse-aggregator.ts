@@ -4,11 +4,13 @@ import { ENV } from '@opencode-manager/shared/config/env'
 import { DEFAULTS } from '@opencode-manager/shared/config'
 
 type SSEClientCallback = (event: string, data: string) => void
+type SSEEventListener = (directory: string, event: SSEEvent) => void
 
 interface SSEClient {
   id: string
   callback: SSEClientCallback
   directories: Set<string>
+  visible: boolean
 }
 
 interface DirectoryConnection {
@@ -18,7 +20,7 @@ interface DirectoryConnection {
   isConnected: boolean
 }
 
-interface SSEEvent {
+export interface SSEEvent {
   type: string
   properties: Record<string, unknown>
 }
@@ -33,6 +35,7 @@ class SSEAggregator {
   private activeSessions: Map<string, Set<string>> = new Map()
   private idleTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private sessionStateVersion: Map<string, number> = new Map()
+  private eventListeners: Set<SSEEventListener> = new Set()
 
   private constructor() {}
 
@@ -47,7 +50,8 @@ class SSEAggregator {
     const client: SSEClient = {
       id,
       callback,
-      directories: new Set(directories)
+      directories: new Set(directories),
+      visible: false
     }
     this.clients.set(id, client)
     
@@ -192,10 +196,18 @@ class SSEAggregator {
     }, conn.reconnectDelay)
   }
 
+  onEvent(listener: SSEEventListener): () => void {
+    this.eventListeners.add(listener)
+    return () => { this.eventListeners.delete(listener) }
+  }
+
   private broadcastToDirectory(directory: string, event: string, data: string): void {
     try {
       const parsed = JSON.parse(data) as SSEEvent
       this.handleEvent(directory, parsed)
+      this.eventListeners.forEach(listener => {
+        try { listener(directory, parsed) } catch { /* ignore listener errors */ }
+      })
     } catch {
       // Ignore parse errors
     }
@@ -341,6 +353,23 @@ class SSEAggregator {
     return this.clients.size
   }
 
+  setClientVisibility(id: string, visible: boolean): boolean {
+    const client = this.clients.get(id)
+    if (!client) {
+      logger.warn(`setClientVisibility: client ${id} not found`)
+      return false
+    }
+    client.visible = visible
+    return true
+  }
+
+  hasVisibleClients(): boolean {
+    for (const client of this.clients.values()) {
+      if (client.visible) return true
+    }
+    return false
+  }
+
   getActiveDirectories(): string[] {
     return Array.from(this.connections.keys())
   }
@@ -364,6 +393,7 @@ class SSEAggregator {
     })
     this.connections.clear()
     this.clients.clear()
+    this.eventListeners.clear()
   }
 
   getActiveSessions(): Record<string, string[]> {

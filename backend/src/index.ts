@@ -17,6 +17,7 @@ import { createProvidersRoutes } from './routes/providers'
 import { createOAuthRoutes } from './routes/oauth'
 import { createTitleRoutes } from './routes/title'
 import { createSSERoutes } from './routes/sse'
+import { createNotificationRoutes } from './routes/notifications'
 import { createAuthRoutes, createAuthInfoRoutes, syncAdminFromEnv } from './routes/auth'
 import { createAuth } from './auth'
 import { createAuthMiddleware } from './auth/middleware'
@@ -26,6 +27,7 @@ import { SettingsService } from './services/settings'
 import { opencodeServerManager } from './services/opencode-single-server'
 import { cleanupOrphanedDirectories } from './services/repo'
 import { proxyRequest } from './services/proxy'
+import { NotificationService } from './services/notification'
 import { logger } from './utils/logger'
 import { 
   getWorkspacePath, 
@@ -201,6 +203,27 @@ try {
   logger.error('Failed to initialize workspace:', error)
 }
 
+const notificationService = new NotificationService(db)
+
+if (ENV.VAPID.PUBLIC_KEY && ENV.VAPID.PRIVATE_KEY) {
+  if (!ENV.VAPID.SUBJECT) {
+    logger.warn('VAPID_SUBJECT is not set — push notifications require a mailto: subject (e.g. mailto:you@example.com)')
+  } else if (!ENV.VAPID.SUBJECT.startsWith('mailto:')) {
+    logger.warn(`VAPID_SUBJECT="${ENV.VAPID.SUBJECT}" does not use mailto: format — iOS/Safari push notifications will fail`)
+  }
+
+  notificationService.configureVapid({
+    publicKey: ENV.VAPID.PUBLIC_KEY,
+    privateKey: ENV.VAPID.PRIVATE_KEY,
+    subject: ENV.VAPID.SUBJECT || 'mailto:push@localhost',
+  })
+  sseAggregator.onEvent((directory, event) => {
+    notificationService.handleSSEEvent(directory, event).catch((err) => {
+      logger.error('Push notification dispatch error:', err)
+    })
+  })
+}
+
 app.route('/api/auth', createAuthRoutes(auth))
 app.route('/api/auth-info', createAuthInfoRoutes(auth, db))
 
@@ -218,6 +241,7 @@ protectedApi.route('/tts', createTTSRoutes(db))
 protectedApi.route('/stt', createSTTRoutes(db))
 protectedApi.route('/generate-title', createTitleRoutes())
 protectedApi.route('/sse', createSSERoutes())
+protectedApi.route('/notifications', createNotificationRoutes(notificationService))
 
 app.route('/api', protectedApi)
 
