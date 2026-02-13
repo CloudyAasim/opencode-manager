@@ -9,6 +9,8 @@ Get up and running with OpenCode Manager in minutes.
     ```bash
     git clone https://github.com/chriswritescode-dev/opencode-manager.git
     cd opencode-manager
+    cp .env.example .env
+    echo "AUTH_SECRET=$(openssl rand -base64 32)" >> .env
     docker-compose up -d
     ```
     
