@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/components/message/MessageThread";
@@ -28,7 +28,10 @@ import { useTTS } from "@/hooks/useTTS";
 import { useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageSkeleton } from "@/components/message/MessageSkeleton";
 import { exportSession, downloadMarkdown } from "@/lib/exportSession";
+import { useMessageParts } from "@/stores/messagePartsStore";
+import type { MessageWithParts } from "@/api/types";
 import { showToast } from "@/lib/toast";
+import { getRepoDisplayName } from "@/lib/utils";
 import { RepoMcpDialog } from "@/components/repo/RepoMcpDialog";
 import { createOpenCodeClient } from "@/api/opencode";
 import { useSessionStatus } from "@/stores/sessionStatusStore";
@@ -48,7 +51,7 @@ const compareMessageIds = (id1: string, id2: string): number => {
 export function SessionDetail() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
-  const repoId = parseInt(id || "0");
+  const repoId = Number(id) || 0;
   const { preferences, updateSettings } = useSettings();
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -95,8 +98,17 @@ export function SessionDetail() {
     if (!rawMessages) return undefined
     const revertMessageID = session?.revert?.messageID
     if (!revertMessageID) return rawMessages
-    return rawMessages.filter(msg => compareMessageIds(msg.info.id, revertMessageID) < 0)
+    return rawMessages.filter(msg => compareMessageIds(msg.id, revertMessageID) < 0)
   }, [rawMessages, session?.revert?.messageID]);
+
+  const getMessagesWithParts = useCallback((): MessageWithParts[] | undefined => {
+    if (!messages) return undefined
+    const partsMap = useMessageParts.getState().parts
+    return messages.map(msg => ({
+      info: msg,
+      parts: partsMap.get(msg.id) || []
+    }))
+  }, [messages])
 
   const { scrollToBottom } = useAutoScroll({
     containerRef: messageContainerRef,
@@ -260,15 +272,16 @@ export function SessionDetail() {
   }, [preferences?.expandToolCalls, updateSettings]);
 
   const handleExportSession = useCallback(() => {
-    if (!messages || !session) {
+    const data = getMessagesWithParts()
+    if (!data || !session) {
       showToast.error('No session data to export')
       return
     }
     
-    const { filename, content } = exportSession(messages, session)
+    const { filename, content } = exportSession(data, session)
     downloadMarkdown(content, filename)
     showToast.success(`Exported to ${filename}`)
-  }, [messages, session]);
+  }, [getMessagesWithParts, session]);
 
   const handleUndoMessage = useCallback((restoredPrompt: string) => {
     promptInputRef.current?.setPromptValue(restoredPrompt)
@@ -283,11 +296,7 @@ export function SessionDetail() {
   
 
   if (!sessionId) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-background text-muted-foreground">
-        Session not found
-      </div>
-    );
+    return <Navigate to="/" replace />;
   }
 
   if (!repo) {
@@ -331,7 +340,7 @@ export function SessionDetail() {
           <Header.EditableTitle
             value={session?.title || "Untitled Session"}
             onChange={handleSessionTitleUpdate}
-            subtitle={<span className="text-orange-600 dark:text-orange-400">{repo.repoUrl?.split("/").pop()?.replace(".git", "") || repo.localPath || "Repository"}</span>}
+            subtitle={<span className="text-orange-600 dark:text-orange-400">{getRepoDisplayName(repo.repoUrl, repo.localPath)}</span>}
             generating={isTitleGenerating}
           />
         </div>
@@ -514,7 +523,7 @@ export function SessionDetail() {
         isOpen={fileBrowserOpen}
         onClose={handleFileBrowserClose}
         basePath={repo.localPath}
-        repoName={repo.repoUrl?.split("/").pop()?.replace(".git", "") || repo.localPath || "Repository"}
+        repoName={getRepoDisplayName(repo.repoUrl, repo.localPath)}
         repoId={repoId}
         initialSelectedFile={selectedFilePath}
       />
@@ -530,7 +539,7 @@ export function SessionDetail() {
         isOpen={sourceControlOpen}
         onClose={() => setSourceControlOpen(false)}
         currentBranch={repo.currentBranch || repo.branch || "main"}
-        repoName={repo.repoUrl?.split("/").pop()?.replace(".git", "") || repo.localPath || "Repository"}
+        repoName={getRepoDisplayName(repo.repoUrl, repo.localPath)}
       />
     </div>
   );

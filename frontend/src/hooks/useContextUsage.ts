@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useMessages } from './useOpenCode'
 import { useQuery } from '@tanstack/react-query'
 import { useModelSelection } from './useModelSelection'
+import { fetchWrapper } from '@/api/fetchWrapper'
 
 interface ContextUsage {
   totalTokens: number
@@ -33,11 +34,7 @@ interface ProvidersResponse {
 }
 
 async function fetchProviders(opcodeUrl: string): Promise<ProvidersResponse> {
-  const response = await fetch(`${opcodeUrl}/config/providers`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch providers')
-  }
-  return response.json()
+  return fetchWrapper<ProvidersResponse>(`${opcodeUrl}/config/providers`)
 }
 
 export const useContextUsage = (opcodeUrl: string | null | undefined, sessionID: string | undefined, directory?: string): ContextUsage => {
@@ -47,7 +44,10 @@ export const useContextUsage = (opcodeUrl: string | null | undefined, sessionID:
 
   const { data: providersData } = useQuery({
     queryKey: ['providers', opcodeUrl],
-    queryFn: () => fetchProviders(opcodeUrl!),
+    queryFn: () => {
+      if (!opcodeUrl) throw new Error('opcodeUrl is required')
+      return fetchProviders(opcodeUrl)
+    },
     enabled: !!opcodeUrl,
     staleTime: 5 * 60 * 1000,
   })
@@ -55,11 +55,11 @@ export const useContextUsage = (opcodeUrl: string | null | undefined, sessionID:
   return useMemo(() => {
     const currentModel = modelString || null
 
-    const assistantMessages = messages?.filter(msg => msg.info.role === 'assistant') || []
+    const assistantMessages = messages?.filter(msg => msg.role === 'assistant') || []
     let latestAssistantMessage = assistantMessages[assistantMessages.length - 1]
     
-    if (latestAssistantMessage?.info.role === 'assistant') {
-      const tokens = latestAssistantMessage.info.tokens.input + latestAssistantMessage.info.tokens.output + latestAssistantMessage.info.tokens.reasoning + (latestAssistantMessage.info.tokens.cache?.read || 0)
+    if (latestAssistantMessage?.role === 'assistant') {
+      const tokens = latestAssistantMessage.tokens.input + latestAssistantMessage.tokens.output + latestAssistantMessage.tokens.reasoning + (latestAssistantMessage.tokens.cache?.read || 0)
       if (tokens === 0 && assistantMessages.length > 1) {
         latestAssistantMessage = assistantMessages[assistantMessages.length - 2]
       }
@@ -88,8 +88,8 @@ export const useContextUsage = (opcodeUrl: string | null | undefined, sessionID:
     }
     
     let totalTokens = 0
-    if (latestAssistantMessage?.info.role === 'assistant') {
-      totalTokens = latestAssistantMessage.info.tokens.input + latestAssistantMessage.info.tokens.output + latestAssistantMessage.info.tokens.reasoning + (latestAssistantMessage.info.tokens.cache?.read || 0)
+    if (latestAssistantMessage?.role === 'assistant') {
+      totalTokens = latestAssistantMessage.tokens.input + latestAssistantMessage.tokens.output + latestAssistantMessage.tokens.reasoning + (latestAssistantMessage.tokens.cache?.read || 0)
     }
 
     const usagePercentage = contextLimit ? (totalTokens / contextLimit) * 100 : null

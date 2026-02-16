@@ -25,7 +25,7 @@ import { detectMentionTrigger, parsePromptToParts, getFilename, filterAgentsByQu
 
 
 import type { components } from '@/api/opencode-types'
-import type { MessageWithParts, FileInfo, ImageAttachment } from '@/api/types'
+import type { Message, FileAttachmentInfo, ImageAttachment } from '@/api/types'
 
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/heic", "image/heif"]
 
@@ -82,7 +82,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(funct
   const [isBashMode, setIsBashMode] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestionQuery, setSuggestionQuery] = useState('')
-  const [attachedFiles, setAttachedFiles] = useState(new Map<string, FileInfo>())
+  const [attachedFiles, setAttachedFiles] = useState(new Map<string, FileAttachmentInfo>())
   const [imageAttachments, setImageAttachments] = useState<ImageAttachment[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false)
@@ -715,12 +715,12 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
     }
   }
 
-  const isMessageIncomplete = (msg: MessageWithParts): boolean => {
-    if (msg.info.role !== 'assistant') return false
-    return !('completed' in msg.info.time && msg.info.time.completed)
+  const isMessageIncomplete = (msg: Message): boolean => {
+    if (msg.role !== 'assistant') return false
+    return !('completed' in msg.time && msg.time.completed)
   }
 
-  const lastAssistantMessage = messages?.filter(msg => msg.info.role === 'assistant').at(-1)
+  const lastAssistantMessage = messages?.filter(msg => msg.role === 'assistant').at(-1)
   const hasIncompleteMessages = lastAssistantMessage ? isMessageIncomplete(lastAssistantMessage) : false
 
   const sessionAgent = useSessionAgent(opcodeUrl, sessionID, directory)
