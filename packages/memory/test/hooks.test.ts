@@ -13,14 +13,14 @@ const mockLogger: Logger = {
 }
 
 const mockSessionStateService = {
-  getPlanningState: () => null,
-  getCompactionSnapshot: () => null,
+  getPlanningState: (_sessionId: string, _projectId: string) => null,
+  getCompactionSnapshot: (_sessionId: string, _projectId: string) => null,
   setCompactionSnapshot: () => {},
 } as unknown as SessionStateService
 
 const createMockSessionStateServiceWithPlanning = (planningState: PlanningState | null): SessionStateService => ({
-  getPlanningState: () => planningState,
-  getCompactionSnapshot: () => null,
+  getPlanningState: (_sessionId: string, _projectId: string) => planningState,
+  getCompactionSnapshot: (_sessionId: string, _projectId: string) => null,
   setCompactionSnapshot: () => {},
 } as unknown as SessionStateService)
 

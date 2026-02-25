@@ -138,7 +138,7 @@ describe('SessionStateService', () => {
     }
 
     service.setPlanningState('session-123', 'project-1', planningState)
-    const result = service.getPlanningState('session-123')
+    const result = service.getPlanningState('session-123', 'project-1')
 
     expect(result).toEqual(planningState)
   })
@@ -155,11 +155,98 @@ describe('SessionStateService', () => {
     }
 
     service.setCompactionSnapshot('session-123', 'project-1', snapshot)
-    const result = service.getCompactionSnapshot('session-123')
+    const result = service.getCompactionSnapshot('session-123', 'project-1')
 
     expect(result).toEqual(snapshot)
     expect(result?.branch).toBe('main')
     expect(result?.activeFiles?.length).toBe(2)
+  })
+
+  test('same sessionId with different projectIds stores separate state', () => {
+    const state1: PlanningState = { objective: 'Project 1 objective' }
+    const state2: PlanningState = { objective: 'Project 2 objective' }
+
+    service.setPlanningState('session-abc', 'project-1', state1)
+    service.setPlanningState('session-abc', 'project-2', state2)
+
+    const result1 = service.getPlanningState('session-abc', 'project-1')
+    const result2 = service.getPlanningState('session-abc', 'project-2')
+
+    expect(result1).toEqual(state1)
+    expect(result2).toEqual(state2)
+  })
+
+  test('listPlanningStates returns only planning entries for the given project', () => {
+    service.setPlanningState('session-1', 'project-1', { objective: 'Task A' })
+    service.setPlanningState('session-2', 'project-1', { objective: 'Task B' })
+    service.setPlanningState('session-3', 'project-2', { objective: 'Task C' })
+    service.setCompactionSnapshot('session-1', 'project-1', {
+      timestamp: new Date().toISOString(),
+      sessionId: 'session-1',
+    })
+
+    const results = service.listPlanningStates('project-1')
+
+    expect(results.length).toBe(2)
+    expect(results.map(r => r.sessionId).sort()).toEqual(['session-1', 'session-2'])
+    expect(results[0]!.planningState.objective).toBeDefined()
+  })
+
+  test('searchPlanningStates finds matching entries by keyword', () => {
+    service.setPlanningState('session-1', 'project-1', {
+      objective: 'Refactor authentication flow',
+      current: 'Writing tests',
+    })
+    service.setPlanningState('session-2', 'project-1', {
+      objective: 'Add dark mode toggle',
+      current: 'Implementing CSS',
+    })
+    service.setPlanningState('session-3', 'project-1', {
+      objective: 'Fix authentication bug',
+      findings: ['Token refresh was broken'],
+    })
+
+    const results = service.searchPlanningStates('project-1', 'authentication')
+
+    expect(results.length).toBe(2)
+    const sessionIds = results.map(r => r.sessionId).sort()
+    expect(sessionIds).toEqual(['session-1', 'session-3'])
+  })
+
+  test('searchPlanningStates returns empty array when no matches', () => {
+    service.setPlanningState('session-1', 'project-1', { objective: 'Build feature X' })
+
+    const results = service.searchPlanningStates('project-1', 'nonexistent')
+
+    expect(results.length).toBe(0)
+  })
+
+  test('searchPlanningStates escapes percent wildcard in search term', () => {
+    service.setPlanningState('session-1', 'project-1', {
+      objective: '100% complete migration',
+    })
+    service.setPlanningState('session-2', 'project-1', {
+      objective: 'Build feature 100',
+    })
+
+    const results = service.searchPlanningStates('project-1', '100%')
+
+    expect(results.length).toBe(1)
+    expect(results[0]!.sessionId).toBe('session-1')
+  })
+
+  test('searchPlanningStates escapes underscore wildcard in search term', () => {
+    service.setPlanningState('session-1', 'project-1', {
+      objective: 'Fix user_name field validation',
+    })
+    service.setPlanningState('session-2', 'project-1', {
+      objective: 'Fix username field validation',
+    })
+
+    const results = service.searchPlanningStates('project-1', 'user_name')
+
+    expect(results.length).toBe(1)
+    expect(results[0]!.sessionId).toBe('session-1')
   })
 })
 
