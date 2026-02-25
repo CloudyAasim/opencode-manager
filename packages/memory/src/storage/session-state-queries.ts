@@ -20,6 +20,10 @@ function mapRow(row: {
   return row
 }
 
+function escapeLikeWildcards(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
 type SessionStateRowRaw = Parameters<typeof mapRow>[0]
 
 export function createSessionStateQueries(db: Database) {
@@ -55,6 +59,20 @@ export function createSessionStateQueries(db: Database) {
      ORDER BY updated_at DESC`
   )
 
+  const searchByProjectAndPrefixStmt = db.prepare(
+    `SELECT key, project_id, data, expires_at, created_at, updated_at
+     FROM session_state
+     WHERE project_id = ? AND key LIKE ? AND data LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?)
+     ORDER BY updated_at DESC`
+  )
+
+  const listByProjectAndPrefixStmt = db.prepare(
+    `SELECT key, project_id, data, expires_at, created_at, updated_at
+     FROM session_state
+     WHERE project_id = ? AND key LIKE ? AND (expires_at IS NULL OR expires_at > ?)
+     ORDER BY updated_at DESC`
+  )
+
   return {
     get(key: string): SessionStateRow | undefined {
       const now = Date.now()
@@ -85,6 +103,21 @@ export function createSessionStateQueries(db: Database) {
     listByProject(projectId: string): SessionStateRow[] {
       const now = Date.now()
       const rows = listByProjectStmt.all(projectId, now) as SessionStateRowRaw[]
+      return rows.map(mapRow)
+    },
+
+    searchByProjectAndPrefix(projectId: string, keyPrefix: string, searchTerm: string): SessionStateRow[] {
+      const now = Date.now()
+      const keyPattern = `${escapeLikeWildcards(keyPrefix)}%`
+      const searchPattern = `%${escapeLikeWildcards(searchTerm)}%`
+      const rows = searchByProjectAndPrefixStmt.all(projectId, keyPattern, searchPattern, now) as SessionStateRowRaw[]
+      return rows.map(mapRow)
+    },
+
+    listByProjectAndPrefix(projectId: string, keyPrefix: string): SessionStateRow[] {
+      const now = Date.now()
+      const keyPattern = `${escapeLikeWildcards(keyPrefix)}%`
+      const rows = listByProjectAndPrefixStmt.all(projectId, keyPattern, now) as SessionStateRowRaw[]
       return rows.map(mapRow)
     },
   }

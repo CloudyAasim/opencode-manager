@@ -5,6 +5,12 @@ import type { SessionState, PlanningState, PreCompactionSnapshot } from '../type
 const DEFAULT_SESSION_TTL = 7 * 24 * 60 * 60 * 1000
 const DEFAULT_SNAPSHOT_TTL = 24 * 60 * 60 * 1000
 
+export interface PlanningStateResult {
+  sessionId: string
+  planningState: PlanningState
+  updatedAt: number
+}
+
 export class SessionStateService {
   private queries: ReturnType<typeof createSessionStateQueries>
   private cleanupInterval: ReturnType<typeof setInterval> | null = null
@@ -83,22 +89,42 @@ export class SessionStateService {
   }
 
   setPlanningState(sessionId: string, projectId: string, planningState: PlanningState): void {
-    const key = `session:${sessionId}`
+    const key = `session:${projectId}:${sessionId}`
     this.set(key, projectId, planningState, DEFAULT_SESSION_TTL)
   }
 
-  getPlanningState(sessionId: string): PlanningState | null {
-    const key = `session:${sessionId}`
+  getPlanningState(sessionId: string, projectId: string): PlanningState | null {
+    const key = `session:${projectId}:${sessionId}`
     return this.get<PlanningState>(key)
   }
 
+  listPlanningStates(projectId: string): PlanningStateResult[] {
+    const prefix = `session:${projectId}:`
+    const rows = this.queries.listByProjectAndPrefix(projectId, prefix)
+    return rows.map(row => ({
+      sessionId: row.key.slice(prefix.length),
+      planningState: JSON.parse(row.data) as PlanningState,
+      updatedAt: row.updated_at,
+    }))
+  }
+
+  searchPlanningStates(projectId: string, query: string): PlanningStateResult[] {
+    const prefix = `session:${projectId}:`
+    const rows = this.queries.searchByProjectAndPrefix(projectId, prefix, query)
+    return rows.map(row => ({
+      sessionId: row.key.slice(prefix.length),
+      planningState: JSON.parse(row.data) as PlanningState,
+      updatedAt: row.updated_at,
+    }))
+  }
+
   setCompactionSnapshot(sessionId: string, projectId: string, snapshot: PreCompactionSnapshot): void {
-    const key = `compaction:snapshot:${sessionId}`
+    const key = `compaction:snapshot:${projectId}:${sessionId}`
     this.set(key, projectId, snapshot, DEFAULT_SNAPSHOT_TTL)
   }
 
-  getCompactionSnapshot(sessionId: string): PreCompactionSnapshot | null {
-    const key = `compaction:snapshot:${sessionId}`
+  getCompactionSnapshot(sessionId: string, projectId: string): PreCompactionSnapshot | null {
+    const key = `compaction:snapshot:${projectId}:${sessionId}`
     return this.get<PreCompactionSnapshot>(key)
   }
 }
