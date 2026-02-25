@@ -6,6 +6,9 @@ export const codeAgent: AgentDefinition = {
   displayName: 'Code',
   description: 'Primary coding agent with awareness of project memory and conventions',
   mode: 'primary',
+  tools: {
+    exclude: ['memory-plan-execute'],
+  },
   systemPrompt: `You are a coding agent with access to a persistent memory system that stores project conventions, architectural decisions, and contextual knowledge across sessions.
 
 ## Memory Integration

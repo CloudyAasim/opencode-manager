@@ -6,8 +6,12 @@ Memory management plugin for OpenCode that enables semantic search and persisten
 
 - **Semantic Memory Search** - Store and retrieve project memories using vector embeddings
 - **Multiple Memory Scopes** - Categorize memories as convention, decision, or context
-- **Automatic Deduplication** - Prevents duplicate memories from being stored
-- **Session Context** - Tracks session state and injects relevant memories during compaction
+- **Automatic Deduplication** - Prevents duplicates via exact match and semantic similarity detection
+- **Compaction Context Injection** - Injects planning state, conventions, and decisions into session compaction for seamless continuity
+- **Bundled Agents** - Ships with Code, Architect, and Memory agents preconfigured for memory-aware workflows
+- **CLI Export/Import** - Export and import memories as JSON or Markdown for backup and migration
+- **Dimension Mismatch Detection** - Detects embedding model changes and guides recovery via reindex
+- **Session Planning** - Tracks objectives, phases, findings, and errors across sessions with automatic TTL cleanup
 
 ## Tools
 
@@ -20,8 +24,75 @@ Memory management plugin for OpenCode that enables semantic search and persisten
 | `memory-health` | Health check or full reindex of the memory store |
 | `memory-planning-update` | Update session planning state (phases, objectives, progress) |
 | `memory-planning-get` | Get the current planning state for a session |
+| `memory-plan-execute` | Create a new Code session and send an approved plan as the first prompt |
 
 Planning state differs from memories: it stores temporary session data (objectives, phase progress, findings, errors) with a 7-day TTL, while memories are persisted indefinitely and retrieved via semantic search.
+
+## Agents
+
+The plugin bundles three agents that integrate with the memory system:
+
+| Agent | ID | Mode | Description |
+|-------|----|------|-------------|
+| **Code** | `ocm-code` | primary | Primary coding agent with memory awareness. Checks memory before unfamiliar code, stores architectural decisions and conventions as it works. |
+| **Architect** | `ocm-architect` | primary | Read-only planning agent. Researches the codebase, checks memory for conventions and decisions, designs implementation plans, then hands off to Code via `memory-plan-execute`. |
+| **Memory** | `ocm-memory` | subagent | Expert agent for storing, retrieving, and curating project knowledge. Handles post-compaction memory extraction and contradiction resolution. |
+
+The Architect agent operates in read-only mode (`temperature: 0.0`, all edits denied). After the user approves a plan, it calls `memory-plan-execute` to create a new Code session with the full plan as context.
+
+## CLI
+
+Export and import memories using the bundled CLI tool. The CLI auto-detects the project ID from git and resolves the database path automatically.
+
+### Export
+
+```bash
+# Export all memories as JSON (stdout)
+bun run src/cli/export.ts export
+
+# Export as Markdown to file
+bun run src/cli/export.ts export --format markdown --output memories.md
+
+# Export with project and scope filter
+bun run src/cli/export.ts export --project my-project --scope convention
+
+# Limit and paginate results
+bun run src/cli/export.ts export --limit 50 --offset 100
+```
+
+**Export options:**
+
+| Flag | Description |
+|------|-------------|
+| `--format, -f` | Output format: `json` or `markdown` (default: `json`) |
+| `--output, -o` | Output file path (prints to stdout if omitted) |
+| `--project, -p` | Project ID filter (auto-detected from git) |
+| `--scope, -s` | Filter by scope: `convention`, `decision`, or `context` |
+| `--limit, -l` | Max number of memories (default: `1000`) |
+| `--offset` | Pagination offset (default: `0`) |
+| `--db-path` | Custom database file path |
+
+### Import
+
+```bash
+# Import from JSON
+bun run src/cli/export.ts import memories.json --project my-project
+
+# Import from Markdown (format auto-detected from extension)
+bun run src/cli/export.ts import memories.md --project my-project
+
+# Skip duplicate detection
+bun run src/cli/export.ts import memories.json --project my-project --force
+```
+
+**Import options:**
+
+| Flag | Description |
+|------|-------------|
+| `--format, -f` | Input format: `json` or `markdown` (auto-detected from extension) |
+| `--project, -p` | Project ID to assign memories to (auto-detected from git) |
+| `--force` | Skip duplicate detection and import all |
+| `--db-path` | Custom database file path |
 
 ## Installation
 
@@ -63,6 +134,12 @@ You can edit this file to customize settings. The file is created only if it doe
   "logging": {
     "enabled": false,
     "file": "~/.local/share/opencode/memory/logs/memory.log"
+  },
+  "compaction": {
+    "customPrompt": true,
+    "inlinePlanning": true,
+    "maxContextTokens": 4000,
+    "snapshotToKV": true
   }
 }
 ```
@@ -100,6 +177,12 @@ For API-based embeddings:
 - `logging.file` - Log file path (default: `"~/.local/share/opencode/memory/logs/memory.log"`)
 
 When enabled, logs are written to the specified file with timestamps. The log file has a 10MB size limit with automatic rotation.
+
+#### Compaction
+- `compaction.customPrompt` - Use a custom compaction prompt optimized for session continuity (default: `true`)
+- `compaction.inlinePlanning` - Inject planning state (phases, objectives, progress) into compaction context (default: `true`)
+- `compaction.maxContextTokens` - Token budget for injected memory context with priority-based trimming (default: `4000`)
+- `compaction.snapshotToKV` - Store compaction snapshots in the session KV store for recovery (default: `true`)
 
 ## Development
 

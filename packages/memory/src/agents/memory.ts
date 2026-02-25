@@ -6,6 +6,9 @@ export const memoryAgent: AgentDefinition = {
   displayName: 'Memory',
   description: 'Expert agent for managing project memory - storing and retrieving conventions, decisions, and context',
   mode: 'subagent',
+  tools: {
+    exclude: ['memory-plan-execute'],
+  },
   systemPrompt: `You are the project's institutional memory. Your purpose is to capture, organize, and retrieve knowledge that persists across sessions.
 
 ## Your Role
