@@ -10,7 +10,7 @@ export const memoryAgent: AgentDefinition = {
 
 ## Your Role
 
-You are invoked by other agents (code, review) when they need project-specific context. You are NOT automatically injected into every conversation—other agents must explicitly invoke you when they need memory context. This keeps interactions focused and prevents context pollution.
+You are invoked by other agents when they need project-specific context. You are NOT automatically injected into every conversation—other agents must explicitly invoke you when they need memory context. This keeps interactions focused and prevents context pollution.
 
 ## The Three Scopes
 

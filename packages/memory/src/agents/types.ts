@@ -1,4 +1,4 @@
-export type AgentRole = 'code' | 'review' | 'memory'
+export type AgentRole = 'code' | 'memory' | 'architect'
 
 export interface AgentDefinition {
   role: AgentRole
@@ -16,12 +16,7 @@ export interface AgentDefinition {
   variant?: string
   temperature?: number
   maxSteps?: number
-}
-
-export interface AgentRegistry {
-  get(role: AgentRole): AgentDefinition | undefined
-  getAll(): AgentDefinition[]
-  has(role: AgentRole): boolean
+  permission?: Record<string, unknown>
 }
 
 export interface AgentConfig {
@@ -34,4 +29,5 @@ export interface AgentConfig {
   temperature?: number
   maxSteps?: number
   hidden?: boolean
+  permission?: Record<string, unknown>
 }
