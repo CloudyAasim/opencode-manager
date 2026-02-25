@@ -6,6 +6,7 @@ export const codeAgent: AgentDefinition = {
   displayName: 'Code',
   description: 'Primary coding agent with awareness of project memory and conventions',
   mode: 'primary',
+  color: '#3b82f6',
   tools: {
     exclude: ['memory-plan-execute'],
   },

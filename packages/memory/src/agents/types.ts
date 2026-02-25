@@ -9,6 +9,7 @@ export interface AgentDefinition {
   systemPrompt: string
   mode?: 'primary' | 'subagent' | 'all'
   hidden?: boolean
+  color?: string
   tools?: {
     include?: string[]
     exclude?: string[]
@@ -29,5 +30,6 @@ export interface AgentConfig {
   temperature?: number
   maxSteps?: number
   hidden?: boolean
+  color?: string
   permission?: Record<string, unknown>
 }

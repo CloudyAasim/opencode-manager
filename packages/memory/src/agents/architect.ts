@@ -6,6 +6,7 @@ export const architectAgent: AgentDefinition = {
   displayName: 'Architect',
   description: 'Memory-aware planning agent that researches, designs, and persists implementation plans',
   mode: 'primary',
+  color: '#ef4444',
   temperature: 0.0,
   permission: {
     edit: {

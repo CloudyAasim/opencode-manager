@@ -1,6 +1,6 @@
 import type { AgentRole, AgentDefinition, AgentConfig } from './agents'
 
-const REPLACED_BUILTIN_AGENTS = ['build']
+const REPLACED_BUILTIN_AGENTS = ['build', 'plan']
 
 const ENHANCED_BUILTIN_AGENTS: Record<string, { tools: Record<string, boolean> }> = {
   plan: {
@@ -68,6 +68,7 @@ function createAgentConfigs(agents: Record<AgentRole, AgentDefinition>): Record<
       ...(agent.temperature !== undefined ? { temperature: agent.temperature } : {}),
       ...(agent.maxSteps !== undefined ? { maxSteps: agent.maxSteps } : {}),
       ...(agent.hidden ? { hidden: agent.hidden } : {}),
+      ...(agent.color ? { color: agent.color } : {}),
       ...(agent.permission ? { permission: agent.permission } : {}),
     }
   }
