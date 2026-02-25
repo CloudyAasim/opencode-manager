@@ -477,7 +477,7 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
         'memory-planning-update': tool({
           description: 'Update the session planning state (phases, objectives, progress). Merge new fields with existing state.',
           args: {
-            sessionID: z.string().describe('The session ID to update'),
+            sessionID: z.string().optional().describe('Session ID to update. Defaults to current session if omitted.'),
             objective: z.string().optional().describe('The main task/goal'),
             current: z.string().optional().describe('Current phase or activity'),
             next: z.string().optional().describe('What comes next'),
@@ -489,12 +489,12 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             findings: z.array(z.string()).optional().describe('Key discoveries'),
             errors: z.array(z.string()).optional().describe('Errors to avoid'),
           },
-          execute: async (args) => {
+          execute: async (args, context) => {
             await initPromise
-            const sessionId = args.sessionID
+            const sessionId = args.sessionID ?? context.sessionID
             logger.log(`memory-planning-update: session=${sessionId}`)
 
-            const existing = sessionStateService.getPlanningState(sessionId)
+            const existing = sessionStateService.getPlanningState(sessionId, projectId)
             const merged: typeof existing = {
               ...(existing ?? {}),
               ...(args.objective !== undefined && { objective: args.objective }),
@@ -526,14 +526,14 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
         'memory-planning-get': tool({
           description: 'Get the current planning state for a session',
           args: {
-            sessionID: z.string().describe('The session ID to retrieve planning state for'),
+            sessionID: z.string().optional().describe('Session ID to retrieve. Defaults to current session if omitted.'),
           },
-          execute: async (args) => {
+          execute: async (args, context) => {
             await initPromise
-            const sessionId = args.sessionID
+            const sessionId = args.sessionID ?? context.sessionID
             logger.log(`memory-planning-get: session=${sessionId}`)
 
-            const planningState = sessionStateService.getPlanningState(sessionId)
+            const planningState = sessionStateService.getPlanningState(sessionId, projectId)
             if (!planningState) {
               return 'No planning state found for this session'
             }
@@ -569,13 +569,47 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             return sections.join('\n') || 'Planning state exists but is empty'
           },
         }),
+        'memory-planning-search': tool({
+          description: 'Search planning states across all sessions in the current project. Use this to find planning context from prior sessions.',
+          args: {
+            query: z.string().optional().describe('Search keyword to filter planning states. Omit to list all.'),
+          },
+          execute: async (args) => {
+            await initPromise
+            logger.log(`memory-planning-search: query="${args.query ?? 'all'}"`)
+
+            const results = args.query
+              ? sessionStateService.searchPlanningStates(projectId, args.query)
+              : sessionStateService.listPlanningStates(projectId)
+
+            if (results.length === 0) {
+              return args.query
+                ? `No planning states found matching "${args.query}"`
+                : 'No planning states found for this project'
+            }
+
+            const formatted = results.map(({ sessionId, planningState, updatedAt }) => {
+              const parts: string[] = [`**Session:** ${sessionId} (updated ${new Date(updatedAt).toISOString().split('T')[0]})`]
+              if (planningState.objective) parts.push(`  Objective: ${planningState.objective}`)
+              if (planningState.current) parts.push(`  Current: ${planningState.current}`)
+              if (planningState.next) parts.push(`  Next: ${planningState.next}`)
+              if (planningState.phases && planningState.phases.length > 0) {
+                const completed = planningState.phases.filter(p => p.status === 'completed').length
+                parts.push(`  Phases: ${completed}/${planningState.phases.length} completed`)
+              }
+              return parts.join('\n')
+            })
+
+            return `Found ${results.length} planning state(s):\n\n${formatted.join('\n\n')}`
+          },
+        }),
         'memory-plan-execute': tool({
           description: 'Create a new Code session and send the plan as the first prompt. Call this after the user approves the plan.',
           args: {
             plan: z.string().describe('The full implementation plan to send to the Code agent'),
             title: z.string().describe('Short title for the session (shown in session list)'),
           },
-          execute: async (args) => {
+          execute: async (args, context) => {
             await initPromise
             logger.log(`memory-plan-execute: creating session titled "${args.title}"`)
 
@@ -593,10 +627,12 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             const newSessionId = createResult.data.id
             logger.log(`memory-plan-execute: created session=${newSessionId}`)
 
+            const planningInstruction = `\n\n---\n\nWhen you complete each phase, update the planning state using memory-planning-update with sessionID "${context.sessionID}". Update phase statuses as you progress (pending → in_progress → completed). Set current to describe what you're working on. When all work is done, set current to "Completed".`
+
             const promptResult = await client.session.promptAsync({
               path: { id: newSessionId },
               body: {
-                parts: [{ type: 'text' as const, text: args.plan }],
+                parts: [{ type: 'text' as const, text: args.plan + planningInstruction }],
                 agent: 'Code',
               },
             })
@@ -607,6 +643,16 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             }
 
             logger.log(`memory-plan-execute: prompted session=${newSessionId}`)
+
+            const existingState = sessionStateService.getPlanningState(context.sessionID, projectId)
+            if (existingState) {
+              sessionStateService.setPlanningState(context.sessionID, projectId, {
+                ...existingState,
+                current: `Plan sent to execution session ${newSessionId}`,
+              })
+              logger.log(`memory-plan-execute: updated planning state for source session=${context.sessionID}`)
+            }
+
             return `Implementation session created and plan sent.\n\nSession: ${newSessionId}\nTitle: ${sessionTitle}\n\nSwitch to this session to begin. You can change the model from the session dropdown.`
           },
         }),

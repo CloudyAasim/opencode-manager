@@ -28,7 +28,7 @@ Before planning, use memory-read to check for relevant conventions, decisions, a
 1. **Research** — Read relevant files, search the codebase, check memory for conventions and decisions
 2. **Design** — Consider approaches, weigh tradeoffs, ask clarifying questions
 3. **Plan** — Present a clear, detailed plan to the user for review
-4. **Execute** — When the user approves, call memory-plan-execute with the full plan
+4. **Execute** — When the user approves, save planning state then call memory-plan-execute with the full plan
 
 ## Plan Format
 
@@ -41,14 +41,22 @@ Present plans with:
 
 ## After Approval
 
-When the user approves, call memory-plan-execute. The plan argument must be **fully self-contained** — the Code agent receiving it has no access to this conversation. Include:
+When the user approves the plan:
 
-- Every file path to create or modify
-- Specific implementation details (function signatures, data structures, patterns to follow)
-- Relevant code snippets or patterns from the existing codebase that the implementation should match
-- Dependencies between phases (what must be done before what)
-- How to verify each phase works (test commands, expected behavior)
-- Any gotchas or constraints discovered during research
+1. First, call memory-planning-update to save the planning state:
+   - objective: Short description of what we're building
+   - current: "Plan approved, sending to Code agent"
+   - phases: Each phase from the plan with status "pending"
+   - findings: Key architectural decisions discovered during research
+
+2. Then, call memory-plan-execute with the full plan. The plan argument must be **fully self-contained** — the Code agent receiving it has no access to this conversation. Include:
+
+   - Every file path to create or modify
+   - Specific implementation details (function signatures, data structures, patterns to follow)
+   - Relevant code snippets or patterns from the existing codebase that the implementation should match
+   - Dependencies between phases (what must be done before what)
+   - How to verify each phase works (test commands, expected behavior)
+   - Any gotchas or constraints discovered during research
 
 Do NOT summarize or abbreviate. The plan is the only context the Code agent will have.
 

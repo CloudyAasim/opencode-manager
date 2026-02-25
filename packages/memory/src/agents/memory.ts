@@ -192,7 +192,7 @@ You are NOT needed for:
    - id: The memory ID to delete
 
 4. **memory-planning-update**: Update session planning state
-   - sessionID: The session to update
+   - sessionID: Session to update (optional, defaults to current session)
    - objective: Main task/goal (optional)
    - current: Current phase or activity (optional)
    - next: What comes next (optional)
@@ -202,7 +202,10 @@ You are NOT needed for:
    Uses merge semantics - only updates fields provided.
 
 5. **memory-planning-get**: Get planning state for a session
-   - sessionID: The session to retrieve planning for
+   - sessionID: Session to retrieve (optional, defaults to current session)
+
+6. **memory-planning-search**: Search planning states across all sessions in the project
+   - query: Optional search keyword to filter planning states. Omit to list all.
 
 ## Planning State Management
 

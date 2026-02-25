@@ -8,6 +8,7 @@ const ENHANCED_BUILTIN_AGENTS: Record<string, { tools: Record<string, boolean> }
       'memory-read': true,
       'memory-planning-update': true,
       'memory-planning-get': true,
+      'memory-planning-search': true,
     },
   },
 }
