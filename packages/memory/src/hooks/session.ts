@@ -119,7 +119,7 @@ export function createSessionHooks(
 
     logger.log(`Post-compaction: fetched compaction summary (${compactionSummary.length} chars)`)
 
-    const planningState = sessionStateService.getPlanningState(sessionId)
+    const planningState = sessionStateService.getPlanningState(sessionId, projectId)
     if (planningState) {
       logger.log(`Post-compaction: fetched planning state for session ${sessionId}`)
     }
@@ -181,7 +181,7 @@ export function createSessionHooks(
 
         let planningState: PlanningState | null = null
         if (compactionConfig.inlinePlanning) {
-          planningState = sessionStateService.getPlanningState(sessionId)
+          planningState = sessionStateService.getPlanningState(sessionId, projectId)
           if (planningState) {
             const planningText = formatPlanningState(planningState)
             if (planningText) {
@@ -193,7 +193,7 @@ export function createSessionHooks(
         }
 
         if (compactionConfig.snapshotToKV) {
-          const priorSnapshot = sessionStateService.getCompactionSnapshot(sessionId)
+          const priorSnapshot = sessionStateService.getCompactionSnapshot(sessionId, projectId)
           if (priorSnapshot) {
             const snapshotParts: string[] = []
             snapshotParts.push(`Last compaction: ${new Date(priorSnapshot.timestamp).toLocaleString()}`)
