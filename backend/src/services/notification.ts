@@ -200,6 +200,7 @@ export class NotificationService {
 
     const sessionId = event.properties.sessionID as string | undefined;
     if (sessionId && sseAggregator.isSessionBeingViewed(sessionId)) return;
+    if (sessionId && sseAggregator.isSubagentSession(sessionId)) return;
 
     if (!this.isConfigured()) return;
 

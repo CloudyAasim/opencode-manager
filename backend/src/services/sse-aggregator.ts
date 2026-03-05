@@ -37,6 +37,7 @@ class SSEAggregator {
   private idleTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private sessionStateVersion: Map<string, number> = new Map()
   private eventListeners: Set<SSEEventListener> = new Set()
+  private subagentSessions: Map<string, Set<string>> = new Map()
 
   private constructor() {}
 
@@ -246,6 +247,27 @@ class SSEAggregator {
       if (sessionID) {
         this.markSessionIdle(directory, sessionID)
       }
+    } else if (type === 'session.created' || type === 'session.updated') {
+      const info = properties.info as { id?: string; parentID?: string } | undefined
+      if (info?.id && info.parentID) {
+        let sessions = this.subagentSessions.get(directory)
+        if (!sessions) {
+          sessions = new Set()
+          this.subagentSessions.set(directory, sessions)
+        }
+        sessions.add(info.id)
+      }
+    } else if (type === 'session.deleted') {
+      const info = properties.info as { id?: string } | undefined
+      if (info?.id) {
+        const sessions = this.subagentSessions.get(directory)
+        if (sessions) {
+          sessions.delete(info.id)
+          if (sessions.size === 0) {
+            this.subagentSessions.delete(directory)
+          }
+        }
+      }
     }
   }
 
@@ -375,6 +397,15 @@ class SSEAggregator {
     return false
   }
 
+  isSubagentSession(sessionId: string): boolean {
+    for (const sessions of this.subagentSessions.values()) {
+      if (sessions.has(sessionId)) {
+        return true
+      }
+    }
+    return false
+  }
+
   getActiveDirectories(): string[] {
     return Array.from(this.connections.keys())
   }
@@ -385,6 +416,7 @@ class SSEAggregator {
     })
     this.idleTimeouts.clear()
     this.activeSessions.clear()
+    this.subagentSessions.clear()
     this.sessionStateVersion.clear()
 
     this.connections.forEach((conn, dir) => {
