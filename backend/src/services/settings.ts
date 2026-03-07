@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { unlinkSync, existsSync } from 'fs'
 import { getOpenCodeConfigFilePath } from '@opencode-manager/shared/config/env'
 import { logger } from '../utils/logger'
-import stripJsonComments from 'strip-json-comments'
+import { parseJsonc } from '@opencode-manager/shared/utils'
 import type { 
   UserPreferences, 
   SettingsResponse, 
@@ -25,9 +25,6 @@ interface OpenCodeConfigResponseWithRaw {
   defaultConfig: OpenCodeConfigWithRaw | null
 }
 
-function parseJsonc(content: string): unknown {
-  return JSON.parse(stripJsonComments(content))
-}
 
 export class SettingsService {
   private static lastKnownGoodConfigContent: string | null = null

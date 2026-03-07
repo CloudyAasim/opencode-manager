@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog'
 import type { OpenCodeConfig } from '@/api/types/settings'
 import { parseJsonc } from '@/lib/jsonc'
+import { FetchError } from '@/api/fetchWrapper'
 
 interface OpenCodeConfigEditorProps {
   config: OpenCodeConfig | null
@@ -44,26 +45,44 @@ export function OpenCodeConfigEditor({
     if (!config) return
 
     try {
-      const parsedContent = parseJsonc<Record<string, unknown>>(editConfigContent)
-      
-      const forbiddenFields = ['id', 'createdAt', 'updatedAt']
-      const foundForbidden = forbiddenFields.filter(field => field in parsedContent)
-      if (foundForbidden.length > 0) {
-        throw new Error(`Invalid fields found: ${foundForbidden.join(', ')}. These fields are managed automatically.`)
-      }
-      
+      parseJsonc<Record<string, unknown>>(editConfigContent)
       await onUpdate(editConfigContent)
       onClose()
     } catch (error) {
       if (error instanceof SyntaxError) {
-        const match = error.message.match(/line (\d+)/i)
-        const line = match ? parseInt(match[1]) : null
+        const lineMatch = error.message.match(/line\s+(\d+)/i)
+        const line = lineMatch ? parseInt(lineMatch[1]) : null
         setEditErrorLine(line)
-        setEditError('Invalid JSON/JSONC format')
+        if (line && editTextareaRef.current) {
+          highlightErrorLine(editTextareaRef.current, line)
+        }
+        setEditError(`Invalid JSON/JSONC: ${error.message}`)
+      } else if (error instanceof FetchError) {
+        setEditError(error.detail || error.message)
+      } else if (error instanceof Error) {
+        setEditError(error.message)
       } else {
-        setEditError('Failed to save. Please check your changes and try again.')
+        setEditError('Failed to save configuration')
       }
     }
+  }
+
+  const highlightErrorLine = (textarea: HTMLTextAreaElement, line: number) => {
+    const lines = textarea.value.split('\n')
+    if (line > lines.length) return
+    
+    let charIndex = 0
+    for (let i = 0; i < line - 1; i++) {
+      charIndex += lines[i].length + 1
+    }
+    
+    textarea.focus()
+    textarea.setSelectionRange(charIndex, charIndex + lines[line - 1].length)
+    
+    // Scroll to make the error line visible
+    const lineHeight = textarea.scrollHeight / lines.length
+    const targetPosition = lineHeight * (line - 1)
+    textarea.scrollTop = targetPosition - textarea.clientHeight / 2 + lineHeight / 2
   }
 
   if (!config) return null
@@ -87,7 +106,7 @@ export function OpenCodeConfigEditor({
               setEditError('')
               setEditErrorLine(null)
             }}
-            className="flex-1 font-mono text-[16px] sm:text-xs md:text-sm resize-none h-full rounded-none sm:rounded-md"
+            className={`flex-1 font-mono text-[16px] sm:text-xs md:text-sm resize-none h-full rounded-none sm:rounded-md ${editErrorLine ? 'error-highlight' : ''}`}
           />
           {editError && (
             <div className="absolute bottom-0 left-0 right-0 bg-background/95 border-t p-2 sm:p-3">

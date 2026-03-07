@@ -36,6 +36,7 @@
     "date-fns": "^4.1.0",
     "diff": "^8.0.2",
     "highlight.js": "^11.11.1",
+    "jsonc-parser": "^3.3.1",
     "lucide-react": "^0.546.0",
     "mermaid": "^11.12.2",
     "react": "^19.1.1",
@@ -47,7 +48,6 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
-    "strip-json-comments": "^5.0.3",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"

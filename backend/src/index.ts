@@ -54,7 +54,7 @@ import {
   ENV
 } from '@opencode-manager/shared/config/env'
 import { OpenCodeConfigSchema } from '@opencode-manager/shared/schemas'
-import stripJsonComments from 'strip-json-comments'
+import { parse as parseJsonc } from 'jsonc-parser'
 
 const { PORT, HOST } = ENV.SERVER
 const DB_PATH = getDatabasePath()
@@ -90,7 +90,7 @@ async function ensureDefaultConfigExists(): Promise<void> {
     logger.info(`Found workspace config at ${workspaceConfigPath}, syncing to database...`)
     try {
       const rawContent = await readFileContent(workspaceConfigPath)
-      const parsed = JSON.parse(stripJsonComments(rawContent))
+      const parsed = parseJsonc(rawContent)
       const validation = OpenCodeConfigSchema.safeParse(parsed)
       
       if (!validation.success) {
@@ -123,7 +123,7 @@ async function ensureDefaultConfigExists(): Promise<void> {
     logger.info(`Found home config at ${homeConfigPath}, importing...`)
     try {
       const rawContent = await readFileContent(homeConfigPath)
-      const parsed = JSON.parse(stripJsonComments(rawContent))
+      const parsed = parseJsonc(rawContent)
       const validation = OpenCodeConfigSchema.safeParse(parsed)
       
       if (validation.success) {

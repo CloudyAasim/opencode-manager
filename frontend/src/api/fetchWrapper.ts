@@ -8,13 +8,34 @@ interface FetchWrapperOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>
 }
 
+function formatDetails(details: unknown): string | undefined {
+  if (Array.isArray(details)) {
+    return details
+      .map((d) => {
+        if (typeof d !== 'object' || d === null) return null
+        const path = Array.isArray((d as Record<string, unknown>).path) 
+          ? ((d as Record<string, unknown>).path as string[]) 
+          : undefined
+        const message = typeof (d as Record<string, unknown>).message === 'string'
+          ? (d as Record<string, unknown>).message as string
+          : undefined
+        return path?.length ? `${path.join('.')}: ${message}` : message
+      })
+      .filter(Boolean)
+      .join('; ')
+  }
+  if (typeof details === 'string') return details
+  return undefined
+}
+
 async function handleResponse(response: Response): Promise<never> {
   const data: ApiErrorResponse = await response.json().catch(() => ({ error: 'An error occurred' }))
+  const detail = data.detail || formatDetails(data.details)
   throw new FetchError(
     data.error || 'Request failed',
     response.status,
     data.code,
-    data.detail
+    detail
   )
 }
 
