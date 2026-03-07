@@ -3,27 +3,28 @@ import { tool } from '@opencode-ai/plugin'
 import { agents } from './agents'
 import { createConfigHandler } from './config'
 import { VERSION } from './version'
-import { createSessionHooks } from './hooks'
+import { createSessionHooks, createMemoryInjectionHook } from './hooks'
 import { join } from 'path'
-import { initializeDatabase, resolveDataDir, closeDatabase, createMetadataQuery, getTableDimensions, recreateVecTable } from './storage'
+import { initializeDatabase, resolveDataDir, closeDatabase, createMetadataQuery } from './storage'
 import type { MemoryService } from './services/memory'
 import { createVecService } from './storage/vec'
 import { createEmbeddingProvider, checkServerHealth, isServerRunning, killEmbeddingServer } from './embedding'
 import { createMemoryService } from './services/memory'
-import { createSessionStateService } from './services/session-state'
 import { createEmbeddingSyncService } from './services/embedding-sync'
 import { loadPluginConfig } from './setup'
 import { resolveLogPath } from './storage'
 import { createLogger } from './utils/logger'
 import type { Database } from 'bun:sqlite'
-import type { PluginConfig, CompactionConfig, HealthStatus, Logger, PlanningState } from './types'
+import type { PluginConfig, CompactionConfig, HealthStatus, Logger } from './types'
 import type { EmbeddingProvider } from './embedding'
+import type { VecService } from './storage/vec-types'
 import { createNoopVecService } from './storage/vec'
 
 
 const z = tool.schema
 
 async function getHealthStatus(
+  projectId: string,
   db: Database,
   config: PluginConfig,
   provider: EmbeddingProvider,
@@ -35,7 +36,7 @@ async function getHealthStatus(
   let memoryCount = 0
   try {
     db.prepare('SELECT 1').get()
-    const row = db.prepare("SELECT COUNT(*) as count FROM memories").get() as { count: number }
+    const row = db.prepare("SELECT COUNT(*) as count FROM memories WHERE project_id = ?").get(projectId) as { count: number }
     memoryCount = row.count
   } catch {
     dbStatus = 'error'
@@ -138,12 +139,13 @@ function formatHealthStatus(status: HealthStatus, provider: EmbeddingProvider): 
 }
 
 async function executeHealthCheck(
+  projectId: string,
   db: Database,
   config: PluginConfig,
   provider: EmbeddingProvider,
   dataDir: string,
 ): Promise<string> {
-  const status = await getHealthStatus(db, config, provider, dataDir)
+  const status = await getHealthStatus(projectId, db, config, provider, dataDir)
   return formatHealthStatus(status, provider)
 }
 
@@ -154,12 +156,13 @@ interface DimensionMismatchState {
 }
 
 async function executeReindex(
+  projectId: string,
   memoryService: MemoryService,
   db: Database,
   config: PluginConfig,
   provider: EmbeddingProvider,
-  dataDir: string,
   mismatchState: DimensionMismatchState,
+  vec: VecService,
 ): Promise<string> {
   const configuredModel = config.embedding.model
   const configuredDimensions = config.embedding.dimensions ?? provider.dimensions
@@ -175,14 +178,12 @@ async function executeReindex(
     return 'Reindex failed: embedding provider is not operational. Check your API key and model configuration.'
   }
 
-  const tableResult = getTableDimensions(db)
-  if (tableResult.exists && tableResult.dimensions !== configuredDimensions) {
-    recreateVecTable(db, configuredDimensions)
-    const newVec = await createVecService(db, dataDir, configuredDimensions)
-    memoryService.setVecService(newVec)
+  const tableInfo = await vec.getDimensions()
+  if (tableInfo.exists && tableInfo.dimensions !== null && tableInfo.dimensions !== configuredDimensions) {
+    await vec.recreateTable(configuredDimensions)
   }
 
-  const result = await memoryService.reindex()
+  const result = await memoryService.reindex(projectId)
 
   if (result.success > 0 || result.total === 0) {
     const metadata = createMetadataQuery(db)
@@ -213,14 +214,17 @@ async function executeReindex(
 }
 
 async function autoValidateOnLoad(
+  projectId: string,
   memoryService: MemoryService,
   db: Database,
   config: PluginConfig,
   provider: EmbeddingProvider,
   dataDir: string,
+  mismatchState: DimensionMismatchState,
+  vec: VecService,
   logger: Logger,
 ): Promise<void> {
-  const status = await getHealthStatus(db, config, provider, dataDir)
+  const status = await getHealthStatus(projectId, db, config, provider, dataDir)
 
   if (status.overallStatus === 'error') {
     logger.log('Auto-validate: unhealthy (db error), skipping')
@@ -238,16 +242,8 @@ async function autoValidateOnLoad(
   }
 
   logger.log('Auto-validate: model drift detected, starting reindex')
-  const result = await memoryService.reindex()
-
-  if (result.success > 0 || result.total === 0) {
-    const metadata = createMetadataQuery(db)
-    metadata.setEmbeddingModel(
-      config.embedding.model,
-      config.embedding.dimensions ?? provider.dimensions,
-    )
-  }
-  logger.log(`Auto-validate: reindex complete (total=${result.total}, success=${result.success}, failed=${result.failed})`)
+  await executeReindex(projectId, memoryService, db, config, provider, mismatchState, vec)
+  logger.log('Auto-validate: reindex complete')
 }
 
 function parseModelString(modelStr?: string): { providerID: string; modelID: string } | undefined {
@@ -269,6 +265,7 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
     const logger = createLogger({
       enabled: loggingConfig?.enabled ?? false,
       file: loggingConfig?.file ?? resolveLogPath(),
+      debug: loggingConfig?.debug ?? false,
     })
     logger.log(`Initializing plugin for directory: ${directory}, projectId: ${projectId}`)
 
@@ -292,10 +289,6 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       logger,
     })
 
-    const sessionStateService = createSessionStateService(db, logger)
-    sessionStateService.startCleanupInterval()
-    sessionStateService.deleteExpired()
-
     if (config.dedupThreshold) {
       memoryService.setDedupThreshold(config.dedupThreshold)
     }
@@ -306,8 +299,17 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       actual: null,
     }
 
-    const initPromise = createVecService(db, dataDir, dimensions)
+    const initState = {
+      vecReady: false,
+      syncRunning: false,
+      syncComplete: false,
+    }
+
+    let currentVec: VecService = noopVec
+
+    createVecService(db, dataDir, dimensions, logger)
       .then(async (vec) => {
+        currentVec = vec
         memoryService.setVecService(vec)
 
         if (!vec.available) {
@@ -316,30 +318,46 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
         }
 
         logger.log('Vec service initialized')
+        initState.vecReady = true
 
-        const tableResult = getTableDimensions(db)
-        if (tableResult.exists && tableResult.dimensions !== dimensions) {
-          mismatchState.detected = true
-          mismatchState.expected = dimensions
-          mismatchState.actual = tableResult.dimensions
-          memoryService.setVecService(createNoopVecService())
-          logger.log(`Dimension mismatch detected: config=${dimensions}, table=${tableResult.dimensions ?? 'unknown'}`)
-          return
+        const tableInfo = await vec.getDimensions()
+        if (tableInfo.exists && tableInfo.dimensions !== null && tableInfo.dimensions !== dimensions) {
+          logger.log(`Dimension mismatch detected: config=${dimensions}, table=${tableInfo.dimensions}, auto-recreating`)
+          await vec.recreateTable(dimensions)
         }
 
         const embeddingSync = createEmbeddingSyncService(memoryService, logger)
-        await embeddingSync.start().catch((err: unknown) => {
-          logger.error('Embedding sync failed', err)
-        })
-
-        await autoValidateOnLoad(memoryService, db, config, provider, dataDir, logger)
+        initState.syncRunning = true
+        embeddingSync.start().then(
+          () => {
+            initState.syncRunning = false
+            initState.syncComplete = true
+            autoValidateOnLoad(projectId, memoryService, db, config, provider, dataDir, mismatchState, currentVec, logger)
+              .catch((err: unknown) => {
+                logger.error('Auto-validate failed', err)
+              })
+          },
+          (err: unknown) => {
+            initState.syncRunning = false
+            logger.error('Embedding sync failed', err)
+          }
+        )
       })
       .catch((err: unknown) => {
         logger.error('Vec service initialization failed', err)
       })
 
     const compactionConfig: CompactionConfig | undefined = config.compaction
-    const sessionHooks = createSessionHooks(projectId, memoryService, sessionStateService, logger, input, compactionConfig)
+    const memoryInjectionConfig = config.memoryInjection
+    const messagesTransformConfig = config.messagesTransform
+    const sessionHooks = createSessionHooks(projectId, memoryService, logger, input, compactionConfig)
+    const memoryInjection = createMemoryInjectionHook({
+      projectId,
+      memoryService,
+      logger,
+      config: memoryInjectionConfig,
+    })
+    const injectedMessageIds = new Set<string>()
 
     const scopeEnum = z.enum(['convention', 'decision', 'context'])
 
@@ -353,8 +371,8 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       if (cleaned) return
       cleaned = true
       logger.log('Cleaning up plugin resources...')
+      memoryInjection.destroy()
       await memoryService.destroy()
-      sessionStateService.destroy()
       closeDatabase(db)
       logger.log('Plugin cleanup complete')
     }
@@ -376,7 +394,6 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             limit: z.number().optional().default(10).describe('Max results'),
           },
           execute: async (args) => {
-            await initPromise
             logger.log(`memory-read: query="${args.query ?? 'none'}", scope=${args.scope}, limit=${args.limit}`)
 
             let results
@@ -411,7 +428,6 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             scope: scopeEnum.describe('Memory scope category'),
           },
           execute: async (args) => {
-            await initPromise
             logger.log(`memory-write: scope=${args.scope}, content="${args.content?.substring(0, 80)}"`)
 
             const result = await memoryService.create({
@@ -432,11 +448,10 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             scope: scopeEnum.optional().describe('Change the scope category'),
           },
           execute: async (args) => {
-            await initPromise
             logger.log(`memory-edit: id=${args.id}, content="${args.content?.substring(0, 80)}"`)
             
             const memory = memoryService.getById(args.id)
-            if (!memory) {
+            if (!memory || memory.projectId !== projectId) {
               logger.log(`memory-edit: id=${args.id} not found`)
               return withDimensionWarning(`Memory #${args.id} not found.`)
             }
@@ -456,12 +471,11 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             id: z.number().describe('The memory ID to delete'),
           },
           execute: async (args) => {
-            await initPromise
             const id = args.id
             logger.log(`memory-delete: id=${id}`)
 
             const memory = memoryService.getById(id)
-            if (!memory) {
+            if (!memory || memory.projectId !== projectId) {
               logger.log(`memory-delete: id=${id} not found`)
               return withDimensionWarning(`Memory #${id} not found.`)
             }
@@ -477,157 +491,24 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             action: z.enum(['check', 'reindex']).optional().default('check').describe('Action to perform: "check" for health status, "reindex" to regenerate embeddings'),
           },
           execute: async (args) => {
-            await initPromise
             if (args.action === 'reindex') {
-              return executeReindex(memoryService, db, config, provider, dataDir, mismatchState)
-            }
-            return withDimensionWarning(await executeHealthCheck(db, config, provider, dataDir))
-          },
-        }),
-        'memory-planning-update': tool({
-          description: 'Update the session planning state (phases, objectives, progress). Merge new fields with existing state.',
-          args: {
-            sessionID: z.string().optional().describe('Session ID to update. Defaults to current session if omitted.'),
-            objective: z.string().optional().describe('The main task/goal'),
-            current: z.string().optional().describe('Current phase or activity'),
-            next: z.string().optional().describe('What comes next'),
-            phases: z.array(z.object({
-              title: z.string(),
-              status: z.string(),
-              notes: z.string().optional(),
-            })).optional().describe('Phase list with status'),
-            findings: z.array(z.string()).optional().describe('Key discoveries'),
-            errors: z.array(z.string()).optional().describe('Errors to avoid'),
-          },
-          execute: async (args, context) => {
-            await initPromise
-            const sessionId = args.sessionID ?? context.sessionID
-            logger.log(`memory-planning-update: session=${sessionId}`)
-
-            const existing = sessionStateService.getPlanningState(sessionId, projectId)
-            const merged: typeof existing = {
-              ...(existing ?? {}),
-              ...(args.objective !== undefined && { objective: args.objective }),
-              ...(args.current !== undefined && { current: args.current }),
-              ...(args.next !== undefined && { next: args.next }),
-              ...(args.phases !== undefined && { phases: args.phases }),
-              ...(args.findings !== undefined && {
-                findings: [...new Set([...(existing?.findings ?? []), ...args.findings])]
-              }),
-              ...(args.errors !== undefined && {
-                errors: [...new Set([...(existing?.errors ?? []), ...args.errors])]
-              }),
-              active: true,
-            }
-
-            sessionStateService.setPlanningState(sessionId, projectId, merged as PlanningState)
-
-            const hasPhases = merged?.phases && merged.phases.length > 0
-            const summary = [
-              merged?.objective && `objective: ${merged.objective}`,
-              merged?.current && `current: ${merged.current}`,
-              hasPhases && `${merged.phases!.length} phases`,
-            ].filter(Boolean).join(', ')
-
-            logger.log(`memory-planning-update: stored for session ${sessionId}`)
-            return `Planning state updated for session ${sessionId}. ${summary || 'No data provided'}`
-          },
-        }),
-        'memory-planning-get': tool({
-          description: 'Get the current planning state for a session',
-          args: {
-            sessionID: z.string().optional().describe('Session ID to retrieve. Defaults to current session if omitted.'),
-          },
-          execute: async (args, context) => {
-            await initPromise
-            const sessionId = args.sessionID ?? context.sessionID
-            logger.log(`memory-planning-get: session=${sessionId}`)
-
-            const planningState = sessionStateService.getPlanningState(sessionId, projectId)
-            if (!planningState) {
-              return 'No planning state found for this session'
-            }
-
-            const sections: string[] = []
-            if (planningState.objective) sections.push(`**Objective:** ${planningState.objective}`)
-            if (planningState.current) sections.push(`**Current:** ${planningState.current}`)
-            if (planningState.next) sections.push(`**Next:** ${planningState.next}`)
-
-            if (planningState.phases && planningState.phases.length > 0) {
-              sections.push('\n### Phases:')
-              for (const phase of planningState.phases) {
-                const statusIcon = phase.status === 'completed' ? '[x]' : phase.status === 'in_progress' ? '[~]' : '[ ]'
-                const notes = phase.notes ? ` - ${phase.notes}` : ''
-                sections.push(`- ${statusIcon} ${phase.title}${notes}`)
+              if (!currentVec.available) {
+                return 'Reindex unavailable: vector service is still initializing. Try again in a few seconds.'
               }
+              return executeReindex(projectId, memoryService, db, config, provider, mismatchState, currentVec)
             }
-
-            if (planningState.findings && planningState.findings.length > 0) {
-              sections.push('\n### Key Findings:')
-              for (const finding of planningState.findings) {
-                sections.push(`- ${finding}`)
-              }
-            }
-
-            if (planningState.errors && planningState.errors.length > 0) {
-              sections.push('\n### Errors to Avoid:')
-              for (const error of planningState.errors) {
-                sections.push(`- ${error}`)
-              }
-            }
-
-            return sections.join('\n') || 'Planning state exists but is empty'
-          },
-        }),
-        'memory-planning-search': tool({
-          description: 'Search planning states across all sessions in the current project. Use this to find planning context from prior sessions.',
-          args: {
-            query: z.string().optional().describe('Search keyword to filter planning states. Omit to list all.'),
-          },
-          execute: async (args) => {
-            await initPromise
-            logger.log(`memory-planning-search: query="${args.query ?? 'all'}"`)
-
-            const results = args.query
-              ? sessionStateService.searchPlanningStates(projectId, args.query)
-              : sessionStateService.listPlanningStates(projectId)
-
-            if (results.length === 0) {
-              return args.query
-                ? `No planning states found matching "${args.query}"`
-                : 'No planning states found for this project'
-            }
-
-            const formatted = results.map(({ sessionId, planningState, updatedAt }) => {
-              const parts: string[] = [`**Session:** ${sessionId} (updated ${new Date(updatedAt).toISOString().split('T')[0]})`]
-              if (planningState.objective) parts.push(`  Objective: ${planningState.objective}`)
-              if (planningState.current) parts.push(`  Current: ${planningState.current}`)
-              if (planningState.next) parts.push(`  Next: ${planningState.next}`)
-              if (planningState.phases && planningState.phases.length > 0) {
-                const completed = planningState.phases.filter(p => p.status === 'completed').length
-                parts.push(`  Phases: ${completed}/${planningState.phases.length} completed`)
-              }
-              return parts.join('\n')
-            })
-
-            return `Found ${results.length} planning state(s):\n\n${formatted.join('\n\n')}`
+            const result = await executeHealthCheck(projectId, db, config, provider, dataDir)
+            const initInfo = `\nInit: ${initState.vecReady ? 'vec ready' : 'vec pending'}${initState.syncRunning ? ', sync in progress' : initState.syncComplete ? ', sync complete' : ''}`
+            return withDimensionWarning(result + initInfo)
           },
         }),
         'memory-plan-execute': tool({
-          description: 'Create a new Code session, save planning state, and send the plan as the first prompt. Call this after the user approves the plan.',
+          description: 'Create a new Code session and send the plan as the first prompt. Call this after the user approves the plan.',
           args: {
             plan: z.string().describe('The full implementation plan to send to the Code agent'),
             title: z.string().describe('Short title for the session (shown in session list)'),
-            objective: z.string().optional().describe('Short description of what we are building'),
-            phases: z.array(z.object({
-              title: z.string(),
-              status: z.string(),
-              notes: z.string().optional(),
-            })).optional().describe('Phases from the plan, each with status "pending"'),
-            findings: z.array(z.string()).optional().describe('Key architectural decisions discovered during research'),
           },
-          execute: async (args, context) => {
-            await initPromise
+          execute: async (args) => {
             logger.log(`memory-plan-execute: creating session titled "${args.title}"`)
 
             const sessionTitle = args.title.length > 60 ? `${args.title.substring(0, 57)}...` : args.title
@@ -644,24 +525,12 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             const newSessionId = createResult.data.id
             logger.log(`memory-plan-execute: created session=${newSessionId}`)
 
-            const planningState: PlanningState = {
-              ...(args.objective && { objective: args.objective }),
-              current: `Plan approved, sending to Code agent`,
-              ...(args.phases && { phases: args.phases }),
-              ...(args.findings && { findings: args.findings }),
-              active: true,
-            }
-            sessionStateService.setPlanningState(context.sessionID, projectId, planningState)
-            logger.log(`memory-plan-execute: saved planning state for session=${context.sessionID}`)
-
-            const planningInstruction = `\n\n---\n\nWhen you complete each phase, delegate to the @Memory subagent via the Task tool to update planning state. Tell it to call memory-planning-update with sessionID "${context.sessionID}". Update phase statuses as you progress (pending → in_progress → completed). Set current to describe what you're working on. When all work is done, set current to "Completed".`
-
             const executionModel = parseModelString(config.executionModel)
 
             const promptResult = await client.session.promptAsync({
               path: { id: newSessionId },
               body: {
-                parts: [{ type: 'text' as const, text: args.plan + planningInstruction }],
+                parts: [{ type: 'text' as const, text: args.plan }],
                 agent: 'Code',
                 ...(executionModel && { model: executionModel }),
               },
@@ -673,13 +542,6 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             }
 
             logger.log(`memory-plan-execute: prompted session=${newSessionId}`)
-
-            const currentState = sessionStateService.getPlanningState(context.sessionID, projectId)
-            sessionStateService.setPlanningState(context.sessionID, projectId, {
-              ...(currentState ?? planningState),
-              current: `Plan sent to execution session ${newSessionId}`,
-            })
-            logger.log(`memory-plan-execute: updated planning state for source session=${context.sessionID}`)
 
             const modelInfo = executionModel ? `${executionModel.providerID}/${executionModel.modelID}` : 'default'
             return `Implementation session created and plan sent.\n\nSession: ${newSessionId}\nTitle: ${sessionTitle}\nModel: ${modelInfo}\n\nSwitch to this session to begin. You can change the model from the session dropdown.`
@@ -699,13 +561,13 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       'experimental.session.compacting': async (input, output) => {
         logger.log(`Compacting triggered`)
         await sessionHooks.onCompacting(
-          input as { sessionID: string; branch?: string },
+          input as { sessionID: string },
           output as { context: string[]; prompt?: string }
         )
       },
       'experimental.chat.messages.transform': async (
         _input: Record<string, never>,
-        output: { messages: Array<{ info: { role: string; agent?: string }; parts: Array<Record<string, unknown>> }> }
+        output: { messages: Array<{ info: { role: string; agent?: string; id?: string }; parts: Array<Record<string, unknown>> }> }
       ) => {
         const messages = output.messages
         let userMessage: typeof messages[number] | undefined
@@ -715,14 +577,53 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             break
           }
         }
-        if (!userMessage || userMessage.info.agent !== agents.architect.displayName) return
+
+        if (!userMessage) return
+
+        const messageId = userMessage.info.id
+        const alreadyInjected = messageId ? injectedMessageIds.has(messageId) : false
+
+        if (!alreadyInjected) {
+          const textParts = userMessage.parts
+            .filter((p) => p.type === 'text' && typeof p.text === 'string')
+            .map((p) => p.text as string)
+          const userText = textParts.join('\n').trim()
+
+          if (userText.length > 0) {
+            const memoryInjectionEnabled = config.memoryInjection?.enabled ?? true
+            if (memoryInjectionEnabled) {
+              const injected = await memoryInjection.handler(userText)
+              if (injected) {
+                userMessage.parts.push({
+                  type: 'text',
+                  text: injected,
+                  synthetic: true,
+                })
+              }
+            }
+          }
+
+          if (messageId) {
+            injectedMessageIds.add(messageId)
+            if (injectedMessageIds.size > 100) {
+              const first = injectedMessageIds.values().next().value
+              if (first) injectedMessageIds.delete(first)
+            }
+          }
+        }
+
+        const messagesTransformEnabled = messagesTransformConfig?.enabled ?? true
+        if (!messagesTransformEnabled) return
+
+        const isArchitect = userMessage.info.agent === agents.architect.displayName
+        if (!isArchitect) return
 
         userMessage.parts.push({
           type: 'text',
           text: `<system-reminder>
 Plan mode is active. You MUST NOT make any file edits, run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
 
-You may ONLY: observe, analyze, plan, and use memory tools (memory-read, memory-write, memory-edit, memory-delete, memory-health, memory-planning-get, memory-plan-execute).
+You may ONLY: observe, analyze, plan, and use memory tools (memory-read, memory-write, memory-edit, memory-delete, memory-health, memory-plan-execute).
 </system-reminder>`,
           synthetic: true,
         })

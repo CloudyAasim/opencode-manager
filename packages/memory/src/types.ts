@@ -50,11 +50,13 @@ export interface EmbeddingConfig {
 export interface LoggingConfig {
   enabled: boolean
   file: string
+  debug?: boolean
 }
 
 export interface Logger {
   log: (message: string, ...args: unknown[]) => void
   error: (message: string, ...args: unknown[]) => void
+  debug: (message: string, ...args: unknown[]) => void
 }
 
 export interface PluginConfig {
@@ -63,6 +65,8 @@ export interface PluginConfig {
   dedupThreshold?: number
   logging?: LoggingConfig
   compaction?: CompactionConfig
+  memoryInjection?: MemoryInjectionConfig
+  messagesTransform?: MessagesTransformConfig
   executionModel?: string
 }
 
@@ -72,38 +76,23 @@ export interface ListMemoriesFilter {
   offset?: number
 }
 
-export interface SessionState {
-  key: string
-  projectId: string
-  data: unknown
-  expiresAt: number | null
-  createdAt: number
-  updatedAt: number
-}
-
-export interface PlanningState {
-  objective?: string
-  current?: string
-  next?: string
-  phases?: Array<{ title: string; status: string; notes?: string }>
-  findings?: string[]
-  errors?: string[]
-  active?: boolean
-}
-
-export interface PreCompactionSnapshot {
-  timestamp: string
-  sessionId: string
-  planningState?: PlanningState
-  branch?: string
-  activeFiles?: string[]
-}
-
 export interface CompactionConfig {
   customPrompt?: boolean
-  inlinePlanning?: boolean
   maxContextTokens?: number
-  snapshotToKV?: boolean
+}
+
+export interface MemoryInjectionConfig {
+  enabled?: boolean
+  maxResults?: number
+  distanceThreshold?: number
+  maxTokens?: number
+  cacheTtlMs?: number
+  debug?: boolean
+}
+
+export interface MessagesTransformConfig {
+  enabled?: boolean
+  debug?: boolean
 }
 
 export interface HealthStatus {

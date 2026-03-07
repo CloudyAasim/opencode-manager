@@ -9,13 +9,22 @@
   "dedupThreshold": 0.25,
   "logging": {
     "enabled": false,
+    "debug": false,
     "file": ""
   },
   "compaction": {
     "customPrompt": true,
-    "inlinePlanning": true,
-    "maxContextTokens": 4000,
-    "snapshotToKV": true
+    "maxContextTokens": 4000
+  },
+  "memoryInjection": {
+    "enabled": true,
+    "debug": false,
+    "maxTokens": 2000,
+    "cacheTtlMs": 30000
+  },
+  "messagesTransform": {
+    "enabled": true,
+    "debug": false
   },
   "executionModel": ""
 }

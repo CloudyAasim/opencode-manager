@@ -6,9 +6,6 @@ const ENHANCED_BUILTIN_AGENTS: Record<string, { tools: Record<string, boolean> }
   plan: {
     tools: {
       'memory-read': true,
-      'memory-planning-update': true,
-      'memory-planning-get': true,
-      'memory-planning-search': true,
     },
   },
 }
@@ -87,7 +84,7 @@ function createAgentConfigs(agents: Record<AgentRole, AgentDefinition>): Record<
       ...(Object.keys(tools).length > 0 ? { tools } : {}),
       ...(agent.variant ? { variant: agent.variant } : {}),
       ...(agent.temperature !== undefined ? { temperature: agent.temperature } : {}),
-      ...(agent.maxSteps !== undefined ? { maxSteps: agent.maxSteps } : {}),
+      ...(agent.steps !== undefined ? { steps: agent.steps } : {}),
       ...(agent.hidden ? { hidden: agent.hidden } : {}),
       ...(agent.color ? { color: agent.color } : {}),
       ...(agent.permission ? { permission: agent.permission } : {}),
