@@ -313,6 +313,9 @@ importers:
 
   shared:
     dependencies:
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       zod:
         specifier: ^4.1.12
         version: 4.3.2
