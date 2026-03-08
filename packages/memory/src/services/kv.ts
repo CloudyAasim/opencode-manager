@@ -16,13 +16,11 @@ export interface KvService {
   set<T = unknown>(projectId: string, key: string, data: T, ttlMs?: number): void
   delete(projectId: string, key: string): void
   list(projectId: string): KvEntry[]
-  startCleanup(intervalMs?: number): void
-  destroy(): void
 }
 
 export function createKvService(db: Database, logger?: Logger): KvService {
   const queries = createKvQuery(db)
-  let cleanupInterval: ReturnType<typeof setInterval> | null = null
+  queries.deleteExpired()
 
   return {
     get<T = unknown>(projectId: string, key: string): T | null {
@@ -60,27 +58,6 @@ export function createKvService(db: Database, logger?: Logger): KvService {
           expiresAt: row.expiresAt,
         }
       })
-    },
-
-    startCleanup(intervalMs: number = 30 * 60 * 1000): void {
-      if (cleanupInterval) return
-      cleanupInterval = setInterval(() => {
-        try {
-          const deleted = queries.deleteExpired()
-          if (deleted > 0) {
-            logger?.log(`KV cleanup: removed ${deleted} expired entries`)
-          }
-        } catch (error) {
-          logger?.error('KV cleanup failed', error)
-        }
-      }, intervalMs)
-    },
-
-    destroy(): void {
-      if (cleanupInterval) {
-        clearInterval(cleanupInterval)
-        cleanupInterval = null
-      }
     },
   }
 }

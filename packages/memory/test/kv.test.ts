@@ -125,7 +125,6 @@ describe('KvService', () => {
   })
 
   afterEach(() => {
-    service.destroy()
     db.close()
   })
 

@@ -295,7 +295,6 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
     }
 
     const kvService = createKvService(db, logger)
-    kvService.startCleanup()
 
     const mismatchState: DimensionMismatchState = {
       detected: false,
@@ -376,7 +375,6 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       cleaned = true
       logger.log('Cleaning up plugin resources...')
       memoryInjection.destroy()
-      kvService.destroy()
       await memoryService.destroy()
       closeDatabase(db)
       logger.log('Plugin cleanup complete')
@@ -587,18 +585,6 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             }
             logger.log(`memory-kv-get: key="${args.key}" found`)
             return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
-          },
-        }),
-        'memory-kv-delete': tool({
-          description: 'Delete a key-value pair for the current project.',
-          args: {
-            key: z.string().describe('The key to delete'),
-          },
-          execute: async (args) => {
-            logger.log(`memory-kv-delete: key="${args.key}"`)
-            kvService.delete(projectId, args.key)
-            logger.log(`memory-kv-delete: deleted key="${args.key}"`)
-            return `Deleted key "${args.key}"`
           },
         }),
         'memory-kv-list': tool({
