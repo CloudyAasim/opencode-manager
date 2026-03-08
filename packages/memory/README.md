@@ -20,7 +20,7 @@ Add to your `opencode.json`:
 
 ```json
 {
-  "plugin": ["@opencode-manager/memory"]
+  "plugin": ["@opencode-manager/memory@latest"]
 }
 ```
 
