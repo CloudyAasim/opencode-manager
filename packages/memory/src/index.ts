@@ -11,6 +11,7 @@ import { createVecService } from './storage/vec'
 import { createEmbeddingProvider, checkServerHealth, isServerRunning, killEmbeddingServer } from './embedding'
 import { createMemoryService } from './services/memory'
 import { createEmbeddingSyncService } from './services/embedding-sync'
+import { createKvService } from './services/kv'
 import { loadPluginConfig } from './setup'
 import { resolveLogPath } from './storage'
 import { createLogger } from './utils/logger'
@@ -293,6 +294,9 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       memoryService.setDedupThreshold(config.dedupThreshold)
     }
 
+    const kvService = createKvService(db, logger)
+    kvService.startCleanup()
+
     const mismatchState: DimensionMismatchState = {
       detected: false,
       expected: null,
@@ -372,6 +376,7 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       cleaned = true
       logger.log('Cleaning up plugin resources...')
       memoryInjection.destroy()
+      kvService.destroy()
       await memoryService.destroy()
       closeDatabase(db)
       logger.log('Plugin cleanup complete')
@@ -547,6 +552,74 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
             return `Implementation session created and plan sent.\n\nSession: ${newSessionId}\nTitle: ${sessionTitle}\nModel: ${modelInfo}\n\nSwitch to this session to begin. You can change the model from the session dropdown.`
           },
         }),
+        'memory-kv-set': tool({
+          description: 'Store a key-value pair for the current project. Values expire after 24 hours by default. Use for ephemeral project state like planning progress, code review patterns, or session context.',
+          args: {
+            key: z.string().describe('The key to store the value under'),
+            value: z.string().describe('The value to store (JSON string)'),
+            ttlMs: z.number().optional().describe('Time-to-live in milliseconds (default: 24 hours)'),
+          },
+          execute: async (args) => {
+            logger.log(`memory-kv-set: key="${args.key}"`)
+            let parsed: unknown
+            try {
+              parsed = JSON.parse(args.value)
+            } catch {
+              parsed = args.value
+            }
+            kvService.set(projectId, args.key, parsed, args.ttlMs)
+            const expiresAt = new Date(Date.now() + (args.ttlMs ?? 24 * 60 * 60 * 1000))
+            logger.log(`memory-kv-set: stored key="${args.key}", expires=${expiresAt.toISOString()}`)
+            return `Stored key "${args.key}" (expires ${expiresAt.toISOString()})`
+          },
+        }),
+        'memory-kv-get': tool({
+          description: 'Retrieve a value by key for the current project.',
+          args: {
+            key: z.string().describe('The key to retrieve'),
+          },
+          execute: async (args) => {
+            logger.log(`memory-kv-get: key="${args.key}"`)
+            const value = kvService.get(projectId, args.key)
+            if (value === null) {
+              logger.log(`memory-kv-get: key="${args.key}" not found`)
+              return `No value found for key "${args.key}"`
+            }
+            logger.log(`memory-kv-get: key="${args.key}" found`)
+            return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+          },
+        }),
+        'memory-kv-delete': tool({
+          description: 'Delete a key-value pair for the current project.',
+          args: {
+            key: z.string().describe('The key to delete'),
+          },
+          execute: async (args) => {
+            logger.log(`memory-kv-delete: key="${args.key}"`)
+            kvService.delete(projectId, args.key)
+            logger.log(`memory-kv-delete: deleted key="${args.key}"`)
+            return `Deleted key "${args.key}"`
+          },
+        }),
+        'memory-kv-list': tool({
+          description: 'List all active key-value pairs for the current project.',
+          args: {},
+          execute: async () => {
+            logger.log('memory-kv-list')
+            const entries = kvService.list(projectId)
+            if (entries.length === 0) {
+              logger.log('memory-kv-list: no entries')
+              return 'No active KV entries for this project.'
+            }
+            const formatted = entries.map((e) => {
+              const expiresIn = Math.round((e.expiresAt - Date.now()) / 60000)
+              const dataPreview = typeof e.data === 'string' ? e.data.substring(0, 100) : JSON.stringify(e.data).substring(0, 100)
+              return `- **${e.key}** (expires in ${expiresIn}m)\n  ${dataPreview}${dataPreview.length >= 100 ? '...' : ''}`
+            })
+            logger.log(`memory-kv-list: ${entries.length} entries`)
+            return `${entries.length} active KV entries:\n\n${formatted.join('\n')}`
+          },
+        }),
       },
       config: createConfigHandler(agents),
       'chat.message': sessionHooks.onMessage,
@@ -623,7 +696,7 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
           text: `<system-reminder>
 Plan mode is active. You MUST NOT make any file edits, run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
 
-You may ONLY: observe, analyze, plan, and use memory tools (memory-read, memory-write, memory-edit, memory-delete, memory-health, memory-plan-execute).
+You may ONLY: observe, analyze, plan, and use memory tools (memory-read, memory-write, memory-edit, memory-delete, memory-health, memory-plan-execute, memory-kv-set, memory-kv-get, memory-kv-delete, memory-kv-list).
 </system-reminder>`,
           synthetic: true,
         })

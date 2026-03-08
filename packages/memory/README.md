@@ -33,6 +33,7 @@ The local embedding model downloads automatically on install. For API-based embe
 - **Automatic Deduplication** - Prevents duplicates via exact match and semantic similarity detection
 - **Compaction Context Injection** - Injects conventions and decisions into session compaction for seamless continuity
 - **Automatic Memory Injection** - Injects relevant project memories into user messages via semantic search with distance filtering and caching
+- **Project KV Store** - Ephemeral key-value storage with TTL management for project state
 - **Bundled Agents** - Ships with Code, Architect, and Memory agents preconfigured for memory-aware workflows
 - **CLI Tools** - Export, import, list, stats, and cleanup commands via `ocm-mem` binary
 - **Dimension Mismatch Detection** - Detects embedding model changes and guides recovery via reindex
@@ -54,6 +55,8 @@ The Architect agent operates in read-only mode (`temperature: 0.0`, all edits de
 
 ## Tools
 
+### Memory Tools
+
 | Tool | Description |
 |------|-------------|
 | `memory-read` | Search and retrieve project memories with semantic search |
@@ -62,6 +65,17 @@ The Architect agent operates in read-only mode (`temperature: 0.0`, all edits de
 | `memory-delete` | Delete a project memory by ID |
 | `memory-health` | Health check or full reindex of the memory store |
 | `memory-plan-execute` | Create a new Code session and send an approved plan as the first prompt |
+
+### Project KV Tools
+
+Ephemeral key-value storage for project state with automatic TTL-based expiration.
+
+| Tool | Description |
+|------|-------------|
+| `memory-kv-set` | Store a value with optional TTL (default 24 hours) |
+| `memory-kv-get` | Retrieve a value by key |
+| `memory-kv-delete` | Delete a value by key |
+| `memory-kv-list` | List all active KV entries for the project |
 
 ## CLI
 

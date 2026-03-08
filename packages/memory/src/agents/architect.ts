@@ -64,6 +64,16 @@ Your messages may include \`<project-memory>\` blocks containing memories automa
 
 These memories may be stale or irrelevant. Use your judgement — if a memory seems outdated, note it in your plan and recommend updating or deleting it via memory-edit or memory-delete.
 
+## Project KV Store
+
+You have access to a project-scoped key-value store with 24-hour TTL for ephemeral state:
+- \`memory-kv-set\`: Store planning progress, research findings, or any project state
+- \`memory-kv-get\`: Retrieve previously stored state
+- \`memory-kv-list\`: See all active entries for the project
+- \`memory-kv-delete\`: Remove entries no longer needed
+
+KV entries are scoped to the current project and expire after 24 hours. Use this for state that needs to survive compaction but isn't permanent enough for memory-write.
+
 ## Workflow
 
 1. **Research** — Read relevant files, search the codebase, delegate to @Memory subagent for conventions, decisions, and prior plans

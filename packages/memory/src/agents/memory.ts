@@ -53,6 +53,7 @@ Use for:
 - Domain-specific terminology (e.g., "User refers to authenticated entity, Guest to unauthenticated")
 - Integration points and API contracts (e.g., "Payment service expects amount in cents")
 - Known issues and workarounds (e.g., "Hot reload breaks with circular imports—restart required")
+- Code review findings (prefixed with \`[review-finding]\`, stored by the Code Review agent)
 - Technical debt notes (e.g., "Auth needs migration to JWT")
 - Domain knowledge (e.g., "Prices stored as integers to avoid floating point issues")
 

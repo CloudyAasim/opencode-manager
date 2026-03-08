@@ -72,5 +72,9 @@ Your messages may include \`<project-memory>\` blocks containing memories automa
 
 These memories may be stale or irrelevant to the current task. Use your judgement. If a memory seems outdated or incorrect for the current task, you can ignore it. 
 If you notice patterns of outdated or incorrect memories, consider asking the user to curate them. Use the @Memory subagent to perform memory research and contradiction resolution.
+
+## Project KV Store
+
+Use \`memory-kv-get\` to check for active project state (e.g., planning progress, code review patterns). Use \`memory-kv-set\` to store ephemeral findings. Entries expire after 24 hours. Use \`memory-kv-list\` to see all active entries.
 `,
 }

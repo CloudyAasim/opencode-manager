@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.16] - 2026-03-07
+
+### Added
+
+- Project KV store for ephemeral project state with TTL management
+- `memory-kv-set`, `memory-kv-get`, `memory-kv-delete`, `memory-kv-list` tools for managing project state
+- Automatic cleanup of expired KV entries (30-minute interval)
+- Default 24-hour TTL for KV entries
+
+### Fixed
+
+- KV `list()` method now handles malformed JSON data gracefully instead of throwing, consistent with `get()` behavior
+
 ## [0.0.12] - 2026-03-05
 
 ### Added
