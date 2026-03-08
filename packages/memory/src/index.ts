@@ -20,6 +20,7 @@ import type { PluginConfig, CompactionConfig, HealthStatus, Logger } from './typ
 import type { EmbeddingProvider } from './embedding'
 import type { VecService } from './storage/vec-types'
 import { createNoopVecService } from './storage/vec'
+import { checkForUpdate, formatUpgradeCheck, performUpgrade } from './utils/upgrade'
 
 
 const z = tool.schema
@@ -489,20 +490,32 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
           },
         }),
         'memory-health': tool({
-          description: 'Check memory plugin health or trigger a reindex of all embeddings. Use action "check" (default) to view status, or "reindex" to regenerate all embeddings when model has changed or embeddings are missing. Always report the plugin version from the output. Never run reindex unless the user explicitly asks for it.',
+          description: 'Check memory plugin health or trigger a reindex of all embeddings. Use action "check" (default) to view status, "reindex" to regenerate all embeddings when model has changed or embeddings are missing, or "upgrade" to update the plugin to the latest version. Always report the plugin version from the output. Never run reindex unless the user explicitly asks for it.',
           args: {
-            action: z.enum(['check', 'reindex']).optional().default('check').describe('Action to perform: "check" for health status, "reindex" to regenerate embeddings'),
+            action: z.enum(['check', 'reindex', 'upgrade']).optional().default('check').describe('Action to perform: "check" for health status, "reindex" to regenerate embeddings, "upgrade" to update plugin'),
           },
           execute: async (args) => {
+            if (args.action === 'upgrade') {
+              const result = await performUpgrade(async (cacheDir, version) => {
+                const pkg = `@opencode-manager/memory@${version}`
+                const output = await input.$`bun add --force --no-cache --exact --cwd ${cacheDir} ${pkg}`.nothrow().quiet()
+                return { exitCode: output.exitCode, stderr: output.stderr.toString() }
+              })
+              return result.message
+            }
             if (args.action === 'reindex') {
               if (!currentVec.available) {
                 return 'Reindex unavailable: vector service is still initializing. Try again in a few seconds.'
               }
               return executeReindex(projectId, memoryService, db, config, provider, mismatchState, currentVec)
             }
-            const result = await executeHealthCheck(projectId, db, config, provider, dataDir)
+            const [healthResult, updateCheck] = await Promise.all([
+              executeHealthCheck(projectId, db, config, provider, dataDir),
+              checkForUpdate(),
+            ])
+            const versionLine = formatUpgradeCheck(updateCheck)
             const initInfo = `\nInit: ${initState.vecReady ? 'vec ready' : 'vec pending'}${initState.syncRunning ? ', sync in progress' : initState.syncComplete ? ', sync complete' : ''}`
-            return withDimensionWarning(result + initInfo)
+            return withDimensionWarning(healthResult + initInfo + '\n' + versionLine)
           },
         }),
         'memory-plan-execute': tool({
