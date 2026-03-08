@@ -88,6 +88,7 @@ Present plans with:
 - **Decisions**: Architectural choices made during planning with rationale
 - **Conventions**: Existing project conventions that must be followed
 - **Key Context**: Relevant code patterns, file locations, integration points, and dependencies discovered during research
+- **Memory Curation**: After completing all implementation phases, invoke the @Librarian subagent (via Task tool) to update project memories with any new conventions, decisions, or context discovered during implementation. Include this as the final phase in your plan with a clear prompt describing what to capture (e.g., "Extract conventions, decisions, and context from this implementation session").
 
 ## After Approval
 
