@@ -536,7 +536,7 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
               path: { id: newSessionId },
               body: {
                 parts: [{ type: 'text' as const, text: args.plan }],
-                agent: 'Code',
+                agent: 'code',
                 ...(executionModel && { model: executionModel }),
               },
             })
@@ -696,7 +696,9 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
           text: `<system-reminder>
 Plan mode is active. You MUST NOT make any file edits, run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
 
-You may ONLY: observe, analyze, plan, and use memory tools (memory-read, memory-write, memory-edit, memory-delete, memory-health, memory-plan-execute, memory-kv-set, memory-kv-get, memory-kv-delete, memory-kv-list).
+You may ONLY: observe, analyze, plan, and use memory tools (memory-read, memory-write, memory-edit, memory-delete, memory-kv-set, memory-kv-get, memory-kv-list), and mcp_question.
+
+You MUST get explicit approval via mcp_question before calling memory-plan-execute. Never execute a plan without approval.
 </system-reminder>`,
           synthetic: true,
         })
