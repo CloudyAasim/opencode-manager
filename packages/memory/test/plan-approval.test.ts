@@ -70,7 +70,7 @@ Do NOT output text without also making this tool call.
 </system-reminder>`,
   }
 
-  const CANCEL_DIRECTIVE = '<system-reminder>\nThe user cancelled or provided a custom response. Do NOT call memory-plan-execute or memory-plan-ralph.\n</system-reminder>'
+  const CANCEL_DIRECTIVE = '<system-reminder>\nThe user provided a custom response instead of selecting a predefined option. Review their answer and respond accordingly. If they want to proceed with execution, use the appropriate tool (memory-plan-execute or memory-plan-ralph) based on their intent. If they want to cancel or revise the plan, help them with that instead.\n</system-reminder>'
 
   beforeEach(() => {
     db = createTestDb()
@@ -117,7 +117,8 @@ Do NOT output text without also making this tool call.
         const labels = options.map((o) => o.label)
         const isPlanApproval = PLAN_APPROVAL_LABELS.every((l) => labels.includes(l))
         if (isPlanApproval) {
-          const answer = output.output.trim()
+          const metadata = output.metadata as { answers?: string[][] } | undefined
+          const answer = metadata?.answers?.[0]?.[0]?.trim() ?? output.output.trim()
           const matchedLabel = PLAN_APPROVAL_LABELS.find((l) => answer === l || answer.startsWith(l))
           const directive = matchedLabel ? PLAN_APPROVAL_DIRECTIVES[matchedLabel] : CANCEL_DIRECTIVE
           output.output = `${output.output}\n\n${directive}`
@@ -246,8 +247,8 @@ Do NOT output text without also making this tool call.
 
     expect(output.output).toContain('Custom answer')
     expect(output.output).toContain('<system-reminder>')
-    expect(output.output).toContain('cancelled or provided a custom response')
-    expect(output.output).toContain('Do NOT call memory-plan-execute or memory-plan-ralph')
+    expect(output.output).toContain('custom response')
+    expect(output.output).toContain('respond accordingly')
   })
 
   test('Matches partial answer that starts with label', () => {
@@ -289,7 +290,7 @@ Do NOT output text without also making this tool call.
 
     expect(output.output).toContain('I want to create a session')
     expect(output.output).toContain('<system-reminder>')
-    expect(output.output).toContain('cancelled or provided a custom response')
+    expect(output.output).toContain('custom response')
   })
 
   test('Does not modify non-approval questions', () => {
@@ -363,5 +364,160 @@ Do NOT output text without also making this tool call.
 
     expect(output.title).toBe('')
     expect(output.output).toBe('test')
+  })
+
+  test('Detects plan approval using metadata.answers when output is full sentence', () => {
+    const args = {
+      questions: [{
+        question: 'How would you like to proceed?',
+        options: [
+          { label: 'New session', description: 'Create new session' },
+          { label: 'Execute here', description: 'Execute here' },
+          { label: 'Ralph (worktree)', description: 'Ralph worktree' },
+          { label: 'Ralph (in place)', description: 'Ralph in place' },
+        ],
+      }],
+    }
+    const output = {
+      title: 'Asked 1 question',
+      output: 'User has answered your questions: "How would you like to proceed?"="Ralph (worktree)". You can now continue with the user\'s answers in mind.',
+      metadata: { answers: [['Ralph (worktree)']] },
+    }
+
+    simulateToolExecuteAfter('question', args, output)
+
+    expect(output.output).toContain('Ralph (worktree)')
+    expect(output.output).toContain('<system-reminder>')
+    expect(output.output).toContain('memory-plan-ralph')
+    expect(output.output).toContain('inPlace: false')
+  })
+
+  test('Detects "Ralph (in place)" using metadata.answers when output is full sentence', () => {
+    const args = {
+      questions: [{
+        question: 'How would you like to proceed?',
+        options: [
+          { label: 'New session', description: 'Create new session' },
+          { label: 'Execute here', description: 'Execute here' },
+          { label: 'Ralph (worktree)', description: 'Ralph worktree' },
+          { label: 'Ralph (in place)', description: 'Ralph in place' },
+        ],
+      }],
+    }
+    const output = {
+      title: 'Asked 1 question',
+      output: 'User has answered your questions: "How would you like to proceed?"="Ralph (in place)". You can now continue with the user\'s answers in mind.',
+      metadata: { answers: [['Ralph (in place)']] },
+    }
+
+    simulateToolExecuteAfter('question', args, output)
+
+    expect(output.output).toContain('Ralph (in place)')
+    expect(output.output).toContain('<system-reminder>')
+    expect(output.output).toContain('memory-plan-ralph')
+    expect(output.output).toContain('inPlace: true')
+  })
+
+  test('Detects "New session" using metadata.answers when output is full sentence', () => {
+    const args = {
+      questions: [{
+        question: 'How would you like to proceed?',
+        options: [
+          { label: 'New session', description: 'Create new session' },
+          { label: 'Execute here', description: 'Execute here' },
+          { label: 'Ralph (worktree)', description: 'Ralph worktree' },
+          { label: 'Ralph (in place)', description: 'Ralph in place' },
+        ],
+      }],
+    }
+    const output = {
+      title: 'Asked 1 question',
+      output: 'User has answered your questions: "How would you like to proceed?"="New session". You can now continue with the user\'s answers in mind.',
+      metadata: { answers: [['New session']] },
+    }
+
+    simulateToolExecuteAfter('question', args, output)
+
+    expect(output.output).toContain('New session')
+    expect(output.output).toContain('<system-reminder>')
+    expect(output.output).toContain('memory-plan-execute')
+    expect(output.output).toContain('inPlace: false')
+  })
+
+  test('Detects "Execute here" using metadata.answers when output is full sentence', () => {
+    const args = {
+      questions: [{
+        question: 'How would you like to proceed?',
+        options: [
+          { label: 'New session', description: 'Create new session' },
+          { label: 'Execute here', description: 'Execute here' },
+          { label: 'Ralph (worktree)', description: 'Ralph worktree' },
+          { label: 'Ralph (in place)', description: 'Ralph in place' },
+        ],
+      }],
+    }
+    const output = {
+      title: 'Asked 1 question',
+      output: 'User has answered your questions: "How would you like to proceed?"="Execute here". You can now continue with the user\'s answers in mind.',
+      metadata: { answers: [['Execute here']] },
+    }
+
+    simulateToolExecuteAfter('question', args, output)
+
+    expect(output.output).toContain('Execute here')
+    expect(output.output).toContain('<system-reminder>')
+    expect(output.output).toContain('memory-plan-execute')
+    expect(output.output).toContain('inPlace: true')
+  })
+
+  test('Falls back to output.output when metadata.answers is missing', () => {
+    const args = {
+      questions: [{
+        question: 'How would you like to proceed?',
+        options: [
+          { label: 'New session', description: 'Create new session' },
+          { label: 'Execute here', description: 'Execute here' },
+          { label: 'Ralph (worktree)', description: 'Ralph worktree' },
+          { label: 'Ralph (in place)', description: 'Ralph in place' },
+        ],
+      }],
+    }
+    const output = {
+      title: 'Asked 1 question',
+      output: 'New session',
+      metadata: {},
+    }
+
+    simulateToolExecuteAfter('question', args, output)
+
+    expect(output.output).toContain('New session')
+    expect(output.output).toContain('<system-reminder>')
+    expect(output.output).toContain('memory-plan-execute')
+    expect(output.output).toContain('inPlace: false')
+  })
+
+  test('Injects cancel directive when metadata.answers contains unknown label', () => {
+    const args = {
+      questions: [{
+        question: 'How would you like to proceed?',
+        options: [
+          { label: 'New session', description: 'Create new session' },
+          { label: 'Execute here', description: 'Execute here' },
+          { label: 'Ralph (worktree)', description: 'Ralph worktree' },
+          { label: 'Ralph (in place)', description: 'Ralph in place' },
+        ],
+      }],
+    }
+    const output = {
+      title: 'Asked 1 question',
+      output: 'User has answered your questions: "How would you like to proceed?"="Some custom answer". You can now continue with the user\'s answers in mind.',
+      metadata: { answers: [['Some custom answer']] },
+    }
+
+    simulateToolExecuteAfter('question', args, output)
+
+    expect(output.output).toContain('<system-reminder>')
+    expect(output.output).toContain('custom response')
+    expect(output.output).toContain('respond accordingly')
   })
 })

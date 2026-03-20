@@ -1304,9 +1304,10 @@ Do NOT output text without also making this tool call.
             const labels = options.map((o) => o.label)
             const isPlanApproval = PLAN_APPROVAL_LABELS.every((l) => labels.includes(l))
             if (isPlanApproval) {
-              const answer = output.output.trim()
+              const metadata = output.metadata as { answers?: string[][] } | undefined
+              const answer = metadata?.answers?.[0]?.[0]?.trim() ?? output.output.trim()
               const matchedLabel = PLAN_APPROVAL_LABELS.find((l) => answer === l || answer.startsWith(l))
-              const directive = matchedLabel ? PLAN_APPROVAL_DIRECTIVES[matchedLabel] : '<system-reminder>\nThe user cancelled or provided a custom response. Do NOT call memory-plan-execute or memory-plan-ralph.\n</system-reminder>'
+              const directive = matchedLabel ? PLAN_APPROVAL_DIRECTIVES[matchedLabel] : '<system-reminder>\nThe user provided a custom response instead of selecting a predefined option. Review their answer and respond accordingly. If they want to proceed with execution, use the appropriate tool (memory-plan-execute or memory-plan-ralph) based on their intent. If they want to cancel or revise the plan, help them with that instead.\n</system-reminder>'
               output.output = `${output.output}\n\n${directive}`
               logger.log(`Plan approval: detected "${matchedLabel ?? 'cancel/custom'}" answer, injected directive`)
             }
