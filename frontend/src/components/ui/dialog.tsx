@@ -46,6 +46,7 @@ const DialogContent = React.forwardRef<
       {!fullscreen && <DialogOverlay className={overlayClassName} />}
       <DialogPrimitive.Content
         ref={ref}
+        autoFocus={false}
         aria-describedby={undefined}
         className={cn(
           "fixed z-50 grid gap-4 border-0 sm:border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",

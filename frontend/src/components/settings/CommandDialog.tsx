@@ -250,7 +250,7 @@ export function CommandDialog({
           </Form>
         </div>
 
-        <DialogFooter className="p-3 sm:p-4 border-t gap-2">
+        <DialogFooter className="p-3 sm:p-4 border-t gap-2 pb-4">
           <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
             Cancel
           </Button>

@@ -160,7 +160,7 @@ export function CreateConfigDialog({ isOpen, onOpenChange, onCreate, isUpdating 
           </div>
         </div>
 
-        <div className="flex flex-row sm:flex-row justify-end gap-2 flex-shrink-0 pt-4 border-t">
+        <div className="flex flex-row sm:flex-row justify-end gap-2 flex-shrink-0 pt-4 pb-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none">
             Cancel
           </Button>
