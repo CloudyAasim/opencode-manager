@@ -15,8 +15,18 @@ describe('schedule migrations', () => {
 
   it('creates tables from scratch when schedule_jobs does not exist (phantom migration)', () => {
     const db = {
-      prepare: vi.fn().mockReturnValue({
-        get: vi.fn().mockReturnValue(undefined),
+      prepare: vi.fn().mockImplementation((query: string) => {
+        if (query.includes('PRAGMA table_info')) {
+          return {
+            all: vi.fn().mockReturnValue([
+              { name: 'interval_minutes', notnull: 0, dflt_value: null },
+              { name: 'schedule_mode', notnull: 1, dflt_value: "'interval'" },
+              { name: 'cron_expression', notnull: 0, dflt_value: null },
+              { name: 'timezone', notnull: 0, dflt_value: null },
+            ]),
+          }
+        }
+        return { get: vi.fn().mockReturnValue(undefined) }
       }),
       run: vi.fn(),
     }
