@@ -167,7 +167,7 @@ The plugin is composed of several subsystems that work together:
 
 ### Storage Layer
 
-The plugin uses a single SQLite database in WAL mode with four tables:
+The plugin uses a single SQLite database in WAL mode with three tables:
 
 | Table | Purpose |
 |-------|---------|
@@ -304,7 +304,7 @@ When deduplication triggers, the existing memory's ID is returned instead of cre
 
 ## Tools
 
-The plugin registers seventeen tools that the AI agent can call:
+The plugin registers twelve tools that the AI agent can call:
 
 ### memory-read
 
@@ -415,16 +415,6 @@ Retrieve a value by key for the current project.
 | `key` | string | Yes | The key to retrieve |
 
 Returns the stored value (formatted as JSON if applicable) or a message indicating the key was not found.
-
-### memory-kv-delete
-
-Delete a key-value pair for the current project.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `key` | string | Yes | The key to delete |
-
-Returns confirmation that the key was deleted.
 
 ### memory-kv-list
 

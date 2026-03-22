@@ -37,11 +37,11 @@ services:
       dockerfile: Dockerfile
     container_name: opencode-manager
     ports:
-      - "5003:5003"      # OpenCode Manager
-      - "5100:5100"      # Dev server 1
-      - "5101:5101"      # Dev server 2
-      - "5102:5102"      # Dev server 3
-      - "5103:5103"      # Dev server 4
+      - "5003:5003"
+      - "5100:5100"
+      - "5101:5101"
+      - "5102:5102"
+      - "5103:5103"
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - HOST=0.0.0.0
@@ -49,18 +49,28 @@ services:
       - OPENCODE_SERVER_PORT=5551
       - DATABASE_PATH=/app/data/opencode.db
       - WORKSPACE_PATH=/workspace
+      - PROCESS_START_WAIT_MS=2000
+      - PROCESS_VERIFY_WAIT_MS=1000
+      - HEALTH_CHECK_INTERVAL_MS=5000
+      - HEALTH_CHECK_TIMEOUT_MS=30000
+      - MAX_FILE_SIZE_MB=50
+      - MAX_UPLOAD_SIZE_MB=50
+      - DEBUG=false
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS:-http://localhost:5003}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
-      # OAuth providers (optional)
+      - ADMIN_PASSWORD_RESET=${ADMIN_PASSWORD_RESET:-false}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
-      # Passkeys (optional)
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
+      - AUTH_SECURE_COOKIES=${AUTH_SECURE_COOKIES:-false}
       - PASSKEY_RP_ID=${PASSKEY_RP_ID:-localhost}
       - PASSKEY_RP_NAME=${PASSKEY_RP_NAME:-OpenCode Manager}
       - PASSKEY_ORIGIN=${PASSKEY_ORIGIN:-http://localhost:5003}
-      # Push notifications (optional)
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
       - VAPID_SUBJECT=${VAPID_SUBJECT:-}
@@ -112,8 +122,8 @@ VAPID_SUBJECT=mailto:you@example.com
 
 The container entrypoint (`scripts/docker-entrypoint.sh`) automatically:
 
-1. **Installs Bun** if not present
-2. **Installs OpenCode** if not present
+1. **Verifies Bun** is installed (installed at build time, fallback install if missing)
+2. **Verifies OpenCode** is installed (installed at build time, fallback install if missing)
 3. **Upgrades OpenCode** if below minimum version (1.0.137)
 4. **Validates AUTH_SECRET** is set (required for startup)
 5. **Validates memory plugin** installation

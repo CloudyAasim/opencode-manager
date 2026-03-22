@@ -7,7 +7,7 @@ Thanks for your interest in contributing! This guide covers our workflow and how
 1. Fork the repository
 2. Clone your fork locally
 
-See the [README](README.md#option-2-local-development-contributors) for detailed setup instructions.
+See the [Development Setup Guide](docs/development/setup.md) for detailed setup instructions.
 
 ## Project Board Workflow
 
@@ -58,7 +58,7 @@ Each item is tagged with a theme to help you find work in your area of interest:
 ### Backend (Bun + Hono)
 
 - Hono framework with Zod validation
-- Better SQLite3 for database
+- Bun SQLite (bun:sqlite) for database
 - Proper error handling with try/catch
 - Use async/await consistently
 
@@ -73,7 +73,7 @@ Each item is tagged with a theme to help you find work in your area of interest:
 
 ```bash
 pnpm test              # Run all backend tests
-cd backend && bun test <filename>  # Run single test file
+cd backend && vitest <filename>   # Run single test file
 ```
 
 ### Linting
