@@ -1,6 +1,5 @@
 import fs from 'fs/promises'
 import { existsSync, rmSync } from 'node:fs'
-import fs from 'fs/promises'
 import { executeCommand } from '../utils/process'
 import { ensureDirectoryExists } from './file-operations'
 import * as db from '../db/queries'
