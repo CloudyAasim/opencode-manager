@@ -37,12 +37,14 @@ import { createMcpOauthProxyRoutes } from './routes/mcp-oauth-proxy'
 import { createAuthRoutes, createAuthInfoRoutes, syncAdminFromEnv } from './routes/auth'
 import { createAuth } from './auth'
 import { createAuthMiddleware } from './auth/middleware'
+import { createPromptTemplateRoutes } from './routes/prompt-templates'
 import { sseAggregator } from './services/sse-aggregator'
 import { ensureDirectoryExists, writeFileContent, fileExists, readFileContent } from './services/file-operations'
 import { SettingsService } from './services/settings'
 import { opencodeServerManager } from './services/opencode-single-server'
 import { proxyRequest, proxyMcpAuthStart, proxyMcpAuthAuthenticate } from './services/proxy'
 import { NotificationService } from './services/notification'
+import { ScheduleRunner, ScheduleService } from './services/schedules'
 
 import { logger } from './utils/logger'
 import { 
@@ -81,6 +83,7 @@ const requireAuth = createAuthMiddleware(auth)
 import { DEFAULT_AGENTS_MD } from './constants'
 
 let ipcServer: IPCServer | undefined
+let scheduleRunnerInstance: ScheduleRunner | undefined
 const gitAuthService = new GitAuthService()
 const OPENCODE_STATE_DB_FILENAMES = new Set(['opencode.db', 'opencode.db-shm', 'opencode.db-wal'])
 
@@ -312,6 +315,10 @@ try {
   await opencodeServerManager.start()
   logger.info(`OpenCode server running on port ${opencodeServerManager.getPort()}`)
 
+  const scheduleService = new ScheduleService(db)
+  scheduleRunnerInstance = new ScheduleRunner(scheduleService)
+  await scheduleRunnerInstance.start()
+
   await syncAdminFromEnv(auth, db)
 } catch (error) {
   logger.error('Failed to initialize workspace:', error)
@@ -340,13 +347,13 @@ if (ENV.VAPID.PUBLIC_KEY && ENV.VAPID.PRIVATE_KEY) {
 
 app.route('/api/auth', createAuthRoutes(auth))
 app.route('/api/auth-info', createAuthInfoRoutes(auth, db))
+app.route('/api/health', createHealthRoutes(db))
 
 app.route('/api/mcp-oauth-proxy', createMcpOauthProxyRoutes(requireAuth))
 
 const protectedApi = new Hono()
 protectedApi.use('/*', requireAuth)
 
-protectedApi.route('/health', createHealthRoutes(db))
 protectedApi.route('/repos', createRepoRoutes(db, gitAuthService))
 protectedApi.route('/settings', createSettingsRoutes(db))
 protectedApi.route('/files', createFileRoutes())
@@ -359,6 +366,7 @@ protectedApi.route('/sse', createSSERoutes())
 protectedApi.route('/ssh', createSSHRoutes(gitAuthService))
 protectedApi.route('/notifications', createNotificationRoutes(notificationService))
 protectedApi.route('/memory', createMemoryRoutes(db))
+protectedApi.route('/prompt-templates', createPromptTemplateRoutes(db))
 
 app.route('/api', protectedApi)
 
@@ -461,6 +469,8 @@ const shutdown = async (signal: string) => {
       await ipcServer.dispose()
       logger.info('Git IPC server stopped')
     }
+    scheduleRunnerInstance?.stop()
+    logger.info('Schedule runner stopped')
     await opencodeServerManager.stop()
     logger.info('OpenCode server stopped')
   } catch (error) {

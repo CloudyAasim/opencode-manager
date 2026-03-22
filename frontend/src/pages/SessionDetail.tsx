@@ -57,6 +57,7 @@ export function SessionDetail() {
   const navigate = useNavigate();
   const repoId = Number(id) || 0;
   const { preferences, updateSettings } = useSettings();
+  const { open: openSettings } = useSettingsDialog();
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const promptInputRef = useRef<PromptInputHandle>(null);
@@ -128,7 +129,6 @@ export function SessionDetail() {
   const updateSession = useUpdateSession(opcodeUrl, repoDirectory);
   const createSession = useCreateSession(opcodeUrl, repoDirectory);
   const isTitleGenerating = useTitleGenerating(sessionId);
-  const { open: openSettings } = useSettingsDialog();
   const { model, modelString } = useModelSelection(opcodeUrl, repoDirectory);
   const isEditingMessage = useUIState((state) => state.isEditingMessage);
   const { isEnabled: ttsEnabled } = useTTS();
@@ -432,11 +432,11 @@ export function SessionDetail() {
             <span className="hidden sm:inline">Settings</span>
           </Button>
           <Header.MobileDropdown>
+            <DropdownMenuItem onClick={() => setFileBrowserOpen(true)}>
+              <FolderOpen className="w-4 h-4 mr-2" /> Files
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate(`/repos/${repoId}/memories`)}>
               <Brain className="w-4 h-4 mr-2" /> Memory
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSourceControlOpen(true)}>
-              <GitCommitHorizontal className="w-4 h-4 mr-2" /> Source Control
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setMcpDialogOpen(true)}>
               <Plug className="w-4 h-4 mr-2" /> MCP
@@ -444,11 +444,11 @@ export function SessionDetail() {
             <DropdownMenuItem onClick={() => setLspDialogOpen(true)}>
               <Code className="w-4 h-4 mr-2" /> LSP
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setFileBrowserOpen(true)}>
-              <FolderOpen className="w-4 h-4 mr-2" /> Files
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setResetPermissionsOpen(true)}>
               <ShieldOff className="w-4 h-4 mr-2" /> Reset Permissions
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSourceControlOpen(true)}>
+              <GitCommitHorizontal className="w-4 h-4 mr-2" /> Source Control
             </DropdownMenuItem>
           </Header.MobileDropdown>
         </Header.Actions>

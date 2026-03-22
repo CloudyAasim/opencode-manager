@@ -99,3 +99,17 @@ export type {
   CreateKvEntryRequest,
   UpdateKvEntryRequest,
 } from '../schemas/memory'
+
+export type {
+  ScheduleMode,
+  ScheduleRunTriggerSource,
+  ScheduleRunStatus,
+  ScheduleSkillMetadata,
+  ScheduleJob,
+  ScheduleRun,
+  CreateScheduleJobRequest,
+  UpdateScheduleJobRequest,
+  PromptTemplate,
+  CreatePromptTemplateRequest,
+  UpdatePromptTemplateRequest,
+} from '../schemas/schedule'
