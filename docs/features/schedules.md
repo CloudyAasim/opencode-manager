@@ -24,6 +24,8 @@ Each run is stored with status, timestamps, logs, assistant output, and a linked
 
 The schedule is scoped to the current repository.
 
+![Schedule Creation](../images/schedules/09-schedule-creation.png)
+
 ## Timing Options
 
 The schedule builder supports both simple presets and advanced cron:
@@ -37,6 +39,8 @@ The schedule builder supports both simple presets and advanced cron:
 - **Advanced** - Enter a cron expression directly
 
 Cron-based schedules also store a timezone so runs happen when expected.
+
+![Timing Options](../images/schedules/10-timing-options.png)
 
 ## Prompt Templates
 
@@ -74,6 +78,8 @@ Each schedule stores a run history panel with:
 - **Errors** - Failure details when a run does not complete
 
 This makes recurring jobs easy to review without digging through raw session data first.
+
+![Run History](../images/schedules/11-run-history-view.png)
 
 ## Linked Sessions
 
