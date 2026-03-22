@@ -27,8 +27,8 @@ export async function listRepoSchedules(repoId: number): Promise<{ jobs: Schedul
 }
 
 export async function getScheduleCounts(): Promise<Map<number, ScheduleCount>> {
-  const response = await fetchWrapper(`${API_BASE_URL}/api/schedules/all`)
-  const jobs = response.jobs as ScheduleJobWithRepo[]
+  const response = await fetchWrapper<{ jobs: ScheduleJobWithRepo[] }>(`${API_BASE_URL}/api/schedules/all`)
+  const jobs = response.jobs
   const counts = new Map<number, ScheduleCount>()
 
   jobs.forEach((job) => {

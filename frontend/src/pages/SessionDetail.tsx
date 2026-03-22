@@ -41,6 +41,7 @@ import { RepoSkillsDialog } from "@/components/repo/RepoSkillsDialog";
 import { createOpenCodeClient } from "@/api/opencode";
 import { useSessionStatus, useSessionStatusForSession } from "@/stores/sessionStatusStore";
 import { useQuestions } from "@/contexts/EventContext";
+import type { QuestionRequest } from "@/api/types";
 import { QuestionPrompt } from "@/components/session/QuestionPrompt";
 import { MinimizedQuestionIndicator } from "@/components/session/MinimizedQuestionIndicator";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
