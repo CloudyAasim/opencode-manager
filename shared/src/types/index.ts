@@ -113,3 +113,19 @@ export type {
   CreatePromptTemplateRequest,
   UpdatePromptTemplateRequest,
 } from '../schemas/schedule'
+
+export type {
+  SkillScope,
+  SkillFrontmatter,
+  CreateSkillRequest,
+  UpdateSkillRequest,
+  SkillFileInfo,
+} from '../schemas/skills'
+export {
+  SKILL_NAME_REGEX,
+  SkillNameSchema,
+  SkillScopeSchema,
+  SkillFrontmatterSchema,
+  CreateSkillRequestSchema,
+  UpdateSkillRequestSchema,
+} from '../schemas/skills'

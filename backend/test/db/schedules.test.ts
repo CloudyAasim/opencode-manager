@@ -290,23 +290,6 @@ describe('schedule database queries', () => {
     expect(run).toMatchObject({ id: 8, sessionId: 'ses-1' })
   })
 
-  it('lists due schedule jobs ordered by next run time', () => {
-    const now = Date.now()
-    const limit = 10
-    const jobRow = makeJobRow()
-    const stmt = {
-      all: vi.fn().mockReturnValue([jobRow]),
-    }
-    mockDb.prepare.mockReturnValue(stmt)
-
-    const jobs = schedulesDb.listDueScheduleJobs(mockDb, now, limit)
-
-    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('WHERE enabled = 1 AND next_run_at IS NOT NULL AND next_run_at <= ?'))
-    expect(stmt.all).toHaveBeenCalledWith(now, limit)
-    expect(jobs).toHaveLength(1)
-    expect(jobs.at(0)?.id).toBe(7)
-  })
-
   it('lists enabled schedule jobs ordered by id', () => {
     const jobRow = makeJobRow()
     const stmt = {

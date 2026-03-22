@@ -1,5 +1,4 @@
 import { Hono, type Context } from 'hono'
-import type { Database } from 'bun:sqlite'
 import {
   CreateScheduleJobRequestSchema,
   UpdateScheduleJobRequestSchema,
@@ -33,9 +32,8 @@ function parseRunListLimit(value: string | undefined): number {
   return Math.min(parsed, 100)
 }
 
-export function createScheduleRoutes(database: Database) {
+export function createScheduleRoutes(scheduleService: ScheduleService) {
   const app = new Hono()
-  const scheduleService = new ScheduleService(database)
 
   app.get('/', (c) => {
     try {

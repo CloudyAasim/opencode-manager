@@ -985,8 +985,38 @@ export class ScheduleService {
   }
 }
 
+interface Stoppable {
+  stop(): void
+}
+
+function buildIntervalCronExpression(intervalMinutes: number): string | null {
+  if (intervalMinutes < 5) {
+    return null
+  }
+
+  if (intervalMinutes <= 59) {
+    return `*/${intervalMinutes} * * * *`
+  }
+
+  if (intervalMinutes === 60) {
+    return `0 * * * *`
+  }
+
+  const hours = intervalMinutes / 60
+  if (Number.isInteger(hours) && 24 % hours === 0) {
+    return `0 */${hours} * * *`
+  }
+
+  const days = intervalMinutes / 1440
+  if (Number.isInteger(days)) {
+    return `0 0 */${days} * *`
+  }
+
+  return null
+}
+
 export class ScheduleRunner {
-  private cronJobs = new Map<number, Cron>()
+  private cronJobs = new Map<number, Stoppable>()
 
   constructor(private readonly scheduleService: ScheduleService) {}
 
@@ -1004,9 +1034,9 @@ export class ScheduleRunner {
   }
 
   stop(): void {
-    this.scheduleService.setJobChangeHandler(null as never)
-    for (const cron of this.cronJobs.values()) {
-      cron.stop()
+    this.scheduleService.setJobChangeHandler(null)
+    for (const stoppable of this.cronJobs.values()) {
+      stoppable.stop()
     }
     this.cronJobs.clear()
   }
@@ -1040,30 +1070,81 @@ export class ScheduleRunner {
     }
 
     if (!job.nextRunAt) {
+      logger.warn(`Job ${job.id} (${job.name}) has no nextRunAt, skipping registration`)
       return
     }
 
-    const cronExpression = `*/${job.intervalMinutes} * * * *`
+    const cronExpression = buildIntervalCronExpression(job.intervalMinutes)
     const options: Record<string, unknown> = { protect: true }
     if (job.timezone) {
       options.timezone = job.timezone
     }
-    const cron = new Cron(cronExpression, options, () => {
-      logger.info(`Cron triggered for job ${job.id}: ${job.name}`)
-      void this.executeJob(job.repoId, job.id)
-    })
 
-    const now = Date.now()
-    const delay = job.nextRunAt - now
-    if (delay > 0) {
-      const timeout = setTimeout(() => {
-        logger.info(`Interval timer triggered for job ${job.id}: ${job.name}`)
+    if (cronExpression) {
+      const nextRunDate = new Date(job.nextRunAt)
+      const now = new Date()
+
+      if (nextRunDate <= now) {
         void this.executeJob(job.repoId, job.id)
-        this.cronJobs.set(job.id, cron)
-      }, delay)
-      this.cronJobs.set(job.id, { stop: () => clearTimeout(timeout) } as unknown as Cron)
-    } else {
+      }
+
+      const cronOptions = {
+        ...options,
+        ...(nextRunDate > now ? { startAt: nextRunDate.toISOString() } : {}),
+      }
+      const cron = new Cron(cronExpression, cronOptions, () => {
+        logger.info(`Cron triggered for job ${job.id}: ${job.name}`)
+        void this.executeJob(job.repoId, job.id)
+      })
       this.cronJobs.set(job.id, cron)
+    } else {
+      const intervalMs = job.intervalMinutes * 60_000
+      let timeout: ReturnType<typeof setTimeout> | null = null
+      let isStopped = false
+      let isRunning = false
+
+      const scheduleNext = () => {
+        if (isStopped || isRunning) return
+        timeout = setTimeout(async () => {
+          if (isStopped || isRunning) return
+          isRunning = true
+          logger.info(`Interval timer triggered for job ${job.id}: ${job.name}`)
+          try {
+            await this.executeJob(job.repoId, job.id)
+          } finally {
+            isRunning = false
+            scheduleNext()
+          }
+        }, intervalMs)
+      }
+
+      const initialDelay = Math.max(0, job.nextRunAt - Date.now())
+      if (initialDelay > 0) {
+        timeout = setTimeout(() => {
+          if (isStopped || isRunning) return
+          isRunning = true
+          logger.info(`Interval timer triggered for job ${job.id}: ${job.name}`)
+          void this.executeJob(job.repoId, job.id).finally(() => {
+            isRunning = false
+            scheduleNext()
+          })
+        }, initialDelay)
+      } else {
+        if (!isStopped) {
+          isRunning = true
+          void this.executeJob(job.repoId, job.id).finally(() => {
+            isRunning = false
+            scheduleNext()
+          })
+        }
+      }
+
+      this.cronJobs.set(job.id, {
+        stop: () => {
+          isStopped = true
+          if (timeout) clearTimeout(timeout)
+        }
+      })
     }
   }
 

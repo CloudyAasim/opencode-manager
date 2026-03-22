@@ -60,7 +60,7 @@ const ScheduleJobBaseRequestSchema = z.object({
   agentSlug: z.string().min(1).max(100).optional(),
   prompt: z.string().min(1).max(20000),
   model: z.string().min(1).max(200).optional(),
-  skillMetadata: ScheduleSkillMetadataSchema.optional(),
+  skillMetadata: ScheduleSkillMetadataSchema.nullable().optional(),
 })
 
 export const CreateScheduleJobRequestSchema = z.discriminatedUnion('scheduleMode', [

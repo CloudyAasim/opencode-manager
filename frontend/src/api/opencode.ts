@@ -1,7 +1,5 @@
 import type { paths } from './opencode-types'
 import { fetchWrapper } from './fetchWrapper'
-import { useQuery } from '@tanstack/react-query'
-import { OPENCODE_API_ENDPOINT } from '@/config'
 
 type SessionListResponse = paths['/session']['get']['responses']['200']['content']['application/json']
 type SessionResponse = paths['/session/{sessionID}']['get']['responses']['200']['content']['application/json']
@@ -251,13 +249,3 @@ export const createOpenCodeClient = (baseURL: string, directory?: string) => {
   return new OpenCodeClient(baseURL, directory)
 }
 
-export const useAgents = () => {
-  return useQuery({
-    queryKey: ['opencode-agents'],
-    queryFn: async () => {
-      const client = createOpenCodeClient(OPENCODE_API_ENDPOINT)
-      return await client.listAgents()
-    },
-    staleTime: 5 * 60 * 1000,
-  })
-}

@@ -13,6 +13,7 @@ import { CommandsEditor } from './CommandsEditor'
 import { AgentsEditor } from './AgentsEditor'
 import { AgentsMdEditor } from './AgentsMdEditor'
 import { McpManager } from './McpManager'
+import { SkillsEditor } from './SkillsEditor'
 import { VersionSelectDialog } from './VersionSelectDialog'
 import { MemoryPluginConfig } from './MemoryPluginConfig'
 import { settingsApi } from '@/api/settings'
@@ -62,6 +63,7 @@ export function OpenCodeConfigManager() {
     agentsMd: false,
     commands: false,
     agents: false,
+    skills: false,
     mcp: false,
   })
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -72,6 +74,7 @@ export function OpenCodeConfigManager() {
   const agentsMdRef = useRef<HTMLButtonElement>(null)
   const commandsRef = useRef<HTMLButtonElement>(null)
   const agentsRef = useRef<HTMLButtonElement>(null)
+  const skillsRef = useRef<HTMLButtonElement>(null)
   const mcpRef = useRef<HTMLButtonElement>(null)
   
   const scrollToSection = (ref: React.RefObject<HTMLButtonElement | null>) => {
@@ -186,7 +189,8 @@ export function OpenCodeConfigManager() {
 
       const agentsChanged = JSON.stringify(previousContent?.agent) !== JSON.stringify(newContent.agent)
       const pluginsChanged = JSON.stringify(previousContent?.plugin) !== JSON.stringify(newContent.plugin)
-      if (restartServer || agentsChanged || pluginsChanged) {
+      const skillsChanged = JSON.stringify(previousContent?.skills) !== JSON.stringify(newContent.skills)
+      if (restartServer || agentsChanged || pluginsChanged || skillsChanged) {
         showToast.loading('Reloading server...', { id: 'update-restart' })
         try {
           await reloadConfigMutation.mutateAsync()
@@ -679,6 +683,44 @@ export function OpenCodeConfigManager() {
                               const updatedContent = {
                                 ...selectedConfig.content,
                                 agent: agents
+                              }
+                              updateConfigContent(selectedConfig.name, updatedContent)
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-lg overflow-hidden min-w-0">
+                      <button
+                        ref={skillsRef}
+                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors min-w-0"
+                        onClick={() => {
+                          const isExpanding = !expandedSections.skills
+                          setExpandedSections(prev => ({ ...prev, skills: isExpanding }))
+                          if (isExpanding) {
+                            setTimeout(() => scrollToSection(skillsRef), 100)
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <h4 className="text-sm font-medium truncate">Skills</h4>
+                          <span className="text-xs text-muted-foreground">
+                            {(selectedConfig.content?.skills?.paths?.length ?? 0) + (selectedConfig.content?.skills?.urls?.length ?? 0)} configured
+                          </span>
+                        </div>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.skills ? 'rotate-90' : ''}`} />
+                      </button>
+                      <div className={`${expandedSections.skills ? 'block' : 'hidden'} border-t border-border`}>
+                        <div className="p-4 max-h-[50vh] overflow-y-auto">
+                          <SkillsEditor
+                            skills={selectedConfig.content?.skills}
+                            onChange={(skills) => {
+                              const paths = skills?.paths?.filter(Boolean)
+                              const urls = skills?.urls?.filter(Boolean)
+                              const updatedContent = {
+                                ...selectedConfig.content,
+                                skills: (paths?.length || urls?.length) ? { paths: paths?.length ? paths : undefined, urls: urls?.length ? urls : undefined } : undefined
                               }
                               updateConfigContent(selectedConfig.name, updatedContent)
                             }}

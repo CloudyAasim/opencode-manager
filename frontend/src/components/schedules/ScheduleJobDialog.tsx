@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { CreateScheduleJobRequest, PromptTemplate, ScheduleJob } from '@opencode-manager/shared/types'
 import { getProvidersWithModels } from '@/api/providers'
 import { createOpenCodeClient } from '@/api/opencode'
+import { settingsApi } from '@/api/settings'
 import { OPENCODE_API_ENDPOINT } from '@/config'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,7 @@ import {
   weekdayOptions,
 } from '@/components/schedules/schedule-utils'
 import { Check, Info, Loader2, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { usePromptTemplates, useDeletePromptTemplate } from '@/hooks/usePromptTemplates'
 import { PromptTemplateDialog } from './PromptTemplateDialog'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
@@ -65,8 +67,10 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit 
   const [model, setModel] = useState('')
   const [prompt, setPrompt] = useState('')
   const [selectedPromptTemplateId, setSelectedPromptTemplateId] = useState<number | null>(null)
-  const [skillSlugs, setSkillSlugs] = useState('')
+  const [skillSlugs, setSkillSlugs] = useState<string[]>([])
   const [skillNotes, setSkillNotes] = useState('')
+  const initialSkillSlugsRef = useRef<string[] | undefined>(undefined)
+  const initialSkillNotesRef = useRef<string | undefined>(undefined)
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<PromptTemplate | undefined>(undefined)
   const [deletingTemplateId, setDeletingTemplateId] = useState<number | null>(null)
@@ -87,6 +91,13 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit 
       const client = createOpenCodeClient(OPENCODE_API_ENDPOINT)
       return await client.listAgents()
     },
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: skills = [], isLoading: skillsLoading } = useQuery({
+    queryKey: ['managed-skills'],
+    queryFn: () => settingsApi.listManagedSkills(),
     enabled: open,
     staleTime: 5 * 60 * 1000,
   })
@@ -164,8 +175,12 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit 
     setPrompt(job?.prompt ?? '')
     const matchingTemplate = templates.find((template) => template.prompt === (job?.prompt ?? ''))
     setSelectedPromptTemplateId(matchingTemplate ? matchingTemplate.id : null)
-    setSkillSlugs(job?.skillMetadata?.skillSlugs.join(', ') ?? '')
-    setSkillNotes(job?.skillMetadata?.notes ?? '')
+    const initialSkillSlugs = job?.skillMetadata?.skillSlugs ?? []
+    const initialSkillNotes = job?.skillMetadata?.notes ?? ''
+    setSkillSlugs(initialSkillSlugs)
+    setSkillNotes(initialSkillNotes)
+    initialSkillSlugsRef.current = initialSkillSlugs
+    initialSkillNotesRef.current = initialSkillNotes
   }, [job, open, templates])
 
   const applyPromptTemplate = (template: PromptTemplate) => {
@@ -186,6 +201,10 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit 
       monthlyDay,
       cronExpression,
     })
+    const skillSlugsChanged = JSON.stringify(skillSlugs) !== JSON.stringify(initialSkillSlugsRef.current ?? [])
+    const skillNotesChanged = skillNotes.trim() !== (initialSkillNotesRef.current ?? '')
+    const shouldIncludeSkillMetadata = skillSlugsChanged || skillNotesChanged
+
     const baseFields = {
       name: name.trim(),
       description: description.trim() || undefined,
@@ -193,12 +212,14 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit 
       agentSlug: agentSlug.trim() || undefined,
       model: model.trim() || undefined,
       prompt: prompt.trim(),
-      skillMetadata: skillSlugs.trim() || skillNotes.trim()
-        ? {
-            skillSlugs: skillSlugs.split(',').map((value) => value.trim()).filter(Boolean),
-            notes: skillNotes.trim() || undefined,
-          }
-        : undefined,
+      ...(shouldIncludeSkillMetadata ? {
+        skillMetadata: skillSlugs.length > 0 || skillNotes.trim()
+          ? {
+              skillSlugs,
+              notes: skillNotes.trim() || undefined,
+            }
+          : null,
+      } : {}),
     }
 
     if (schedulePreset !== 'interval') {
@@ -575,26 +596,65 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit 
 
           <TabsContent value="skills" className="mt-0 min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-5">
             <div className="space-y-4">
-              <section className="rounded-lg border border-border bg-card p-4">
-                <div className="space-y-1">
-                  <h3 className="text-base font-medium flex items-center gap-2"><Sparkles className="h-4 w-4" /> Optional future integrations</h3>
-                  <p className="text-sm text-muted-foreground">You can ignore this for now. These fields are stored for future skill-aware scheduling, but the current MVP does not use them during execution.</p>
-                </div>
-              </section>
+              <div className="space-y-2">
+                <Label>Select skills for this schedule</Label>
+                <p className="text-xs text-muted-foreground">
+                  Skills provide domain-specific instructions to the agent. Select which skills should be available when this schedule runs.
+                </p>
+              </div>
 
-              <details className="group rounded-lg border border-dashed border-border bg-card/50 p-4">
-                <summary className="cursor-pointer list-none text-sm font-medium">Edit optional skill metadata</summary>
-                <div className="mt-4 space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="schedule-skills">Skill tags</Label>
-                    <Input id="schedule-skills" value={skillSlugs} onChange={(event) => setSkillSlugs(event.target.value)} placeholder="nextjs, database-tuning" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="schedule-skill-notes">Notes</Label>
-                    <Textarea id="schedule-skill-notes" value={skillNotes} onChange={(event) => setSkillNotes(event.target.value)} placeholder="Optional notes for a future skill-aware scheduler." />
-                  </div>
+              {skillsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              </details>
+              ) : skills.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border bg-card/50 p-6 text-center">
+                  <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No skills discovered. Configure skill paths in Settings to make skills available here.</p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {skills.map((skill) => (
+                    <button
+                      key={skill.name}
+                      type="button"
+                      onClick={() => {
+                        setSkillSlugs(prev =>
+                          prev.includes(skill.name)
+                            ? prev.filter(s => s !== skill.name)
+                            : [...prev, skill.name]
+                        )
+                      }}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                        skillSlugs.includes(skill.name)
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground'
+                      )}
+                    >
+                      {skillSlugs.includes(skill.name) && <Check className="h-3 w-3" />}
+                      {skill.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {skillSlugs.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  {skillSlugs.length} skill{skillSlugs.length !== 1 ? 's' : ''} selected
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="schedule-skill-notes">Notes</Label>
+                <Textarea
+                  id="schedule-skill-notes"
+                  value={skillNotes}
+                  onChange={(event) => setSkillNotes(event.target.value)}
+                  placeholder="Optional notes about skill usage for this schedule."
+                  className="min-h-[80px]"
+                />
+              </div>
             </div>
           </TabsContent>
         </Tabs>

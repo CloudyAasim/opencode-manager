@@ -83,7 +83,6 @@ const requireAuth = createAuthMiddleware(auth)
 import { DEFAULT_AGENTS_MD } from './constants'
 
 let ipcServer: IPCServer | undefined
-let scheduleRunnerInstance: ScheduleRunner | undefined
 const gitAuthService = new GitAuthService()
 const OPENCODE_STATE_DB_FILENAMES = new Set(['opencode.db', 'opencode.db-shm', 'opencode.db-wal'])
 
@@ -315,14 +314,13 @@ try {
   await opencodeServerManager.start()
   logger.info(`OpenCode server running on port ${opencodeServerManager.getPort()}`)
 
-  const scheduleService = new ScheduleService(db)
-  scheduleRunnerInstance = new ScheduleRunner(scheduleService)
-  await scheduleRunnerInstance.start()
-
   await syncAdminFromEnv(auth, db)
 } catch (error) {
   logger.error('Failed to initialize workspace:', error)
 }
+
+const scheduleService = new ScheduleService(db)
+const scheduleRunnerInstance = new ScheduleRunner(scheduleService)
 
 const notificationService = new NotificationService(db)
 
@@ -345,6 +343,8 @@ if (ENV.VAPID.PUBLIC_KEY && ENV.VAPID.PRIVATE_KEY) {
   })
 }
 
+void scheduleRunnerInstance.start()
+
 app.route('/api/auth', createAuthRoutes(auth))
 app.route('/api/auth-info', createAuthInfoRoutes(auth, db))
 app.route('/api/health', createHealthRoutes(db))
@@ -354,7 +354,7 @@ app.route('/api/mcp-oauth-proxy', createMcpOauthProxyRoutes(requireAuth))
 const protectedApi = new Hono()
 protectedApi.use('/*', requireAuth)
 
-protectedApi.route('/repos', createRepoRoutes(db, gitAuthService))
+protectedApi.route('/repos', createRepoRoutes(db, gitAuthService, scheduleService))
 protectedApi.route('/settings', createSettingsRoutes(db))
 protectedApi.route('/files', createFileRoutes())
 protectedApi.route('/providers', createProvidersRoutes())

@@ -150,7 +150,7 @@ export function buildUpdatedSchedulePersistenceInput(
     agentSlug: input.agentSlug === undefined ? existing.agentSlug : (input.agentSlug?.trim() || null),
     prompt: input.prompt?.trim() || existing.prompt,
     model: input.model === undefined ? existing.model : (input.model?.trim() || null),
-    skillMetadata: input.skillMetadata === undefined ? existing.skillMetadata : input.skillMetadata,
+    skillMetadata: input.skillMetadata !== undefined ? input.skillMetadata : existing.skillMetadata,
     nextRunAt,
   }
 }

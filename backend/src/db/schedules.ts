@@ -115,17 +115,6 @@ export function listScheduleJobsByRepo(db: Database, repoId: number): ScheduleJo
   return rows.map(rowToScheduleJob)
 }
 
-export function listDueScheduleJobs(db: Database, now: number, limit: number = 20): ScheduleJob[] {
-  const stmt = db.prepare(`
-    SELECT * FROM schedule_jobs
-    WHERE enabled = 1 AND next_run_at IS NOT NULL AND next_run_at <= ?
-    ORDER BY next_run_at ASC
-    LIMIT ?
-  `)
-  const rows = stmt.all(now, limit) as ScheduleJobRow[]
-  return rows.map(rowToScheduleJob)
-}
-
 export function listEnabledScheduleJobs(db: Database): ScheduleJob[] {
   const stmt = db.prepare('SELECT * FROM schedule_jobs WHERE enabled = 1 ORDER BY id ASC')
   const rows = stmt.all() as ScheduleJobRow[]

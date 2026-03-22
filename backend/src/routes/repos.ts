@@ -15,13 +15,14 @@ import { getOpenCodeConfigFilePath } from '@opencode-manager/shared/config/env'
 import { createRepoGitRoutes } from './repo-git'
 import { createScheduleRoutes } from './schedules'
 import type { GitAuthService } from '../services/git-auth'
+import { ScheduleService } from '../services/schedules'
 import path from 'path'
 
-export function createRepoRoutes(database: Database, gitAuthService: GitAuthService) {
+export function createRepoRoutes(database: Database, gitAuthService: GitAuthService, scheduleService: ScheduleService) {
   const app = new Hono()
 
   app.route('/', createRepoGitRoutes(database, gitAuthService))
-  app.route('/:id/schedules', createScheduleRoutes(database))
+  app.route('/:id/schedules', createScheduleRoutes(scheduleService))
 
   app.post('/', async (c) => {
     try {

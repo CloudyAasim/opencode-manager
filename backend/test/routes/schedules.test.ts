@@ -23,6 +23,9 @@ const mocks = vi.hoisted(() => {
       listRuns: vi.fn(),
       getRun: vi.fn(),
       cancelRun: vi.fn(),
+      listAllEnabledJobs: vi.fn(),
+      recoverRunningRuns: vi.fn(),
+      setJobChangeHandler: vi.fn(),
     },
   }
 })
@@ -48,7 +51,7 @@ describe('Schedule Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     app = new Hono()
-    app.route('/repos/:id/schedules', createScheduleRoutes({} as never))
+    app.route('/repos/:id/schedules', createScheduleRoutes(mocks.scheduleService as unknown as import('../../src/services/schedules').ScheduleService))
   })
 
   it('lists jobs for a repo', async () => {

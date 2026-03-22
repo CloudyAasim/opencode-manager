@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   getScheduleJobById: vi.fn(),
   getRunningScheduleRunByJob: vi.fn(),
   getScheduleRunById: vi.fn(),
-  listDueScheduleJobs: vi.fn(),
   listEnabledScheduleJobs: vi.fn(),
   listRunningScheduleRuns: vi.fn(),
   listScheduleJobsByRepo: vi.fn(),
@@ -40,7 +39,6 @@ vi.mock('../../src/db/schedules', () => ({
   getScheduleJobById: mocks.getScheduleJobById,
   getRunningScheduleRunByJob: mocks.getRunningScheduleRunByJob,
   getScheduleRunById: mocks.getScheduleRunById,
-  listDueScheduleJobs: mocks.listDueScheduleJobs,
   listEnabledScheduleJobs: mocks.listEnabledScheduleJobs,
   listRunningScheduleRuns: mocks.listRunningScheduleRuns,
   listScheduleJobsByRepo: mocks.listScheduleJobsByRepo,
@@ -748,7 +746,7 @@ describe('ScheduleRunner', () => {
     expect(mocks.listRunningScheduleRuns).toHaveBeenCalled()
     expect(mocks.listEnabledScheduleJobs).toHaveBeenCalled()
     expect(mockCronInstances).toHaveLength(1)
-    expect(mockCronInstances[0]?.pattern).toBe('*/60 * * * *')
+    expect(mockCronInstances[0]?.pattern).toBe('0 * * * *')
     expect(mockCronInstances[0]?.options).toEqual(expect.objectContaining({ protect: true }))
   })
 

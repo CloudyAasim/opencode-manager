@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { execSync } from 'child_process'
+import { execSync, spawnSync } from 'child_process'
 
 vi.mock('fs', () => ({
   existsSync: vi.fn(() => false),
@@ -93,6 +93,7 @@ import { createSettingsRoutes } from '../../src/routes/settings'
 import { opencodeServerManager } from '../../src/services/opencode-single-server'
 
 const mockExecSync = execSync as ReturnType<typeof vi.fn>
+const mockSpawnSync = spawnSync as ReturnType<typeof vi.fn>
 const mockGetVersion = opencodeServerManager.getVersion as ReturnType<typeof vi.fn>
 const mockFetchVersion = opencodeServerManager.fetchVersion as ReturnType<typeof vi.fn>
 const mockReloadConfig = opencodeServerManager.reloadConfig as ReturnType<typeof vi.fn>
@@ -302,7 +303,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
       it('should install specific version successfully', async () => {
         mockGetVersion.mockReturnValueOnce('1.0.0')
         mockFetchVersion.mockResolvedValueOnce('1.0.5')
-        mockExecSync.mockReturnValueOnce('Installed v1.0.5\n')
+        mockSpawnSync.mockReturnValueOnce({ stdout: 'Installed v1.0.5\n', stderr: '', signal: null, error: undefined })
 
         const req = new Request('http://localhost/opencode-install-version', {
           method: 'POST',
@@ -320,7 +321,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
       it('should prepend v to version if missing', async () => {
         mockGetVersion.mockReturnValueOnce('1.0.0')
         mockFetchVersion.mockResolvedValueOnce('1.0.5')
-        mockExecSync.mockReturnValueOnce('Installed v1.0.5\n')
+        mockSpawnSync.mockReturnValueOnce({ stdout: 'Installed v1.0.5\n', stderr: '', signal: null, error: undefined })
 
         const req = new Request('http://localhost/opencode-install-version', {
           method: 'POST',
@@ -329,8 +330,9 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         })
         await settingsApp.fetch(req)
 
-        expect(mockExecSync).toHaveBeenCalledWith(
-          'opencode upgrade v1.0.5 --method curl 2>&1',
+        expect(mockSpawnSync).toHaveBeenCalledWith(
+          'opencode',
+          ['upgrade', 'v1.0.5', '--method', 'curl'],
           expect.any(Object)
         )
       })
@@ -338,7 +340,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
       it('should not double prepend v to version', async () => {
         mockGetVersion.mockReturnValueOnce('1.0.0')
         mockFetchVersion.mockResolvedValueOnce('1.0.5')
-        mockExecSync.mockReturnValueOnce('Installed v1.0.5\n')
+        mockSpawnSync.mockReturnValueOnce({ stdout: 'Installed v1.0.5\n', stderr: '', signal: null, error: undefined })
 
         const req = new Request('http://localhost/opencode-install-version', {
           method: 'POST',
@@ -347,8 +349,9 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         })
         await settingsApp.fetch(req)
 
-        expect(mockExecSync).toHaveBeenCalledWith(
-          'opencode upgrade v1.0.5 --method curl 2>&1',
+        expect(mockSpawnSync).toHaveBeenCalledWith(
+          'opencode',
+          ['upgrade', 'v1.0.5', '--method', 'curl'],
           expect.any(Object)
         )
       })
@@ -359,9 +362,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         mockGetVersion.mockReturnValueOnce('1.0.0')
           .mockReturnValueOnce('1.0.0')
         mockFetchVersion.mockResolvedValueOnce('1.0.0')
-        mockExecSync.mockImplementationOnce(() => {
-          throw new Error('timeout')
-        })
+        mockSpawnSync.mockReturnValueOnce({ stdout: '', stderr: '', signal: 'SIGKILL', error: undefined })
 
         const req = new Request('http://localhost/opencode-install-version', {
           method: 'POST',
@@ -371,8 +372,9 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         const res = await settingsApp.fetch(req)
         const json = await res.json() as Record<string, unknown>
 
-        expect(mockExecSync).toHaveBeenCalledWith(
-          'opencode upgrade v1.0.5 --method curl 2>&1',
+        expect(mockSpawnSync).toHaveBeenCalledWith(
+          'opencode',
+          ['upgrade', 'v1.0.5', '--method', 'curl'],
           expect.any(Object)
         )
         expect(mockRestart).toHaveBeenCalled()
@@ -397,6 +399,28 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         const req = new Request('http://localhost/opencode-install-version', {
           method: 'POST',
           body: JSON.stringify({}),
+          headers: { 'Content-Type': 'application/json' }
+        })
+        const res = await settingsApp.fetch(req)
+
+        expect(res.status).toBe(400)
+      })
+
+      it('should reject invalid version format with command injection attempt', async () => {
+        const req = new Request('http://localhost/opencode-install-version', {
+          method: 'POST',
+          body: JSON.stringify({ version: '1.2.27; cat /etc/passwd; #' }),
+          headers: { 'Content-Type': 'application/json' }
+        })
+        const res = await settingsApp.fetch(req)
+
+        expect(res.status).toBe(400)
+      })
+
+      it('should reject version with invalid format', async () => {
+        const req = new Request('http://localhost/opencode-install-version', {
+          method: 'POST',
+          body: JSON.stringify({ version: 'invalid' }),
           headers: { 'Content-Type': 'application/json' }
         })
         const res = await settingsApp.fetch(req)
