@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => {
       getRun: vi.fn(),
       cancelRun: vi.fn(),
       listAllEnabledJobs: vi.fn(),
+      listAllJobsWithRepos: vi.fn(),
       recoverRunningRuns: vi.fn(),
       setJobChangeHandler: vi.fn(),
     },
