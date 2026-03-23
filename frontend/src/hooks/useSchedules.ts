@@ -102,9 +102,9 @@ export function useUpdateRepoSchedule(repoId: number | undefined) {
       const response = await updateRepoSchedule(resolvedRepoId!, jobId, data)
       return response.job
     },
-    onSuccess: (__variables) => {
-      queryClient.invalidateQueries({ queryKey: ['repo-schedules', __variables.repoId ?? repoId] })
-      queryClient.invalidateQueries({ queryKey: ['repo-schedule', __variables.repoId ?? repoId, __variables.jobId] })
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId ?? repoId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedule', variables.repoId ?? repoId, variables.jobId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
       showToast.success('Schedule updated')
     },
@@ -122,8 +122,8 @@ export function useDeleteRepoSchedule(repoId: number | undefined) {
       const resolvedRepoId = callRepoId ?? repoId
       return deleteRepoSchedule(resolvedRepoId!, jobId)
     },
-    onSuccess: (__variables) => {
-      queryClient.invalidateQueries({ queryKey: ['repo-schedules', __variables.repoId ?? repoId] })
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId ?? repoId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
       showToast.success('Schedule deleted')
     },
