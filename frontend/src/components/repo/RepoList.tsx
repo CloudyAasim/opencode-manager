@@ -334,7 +334,7 @@ export function RepoList() {
         </div>
 
         <div className="mx-2 md:mx-0 flex-1 min-h-0">
-          <div className="h-full overflow-y-auto pt-4 pb-2 md:pb-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
+          <div className="h-full overflow-y-auto pt-4 md:pb-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
             {filteredRepos.length === 0 ? (
               <div className="text-center p-12">
                 <Search className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
