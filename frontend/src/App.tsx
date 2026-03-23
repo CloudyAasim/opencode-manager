@@ -14,6 +14,7 @@ import { Register } from './pages/Register'
 import { Setup } from './pages/Setup'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { VersionNotifier } from './components/VersionNotifier'
+import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
 import { useTheme } from './hooks/useTheme'
 import { TTSProvider } from './contexts/TTSContext'
 import { AuthProvider } from './contexts/AuthContext'
@@ -72,8 +73,9 @@ function AppShell() {
   useEffect(() => {
     const channel = new BroadcastChannel('notification-click')
     channel.onmessage = (event: MessageEvent) => {
-      if (event.data?.url) {
-        navigate(event.data.url)
+      const data = event.data as { url?: string } | null | undefined
+      if (typeof data?.url === 'string') {
+        navigate(data.url)
       }
     }
     return () => channel.close()
@@ -87,6 +89,7 @@ function AppShell() {
         <SSHHostKeyDialogWrapper />
         <SettingsDialog />
         <VersionNotifier />
+        <PwaUpdatePrompt />
         <Toaster
           position="bottom-right"
           expand={false}
