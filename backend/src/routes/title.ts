@@ -1,15 +1,13 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { logger } from '../utils/logger'
-import { ENV } from '@opencode-manager/shared/config/env'
 import { resolveOpenCodeModel } from '../services/opencode-models'
+import { OPENCODE_SERVER_URL } from '../services/proxy'
 
 const TitleRequestSchema = z.object({
   text: z.string().min(1).max(5000),
   sessionID: z.string().min(1)
 })
-
-const OPENCODE_SERVER_URL = `http://127.0.0.1:${ENV.OPENCODE.PORT}`
 const TITLE_POLL_INTERVAL_MS = 1_000
 const TITLE_POLL_TIMEOUT_MS = 30_000
 

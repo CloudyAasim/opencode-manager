@@ -1,26 +1,11 @@
-import { Hono, type Context } from 'hono'
+import { Hono } from 'hono'
 import type { Database } from 'bun:sqlite'
 import {
   CreatePromptTemplateRequestSchema,
   UpdatePromptTemplateRequestSchema,
 } from '@opencode-manager/shared/schemas'
 import { PromptTemplateService, PromptTemplateServiceError } from '../services/prompt-templates'
-import { getErrorMessage } from '../utils/error-utils'
-import { logger } from '../utils/logger'
-
-function parseId(value: string | undefined): number {
-  const parsed = Number.parseInt(value ?? '', 10)
-  if (Number.isNaN(parsed)) throw new PromptTemplateServiceError('Invalid id', 400)
-  return parsed
-}
-
-function handleTemplateError(c: Context, error: unknown, fallback: string) {
-  if (error instanceof PromptTemplateServiceError) {
-    return c.json({ error: error.message }, error.statusCode as 400 | 404 | 500)
-  }
-  logger.error(fallback, error)
-  return c.json({ error: getErrorMessage(error) }, 500)
-}
+import { parseId, handleServiceError } from '../utils/route-helpers'
 
 export function createPromptTemplateRoutes(database: Database) {
   const app = new Hono()
@@ -30,7 +15,7 @@ export function createPromptTemplateRoutes(database: Database) {
     try {
       return c.json({ templates: service.list() })
     } catch (error) {
-      return handleTemplateError(c, error, 'Failed to list templates')
+      return handleServiceError(c, error, 'Failed to list templates', PromptTemplateServiceError)
     }
   })
 
@@ -41,38 +26,38 @@ export function createPromptTemplateRoutes(database: Database) {
       const template = service.create(input)
       return c.json({ template }, 201)
     } catch (error) {
-      return handleTemplateError(c, error, 'Failed to create template')
+      return handleServiceError(c, error, 'Failed to create template', PromptTemplateServiceError)
     }
   })
 
   app.get('/:id', (c) => {
     try {
-      const id = parseId(c.req.param('id'))
+      const id = parseId(c.req.param('id'), 'id', PromptTemplateServiceError)
       return c.json({ template: service.getById(id) })
     } catch (error) {
-      return handleTemplateError(c, error, 'Failed to get template')
+      return handleServiceError(c, error, 'Failed to get template', PromptTemplateServiceError)
     }
   })
 
   app.patch('/:id', async (c) => {
     try {
-      const id = parseId(c.req.param('id'))
+      const id = parseId(c.req.param('id'), 'id', PromptTemplateServiceError)
       const body = await c.req.json()
       const input = UpdatePromptTemplateRequestSchema.parse(body)
       const template = service.update(id, input)
       return c.json({ template })
     } catch (error) {
-      return handleTemplateError(c, error, 'Failed to update template')
+      return handleServiceError(c, error, 'Failed to update template', PromptTemplateServiceError)
     }
   })
 
   app.delete('/:id', (c) => {
     try {
-      const id = parseId(c.req.param('id'))
+      const id = parseId(c.req.param('id'), 'id', PromptTemplateServiceError)
       service.delete(id)
       return c.body(null, 204)
     } catch (error) {
-      return handleTemplateError(c, error, 'Failed to delete template')
+      return handleServiceError(c, error, 'Failed to delete template', PromptTemplateServiceError)
     }
   })
 

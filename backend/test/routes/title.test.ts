@@ -20,7 +20,7 @@ vi.mock('../../src/utils/logger', () => ({
 
 vi.mock('@opencode-manager/shared/config/env', () => ({
   ENV: {
-    OPENCODE: { PORT: 5551 },
+    OPENCODE: { PORT: 5551, HOST: '127.0.0.1' },
   },
 }))
 
