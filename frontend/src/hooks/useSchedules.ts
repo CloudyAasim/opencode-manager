@@ -73,17 +73,16 @@ export function useRepoScheduleRun(repoId: number | undefined, jobId: number | n
   })
 }
 
-export function useCreateRepoSchedule(repoId: number | undefined) {
+export function useCreateRepoSchedule() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ repoId: callRepoId, data }: { repoId?: number; data: CreateScheduleJobRequest }) => {
-      const resolvedRepoId = callRepoId ?? repoId
-      const response = await createRepoSchedule(resolvedRepoId!, data)
+    mutationFn: async ({ repoId, data }: { repoId: number; data: CreateScheduleJobRequest }) => {
+      const response = await createRepoSchedule(repoId, data)
       return response.job
     },
-    onSuccess: (__variables) => {
-      queryClient.invalidateQueries({ queryKey: ['repo-schedules', __variables.repoId ?? repoId] })
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
       showToast.success('Schedule created')
     },
@@ -93,18 +92,17 @@ export function useCreateRepoSchedule(repoId: number | undefined) {
   })
 }
 
-export function useUpdateRepoSchedule(repoId: number | undefined) {
+export function useUpdateRepoSchedule() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ repoId: callRepoId, jobId, data }: { repoId?: number; jobId: number; data: UpdateScheduleJobRequest }) => {
-      const resolvedRepoId = callRepoId ?? repoId
-      const response = await updateRepoSchedule(resolvedRepoId!, jobId, data)
+    mutationFn: async ({ repoId, jobId, data }: { repoId: number; jobId: number; data: UpdateScheduleJobRequest }) => {
+      const response = await updateRepoSchedule(repoId, jobId, data)
       return response.job
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId ?? repoId] })
-      queryClient.invalidateQueries({ queryKey: ['repo-schedule', variables.repoId ?? repoId, variables.jobId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedule', variables.repoId, variables.jobId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
       showToast.success('Schedule updated')
     },
@@ -114,16 +112,15 @@ export function useUpdateRepoSchedule(repoId: number | undefined) {
   })
 }
 
-export function useDeleteRepoSchedule(repoId: number | undefined) {
+export function useDeleteRepoSchedule() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ repoId: callRepoId, jobId }: { repoId?: number; jobId: number }) => {
-      const resolvedRepoId = callRepoId ?? repoId
-      return deleteRepoSchedule(resolvedRepoId!, jobId)
+    mutationFn: ({ repoId, jobId }: { repoId: number; jobId: number }) => {
+      return deleteRepoSchedule(repoId, jobId)
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId ?? repoId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
       showToast.success('Schedule deleted')
     },
@@ -133,20 +130,19 @@ export function useDeleteRepoSchedule(repoId: number | undefined) {
   })
 }
 
-export function useRunRepoSchedule(repoId: number | undefined) {
+export function useRunRepoSchedule() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ repoId: callRepoId, jobId }: { repoId?: number; jobId: number }) => {
-      const resolvedRepoId = callRepoId ?? repoId
-      const response = await runRepoSchedule(resolvedRepoId!, jobId)
+    mutationFn: async ({ repoId, jobId }: { repoId: number; jobId: number }) => {
+      const response = await runRepoSchedule(repoId, jobId)
       return response.run
     },
     onSuccess: (run, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId ?? repoId] })
-      queryClient.invalidateQueries({ queryKey: ['repo-schedule-runs', variables.repoId ?? repoId, run.jobId] })
-      queryClient.invalidateQueries({ queryKey: ['repo-schedule', variables.repoId ?? repoId, run.jobId] })
-      queryClient.invalidateQueries({ queryKey: ['repo-schedule-run', variables.repoId ?? repoId, run.jobId, run.id] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedule-runs', variables.repoId, run.jobId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedule', variables.repoId, run.jobId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedule-run', variables.repoId, run.jobId, run.id] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
       showToast.success(run.status === 'running' ? 'Schedule started' : 'Schedule run completed')
     },
@@ -156,19 +152,20 @@ export function useRunRepoSchedule(repoId: number | undefined) {
   })
 }
 
-export function useCancelRepoScheduleRun(repoId: number | undefined) {
+export function useCancelRepoScheduleRun() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ jobId, runId }: { jobId: number; runId: number }) => {
-      const response = await cancelRepoScheduleRun(repoId!, jobId, runId)
+    mutationFn: async ({ repoId, jobId, runId }: { repoId: number; jobId: number; runId: number }) => {
+      const response = await cancelRepoScheduleRun(repoId, jobId, runId)
       return response.run
     },
-    onSuccess: (run) => {
-      queryClient.invalidateQueries({ queryKey: ['repo-schedules', repoId] })
-      queryClient.invalidateQueries({ queryKey: ['repo-schedule-runs', repoId, run.jobId] })
-      queryClient.invalidateQueries({ queryKey: ['repo-schedule', repoId, run.jobId] })
-      queryClient.invalidateQueries({ queryKey: ['repo-schedule-run', repoId, run.jobId, run.id] })
+    onSuccess: (run, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedule-runs', variables.repoId, run.jobId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedule', variables.repoId, run.jobId] })
+      queryClient.invalidateQueries({ queryKey: ['repo-schedule-run', variables.repoId, run.jobId, run.id] })
+      queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
       showToast.success('Schedule run cancelled')
     },
     onError: (error) => {

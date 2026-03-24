@@ -44,11 +44,11 @@ export function Schedules() {
   const { data: runs, isLoading: runsLoading } = useRepoScheduleRuns(repoId, selectedJobId, 30)
   const { data: selectedRunDetails, isLoading: selectedRunLoading } = useRepoScheduleRun(repoId, selectedJobId, selectedRunId)
 
-  const createMutation = useCreateRepoSchedule(repoId)
-  const updateMutation = useUpdateRepoSchedule(repoId)
-  const deleteMutation = useDeleteRepoSchedule(repoId)
-  const runMutation = useRunRepoSchedule(repoId)
-  const cancelRunMutation = useCancelRepoScheduleRun(repoId)
+  const createMutation = useCreateRepoSchedule()
+  const updateMutation = useUpdateRepoSchedule()
+  const deleteMutation = useDeleteRepoSchedule()
+  const runMutation = useRunRepoSchedule()
+  const cancelRunMutation = useCancelRepoScheduleRun()
 
   useEffect(() => {
     if (!jobs?.length) {
@@ -103,7 +103,7 @@ export function Schedules() {
   const hasJobs = (jobs?.length ?? 0) > 0
 
   const handleCreate = (data: CreateScheduleJobRequest) => {
-    createMutation.mutate({ data }, {
+    createMutation.mutate({ repoId: repoId!, data }, {
       onSuccess: (job) => {
         setSelectedJobId(job.id)
         setDialogOpen(false)
@@ -118,6 +118,7 @@ export function Schedules() {
     }
 
     updateMutation.mutate({
+      repoId: repoId!,
       jobId: editingJob.id,
       data: toUpdateScheduleRequest(data),
     }, {
@@ -133,7 +134,7 @@ export function Schedules() {
       return
     }
 
-    deleteMutation.mutate({ jobId: deleteJobId }, {
+    deleteMutation.mutate({ repoId: repoId!, jobId: deleteJobId }, {
       onSuccess: () => {
         if (selectedJobId === deleteJobId) {
           setSelectedJobId(null)
@@ -149,6 +150,7 @@ export function Schedules() {
     }
 
     updateMutation.mutate({
+      repoId: repoId!,
       jobId: selectedJob.id,
       data: { enabled: !selectedJob.enabled },
     })
@@ -159,7 +161,7 @@ export function Schedules() {
       return
     }
 
-    runMutation.mutate({ jobId: selectedJob.id }, {
+    runMutation.mutate({ repoId: repoId!, jobId: selectedJob.id }, {
       onSuccess: (run) => {
         setSelectedRunId(run.id)
       },
@@ -172,6 +174,7 @@ export function Schedules() {
     }
 
     cancelRunMutation.mutate({
+      repoId: repoId!,
       jobId: activeRun.jobId,
       runId: activeRun.id,
     }, {

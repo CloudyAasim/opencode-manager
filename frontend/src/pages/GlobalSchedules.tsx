@@ -33,10 +33,10 @@ export function GlobalSchedules() {
 
   const { data: jobs = [], isLoading, error } = useAllSchedules()
 
-  const createMutation = useCreateRepoSchedule(undefined)
-  const deleteMutation = useDeleteRepoSchedule(undefined)
-  const runMutation = useRunRepoSchedule(undefined)
-  const updateMutation = useUpdateRepoSchedule(undefined)
+  const createMutation = useCreateRepoSchedule()
+  const deleteMutation = useDeleteRepoSchedule()
+  const runMutation = useRunRepoSchedule()
+  const updateMutation = useUpdateRepoSchedule()
 
   const uniqueRepos = useMemo(() => {
     const repoMap = new Map<string, { name: string; url: string }>()
