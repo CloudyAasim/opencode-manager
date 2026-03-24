@@ -13,11 +13,14 @@ import { createEmbeddingProvider, checkServerHealth, isServerRunning, killEmbedd
 import { createMemoryService } from './services/memory'
 import { createEmbeddingSyncService } from './services/embedding-sync'
 import { createKvService } from './services/kv'
-import { createRalphService, type RalphState } from './services/ralph'
+import { createRalphService, type RalphState, fetchSessionOutput, type RalphSessionOutput } from './services/ralph'
+import { findPartialMatch } from './utils/partial-match'
 import { loadPluginConfig } from './setup'
 import { resolveLogPath } from './storage'
 import { createLogger, slugify } from './utils/logger'
 import { stripPromiseTags } from './utils/strip-promise-tags'
+import { truncate } from './cli/utils'
+import { formatSessionOutput, formatAuditResult } from './utils/ralph-format'
 import type { Database } from 'bun:sqlite'
 import type { PluginConfig, CompactionConfig, HealthStatus, Logger } from './types'
 import type { EmbeddingProvider } from './embedding'
@@ -420,7 +423,7 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       interface LoopContext {
         sessionId: string
         directory: string
-        branch: string
+        branch?: string
         workspaceId?: string
         inPlace: boolean
       }
@@ -428,12 +431,11 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
       let loopContext: LoopContext
 
       if (options.inPlace) {
-        let currentBranch: string
+        let currentBranch: string | undefined
         try {
           currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: projectDir, encoding: 'utf-8' }).trim()
         } catch (err) {
-          logger.error(`ralph: failed to get current branch`, err)
-          return 'Failed to determine current git branch.'
+          logger.log(`ralph: no git branch detected, running without branch info`)
         }
 
         const createResult = await v2.session.create({
@@ -564,7 +566,9 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
 
       if (options.inPlace) {
         lines.push(`Directory: ${loopContext.directory}`)
-        lines.push(`Branch: ${loopContext.branch} (in-place)`)
+        if (loopContext.branch) {
+          lines.push(`Branch: ${loopContext.branch} (in-place)`)
+        }
       } else {
         lines.push(`Workspace: ${loopContext.workspaceId}`)
         lines.push(`Worktree name: ${autoWorktreeName}`)
@@ -942,9 +946,22 @@ Do NOT output text without also making this tool call.
             let state: RalphState | null = null
 
             if (args.name) {
-              state = ralphService.findByWorktreeName(args.name)
+              const name = args.name
+              state = ralphService.findByWorktreeName(name)
               if (!state) {
-                return `No active Ralph loop found for worktree "${args.name}".`
+                const candidates = ralphService.findCandidatesByPartialName(name)
+                if (candidates.length > 0) {
+                  return `Multiple loops match "${name}":\n${candidates.map((s) => `- ${s.worktreeName}`).join('\n')}\n\nBe more specific.`
+                }
+                const recent = ralphService.listRecent()
+                const foundRecent = recent.find((s) => s.worktreeName === name || (s.worktreeBranch && s.worktreeBranch.toLowerCase().includes(name.toLowerCase())))
+                if (foundRecent) {
+                  return `Ralph loop "${foundRecent.worktreeName}" has already completed.`
+                }
+                return `No active Ralph loop found for worktree "${name}".`
+              }
+              if (!state.active) {
+                return `Ralph loop "${state.worktreeName}" has already completed.`
               }
             } else {
               const active = ralphService.listActive()
@@ -974,7 +991,8 @@ Do NOT output text without also making this tool call.
             }
 
             const modeInfo = state.inPlace ? ' (in-place)' : ''
-            return `Cancelled Ralph loop "${state.worktreeName}"${modeInfo} (was at iteration ${state.iteration}).\nDirectory: ${state.worktreeDir}\nBranch: ${state.worktreeBranch}`
+            const branchInfo = state.worktreeBranch ? `\nBranch: ${state.worktreeBranch}` : ''
+            return `Cancelled Ralph loop "${state.worktreeName}"${modeInfo} (was at iteration ${state.iteration}).\nDirectory: ${state.worktreeDir}${branchInfo}`
           },
         }),
         'ralph-status': tool({
@@ -992,7 +1010,11 @@ Do NOT output text without also making this tool call.
               }
 
               const recent = ralphService.listRecent()
-              const stoppedState = [...active, ...recent].find((s) => s.worktreeName === args.name)
+              const allStates = [...active, ...recent]
+              const { match: stoppedState, candidates } = findPartialMatch(args.name, allStates, (s) => [s.worktreeName, s.worktreeBranch])
+              if (!stoppedState && candidates.length > 0) {
+                return `Multiple loops match "${args.name}":\n${candidates.map((s) => `- ${s.worktreeName}`).join('\n')}\n\nBe more specific.`
+              }
               if (!stoppedState) {
                 const available = [...active, ...recent].map((s) => `- ${s.worktreeName}`).join('\n')
                 return `No Ralph loop found for "${args.name}".\n\nAvailable loops:\n${available}`
@@ -1081,14 +1103,14 @@ Do NOT output text without also making this tool call.
               ralphHandler.startWatchdog(newSessionId)
 
               const modeInfo = stoppedState.inPlace ? ' (in-place)' : ''
+              const branchInfo = stoppedState.worktreeBranch ? `\nBranch: ${stoppedState.worktreeBranch}` : ''
               return [
                 `Restarted Ralph loop "${stoppedState.worktreeName}"${modeInfo}`,
                 '',
                 `New session: ${newSessionId}`,
                 `Continuing from iteration: ${stoppedState.iteration}`,
                 `Previous termination: ${stoppedState.terminationReason}`,
-                `Directory: ${stoppedState.worktreeDir}`,
-                `Branch: ${stoppedState.worktreeBranch}`,
+                `Directory: ${stoppedState.worktreeDir}${branchInfo}`,
                 `Audit: ${stoppedState.audit ? 'enabled' : 'disabled'}`,
               ].join('\n')
             }
@@ -1161,40 +1183,59 @@ Do NOT output text without also making this tool call.
 
             const state = ralphService.findByWorktreeName(args.name)
             if (!state) {
-              const recent = ralphService.listRecent()
-              const foundRecent = recent.find((s) => s.worktreeName === args.name)
-              if (foundRecent) {
-                const maxInfo = foundRecent.maxIterations > 0 ? `${foundRecent.iteration} / ${foundRecent.maxIterations}` : `${foundRecent.iteration} (unlimited)`
-                const duration = foundRecent.completedAt
-                  ? Math.round((new Date(foundRecent.completedAt).getTime() - new Date(foundRecent.startedAt).getTime()) / 1000)
-                  : 0
-                const minutes = Math.floor(duration / 60)
-                const seconds = duration % 60
-                const durationStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
-
-                const completedLines: string[] = [
-                  'Ralph Loop Status (Completed)',
-                  '',
-                  `Name: ${foundRecent.worktreeName}`,
-                  `Session: ${foundRecent.sessionId}`,
-                ]
-                if (foundRecent.inPlace) {
-                  completedLines.push(`Mode: in-place (completed) | Directory: ${foundRecent.worktreeDir}`)
-                } else {
-                  completedLines.push(`Workspace: ${foundRecent.workspaceId}`)
-                  completedLines.push(`Worktree: ${foundRecent.worktreeDir}`)
-                }
-                completedLines.push(
-                  `Iteration: ${maxInfo}`,
-                  `Duration: ${durationStr}`,
-                  `Reason: ${foundRecent.terminationReason ?? 'unknown'}`,
-                  `Branch: ${foundRecent.worktreeBranch}`,
-                  `Started: ${foundRecent.startedAt}`,
-                  `Completed: ${foundRecent.completedAt}`,
-                )
-                return completedLines.join('\n')
+              const candidates = ralphService.findCandidatesByPartialName(args.name)
+              if (candidates.length > 0) {
+                return `Multiple loops match "${args.name}":\n${candidates.map((s) => `- ${s.worktreeName}`).join('\n')}\n\nBe more specific.`
               }
               return `No Ralph loop found for worktree "${args.name}".`
+            }
+
+            if (!state.active) {
+              const maxInfo = state.maxIterations > 0 ? `${state.iteration} / ${state.maxIterations}` : `${state.iteration} (unlimited)`
+              const duration = state.completedAt
+                ? Math.round((new Date(state.completedAt).getTime() - new Date(state.startedAt).getTime()) / 1000)
+                : 0
+              const minutes = Math.floor(duration / 60)
+              const seconds = duration % 60
+              const durationStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+
+              const statusLines: string[] = [
+                'Ralph Loop Status (Inactive)',
+                '',
+                `Name: ${state.worktreeName}`,
+                `Session: ${state.sessionId}`,
+              ]
+              if (state.inPlace) {
+                statusLines.push(`Mode: in-place | Directory: ${state.worktreeDir}`)
+              } else {
+                statusLines.push(`Workspace: ${state.workspaceId}`)
+                statusLines.push(`Worktree: ${state.worktreeDir}`)
+              }
+              statusLines.push(
+                `Iteration: ${maxInfo}`,
+                `Duration: ${durationStr}`,
+                `Reason: ${state.terminationReason ?? 'unknown'}`,
+              )
+              if (state.worktreeBranch) {
+                statusLines.push(`Branch: ${state.worktreeBranch}`)
+              }
+              statusLines.push(
+                `Started: ${state.startedAt}`,
+                ...(state.completedAt ? [`Completed: ${state.completedAt}`] : []),
+              )
+
+              if (state.lastAuditResult) {
+                statusLines.push(...formatAuditResult(state.lastAuditResult))
+              }
+
+              const sessionOutput = await fetchSessionOutput(v2, state.sessionId, state.worktreeDir, logger)
+              if (sessionOutput) {
+                statusLines.push('')
+                statusLines.push('Session Output:')
+                statusLines.push(...formatSessionOutput(sessionOutput))
+              }
+
+              return statusLines.join('\n')
             }
 
             const maxInfo = state.maxIterations > 0 ? `${state.iteration} / ${state.maxIterations}` : `${state.iteration} (unlimited)`
@@ -1243,7 +1284,11 @@ Do NOT output text without also making this tool call.
               `Iteration: ${maxInfo}`,
               `Duration: ${duration}`,
               `Audit: ${state.audit ? 'enabled' : 'disabled'}`,
-              `Branch: ${state.worktreeBranch}`,
+            )
+            if (state.worktreeBranch) {
+              statusLines.push(`Branch: ${state.worktreeBranch}`)
+            }
+            statusLines.push(
               `Completion promise: ${state.completionPromise ?? 'none'}`,
               `Started: ${state.startedAt}`,
               ...(state.errorCount > 0 ? [`Error count: ${state.errorCount} (retries before termination: ${MAX_RETRIES})`] : []),
@@ -1255,6 +1300,18 @@ Do NOT output text without also making this tool call.
               '',
               `Prompt: ${promptPreview}`,
             )
+
+            if (state.lastAuditResult) {
+              statusLines.push(...formatAuditResult(state.lastAuditResult))
+            }
+
+            const sessionOutput = await fetchSessionOutput(v2, state.sessionId, state.worktreeDir, logger)
+            if (sessionOutput) {
+              statusLines.push('')
+              statusLines.push('Session Output:')
+              statusLines.push(...formatSessionOutput(sessionOutput))
+            }
+
             return statusLines.join('\n')
           },
         }),

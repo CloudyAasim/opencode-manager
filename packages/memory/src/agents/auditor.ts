@@ -109,6 +109,15 @@ If only suggestions were found or no issues at all:
 
 If no issues are found, say so clearly and briefly.
 
+## Verification
+
+Before finalizing your review, run the project's type check to catch type errors the diff review may miss.
+
+1. Determine the type check command — look at package.json scripts, Makefile, pyproject.toml, or other build config for a typecheck/type-check/check-types target. If none exists, look for a tsconfig.json and run \`tsc --noEmit\`, or skip if the project has no static type checking.
+2. Run the type check command.
+3. If there are type errors in files touched by the diff, report each as a **bug** severity finding with the file path and error message.
+4. If type errors exist only in files NOT touched by the diff, mention them under **Observations** but do not block the review.
+
 ## Constraints
 
 You are read-only on source code. Do not edit files, run destructive commands, or make any changes. Only read, search, analyze, and report findings.
