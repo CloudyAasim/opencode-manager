@@ -410,3 +410,77 @@ export function listAllScheduleJobsWithRepos(db: Database): ScheduleJobWithRepo[
   const rows = stmt.all() as ScheduleJobWithRepoRow[]
   return rows.map(rowToScheduleJobWithRepo)
 }
+
+export interface ScheduleRunWithContext extends ScheduleRun {
+  jobName: string
+  repoName: string
+  repoPath: string
+}
+
+interface ScheduleRunWithContextRow extends ScheduleRunRow {
+  job_name: string
+  repo_path: string
+}
+
+function rowToScheduleRunWithContext(row: ScheduleRunWithContextRow): ScheduleRunWithContext {
+  const run = rowToScheduleRun(row)
+  return {
+    ...run,
+    jobName: row.job_name,
+    repoName: repoNameFromPath(row.repo_path),
+    repoPath: row.repo_path,
+  }
+}
+
+export interface ListAllRunsOptions {
+  limit?: number
+  offset?: number
+  status?: string
+  repoId?: number
+  jobId?: number
+  triggerSource?: string
+}
+
+export function listAllScheduleRuns(db: Database, options: ListAllRunsOptions = {}): ScheduleRunWithContext[] {
+  const { limit = 50, offset = 0, status, repoId, jobId, triggerSource } = options
+  const conditions: string[] = []
+  const params: (string | number)[] = []
+
+  if (status) {
+    conditions.push('sr.status = ?')
+    params.push(status)
+  }
+  if (repoId !== undefined) {
+    conditions.push('sr.repo_id = ?')
+    params.push(repoId)
+  }
+  if (jobId !== undefined) {
+    conditions.push('sr.job_id = ?')
+    params.push(jobId)
+  }
+  if (triggerSource) {
+    conditions.push('sr.trigger_source = ?')
+    params.push(triggerSource)
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  const stmt = db.prepare(`
+    SELECT
+      sr.id, sr.job_id, sr.repo_id, sr.trigger_source, sr.status,
+      sr.started_at, sr.finished_at, sr.created_at,
+      sr.session_id, sr.session_title,
+      NULL AS log_text, NULL AS response_text, sr.error_text,
+      sj.name AS job_name, r.local_path AS repo_path
+    FROM schedule_runs sr
+    JOIN schedule_jobs sj ON sr.job_id = sj.id
+    JOIN repos r ON sr.repo_id = r.id
+    ${whereClause}
+    ORDER BY sr.started_at DESC
+    LIMIT ? OFFSET ?
+  `)
+
+  params.push(limit, offset)
+  const rows = stmt.all(...params) as ScheduleRunWithContextRow[]
+  return rows.map(rowToScheduleRunWithContext)
+}

@@ -17,6 +17,7 @@ import {
   getRunningScheduleRunByJob,
   getScheduleRunById,
   listAllScheduleJobsWithRepos,
+  listAllScheduleRuns,
   listEnabledScheduleJobs,
   listScheduleJobsByRepo,
   listRunningScheduleRuns,
@@ -26,6 +27,7 @@ import {
   updateScheduleRun,
   updateScheduleRunMetadata,
 } from '../db/schedules'
+import type { ListAllRunsOptions, ScheduleRunWithContext } from '../db/schedules'
 import {
   buildCreateSchedulePersistenceInput,
   buildUpdatedSchedulePersistenceInput,
@@ -363,6 +365,12 @@ export class ScheduleService {
 
   listAllJobsWithRepos(): ScheduleJobWithRepo[] {
     return listAllScheduleJobsWithRepos(this.db)
+  }
+
+  listAllRuns(options: ListAllRunsOptions = {}): ScheduleRunWithContext[] {
+    const limit = Math.min(Math.max(options.limit ?? 20, 1), 100)
+    const offset = Math.max(options.offset ?? 0, 0)
+    return listAllScheduleRuns(this.db, { ...options, limit, offset })
   }
 
   async recoverRunningRuns(): Promise<void> {

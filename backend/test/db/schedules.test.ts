@@ -440,4 +440,87 @@ describe('schedule database queries', () => {
 
     expect(run).toBeNull()
   })
+
+  it('lists all runs with context and no filters', () => {
+    const row = {
+      ...makeRunRow(),
+      job_name: 'Weekly summary',
+      repo_path: '/home/user/my-repo',
+    }
+    const stmt = { all: vi.fn().mockReturnValue([row]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    const result = schedulesDb.listAllScheduleRuns(mockDb, {})
+
+    expect(stmt.all).toHaveBeenCalledWith(50, 0)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({
+      id: 5,
+      jobName: 'Weekly summary',
+      repoName: 'my-repo',
+      repoPath: '/home/user/my-repo',
+    })
+  })
+
+  it('applies status filter', () => {
+    const stmt = { all: vi.fn().mockReturnValue([]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    schedulesDb.listAllScheduleRuns(mockDb, { status: 'completed' })
+
+    expect(stmt.all).toHaveBeenCalledWith('completed', 50, 0)
+    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('sr.status = ?'))
+  })
+
+  it('applies repoId filter', () => {
+    const stmt = { all: vi.fn().mockReturnValue([]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    schedulesDb.listAllScheduleRuns(mockDb, { repoId: 42 })
+
+    expect(stmt.all).toHaveBeenCalledWith(42, 50, 0)
+    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('sr.repo_id = ?'))
+  })
+
+  it('applies jobId filter', () => {
+    const stmt = { all: vi.fn().mockReturnValue([]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    schedulesDb.listAllScheduleRuns(mockDb, { jobId: 7 })
+
+    expect(stmt.all).toHaveBeenCalledWith(7, 50, 0)
+  })
+
+  it('applies triggerSource filter', () => {
+    const stmt = { all: vi.fn().mockReturnValue([]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    schedulesDb.listAllScheduleRuns(mockDb, { triggerSource: 'manual' })
+
+    expect(stmt.all).toHaveBeenCalledWith('manual', 50, 0)
+  })
+
+  it('applies limit and offset', () => {
+    const stmt = { all: vi.fn().mockReturnValue([]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    schedulesDb.listAllScheduleRuns(mockDb, { limit: 10, offset: 20 })
+
+    expect(stmt.all).toHaveBeenCalledWith(10, 20)
+  })
+
+  it('returns NULL for log_text and response_text', () => {
+    const row = {
+      ...makeRunRow({ log_text: 'should be null', response_text: 'should be null' }),
+      job_name: 'Test job',
+      repo_path: '/test',
+    }
+    const stmt = { all: vi.fn().mockReturnValue([row]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    schedulesDb.listAllScheduleRuns(mockDb, {})
+
+    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('NULL AS log_text'))
+    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('NULL AS response_text'))
+  })
 })

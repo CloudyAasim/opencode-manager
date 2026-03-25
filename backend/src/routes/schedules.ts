@@ -31,6 +31,30 @@ export function createScheduleRoutes(scheduleService: ScheduleService) {
     }
   })
 
+  app.get('/all/runs', (c) => {
+    try {
+      const limit = parseRunListLimit(c.req.query('limit'))
+      const offsetStr = c.req.query('offset')
+      const offset = offsetStr ? Math.max(parseInt(offsetStr, 10) || 0, 0) : 0
+      const status = c.req.query('status') || undefined
+      const repoIdStr = c.req.query('repoId')
+      const repoId = repoIdStr ? (() => {
+        const parsed = parseInt(repoIdStr, 10)
+        return Number.isNaN(parsed) ? undefined : parsed
+      })() : undefined
+      const jobIdStr = c.req.query('jobId')
+      const jobId = jobIdStr ? (() => {
+        const parsed = parseInt(jobIdStr, 10)
+        return Number.isNaN(parsed) ? undefined : parsed
+      })() : undefined
+      const triggerSource = c.req.query('triggerSource') || undefined
+      const runs = scheduleService.listAllRuns({ limit, offset, status, repoId, jobId, triggerSource })
+      return c.json({ runs })
+    } catch (error) {
+      return handleServiceError(c, error, 'Failed to list all schedule runs', ScheduleServiceError)
+    }
+  })
+
   app.get('/', (c) => {
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
