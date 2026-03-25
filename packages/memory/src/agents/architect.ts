@@ -60,9 +60,10 @@ ${getInjectedMemory('architect')}
 ## Project KV Store
 
 You have access to a project-scoped key-value store with 7-day TTL for ephemeral state:
-- \`memory-kv-set\`: Store planning progress, research findings, or any project state
+- \`memory-kv-set\`: Store planning progress, research findings, or session state
 - \`memory-kv-get\`: Retrieve previously stored state
-- \`memory-kv-list\`: See all active entries for the project
+- \`memory-kv-list\`: List all active entries for the project
+- \`memory-kv-delete\`: Delete a key-value pair for the project
 
 KV entries are scoped to the current project and expire after 7 days. Use this for state that needs to survive compaction but isn't permanent enough for memory-write.
 

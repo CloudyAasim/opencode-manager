@@ -82,7 +82,7 @@ You are the execution agent. Your job is to write code, not describe code.
 You have access to a project-scoped key-value store with 7-day TTL for ephemeral state:
 - \`memory-kv-set\`: Store ephemeral findings, planning progress, or session state
 - \`memory-kv-get\`: Retrieve previously stored state
-- \`memory-kv-list\`: See all active entries for the project
+- \`memory-kv-list\`: List all active key-value pairs for the project. Optionally filter by key prefix.
 
 KV entries are scoped to the current project and expire after 7 days. Use this for state that needs to survive compaction but isn't permanent enough for memory-write.
 `,

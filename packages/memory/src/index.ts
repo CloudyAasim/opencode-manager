@@ -920,7 +920,7 @@ Do NOT output text without also making this tool call.
           },
         }),
         'memory-kv-list': tool({
-          description: 'List all active key-value pairs for the current project.',
+          description: 'List all active key-value pairs for the current project. Optionally filter by key prefix.',
           args: {
             prefix: z.string().optional().describe('Filter entries by key prefix (e.g. "review-finding:")'),
           },
