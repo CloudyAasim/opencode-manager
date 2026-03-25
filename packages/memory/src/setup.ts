@@ -129,6 +129,7 @@ export function loadPluginConfig(): PluginConfig {
 function normalizeConfig(config: PluginConfig): PluginConfig {
   const normalized: PluginConfig = {
     dataDir: config.dataDir,
+    defaultKvTtlMs: config.defaultKvTtlMs,
     embedding: config.embedding,
     dedupThreshold: config.dedupThreshold,
     logging: config.logging,

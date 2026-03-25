@@ -35,7 +35,7 @@ The local embedding model downloads automatically on install. For API-based embe
 - **Automatic Memory Injection** - Injects relevant project memories into user messages via semantic search with distance filtering and caching
 - **Project KV Store** - Ephemeral key-value storage with TTL management for project state
 - **Bundled Agents** - Ships with Code, Architect, and Librarian agents preconfigured for memory-aware workflows
-- **CLI Tools** - Export, import, list, stats, and cleanup commands via `ocm-mem` binary
+- **CLI Tools** - Export, import, list, stats, cleanup, upgrade, status, and cancel commands via `ocm-mem` binary
 - **Dimension Mismatch Detection** - Detects embedding model changes and guides recovery via reindex
 
 ## Agents
@@ -72,9 +72,10 @@ Ephemeral key-value storage for project state with automatic TTL-based expiratio
 
 | Tool | Description |
 |------|-------------|
-| `memory-kv-set` | Store a value with optional TTL (default 24 hours) |
+| `memory-kv-set` | Store a value with optional TTL (default 7 days) |
 | `memory-kv-get` | Retrieve a value by key |
-| `memory-kv-list` | List all active KV entries for the project |
+| `memory-kv-list` | List all active KV entries for the project. Optionally filter by key prefix. |
+| `memory-kv-delete` | Delete a key-value pair by key |
 
 ### Ralph Loop Tools
 
@@ -82,9 +83,9 @@ Iterative development loops with automatic auditing. Runs in an isolated git wor
 
 | Tool | Description |
 |------|-------------|
-| `ralph-cancel` | Cancel an active Ralph loop and clean up the worktree |
-| `ralph-status` | Check status of active Ralph loops |
-| `memory-plan-ralph` | Execute an architect plan using a Ralph iterative loop |
+| `ralph-cancel` | Cancel an active Ralph loop by worktree name |
+| `ralph-status` | Check status of Ralph loops. Supports `restart` to resume inactive loops. |
+| `memory-plan-ralph` | Execute an architect plan using a Ralph iterative loop. Supports `inPlace` parameter. |
 
 ## Slash Commands
 
@@ -181,6 +182,40 @@ ocm-mem cleanup --all --project my-project
 | `--all` | Delete all memories for the project |
 | `--dry-run` | Preview what would be deleted without deleting |
 | `--force` | Skip confirmation prompt |
+
+#### upgrade
+
+Check for plugin updates and install the latest version.
+
+```bash
+ocm-mem upgrade
+```
+
+#### status
+
+Show Ralph loop status for the current project.
+
+```bash
+ocm-mem status
+ocm-mem status --project my-project
+```
+
+| Flag | Description |
+|------|-------------|
+| `--project, -p <name>` | Project name or SHA (auto-detected from git) |
+
+#### cancel
+
+Cancel a Ralph loop by worktree name.
+
+```bash
+ocm-mem cancel my-worktree-name
+ocm-mem cancel --project my-project my-worktree-name
+```
+
+| Flag | Description |
+|------|-------------|
+| `--project, -p <name>` | Project name or SHA (auto-detected from git) |
 
 ## Configuration
 
@@ -298,7 +333,11 @@ When enabled, logs are written to the specified file with timestamps. The log fi
 - `ralph.cleanupWorktree` - Auto-remove worktree on cancel (default: `false`)
 - `ralph.defaultAudit` - Run auditor after each coding iteration by default (default: `true`)
 - `ralph.model` - Model override for Ralph sessions (`provider/model`), falls back to `executionModel` (default: `""`)
+- `ralph.stallTimeoutMs` - Watchdog stall detection timeout in milliseconds (default: `60000`)
 - `ralph.minAudits` - Minimum audit iterations required before completion (default: `1`)
+
+#### Top-level
+- `defaultKvTtlMs` - Default TTL for KV store entries in milliseconds (default: `604800000` / 7 days)
 
 #### Auditor
 - `auditorModel` - Model override for the auditor agent (`provider/model`). When set, overrides the auditor agent's default model. When not set, uses platform default (default: `""`)
@@ -307,11 +346,12 @@ When enabled, logs are written to the specified file with timestamps. The log fi
 
 Plan with a smart model, execute with a fast model. The architect agent researches and designs; the code agent implements.
 
-After the architect presents a plan, the user approves via one of three execution modes:
+After the architect presents a plan, the user approves via one of four execution modes:
 
-- **Approve plan** — Creates a new Code session via `memory-plan-execute`
-- **Execute with Ralph loop** — Runs the plan in an isolated worktree with iterative coding/auditing via `memory-plan-ralph`
-- **Ralph in place** — Same as Ralph loop but runs in the current directory (no worktree isolation)
+- **New session** — Creates a new Code session via `memory-plan-execute`
+- **Execute here** — Executes the plan in the current session (code agent takes over immediately)
+- **Ralph (worktree)** — Runs the plan in an isolated git worktree with iterative coding/auditing via `memory-plan-ralph`
+- **Ralph (in place)** — Same as Ralph worktree but runs in the current directory (no worktree isolation)
 
 Set `executionModel` in your config to a fast model (e.g., Haiku) and use a smart model (e.g., Opus) for the architect session.
 
