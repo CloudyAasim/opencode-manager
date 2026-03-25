@@ -34,7 +34,7 @@ The local embedding model downloads automatically on install. For API-based embe
 - **Compaction Context Injection** - Injects conventions and decisions into session compaction for seamless continuity
 - **Automatic Memory Injection** - Injects relevant project memories into user messages via semantic search with distance filtering and caching
 - **Project KV Store** - Ephemeral key-value storage with TTL management for project state
-- **Bundled Agents** - Ships with Code, Architect, and Librarian agents preconfigured for memory-aware workflows
+- **Bundled Agents** - Ships with Code, Architect, Auditor and Librarian agents preconfigured for memory-aware workflows
 - **CLI Tools** - Export, import, list, stats, cleanup, upgrade, status, and cancel commands via `ocm-mem` binary
 - **Dimension Mismatch Detection** - Detects embedding model changes and guides recovery via reindex
 
@@ -51,7 +51,8 @@ The plugin bundles four agents that integrate with the memory system:
 
 The auditor agent is a read-only subagent (`temperature: 0.0`) that can read memory but cannot write, edit, or delete memories or execute plans. It is invoked by other agents via the Task tool to review code changes against stored project conventions and decisions.
 
-The architect agent operates in read-only mode (`temperature: 0.0`, all edits denied) with additional message-level read-only enforcement via the `experimental.chat.messages.transform` hook. After the user approves a plan, it calls `memory-plan-execute` which creates a new code session with the full plan as context.
+The architect agent operates in read-only mode (`temperature: 0.0`, all edits denied) with additional message-level read-only enforcement via the `experimental.chat.messages.transform` hook. After the user approves a plan you can choose to execute the plan in the same session with your execution model (less advanced model needed for cost / speed), new session, ralph loop in the same branch or in external worktree. 
+
 
 ## Tools
 
@@ -361,15 +362,32 @@ See the [full workflow guide](https://chriswritescode-dev.github.io/opencode-man
 
 The Ralph loop is an iterative development system that alternates between coding and auditing phases:
 
-1. **Coding phase** — The Code agent works on the task
-2. **Auditing phase** — The Auditor agent reviews changes against project conventions
-3. **Repeat** — Findings from the audit feed back into the next coding iteration
+1. **Coding phase** — A Code session works on the task
+2. **Auditing phase** — The Auditor agent reviews changes against project conventions and stored review findings
+3. **Session rotation** — A fresh session is created for the next iteration
+4. **Repeat** — Audit findings feed back into the next coding iteration
+
+### Session Rotation
+
+Each iteration runs in a **fresh session** to keep context small and prioritize speed. After each phase completes, the current session is destroyed and a new one is created. The original task prompt and any audit findings are re-injected into the new session as a continuation prompt, so no context is lost while keeping the window clean.
+
+### Review Finding Persistence
+
+Audit findings survive session rotation via the **KV store**. The auditor stores each bug and warning as a KV entry with key `review-finding:<file>:<line>` containing severity, description, and status. At the start of each audit:
+
+- Existing findings are retrieved via `memory-kv-list` with prefix `review-finding:`
+- Resolved findings are deleted
+- Unresolved findings are carried forward into the review
+
+This ensures review findings are never lost between iterations, even as sessions rotate.
+
+### Completion and Termination
 
 The loop completes when the Code agent outputs the completion promise. It auto-terminates after `maxIterations` (if set) or after 3 consecutive errors.
 
 By default, Ralph loops run in an isolated git worktree. Set `inPlace: true` to run in the current directory instead (skips worktree creation, auto-commit, and cleanup).
 
-See the [full documentation](https://chriswritescode-dev.github.io/opencode-manager/features/memory/#ralph-loop) for details on the Ralph loop system.
+See the [full documentation](https://chriswritescode-dev.github.io/opencode-manager/features/memory/#ralph-loop) for details on worktree management, model configuration, and termination conditions.
 
 ## Documentation
 

@@ -138,6 +138,7 @@ Set `baseUrl` to point at any OpenAI-compatible self-hosted service (vLLM, Ollam
 | `ralph.defaultAudit` | Run auditor after each coding iteration | `true` |
 | `ralph.model` | Model override for Ralph sessions (`provider/model`), falls back to `executionModel` | — |
 | `ralph.minAudits` | Minimum audit iterations required before completion | `1` |
+| `ralph.stallTimeoutMs` | Watchdog stall detection timeout (ms) | `60000` |
 | `auditorModel` | Model override for the auditor agent (`provider/model`). When set, overrides the auditor agent's default model. When not set, the auditor uses the platform default. | — |
 
 ---
@@ -505,10 +506,11 @@ The Ralph loop is an iterative development system that alternates between coding
 1. A new session is created (in a worktree or in-place)
 2. The Code agent receives the task prompt and works on it
 3. When the session goes idle, the Ralph handler checks the phase:
-    - **Coding phase** → If auditing is enabled, switches to auditing phase and runs the Auditor agent as a subtask
-    - **Auditing phase** → Processes audit findings, switches back to coding phase, and sends a continuation prompt with the findings
-4. The loop repeats until one of these conditions is met:
-    - **Completion**: The `completionPromise` phrase is detected in `<promise>` tags AND `minAudits` (default 1) audit iterations have been performed. Without a `completionPromise`, the loop does not auto-complete.
+    - **Coding phase** → If auditing is enabled, switches to auditing phase and invokes the Auditor agent as a subtask with a focused review prompt
+    - **Auditing phase** → Extracts the auditor's full response as findings, switches back to coding phase, and sends a continuation prompt with the findings
+4. **Session rotation** — The current session is destroyed and a fresh one is created. The original task prompt and any audit findings are re-injected as a continuation prompt. This keeps each iteration's context window small and prioritizes speed.
+5. The loop repeats until one of these conditions is met:
+    - **Completion**: The `completionPromise` phrase is detected in `<promise>` tags AND `minAudits` (default 1) audit iterations have been performed
     - **Max iterations**: Reached `maxIterations` limit (if > 0)
     - **Error limit**: 3 consecutive failures (`MAX_RETRIES`)
     - **Stall timeout**: 5 consecutive stalls detected by the watchdog (`MAX_CONSECUTIVE_STALLS`)
@@ -522,6 +524,57 @@ The Ralph loop is an iterative development system that alternates between coding
 |------|-----------|-------------|---------|-------------------|
 | Worktree (default) | Isolated git worktree | Yes, on completion | Worktree removed, branch preserved | File ops scoped to worktree, git push denied |
 | In-place (`inPlace: true`) | None — runs in current directory | No | None | Git push denied only |
+
+#### Session Rotation
+
+Each iteration runs in a **fresh session**. After each phase completes (coding or auditing), the current session is destroyed and a new one is created. This design keeps the context window small across many iterations, reducing token costs and improving speed.
+
+The rotation flow:
+
+1. Create a new session targeting the worktree directory (or current directory for in-place)
+2. Update internal session-to-worktree mappings
+3. Reset the watchdog stall timer
+4. Delete the old session (fire-and-forget)
+5. Send a **continuation prompt** to the new session containing:
+    - The iteration number and completion signal instructions
+    - The original task prompt (verbatim)
+    - Audit findings from the previous iteration (if any), with a mandatory instruction to fix all bugs and convention violations
+
+No context is lost — the task and findings are re-injected each iteration. The tradeoff is that the agent loses awareness of its own prior implementation steps, but the code on disk (and any audit findings) provide sufficient continuity.
+
+#### Review Finding Persistence
+
+Audit findings survive session rotation via the **KV store**. This ensures issues are tracked across iterations even as sessions are destroyed and recreated.
+
+**Storage flow** (auditor writes findings):
+
+After each review, the Auditor stores every **bug** and **warning** finding (not suggestions) using `memory-kv-set`:
+
+- **Key:** `review-finding:<file_path>:<line_number>`
+- **Value:** JSON object with severity, file, line, description, scenario, status, date, and branch
+- The KV store uses upsert semantics — storing the same key updates the existing entry
+- Findings expire after 7 days automatically
+
+**Retrieval flow** (auditor reads past findings):
+
+At the start of every review, before analyzing the diff:
+
+1. Retrieve all entries with `memory-kv-list` (prefix `review-finding:`)
+2. Match findings against files in the current diff
+3. Include unresolved findings under a "Previously Identified Issues" heading
+4. Delete resolved findings via `memory-kv-delete`
+
+!!! note
+    Finding persistence is enforced via the auditor's system prompt, not application code. The auditor is instructed to use KV tools for storage and retrieval as part of its review workflow.
+
+#### Watchdog and Stall Detection
+
+A watchdog timer monitors each Ralph loop for stalls — situations where the session stops producing `session.idle` events within the expected timeframe.
+
+- **`stallTimeoutMs`** (default `60000`): If no activity is detected within this window, the watchdog fires
+- On each stall, the watchdog checks the session status and re-triggers the appropriate phase handler
+- **`MAX_CONSECUTIVE_STALLS`** (`5`): After 5 consecutive stalls without progress, the loop terminates with reason `stall_timeout`
+- The stall counter resets whenever a successful `session.idle` event is processed
 
 #### Tool Blocking
 
@@ -539,6 +592,12 @@ Blocking is enforced via `tool.execute.before` (throws error) with `tool.execute
 |------------|---------|----------|
 | `ralph.model` | Model for Ralph coding sessions | `executionModel` → platform default |
 | `auditorModel` | Model for the auditor agent | Platform default (no fallback chain) |
+
+#### Model Fallback on Error
+
+If the configured model produces a provider, auth, or API error during a Ralph iteration, the loop automatically falls back to the platform default model for all remaining iterations. This prevents the loop from exhausting retries on a misconfigured or unavailable model.
+
+The fallback is permanent within a loop — once triggered, the `modelFailed` flag is set on the loop state and is never reset. The error count is incremented on each model failure; after 3 consecutive failures (`MAX_RETRIES`), the loop terminates regardless of fallback.
 
 #### Slash Commands
 
@@ -612,7 +671,7 @@ The Auditor agent is a read-only subagent invoked by other agents via the Task t
 
 The agent can read memory (`memory-read`) but cannot write, edit, or delete memories. It also cannot execute plans — `memory-plan-execute`, `memory-plan-ralph`, `memory-health`, `memory-write`, `memory-edit`, and `memory-delete` are excluded.
 
-The Auditor persists review findings to the KV store (key pattern: `review-finding:<file_path>:<line_number>`) and retrieves past findings at the start of every review for continuity.
+The Auditor persists review findings to the KV store (key pattern: `review-finding:<file_path>:<line_number>`) and retrieves past findings at the start of every review for continuity. Each finding is a JSON object containing severity, file, line, description, scenario, status, date, and branch. Only bugs and warnings are persisted — suggestions are not stored. Resolved findings are deleted during subsequent reviews. See [Review Finding Persistence](#review-finding-persistence) for the full lifecycle.
 
 The `/review` slash command triggers this agent as a subtask with the template: "Review the current code changes."
 
