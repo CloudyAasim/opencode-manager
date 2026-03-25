@@ -13,6 +13,21 @@ export interface ScheduleJobWithRepo extends ScheduleJob {
   repoUrl: string
 }
 
+export interface ScheduleRunWithContext extends ScheduleRun {
+  jobName: string
+  repoName: string
+  repoPath: string
+}
+
+export interface ListAllRunsParams {
+  limit?: number
+  offset?: number
+  status?: string
+  repoId?: number
+  jobId?: number
+  triggerSource?: string
+}
+
 export interface ScheduleCount {
   total: number
   enabled: number
@@ -20,6 +35,18 @@ export interface ScheduleCount {
 
 export async function listAllSchedules(): Promise<{ jobs: ScheduleJobWithRepo[] }> {
   return fetchWrapper(`${API_BASE_URL}/api/schedules/all`)
+}
+
+export async function listAllScheduleRuns(params: ListAllRunsParams = {}): Promise<{ runs: ScheduleRunWithContext[] }> {
+  const searchParams = new URLSearchParams()
+  if (params.limit !== undefined) searchParams.set('limit', String(params.limit))
+  if (params.offset !== undefined) searchParams.set('offset', String(params.offset))
+  if (params.status) searchParams.set('status', params.status)
+  if (params.repoId !== undefined) searchParams.set('repoId', String(params.repoId))
+  if (params.jobId !== undefined) searchParams.set('jobId', String(params.jobId))
+  if (params.triggerSource) searchParams.set('triggerSource', params.triggerSource)
+  const qs = searchParams.toString()
+  return fetchWrapper(`${API_BASE_URL}/api/schedules/all/runs${qs ? `?${qs}` : ''}`)
 }
 
 export async function listRepoSchedules(repoId: number): Promise<{ jobs: ScheduleJob[] }> {

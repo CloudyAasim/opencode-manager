@@ -6,6 +6,7 @@ import {
   deleteRepoSchedule,
   getRepoSchedule,
   getRepoScheduleRun,
+  listAllScheduleRuns,
   listAllSchedules,
   listRepoScheduleRuns,
   listRepoSchedules,
@@ -13,7 +14,7 @@ import {
   updateRepoSchedule,
 } from '@/api/schedules'
 import { showToast } from '@/lib/toast'
-import type { ScheduleJobWithRepo } from '@/api/schedules'
+import type { ListAllRunsParams, ScheduleJobWithRepo, ScheduleRunWithContext } from '@/api/schedules'
 
 export function useAllSchedules() {
   return useQuery({
@@ -22,6 +23,18 @@ export function useAllSchedules() {
       const response = await listAllSchedules()
       return response.jobs as ScheduleJobWithRepo[]
     },
+  })
+}
+
+export function useAllScheduleRuns(params: ListAllRunsParams, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['all-schedule-runs', params],
+    queryFn: async () => {
+      const response = await listAllScheduleRuns(params)
+      return response.runs as ScheduleRunWithContext[]
+    },
+    enabled,
+    refetchInterval: 5000,
   })
 }
 
