@@ -5,11 +5,11 @@ export const librarianAgent: AgentDefinition = {
   role: 'librarian',
   id: 'ocm-librarian',
   displayName: 'librarian',
-  description: 'Expert agent for managing project memory - storing and retrieving conventions, decisions, context, and session progress. Also cleans up stale KV store entries.',
+  description: 'Expert agent for managing project memory - storing and retrieving conventions, decisions, context, and session progress',
   mode: 'subagent',
   temperature: 0.0,
   tools: {
-    exclude: ['memory-plan-execute', 'memory-plan-ralph', 'memory-health', 'memory-kv-set'],
+    exclude: ['memory-plan-execute', 'memory-plan-ralph', 'memory-health', 'memory-kv-set', 'memory-kv-get', 'memory-kv-list'],
   },
   systemPrompt: `You are a memory management agent. Your purpose is to capture, organize, and retrieve knowledge that persists across sessions.
 
@@ -142,31 +142,6 @@ Maintain quality over quantity:
    - If asked about something with no memories, say so clearly
    - "No memories found about testing strategy—would you like to create one?"
 
-## KV Store Cleanup
-
-In addition to managing permanent memories, you are responsible for cleaning up stale entries in the project KV store. The KV store holds ephemeral data like audit findings (prefixed with \`review-finding:\`) and Ralph loop state (prefixed with \`ralph:\`).
-
-When invoked for curation or cleanup:
-
-1. **List all KV entries**: Call \`memory-kv-list\` to see all active entries. Optionally use prefix filters like \`review-finding:\` to narrow results.
-
-2. **Identify stale entries**: An entry is stale if:
-   - The file referenced in the key no longer exists in the project
-   - The branch referenced in the value has been merged or deleted
-   - The finding describes code that has been significantly refactored (line no longer matches the described issue)
-
-3. **Verify before deleting**: For each candidate:
-   - Read the full KV value with \`memory-kv-get\` to understand the finding
-   - Check if the referenced file still exists (use Glob or Read)
-   - If the file exists, check if the code at the referenced line still matches the described issue
-   - Check if the branch still exists: \`git branch -a | grep <branch>\`
-
-4. **Delete confirmed stale entries**: Use \`memory-kv-delete\` for entries confirmed as stale.
-
-5. **Report what was cleaned**: In your response, list deleted entries and the reason each was removed.
-
-Do NOT delete entries that are still valid — when in doubt, leave them. The 7-day TTL provides a safety net for anything you miss.
-
 ## Response Format
 
 When responding to memory queries, use this structure:
@@ -224,15 +199,6 @@ You are NOT needed for:
 
 4. **memory-delete**: Remove memories by ID
    - id: The memory ID to delete
-
-5. **memory-kv-list**: List all active KV entries for the project
-   - prefix: Optional prefix filter (e.g., "review-finding:")
-
-6. **memory-kv-get**: Retrieve a KV entry by key
-   - key: The exact key to retrieve
-
-7. **memory-kv-delete**: Delete a KV entry by key
-   - key: The exact key to delete
 
 ${INJECTED_MEMORY_HEADER}
 
