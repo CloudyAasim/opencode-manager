@@ -2,8 +2,96 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.0.27]
+
+### Changed
+
+- Renamed "Ralph" to "Loop" across the entire codebase — types (`RalphState` → `LoopState`, `RalphConfig` → `LoopConfig`), services, hooks, filenames, KV keys (`ralph:` → `loop:`), CLI commands, and tests
+- Automatic KV key migration from `ralph:` to `loop:` prefixes on plugin startup
+- Config backward compatibility: accepts both `loop` and `ralph` keys (prefers `loop`)
+
+### Added
+
+- `stallTimeoutMs` option in default `config.jsonc`
+- Automatic session switch when Loop completes — navigates back to parent session without manual intervention
+- Memory curation delegation — architect agent can identify problematic memories and delegate fixes to @Librarian subagent during planning
+
+## [0.0.26] - 2026-03-27
+
+### Fixed
+
+- Basic Auth handling in v2 client and CLI `status` command
+- `normalizeConfig` bug when processing plugin configuration
+
+## [0.0.25] - 2026-03-25
+
+### Changed
+
+- Refactored Loop session tracking to use KV-backed worktree-keyed session mapping instead of sessionId lookups
+- Configurable KV TTL with 7-day default (was 24 hours)
+
+### Added
+
+- `--limit` flag to CLI `status` command
+
+### Fixed
+
+- Loop state type safety and null handling in status commands
+
+## [0.0.23] - 2026-03-24
+
+### Added
+
+- CLI partial-match utility for fuzzy loop name lookup
+- Formatting helpers for consistent CLI output (`formatSessionOutput`, `formatAuditResult`)
+- Loop session rotation with watchdog-based stall detection and configurable `stallTimeoutMs`
+- Loop status dialog and session management improvements
+
+### Changed
+
+- Enhanced CLI `status`, `cancel`, and `list` commands with better UX
+
+## [0.0.22] - 2026-03-22
+
+### Changed
+
+- Removed parent session notification and child session tracking from Loop (sending `promptAsync` to parent sessions on completion could resume previously inactive sessions)
+- Simplified Loop event handling by removing child session maps and parent activity recording
+
+## [0.0.20] - 2026-03-20
+
+### Added
+
+- Loop system (`memory-loop`) — iterative development loops with git worktree isolation, automatic session rotation, and optional code auditing between iterations
+- `memory-loop-cancel` and `memory-loop-status` tools for managing active loops
+- Plan approval interception via `question` tool results — architect agent plans can be approved and dispatched without manual copy-paste
+- `memory-plan-execute` `inPlace` parameter for executing plans in the current session directory
+- Promise tag stripping utility for cleaning LLM output
+- Model fallback utility (`retryWithModelFallback`) for API resilience
+- CLI `cancel` and `status` commands for loop management
+- Loop service with KV-backed state persistence, stall detection watchdog, and automatic worktree cleanup
+- Comprehensive test suites: plan approval, loop lifecycle, tool blocking, promise tag stripping
+
+### Changed
+
+- Migrated plugin config from JSON to JSONC format (`config.json` → `config.jsonc`)
+- Upgraded `@opencode-ai/sdk` dependency and introduced v2 client for session/worktree APIs
+- Agent prompts updated with shared prompt utilities
+
+## [0.0.18] - 2026-03-08
+
+### Added
+
+- `memory-health` upgrade action with npm version check and 1-hour cache
+- CLI `upgrade` command for self-updating the plugin
+- `memory-kv-delete` tool for removing KV entries
+
+### Changed
+
+- Renamed agent files to lowercase conventions (`code-review.ts` → `auditor.ts`, `memory.ts` → `librarian.ts`)
+- Simplified KV service lifecycle management
+- Added memory curation guideline to architect agent prompt
 
 ## [0.0.16] - 2026-03-07
 
