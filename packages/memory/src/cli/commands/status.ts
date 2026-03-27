@@ -138,7 +138,7 @@ export async function run(argv: StatusArgs): Promise<void> {
       }
 
       if (!match && candidates.length === 0) {
-        console.error(`Ralph loop not found: ${worktreeName}`)
+        console.error(`Loop not found: ${worktreeName}`)
         console.error('')
         if (activeLoops.length > 0) {
           console.error('Active loops:')

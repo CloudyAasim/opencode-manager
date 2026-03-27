@@ -123,11 +123,11 @@ export function createLoopEventHandler(
 
         if (hasActiveWork) {
           lastActivityTime.set(worktreeName, Date.now())
-          logger.log(`Ralph watchdog: worktree ${worktreeName} has active work, resetting timer`)
+          logger.log(`Loop watchdog: worktree ${worktreeName} has active work, resetting timer`)
           return
         }
       } catch (err) {
-        logger.error(`Ralph watchdog: failed to check session status`, err)
+        logger.error(`Loop watchdog: failed to check session status`, err)
         return
       }
 
@@ -136,12 +136,12 @@ export function createLoopEventHandler(
       lastActivityTime.set(worktreeName, Date.now())
 
       if (stallCount >= MAX_CONSECUTIVE_STALLS) {
-        logger.error(`Ralph watchdog: worktree ${worktreeName} exceeded max consecutive stalls (${MAX_CONSECUTIVE_STALLS}), terminating`)
+        logger.error(`Loop watchdog: worktree ${worktreeName} exceeded max consecutive stalls (${MAX_CONSECUTIVE_STALLS}), terminating`)
         await terminateLoop(worktreeName, state, 'stall_timeout')
         return
       }
 
-      logger.log(`Ralph watchdog: stall detected for worktree ${worktreeName} (${stallCount}/${MAX_CONSECUTIVE_STALLS}), re-triggering ${state.phase} phase`)
+      logger.log(`Loop watchdog: stall detected for worktree ${worktreeName} (${stallCount}/${MAX_CONSECUTIVE_STALLS}), re-triggering ${state.phase} phase`)
 
       try {
         if (state.phase === 'auditing') {
@@ -155,7 +155,7 @@ export function createLoopEventHandler(
     }, stallTimeout)
 
     stallWatchdogs.set(worktreeName, interval)
-    logger.log(`Ralph watchdog: started for worktree ${worktreeName} (timeout: ${stallTimeout}ms)`)
+    logger.log(`Loop watchdog: started for worktree ${worktreeName} (timeout: ${stallTimeout}ms)`)
   }
 
   function getStallInfo(worktreeName: string): { consecutiveStalls: number; lastActivityTime: number } | null {
@@ -192,7 +192,7 @@ export function createLoopEventHandler(
       // Session may already be idle
     }
 
-    logger.log(`Ralph loop terminated: reason="${reason}", worktree="${state.worktreeName}", iteration=${state.iteration}`)
+    logger.log(`Loop terminated: reason="${reason}", worktree="${state.worktreeName}", iteration=${state.iteration}`)
 
     let commitResult: { committed: boolean; cleaned: boolean } | undefined
     if (reason === 'completed' || reason === 'cancelled') {
@@ -334,7 +334,7 @@ export function createLoopEventHandler(
         const currentAuditCount = currentState.auditCount ?? 0
         if (!currentState.audit || currentAuditCount >= minAudits) {
           await terminateLoop(worktreeName, currentState, 'completed')
-          logger.log(`Ralph loop completed: detected <promise>${currentState.completionPromise}</promise> at iteration ${currentState.iteration} (${currentAuditCount}/${minAudits} audits)`)
+          logger.log(`Loop completed: detected <promise>${currentState.completionPromise}</promise> at iteration ${currentState.iteration} (${currentAuditCount}/${minAudits} audits)`)
           return
         }
         logger.log(`Loop: completion promise detected but only ${currentAuditCount}/${minAudits} audits performed, continuing`)
@@ -354,7 +354,7 @@ export function createLoopEventHandler(
 
     if (currentState.audit) {
       loopService.setState(worktreeName, { ...currentState, phase: 'auditing', errorCount: 0 })
-      logger.log(`Ralph iteration ${currentState.iteration ?? 0} complete, running auditor for session ${currentState.sessionId}`)
+      logger.log(`Loop iteration ${currentState.iteration ?? 0} complete, running auditor for session ${currentState.sessionId}`)
 
       const auditPrompt = {
         sessionID: currentState.sessionId,
@@ -381,7 +381,7 @@ export function createLoopEventHandler(
       }
       
       const currentConfig = getConfig()
-      const configuredModel = currentConfig.auditorModel ?? currentConfig.ralph?.model ?? currentConfig.executionModel
+      const configuredModel = currentConfig.auditorModel ?? currentConfig.loop?.model ?? currentConfig.executionModel
       logger.log(`auditor using agent-configured model: ${configuredModel ?? 'default'}`)
       
       consecutiveStalls.set(worktreeName, 0)
@@ -404,13 +404,13 @@ export function createLoopEventHandler(
     })
 
     const continuationPrompt = loopService.buildContinuationPrompt({ ...currentState, iteration: nextIteration })
-    logger.log(`Ralph iteration ${nextIteration} for session ${activeSessionId}`)
+    logger.log(`Loop iteration ${nextIteration} for session ${activeSessionId}`)
 
     const currentConfig = getConfig()
     const freshStateForModel = loopService.getActiveState(worktreeName)
     const loopModel = freshStateForModel?.modelFailed
       ? undefined
-      : (parseModelString(currentConfig.ralph?.model) ?? parseModelString(currentConfig.executionModel))
+      : (parseModelString(currentConfig.loop?.model) ?? parseModelString(currentConfig.executionModel))
 
     if (freshStateForModel?.modelFailed) {
       logger.log(`Loop: configured model previously failed, using default model`)
@@ -512,7 +512,7 @@ export function createLoopEventHandler(
 
     const nextIteration = (currentState.iteration ?? 0) + 1
     const newAuditCount = (currentState.auditCount ?? 0) + 1
-    logger.log(`Ralph audit ${newAuditCount} at iteration ${currentState.iteration ?? 0}`)
+    logger.log(`Loop audit ${newAuditCount} at iteration ${currentState.iteration ?? 0}`)
 
     // Always pass the full audit response to the code agent
     const auditFindings = auditText ?? undefined
@@ -522,7 +522,7 @@ export function createLoopEventHandler(
         // Check if minimum audits have been performed
         if (!currentState.audit || newAuditCount >= minAudits) {
           await terminateLoop(worktreeName, currentState, 'completed')
-          logger.log(`Ralph loop completed: detected <promise>${currentState.completionPromise}</promise> in audit at iteration ${currentState.iteration} (${newAuditCount}/${minAudits} audits)`)
+          logger.log(`Loop completed: detected <promise>${currentState.completionPromise}</promise> in audit at iteration ${currentState.iteration} (${newAuditCount}/${minAudits} audits)`)
           return
         }
         logger.log(`Loop: completion promise detected but only ${newAuditCount}/${minAudits} audits performed, continuing`)
@@ -555,13 +555,13 @@ export function createLoopEventHandler(
       { ...currentState, iteration: nextIteration },
       auditFindings,
     )
-    logger.log(`Ralph iteration ${nextIteration} for session ${activeSessionId}`)
+    logger.log(`Loop iteration ${nextIteration} for session ${activeSessionId}`)
 
     const currentConfig = getConfig()
     const freshStateForModel = loopService.getActiveState(worktreeName)
     const loopModel = freshStateForModel?.modelFailed
       ? undefined
-      : (parseModelString(currentConfig.ralph?.model) ?? parseModelString(currentConfig.executionModel))
+      : (parseModelString(currentConfig.loop?.model) ?? parseModelString(currentConfig.executionModel))
 
     if (freshStateForModel?.modelFailed) {
       logger.log(`Loop: configured model previously failed, using default model`)

@@ -80,6 +80,7 @@ export interface PluginConfig {
   executionModel?: string
   auditorModel?: string
   loop?: LoopConfig
+  /** @deprecated Use `loop` instead */
   ralph?: LoopConfig
   defaultKvTtlMs?: number
 }

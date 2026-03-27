@@ -457,7 +457,7 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
 
         if (createResult.error || !createResult.data) {
           logger.error(`loop: failed to create session`, createResult.error)
-          return 'Failed to create Ralph session.'
+          return 'Failed to create loop session.'
         }
 
         loopContext = {
@@ -491,7 +491,7 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
           } catch (cleanupErr) {
             logger.error(`loop: failed to cleanup worktree`, cleanupErr)
           }
-          return 'Failed to create Ralph session.'
+          return 'Failed to create loop session.'
         }
 
         loopContext = {
@@ -560,11 +560,17 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
           }
         }
         return !options.worktree
-          ? 'Ralph session created but failed to send prompt.'
-          : 'Ralph session created but failed to send prompt. Cleaned up.'
+          ? 'Loop session created but failed to send prompt.'
+          : 'Loop session created but failed to send prompt. Cleaned up.'
       }
 
       options.onLoopStarted?.(autoWorktreeName)
+
+      if (!options.worktree) {
+        v2.tui.selectSession({ sessionID: loopContext.sessionId }).catch((err) => {
+          logger.error('loop: failed to navigate TUI to new session', err)
+        })
+      }
 
       const maxInfo = maxIter > 0 ? maxIter.toString() : 'unlimited'
       const auditInfo = options.audit ? 'enabled' : 'disabled'
@@ -859,8 +865,12 @@ Do NOT output text without also making this tool call.
 
             logger.log(`memory-plan-execute: prompted session=${newSessionId}`)
 
+            v2.tui.selectSession({ sessionID: newSessionId }).catch((err) => {
+              logger.error('memory-plan-execute: failed to navigate TUI to new session', err)
+            })
+
             const modelInfo = actualModel ? `${actualModel.providerID}/${actualModel.modelID}` : 'default'
-            return `Implementation session created and plan sent.\n\nSession: ${newSessionId}\nTitle: ${sessionTitle}\nModel: ${modelInfo}\n\nSwitch to this session to begin. You can change the model from the session dropdown.`
+            return `Implementation session created and plan sent.\n\nSession: ${newSessionId}\nTitle: ${sessionTitle}\nModel: ${modelInfo}\n\nNavigated to the new session. You can change the model from the session dropdown.`
           },
         }),
         'memory-loop': tool({
@@ -872,7 +882,7 @@ Do NOT output text without also making this tool call.
           },
           execute: async (args, context) => {
             if (config.loop?.enabled === false) {
-              return 'Ralph loops are disabled in plugin config. Use memory-plan-execute instead.'
+              return 'Loops are disabled in plugin config. Use memory-plan-execute instead.'
             }
 
             logger.log(`memory-loop: creating worktree for plan="${args.title}"`)
@@ -1223,7 +1233,7 @@ Do NOT output text without also making this tool call.
               if (candidates.length > 0) {
                 return `Multiple loops match "${args.name}":\n${candidates.map((s) => `- ${s.worktreeName}`).join('\n')}\n\nBe more specific.`
               }
-              return `No Ralph loop found for worktree "${args.name}".`
+              return `No loop found for worktree "${args.name}".`
             }
 
             if (!state.active) {
@@ -1236,7 +1246,7 @@ Do NOT output text without also making this tool call.
               const durationStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
 
               const statusLines: string[] = [
-                'Ralph Loop Status (Inactive)',
+                'Loop Status (Inactive)',
                 '',
                 `Name: ${state.worktreeName}`,
                 `Session: ${state.sessionId}`,
@@ -1303,7 +1313,7 @@ Do NOT output text without also making this tool call.
             const stallCount = stallInfo?.consecutiveStalls ?? 0
 
             const statusLines: string[] = [
-              'Ralph Loop Status',
+              'Loop Status',
               '',
               `Name: ${state.worktreeName}`,
               `Session: ${state.sessionId}`,
@@ -1379,7 +1389,7 @@ Do NOT output text without also making this tool call.
 
         if (!(input.tool in LOOP_BLOCKED_TOOLS)) return
 
-        logger.log(`Ralph: blocking ${input.tool} tool before execution in ${state.phase} phase for session ${input.sessionID}`)
+        logger.log(`Loop: blocking ${input.tool} tool before execution in ${state.phase} phase for session ${input.sessionID}`)
 
         throw new Error(LOOP_BLOCKED_TOOLS[input.tool]!)
       },
@@ -1411,7 +1421,7 @@ Do NOT output text without also making this tool call.
 
         if (!(input.tool in LOOP_BLOCKED_TOOLS)) return
 
-        logger.log(`Ralph: blocked ${input.tool} tool in ${state.phase} phase for session ${input.sessionID}`)
+        logger.log(`Loop: blocked ${input.tool} tool in ${state.phase} phase for session ${input.sessionID}`)
         
         output.title = 'Tool blocked'
         output.output = LOOP_BLOCKED_TOOLS[input.tool]!
@@ -1423,7 +1433,7 @@ Do NOT output text without also making this tool call.
         if (!state?.active) return
 
         if (req.patterns.some((p) => p.startsWith('git push'))) {
-          logger.log(`Ralph: denied git push for session ${req.sessionID}`)
+          logger.log(`Loop: denied git push for session ${req.sessionID}`)
           output.status = 'deny'
           return
         }

@@ -103,8 +103,8 @@ Commands:
   stats     Show memory statistics
   cleanup   Delete memories by criteria
   upgrade   Check for and install plugin updates
-  status    Show Ralph loop status
-  cancel    Cancel a Ralph loop
+  status    Show loop status
+  cancel    Cancel a loop
 
 Global Options:
   --db-path <path>       Path to memory database
