@@ -80,7 +80,8 @@ The file is only created if it does not already exist. The config is validated o
     "cleanupWorktree": false,
     "defaultAudit": true,
     "model": "",
-    "minAudits": 1
+    "minAudits": 1,
+    "stallTimeoutMs": 60000
   }
 }
 ```
@@ -132,13 +133,16 @@ Set `baseUrl` to point at any OpenAI-compatible self-hosted service (vLLM, Ollam
 | `messagesTransform.enabled` | Enable the messages transform hook (memory injection + Architect enforcement) | `true` |
 | `messagesTransform.debug` | Enable debug logging for messages transform | `false` |
 | `executionModel` | Model override for plan execution sessions (`provider/model`). Falls back to OpenCode's default model. | — |
-| `ralph.enabled` | Enable Ralph iterative development loops | `true` |
-| `ralph.defaultMaxIterations` | Default max iterations (0 = unlimited) | `15` |
-| `ralph.cleanupWorktree` | Auto-remove worktree on cancel | `false` |
-| `ralph.defaultAudit` | Run auditor after each coding iteration | `true` |
-| `ralph.model` | Model override for Ralph sessions (`provider/model`), falls back to `executionModel` | — |
-| `ralph.minAudits` | Minimum audit iterations required before completion | `1` |
-| `ralph.stallTimeoutMs` | Watchdog stall detection timeout (ms) | `60000` |
+| `loop.enabled` | Enable Ralph iterative development loops | `true` |
+| `loop.defaultMaxIterations` | Default max iterations (0 = unlimited) | `15` |
+| `loop.cleanupWorktree` | Auto-remove worktree on cancel | `false` |
+| `loop.defaultAudit` | Run auditor after each coding iteration | `true` |
+| `loop.model` | Model override for Ralph sessions (`provider/model`), falls back to `executionModel` | — |
+| `loop.minAudits` | Minimum audit iterations required before completion | `1` |
+| `loop.stallTimeoutMs` | Watchdog stall detection timeout (ms) | `60000` |
+
+!!! note "Deprecated Options"
+    The `ralph.*` prefix is deprecated but still accepted for backward compatibility. Use `loop.*` instead.
 | `auditorModel` | Model override for the auditor agent (`provider/model`). When set, overrides the auditor agent's default model. When not set, the auditor uses the platform default. | — |
 
 ---
@@ -187,7 +191,7 @@ SQLite pragmas are tuned for concurrent access:
 The KV store provides ephemeral project state management with automatic TTL-based expiration:
 
 - **Key-Value Storage**: Store arbitrary JSON values under string keys, scoped by project ID
-- **TTL Management**: Each entry has a configurable expiration time (default 24 hours)
+- **TTL Management**: Each entry has a configurable expiration time (default 7 days)
 - **Auto-Cleanup**: Background cleanup runs every 30 minutes to remove expired entries
 - **Graceful Degradation**: `get()` and `list()` methods handle malformed JSON gracefully
 - **Use Cases**: Planning progress, code review patterns, session context, temporary state
@@ -397,13 +401,13 @@ The model used for execution is determined by `executionModel` in the plugin con
 
 ### memory-kv-set
 
-Store a key-value pair for the current project. Values expire after 24 hours by default. Use for ephemeral project state like planning progress, code review patterns, or session context.
+Store a key-value pair for the current project. Values expire after 7 days by default. Use for ephemeral project state like planning progress, code review patterns, or session context.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `key` | string | Yes | The key to store the value under |
 | `value` | string | Yes | The value to store (JSON string) |
-| `ttlMs` | number | No | Time-to-live in milliseconds (default: 24 hours) |
+| `ttlMs` | number | No | Time-to-live in milliseconds (default: 7 days) |
 
 Returns confirmation with the key and expiration timestamp.
 
@@ -424,6 +428,14 @@ List all active key-value pairs for the current project.
 No parameters required.
 
 Returns a list of all stored keys with their values and expiration times. Useful for debugging or inspecting current project state.
+
+### memory-kv-delete
+
+Delete a key-value pair for the current project.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `key` | string | Yes | The key to delete |
 
 ### memory-loop-cancel
 
@@ -454,7 +466,7 @@ Execute an architect plan using a Ralph iterative development loop. Designed to 
 | `worktree` | boolean | No | Run in isolated git worktree instead of current directory (default: false) |
 
 !!! note "KV Store vs Memory"
-    The KV store is designed for **ephemeral** project state that expires automatically (default 24 hours). Use `memory-write` for **durable** knowledge that should persist across sessions, such as conventions, decisions, and context.
+    The KV store is designed for **ephemeral** project state that expires automatically (default 7 days). Use `memory-write` for **durable** knowledge that should persist across sessions, such as conventions, decisions, and context.
 
 ---
 
@@ -590,7 +602,7 @@ Blocking is enforced via `tool.execute.before` (throws error) with `tool.execute
 
 | Config Key | Purpose | Fallback |
 |------------|---------|----------|
-| `ralph.model` | Model for Ralph coding sessions | `executionModel` → platform default |
+| `loop.model` | Model for Ralph coding sessions | `executionModel` → platform default |
 | `auditorModel` | Model for the auditor agent | Platform default (no fallback chain) |
 
 #### Model Fallback on Error

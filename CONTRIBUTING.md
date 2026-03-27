@@ -72,7 +72,7 @@ Each item is tagged with a theme to help you find work in your area of interest:
 ### Running Tests
 
 ```bash
-pnpm test              # Run all backend tests
+pnpm test              # Run all tests (backend + memory plugin)
 cd backend && vitest <filename>   # Run single test file
 ```
 

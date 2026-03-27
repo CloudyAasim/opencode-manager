@@ -6,7 +6,7 @@ Skills are reusable instruction sets that provide domain-specific workflows and 
 
 | Scope | Location | Description |
 |-------|----------|-------------|
-| **Global** | `<workspace>/.config/opencode/skills/<name>/SKILL.md` | Available across all repositories |
+| **Global** | `$WORKSPACE_PATH/.config/opencode/skills/<name>/SKILL.md` (defaults to `./workspace/.config/opencode/skills/`) | Available across all repositories |
 | **Project** | `<repo>/.opencode/skills/<name>/SKILL.md` | Scoped to a specific repository |
 
 ## Skill File Format

@@ -28,7 +28,7 @@
   },
   "executionModel": "",
   "auditorModel": "",
-  "ralph": {
+  "loop": {
     "enabled": true,
     "defaultMaxIterations": 15,
     "cleanupWorktree": false,
