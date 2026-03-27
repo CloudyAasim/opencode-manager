@@ -31,7 +31,18 @@ export async function run(argv: StatusArgs): Promise<void> {
 
   async function tryFetchSessionOutput(serverUrl: string, sessionId: string, directory: string) {
     try {
-      const client = createOpencodeClient({ baseUrl: serverUrl, directory })
+      const url = new URL(serverUrl)
+      const password = url.password || process.env['OPENCODE_SERVER_PASSWORD']
+      const cleanUrl = new URL(url.toString())
+      cleanUrl.username = ''
+      cleanUrl.password = ''
+      const clientConfig: Parameters<typeof createOpencodeClient>[0] = { baseUrl: cleanUrl.toString(), directory }
+      if (password) {
+        clientConfig.headers = {
+          Authorization: `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}`,
+        }
+      }
+      const client = createOpencodeClient(clientConfig)
       return await fetchSessionOutput(client, sessionId, directory)
     } catch {
       return null

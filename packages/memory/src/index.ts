@@ -264,7 +264,18 @@ export function createMemoryPlugin(config: PluginConfig): Plugin {
     const { directory, project, client } = input
     const projectId = project.id
 
-    const v2 = createV2Client({ baseUrl: input.serverUrl.toString(), directory })
+    const serverUrl = input.serverUrl
+    const serverPassword = serverUrl.password || process.env['OPENCODE_SERVER_PASSWORD']
+    const cleanUrl = new URL(serverUrl.toString())
+    cleanUrl.username = ''
+    cleanUrl.password = ''
+    const v2ClientConfig: Parameters<typeof createV2Client>[0] = { baseUrl: cleanUrl.toString(), directory }
+    if (serverPassword) {
+      v2ClientConfig.headers = {
+        Authorization: `Basic ${Buffer.from(`opencode:${serverPassword}`).toString('base64')}`,
+      }
+    }
+    const v2 = createV2Client(v2ClientConfig)
 
     const loggingConfig = config.logging
     const logger = createLogger({
