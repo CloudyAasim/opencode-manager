@@ -133,11 +133,11 @@ Set `baseUrl` to point at any OpenAI-compatible self-hosted service (vLLM, Ollam
 | `messagesTransform.enabled` | Enable the messages transform hook (memory injection + Architect enforcement) | `true` |
 | `messagesTransform.debug` | Enable debug logging for messages transform | `false` |
 | `executionModel` | Model override for plan execution sessions (`provider/model`). Falls back to OpenCode's default model. | — |
-| `loop.enabled` | Enable Ralph iterative development loops | `true` |
+| `loop.enabled` | Enable iterative development loops | `true` |
 | `loop.defaultMaxIterations` | Default max iterations (0 = unlimited) | `15` |
 | `loop.cleanupWorktree` | Auto-remove worktree on cancel | `false` |
 | `loop.defaultAudit` | Run auditor after each coding iteration | `true` |
-| `loop.model` | Model override for Ralph sessions (`provider/model`), falls back to `executionModel` | — |
+| `loop.model` | Model override for loop sessions (`provider/model`), falls back to `executionModel` | — |
 | `loop.minAudits` | Minimum audit iterations required before completion | `1` |
 | `loop.stallTimeoutMs` | Watchdog stall detection timeout (ms) | `60000` |
 
@@ -200,7 +200,7 @@ The KV service is initialized on plugin startup and begins its cleanup interval 
 
 ### Loop Service
 
-The Ralph service manages iterative development loops using the KV store for state persistence:
+The loop service manages iterative development loops using the KV store for state persistence:
 
 - **State Management**: Each loop's state is stored in the KV store under `loop:{sessionId}` with fields: `active` (boolean), `sessionId`, `worktreeName`, `worktreeDir`, `worktreeBranch`, `workspaceId`, `iteration`, `maxIterations`, `completionPromise`, `startedAt`, `prompt`, `phase` (coding/auditing), `audit`, `lastAuditResult`, `errorCount`, `auditCount`, `terminationReason`, `completedAt`, `parentSessionId`, `inPlace`
 - **Two-Phase Cycle**: Alternates between coding (Code agent works on the task) and auditing (Auditor agent reviews changes). Audit findings feed back into the next coding iteration
@@ -439,7 +439,7 @@ Delete a key-value pair for the current project.
 
 ### memory-loop-cancel
 
-Cancel an active Ralph loop and optionally clean up the worktree.
+Cancel an active loop and optionally clean up the worktree.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -447,7 +447,7 @@ Cancel an active Ralph loop and optionally clean up the worktree.
 
 ### memory-loop-status
 
-Check the status of Ralph loops. With no arguments, lists all active loops for the current project. Pass a worktree name for detailed status.
+Check the status of loops. With no arguments, lists all active loops for the current project. Pass a worktree name for detailed status.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -457,7 +457,7 @@ Returns iteration count, current phase, audit results, model configuration, and 
 
 ### memory-loop
 
-Execute an architect plan using a Ralph iterative development loop. Designed to be called by the Architect agent after the user approves a plan with the "Execute with Ralph loop" or "Ralph in place" option.
+Execute an architect plan using an iterative development loop. Designed to be called by the Architect agent after the user approves a plan with the "Loop (worktree)" or "Loop" option.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -483,8 +483,8 @@ The Architect and Code agents work together in a plan-then-execute pattern. The 
 3. **Review the plan** — the Architect presents a structured plan with objectives, phases, and decisions for your approval
 4. **Approve the plan** — choose an execution mode:
     - **Approve plan** → `memory-plan-execute` creates a new Code session with the plan
-    - **Execute with Ralph loop** → `memory-loop` runs the plan in an isolated worktree with iterative coding/auditing
-    - **Ralph in place** → Same as Ralph loop but in the current directory (no worktree isolation)
+    - **Loop (worktree)** → `memory-loop` runs the plan in an isolated worktree with iterative coding/auditing
+    - **Loop** → Same as loop but in the current directory (no worktree isolation)
     - **Reject plan** → Cancel
 5. **Switch to the new session** — the Code agent executes the plan phase by phase
 
@@ -511,13 +511,13 @@ Or set it from the UI: **Settings > Memory Plugin > Execution Model**.
 
 ### Loop
 
-The Ralph loop is an iterative development system that alternates between coding and auditing phases until the task is complete.
+The loop is an iterative development system that alternates between coding and auditing phases until the task is complete.
 
 #### How It Works
 
 1. A new session is created (in a worktree or in-place)
 2. The Code agent receives the task prompt and works on it
-3. When the session goes idle, the Ralph handler checks the phase:
+3. When the session goes idle, the loop handler checks the phase:
     - **Coding phase** → If auditing is enabled, switches to auditing phase and invokes the Auditor agent as a subtask with a focused review prompt
     - **Auditing phase** → Extracts the auditor's full response as findings, switches back to coding phase, and sends a continuation prompt with the findings
 4. **Session rotation** — The current session is destroyed and a fresh one is created. The original task prompt and any audit findings are re-injected as a continuation prompt. This keeps each iteration's context window small and prioritizes speed.
@@ -581,7 +581,7 @@ At the start of every review, before analyzing the diff:
 
 #### Watchdog and Stall Detection
 
-A watchdog timer monitors each Ralph loop for stalls — situations where the session stops producing `session.idle` events within the expected timeframe.
+A watchdog timer monitors each loop for stalls — situations where the session stops producing `session.idle` events within the expected timeframe.
 
 - **`stallTimeoutMs`** (default `60000`): If no activity is detected within this window, the watchdog fires
 - On each stall, the watchdog checks the session status and re-triggers the appropriate phase handler
@@ -590,11 +590,11 @@ A watchdog timer monitors each Ralph loop for stalls — situations where the se
 
 #### Tool Blocking
 
-During a Ralph loop, certain tools are blocked to keep the agent focused:
+During a loop, certain tools are blocked to keep the agent focused:
 
 - `question` — No interactive questions; work autonomously
 - `memory-plan-execute` — Cannot start new plan sessions
-- `memory-loop` — Cannot start nested Ralph loops
+- `memory-loop` — Cannot start nested loops
 
 Blocking is enforced via `tool.execute.before` (throws error) with `tool.execute.after` as defense in depth.
 
@@ -602,12 +602,12 @@ Blocking is enforced via `tool.execute.before` (throws error) with `tool.execute
 
 | Config Key | Purpose | Fallback |
 |------------|---------|----------|
-| `loop.model` | Model for Ralph coding sessions | `executionModel` → platform default |
+| `loop.model` | Model for loop coding sessions | `executionModel` → platform default |
 | `auditorModel` | Model for the auditor agent | Platform default (no fallback chain) |
 
 #### Model Fallback on Error
 
-If the configured model produces a provider, auth, or API error during a Ralph iteration, the loop automatically falls back to the platform default model for all remaining iterations. This prevents the loop from exhausting retries on a misconfigured or unavailable model.
+If the configured model produces a provider, auth, or API error during a loop iteration, the loop automatically falls back to the platform default model for all remaining iterations. This prevents the loop from exhausting retries on a misconfigured or unavailable model.
 
 The fallback is permanent within a loop — once triggered, the `modelFailed` flag is set on the loop state and is never reset. The error count is incremented on each model failure; after 3 consecutive failures (`MAX_RETRIES`), the loop terminates regardless of fallback.
 
@@ -615,8 +615,8 @@ The fallback is permanent within a loop — once triggered, the `modelFailed` fl
 
 | Command | Description |
 |---------|-------------|
-| `/loop <prompt>` | Start a Ralph loop (delegates to memory-loop) |
-| `/cancel-loop` | Cancel the active Ralph loop |
+| `/loop <prompt>` | Start a loop (delegates to memory-loop) |
+| `/cancel-loop` | Cancel the active loop |
 
 ---
 
@@ -703,8 +703,8 @@ The default agent is set to `code`.
 | Command | Description | Agent | Mode |
 |---------|-------------|-------|------|
 | `/review` | Run a code review on current changes | auditor | subtask |
-| `/loop` | Start a Ralph loop (delegates to memory-loop) | code | direct |
-| `/cancel-loop` | Cancel the active Ralph loop | code | direct |
+| `/loop` | Start a loop (delegates to memory-loop) | code | direct |
+| `/cancel-loop` | Cancel the active loop | code | direct |
 
 ---
 
@@ -760,24 +760,24 @@ Memory injection is controlled independently by `memoryInjection.enabled` (defau
 
 ### tool.execute.before
 
-Blocks certain tools during active Ralph loops to keep the agent focused on the current task. Throws an error with a descriptive message when a blocked tool is called. Blocked tools: `question`, `memory-plan-execute`, `memory-loop`.
+Blocks certain tools during active loops to keep the agent focused on the current task. Throws an error with a descriptive message when a blocked tool is called. Blocked tools: `question`, `memory-plan-execute`, `memory-loop`.
 
 ### tool.execute.after
 
-Defense-in-depth companion to `tool.execute.before`. If a blocked tool somehow executes during a Ralph loop, this hook overrides the output with the denial message.
+Defense-in-depth companion to `tool.execute.before`. If a blocked tool somehow executes during a loop, this hook overrides the output with the denial message.
 
 ### permission.ask
 
-Auto-resolves permissions during Ralph loops:
+Auto-resolves permissions during loops:
 
-- **Deny**: `git push` operations (always denied during Ralph loops)
+- **Deny**: `git push` operations (always denied during loops)
 - All other permission requests are passed through to the default handler
 
 ### session.idle (event handler)
 
-Drives the Ralph iteration loop by listening for `session.idle` events:
+Drives the iteration loop by listening for `session.idle` events:
 
-1. Checks if the idle session belongs to an active Ralph loop
+1. Checks if the idle session belongs to an active loop
 2. Records activity to reset the watchdog stall timer
 3. Re-fetches state as a safety check against race conditions
 4. Dispatches to the appropriate phase handler:
@@ -787,7 +787,7 @@ Drives the Ralph iteration loop by listening for `session.idle` events:
 
 ### worktree.failed (event handler)
 
-Terminates any Ralph loop associated with a failed worktree. Sets the loop status to stopped with reason `worktree_failed`.
+Terminates any loop associated with a failed worktree. Sets the loop status to stopped with reason `worktree_failed`.
 
 ---
 
@@ -801,7 +801,7 @@ Terminates any Ralph loop associated with a failed worktree. Sets the loop statu
 4. Initialize SQLite database with WAL mode
 5. Create memory service with no-op vec service
 6. Initialize KV service and start auto-cleanup interval (30 minutes)
-7. Initialize Ralph service (uses KV store for state persistence)
+7. Initialize loop service (uses KV store for state persistence)
 8. Initialize vec service asynchronously:
     - If available: sync missing embeddings, auto-validate model drift
     - If unavailable: continue with no-op (semantic search degraded)
@@ -810,7 +810,7 @@ Terminates any Ralph loop associated with a failed worktree. Sets the loop statu
 
 On process exit, `SIGINT`, or `SIGTERM`:
 
-1. Stop any active Ralph loops
+1. Stop any active loops
 2. Stop KV cleanup interval
 3. Dispose vec service
 4. Destroy in-memory cache

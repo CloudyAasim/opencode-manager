@@ -51,7 +51,7 @@ The plugin bundles four agents that integrate with the memory system:
 
 The auditor agent is a read-only subagent (`temperature: 0.0`) that can read memory but cannot write, edit, or delete memories or execute plans. It is invoked by other agents via the Task tool to review code changes against stored project conventions and decisions.
 
-The architect agent operates in read-only mode (`temperature: 0.0`, all edits denied) with additional message-level read-only enforcement via the `experimental.chat.messages.transform` hook. After the user approves a plan you can choose to execute the plan in the same session with your execution model (less advanced model needed for cost / speed), new session, ralph loop in the same branch or in external worktree. 
+The architect agent operates in read-only mode (`temperature: 0.0`, all edits denied) with additional message-level read-only enforcement via the `experimental.chat.messages.transform` hook. After the user approves a plan you can choose to execute the plan in the same session with your execution model (less advanced model needed for cost / speed), new session, loop in the same branch or in external worktree. 
 
 
 ## Tools
@@ -84,17 +84,17 @@ Iterative development loops with automatic auditing. Runs in an isolated git wor
 
 | Tool | Description |
 |------|-------------|
-| `memory-loop-cancel` | Cancel an active Ralph loop by worktree name |
-| `memory-loop-status` | Check status of Ralph loops. Supports `restart` to resume inactive loops. |
-| `memory-loop` | Execute an architect plan using a Ralph iterative loop. Supports `inPlace` parameter. |
+| `memory-loop-cancel` | Cancel an active loop by worktree name |
+| `memory-loop-status` | Check status of loops. Supports `restart` to resume inactive loops. |
+| `memory-loop` | Execute an architect plan using an iterative loop. Supports `inPlace` parameter. |
 
 ## Slash Commands
 
 | Command | Description | Agent |
 |---------|-------------|-------|
 | `/review` | Run a code review on current changes | auditor (subtask) |
-| `/loop` | Start a Ralph loop (delegates to memory-loop) | code |
-| `/cancel-loop` | Cancel the active Ralph loop | code |
+| `/loop` | Start a loop (delegates to memory-loop) | code |
+| `/cancel-loop` | Cancel the active loop | code |
 
 ## CLI
 
@@ -194,7 +194,7 @@ ocm-mem upgrade
 
 #### status
 
-Show Ralph loop status for the current project.
+Show loop status for the current project.
 
 ```bash
 ocm-mem status
@@ -207,7 +207,7 @@ ocm-mem status --project my-project
 
 #### cancel
 
-Cancel a Ralph loop by worktree name.
+Cancel a loop by worktree name.
 
 ```bash
 ocm-mem cancel my-worktree-name
@@ -328,14 +328,14 @@ When enabled, logs are written to the specified file with timestamps. The log fi
 #### Execution
 - `executionModel` - Model override for plan execution sessions, format: `provider/model` (e.g. `anthropic/claude-haiku-3-5-20241022`). When set, `memory-plan-execute` uses this model for the new Code session. When empty or omitted, OpenCode's default model is used (typically the `model` field from `opencode.json`). **Recommended:** Set this to a fast, cheap model (e.g. Haiku or MiniMax) and use a smart model (e.g. Opus) for the Architect session — planning needs reasoning, execution needs speed.
 
-#### Ralph
-- `ralph.enabled` - Enable Ralph iterative development loops (default: `true`)
-- `ralph.defaultMaxIterations` - Default max iterations for loops, 0 = unlimited (default: `15`)
-- `ralph.cleanupWorktree` - Auto-remove worktree on cancel (default: `false`)
-- `ralph.defaultAudit` - Run auditor after each coding iteration by default (default: `true`)
-- `ralph.model` - Model override for Ralph sessions (`provider/model`), falls back to `executionModel` (default: `""`)
-- `ralph.stallTimeoutMs` - Watchdog stall detection timeout in milliseconds (default: `60000`)
-- `ralph.minAudits` - Minimum audit iterations required before completion (default: `1`)
+#### Loop
+- `loop.enabled` - Enable iterative development loops (default: `true`)
+- `loop.defaultMaxIterations` - Default max iterations for loops, 0 = unlimited (default: `15`)
+- `loop.cleanupWorktree` - Auto-remove worktree on cancel (default: `false`)
+- `loop.defaultAudit` - Run auditor after each coding iteration by default (default: `true`)
+- `loop.model` - Model override for loop sessions (`provider/model`), falls back to `executionModel` (default: `""`)
+- `loop.stallTimeoutMs` - Watchdog stall detection timeout in milliseconds (default: `60000`)
+- `loop.minAudits` - Minimum audit iterations required before completion (default: `1`)
 
 #### Top-level
 - `defaultKvTtlMs` - Default TTL for KV store entries in milliseconds (default: `604800000` / 7 days)
@@ -351,8 +351,8 @@ After the architect presents a plan, the user approves via one of four execution
 
 - **New session** — Creates a new Code session via `memory-plan-execute`
 - **Execute here** — Executes the plan in the current session (code agent takes over immediately)
-- **Ralph (worktree)** — Runs the plan in an isolated git worktree with iterative coding/auditing via `memory-loop`
-- **Ralph (in place)** — Same as Ralph worktree but runs in the current directory (no worktree isolation)
+- **Loop (worktree)** — Runs the plan in an isolated git worktree with iterative coding/auditing via `memory-loop`
+- **Loop** — Same as loop (worktree) but runs in the current directory (no worktree isolation)
 
 Set `executionModel` in your config to a fast model (e.g., Haiku) and use a smart model (e.g., Opus) for the architect session.
 
@@ -360,7 +360,7 @@ See the [full workflow guide](https://chriswritescode-dev.github.io/opencode-man
 
 ## Loop
 
-The Ralph loop is an iterative development system that alternates between coding and auditing phases:
+The loop is an iterative development system that alternates between coding and auditing phases:
 
 1. **Coding phase** — A Code session works on the task
 2. **Auditing phase** — The Auditor agent reviews changes against project conventions and stored review findings
@@ -385,9 +385,9 @@ This ensures review findings are never lost between iterations, even as sessions
 
 The loop completes when the Code agent outputs the completion promise. It auto-terminates after `maxIterations` (if set) or after 3 consecutive errors.
 
-By default, Ralph loops run in an isolated git worktree. Set `inPlace: true` to run in the current directory instead (skips worktree creation, auto-commit, and cleanup).
+By default, loops run in an isolated git worktree. Set `inPlace: true` to run in the current directory instead (skips worktree creation, auto-commit, and cleanup).
 
-See the [full documentation](https://chriswritescode-dev.github.io/opencode-manager/features/memory/#ralph-loop) for details on worktree management, model configuration, and termination conditions.
+See the [full documentation](https://chriswritescode-dev.github.io/opencode-manager/features/memory/#loop) for details on worktree management, model configuration, and termination conditions.
 
 ## Documentation
 
