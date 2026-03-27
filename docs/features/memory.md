@@ -451,7 +451,7 @@ Execute an architect plan using a Ralph iterative development loop. Designed to 
 |-----------|------|----------|-------------|
 | `plan` | string | Yes | The full implementation plan |
 | `title` | string | Yes | Short title for the session |
-| `inPlace` | boolean | No | Run in current directory instead of worktree (default: false) |
+| `worktree` | boolean | No | Run in isolated git worktree instead of current directory (default: false) |
 
 !!! note "KV Store vs Memory"
     The KV store is designed for **ephemeral** project state that expires automatically (default 24 hours). Use `memory-write` for **durable** knowledge that should persist across sessions, such as conventions, decisions, and context.
