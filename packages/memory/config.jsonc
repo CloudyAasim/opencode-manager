@@ -34,6 +34,7 @@
     "cleanupWorktree": false,
     "defaultAudit": true,
     "model": "",
-    "minAudits": 1
+    "minAudits": 1,
+    "stallTimeoutMs": 60000
   }
 }
