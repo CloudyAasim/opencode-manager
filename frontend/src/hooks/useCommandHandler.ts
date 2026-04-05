@@ -71,7 +71,7 @@ export function useCommandHandler({
           break
           
         case 'new':
-        case 'clear':
+        case 'clear': {
           try {
             const newSession = await createSession.mutateAsync({
               agent: undefined
@@ -91,6 +91,7 @@ export function useCommandHandler({
             showToast.error(`Failed to create new session: ${error instanceof Error ? error.message : 'Unknown error'}`)
           }
           break
+        }
           
         case 'details':
           if (onToggleDetails) {
