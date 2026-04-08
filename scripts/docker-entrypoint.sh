@@ -75,14 +75,9 @@ if [ -z "$AUTH_SECRET" ]; then
   exit 1
 fi
 
-# Fix database directory permissions for Docker volumes
-# Docker volumes are mounted at runtime and may have incorrect ownership
-if [ -d "/app/data" ]; then
-  echo "🔧 Ensuring database directory permissions..."
-  chown -R node:node /app/data 2>/dev/null || true
-  chmod -R 755 /app/data 2>/dev/null || true
-  echo "✅ Database directory permissions set"
-fi
+mkdir -p /app/data
+chown -R node:node /app/data
+chmod -R 755 /app/data
 
-exec "$@"
+exec runuser -u node -- "$@"
 

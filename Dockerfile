@@ -93,16 +93,13 @@ RUN mkdir -p /app/backend/node_modules/@opencode-manager && \
 COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-RUN mkdir -p /workspace && \
-    chown -R node:node /workspace
-# Note: /app/data is a Docker volume, permissions are handled at runtime in entrypoint
+RUN mkdir -p /workspace /app/data && \
+    chown -R node:node /workspace /app/data
 
 EXPOSE 5003 5100 5101 5102 5103
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:5003/api/health || exit 1
-
-USER node
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["bun", "backend/src/index.ts"]
