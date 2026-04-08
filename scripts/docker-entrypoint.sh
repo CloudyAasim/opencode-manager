@@ -75,9 +75,8 @@ if [ -z "$AUTH_SECRET" ]; then
   exit 1
 fi
 
-mkdir -p /app/data
-chown -R node:node /app/data
-chmod -R 755 /app/data
+mkdir -p /app/data /workspace /home/node/.cache /home/node/.opencode
+chown -R node:node /app/data /workspace /home/node
 
 exec runuser -u node -- "$@"
 
