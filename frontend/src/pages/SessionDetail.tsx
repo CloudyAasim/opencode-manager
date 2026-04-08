@@ -538,10 +538,10 @@ export function SessionDetail() {
                     handleClearPrompt()
                   }}
                   onClick={handleClearPrompt}
-                  className="absolute -top-12 right-0 md:right-4 z-50 flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border-2 border-red-500/60 hover:border-red-400 shadow-lg shadow-red-500/30 hover:shadow-red-500/50 backdrop-blur-md transition-all duration-200 active:scale-95 hover:scale-105 ring-2 ring-red-500/20 hover:ring-red-500/40"
+                  className="absolute -top-5 right-0 md:right-4 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 hover:border-red-400 shadow-md shadow-red-500/30 hover:shadow-red-500/50 backdrop-blur-md transition-all duration-200 active:scale-95 hover:scale-105 ring-1 ring-red-500/20 hover:ring-red-500/40"
                   aria-label="Clear"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                   <span className="text-sm font-medium hidden sm:inline">Clear</span>
                 </button>
               )}

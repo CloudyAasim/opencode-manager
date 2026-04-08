@@ -861,13 +861,23 @@ return (
           
         </div>
 <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
-            <button
-               onClick={onScrollToBottom}
-               className={`p-2.5 md:p-2 rounded-lg bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95 hover:scale-105 shadow-md ${showScrollButton ? 'visible' : 'invisible'}`}
-               title="Scroll to bottom"
-             >
-               <ArrowDown className="w-6 h-6" />
-             </button>
+            {isMobile && showScrollButton ? (
+              <button
+                onClick={onScrollToBottom}
+                className="px-4 py-2 rounded-lg bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95 shadow-md flex items-center justify-center min-w-[52px] border border-border"
+                title="Scroll to bottom"
+              >
+                <ArrowDown className="w-5 h-5" />
+              </button>
+            ) : !isMobile ? (
+              <button
+                onClick={onScrollToBottom}
+                className={`p-2 rounded-lg bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95 hover:scale-105 shadow-md ${showScrollButton ? 'visible' : 'invisible'}`}
+                title="Scroll to bottom"
+              >
+                <ArrowDown className="w-6 h-6" />
+              </button>
+            ) : null}
 {showStopButton && (
             <button
               onClick={handleStop}
@@ -916,14 +926,14 @@ return (
               )}
             </button>
           )}
-          {isMobile && !prompt.trim() && imageAttachments.length === 0 && sttEnabled && sttSupported && !hasPendingPermissionForSession ? (
+          {isMobile && !showScrollButton && sttEnabled && sttSupported && !hasPendingPermissionForSession && (
             <button
               onClick={handleVoiceToggle}
               disabled={disabled || isProcessing}
               className={`px-4 py-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center justify-center min-w-[52px] ${
                 isRecording || isTogglingRecording || (isProcessing && !isRecording)
                   ? 'bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border-2 border-red-500/60 shadow-lg shadow-red-500/30 animate-pulse'
-                  : 'bg-primary hover:bg-primary/90 text-primary-foreground border border-white/30'
+                  : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground border border-border'
               }`}
               title={isRecording ? 'Stop recording' : 'Voice input'}
             >
@@ -937,7 +947,7 @@ return (
                 <Mic className="w-5 h-5" />
               )}
             </button>
-          ) : (
+          )}
             <button
               data-submit-prompt
               onClick={hasPendingPermissionForSession ? () => setShowDialog(true) : handleSubmit}
@@ -951,7 +961,6 @@ return (
             >
               <span className="whitespace-nowrap">{hasPendingPermissionForSession ? 'View' : (hasActiveStream ? 'Queue' : 'Send')}</span>
             </button>
-          )}
         </div>
       </div>
       
