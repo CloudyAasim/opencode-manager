@@ -96,11 +96,11 @@ export async function importOpenCodeStateDirectory(sourcePath: string, targetPat
   const resolvedTargetPath = path.resolve(targetPath)
   const sourceDbPath = path.join(resolvedSourcePath, 'opencode.db')
 
-  if (!await fileExists(sourceDbPath)) {
+  if (resolvedSourcePath === resolvedTargetPath) {
     return false
   }
 
-  if (resolvedSourcePath === resolvedTargetPath) {
+  if (!await fileExists(sourceDbPath)) {
     return false
   }
 

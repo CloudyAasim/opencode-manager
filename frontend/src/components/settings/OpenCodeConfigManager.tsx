@@ -14,6 +14,7 @@ import { AgentsEditor } from './AgentsEditor'
 import { AgentsMdEditor } from './AgentsMdEditor'
 import { McpManager } from './McpManager'
 import { SkillsEditor } from './SkillsEditor'
+import { OpenCodeModelsEditor, type ConfigProvider } from './OpenCodeModelsEditor'
 import { VersionSelectDialog } from './VersionSelectDialog'
 import { MemoryPluginConfig } from './MemoryPluginConfig'
 import { settingsApi } from '@/api/settings'
@@ -65,6 +66,7 @@ export function OpenCodeConfigManager() {
     agents: false,
     skills: false,
     mcp: false,
+    models: false,
   })
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -76,6 +78,7 @@ export function OpenCodeConfigManager() {
   const agentsRef = useRef<HTMLButtonElement>(null)
   const skillsRef = useRef<HTMLButtonElement>(null)
   const mcpRef = useRef<HTMLButtonElement>(null)
+  const modelsRef = useRef<HTMLButtonElement>(null)
   
   const { data: managedSkills = [] } = useQuery({
     queryKey: ['managed-skills'],
@@ -864,6 +867,50 @@ export function OpenCodeConfigManager() {
                             config={selectedConfig}
                             onUpdate={(content) => updateConfigContent(selectedConfig.name, content)}
                             onConfigUpdate={updateConfigContent}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-lg overflow-hidden min-w-0">
+                      <button
+                        ref={modelsRef}
+                        className={cn("w-full px-4 py-3 flex items-center justify-between transition-colors min-w-0", expandedSections.models ? "bg-muted/40 hover:bg-muted/50" : "hover:bg-muted/50")}
+                        onClick={() => {
+                          const isExpanding = !expandedSections.models
+                          setExpandedSections(prev => ({ ...prev, models: isExpanding }))
+                          
+                          if (isExpanding) {
+                            setTimeout(() => scrollToSection(modelsRef), 100)
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <h4 className="text-sm font-medium truncate">Models</h4>
+                          <span className="text-xs text-muted-foreground">
+                            {(() => {
+                              const provider = selectedConfig.content?.provider as Record<string, unknown> | undefined
+                              if (!provider) return 0
+                              return Object.values(provider).reduce<number>((acc, p) => {
+                                const models = (p as { models?: Record<string, unknown> })?.models
+                                return acc + (models ? Object.keys(models).length : 0)
+                              }, 0)
+                            })()} configured
+                          </span>
+                        </div>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${expandedSections.models ? 'rotate-90' : ''}`} />
+                      </button>
+                      <div className={`${expandedSections.models ? 'block' : 'hidden'} border-t border-border`}>
+                        <div className="p-4 max-h-[50vh] overflow-y-auto">
+                          <OpenCodeModelsEditor
+                            providers={(selectedConfig.content?.provider as Record<string, ConfigProvider> | undefined) ?? {}}
+                            onChange={(providers) => {
+                              const updatedContent = {
+                                ...selectedConfig.content,
+                                provider: providers
+                              }
+                              updateConfigContent(selectedConfig.name, updatedContent)
+                            }}
                           />
                         </div>
                       </div>

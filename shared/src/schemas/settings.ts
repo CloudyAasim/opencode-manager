@@ -181,12 +181,102 @@ export const UpdateSettingsRequestSchema = z.object({
   preferences: UserPreferencesSchema.partial(),
 });
 
+export const ProviderApiConfigSchema = z.object({
+  url: z.string(),
+  npm: z.string().optional(),
+});
+
+export type ProviderApiConfig = z.infer<typeof ProviderApiConfigSchema>;
+
+export const ModelCapabilitiesSchema = z.object({
+  temperature: z.boolean(),
+  reasoning: z.boolean(),
+  attachment: z.boolean(),
+  toolcall: z.boolean(),
+  input: z.object({
+    text: z.boolean(),
+    audio: z.boolean(),
+    image: z.boolean(),
+    video: z.boolean(),
+    pdf: z.boolean(),
+  }),
+  output: z.object({
+    text: z.boolean(),
+    audio: z.boolean(),
+    image: z.boolean(),
+    video: z.boolean(),
+    pdf: z.boolean(),
+  }),
+  interleaved: z.union([
+    z.boolean(),
+    z.object({
+      field: z.enum(["reasoning_content", "reasoning_details"]),
+    }),
+  ]),
+});
+
+export const ModelCostSchema = z.object({
+  input: z.number(),
+  output: z.number(),
+  cache: z.object({
+    read: z.number(),
+    write: z.number(),
+  }),
+  experimentalOver200K: z.object({
+    input: z.number(),
+    output: z.number(),
+    cache: z.object({
+      read: z.number(),
+      write: z.number(),
+    }),
+  }).optional(),
+});
+
+export const ModelLimitSchema = z.object({
+  context: z.number(),
+  input: z.number().optional(),
+  output: z.number(),
+});
+
+export const ModelConfigSchema = z.object({
+  id: z.string(),
+  providerID: z.string(),
+  api: ProviderApiConfigSchema,
+  name: z.string(),
+  family: z.string().optional(),
+  capabilities: ModelCapabilitiesSchema,
+  cost: ModelCostSchema,
+  limit: ModelLimitSchema,
+  status: z.enum(["alpha", "beta", "deprecated", "active"]),
+  options: z.record(z.string(), z.any()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+  release_date: z.string(),
+  variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
+});
+
+export type ModelConfig = z.infer<typeof ModelConfigSchema>;
+
+export const ProviderSourceSchema = z.enum(["env", "config", "custom", "api"]);
+
+export const ProviderConfigSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  source: ProviderSourceSchema,
+  env: z.array(z.string()),
+  key: z.string().optional(),
+  options: z.record(z.string(), z.any()).optional(),
+  models: z.record(z.string(), ModelConfigSchema),
+});
+
+export type ProviderSource = z.infer<typeof ProviderSourceSchema>;
+export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
+
 export const OpenCodeConfigSchema = z.object({
   $schema: z.string().optional(),
   theme: z.string().optional(),
   model: z.string().optional(),
   small_model: z.string().optional(),
-  provider: z.record(z.string(), z.any()).optional(),
+  provider: z.record(z.string(), ProviderConfigSchema).optional(),
   agent: z.record(z.string(), z.any()).optional(),
   command: z.record(z.string(), z.any()).optional(),
   keybinds: z.record(z.string(), z.any()).optional(),
