@@ -221,14 +221,14 @@ export const ModelCostSchema = z.object({
   cache: z.object({
     read: z.number(),
     write: z.number(),
-  }),
+  }).optional(),
   experimentalOver200K: z.object({
     input: z.number(),
     output: z.number(),
     cache: z.object({
       read: z.number(),
       write: z.number(),
-    }),
+    }).optional(),
   }).optional(),
 });
 
@@ -239,18 +239,18 @@ export const ModelLimitSchema = z.object({
 });
 
 export const ModelConfigSchema = z.object({
-  id: z.string(),
-  providerID: z.string(),
-  api: ProviderApiConfigSchema,
-  name: z.string(),
+  id: z.string().optional(),
+  providerID: z.string().optional(),
+  api: ProviderApiConfigSchema.optional(),
+  name: z.string().optional(),
   family: z.string().optional(),
-  capabilities: ModelCapabilitiesSchema,
-  cost: ModelCostSchema,
-  limit: ModelLimitSchema,
-  status: z.enum(["alpha", "beta", "deprecated", "active"]),
+  capabilities: ModelCapabilitiesSchema.optional(),
+  cost: ModelCostSchema.optional(),
+  limit: ModelLimitSchema.optional(),
+  status: z.enum(["alpha", "beta", "deprecated", "active"]).optional(),
   options: z.record(z.string(), z.any()).optional(),
   headers: z.record(z.string(), z.string()).optional(),
-  release_date: z.string(),
+  release_date: z.string().optional(),
   variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
 });
 
@@ -259,13 +259,13 @@ export type ModelConfig = z.infer<typeof ModelConfigSchema>;
 export const ProviderSourceSchema = z.enum(["env", "config", "custom", "api"]);
 
 export const ProviderConfigSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  source: ProviderSourceSchema,
-  env: z.array(z.string()),
+  id: z.string().optional(),
+  name: z.string().optional(),
+  source: ProviderSourceSchema.optional(),
+  env: z.array(z.string()).optional().default([]),
   key: z.string().optional(),
   options: z.record(z.string(), z.any()).optional(),
-  models: z.record(z.string(), ModelConfigSchema),
+  models: z.record(z.string(), ModelConfigSchema).optional(),
 });
 
 export type ProviderSource = z.infer<typeof ProviderSourceSchema>;
