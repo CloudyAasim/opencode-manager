@@ -21,7 +21,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useServerHealth } from '@/hooks/useServerHealth'
 import { parseJsonc, hasJsoncComments } from '@/lib/jsonc'
 import { showToast } from '@/lib/toast'
-import { invalidateAllConfigRelatedCaches, invalidateConfigCaches } from '@/lib/queryInvalidation'
+import { invalidateConfigCaches } from '@/lib/queryInvalidation'
 import type { OpenCodeConfig, OpenCodeImportStatus } from '@/api/types/settings'
 
 interface Command {
@@ -162,7 +162,7 @@ export function OpenCodeConfigManager() {
     mutationFn: async () => settingsApi.syncOpenCodeImport(true),
     onSuccess: async () => {
       await fetchConfigs()
-      invalidateAllConfigRelatedCaches(queryClient)
+      invalidateConfigCaches(queryClient)
       queryClient.invalidateQueries({ queryKey: ['opencode-import-status'] })
     },
   })
