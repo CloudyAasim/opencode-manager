@@ -3,7 +3,9 @@ import type { Database } from 'bun:sqlite'
 
 vi.mock('fs/promises', () => ({
   cp: vi.fn(),
+  mkdtemp: vi.fn(),
   readdir: vi.fn(),
+  rename: vi.fn(),
   rm: vi.fn(),
 }))
 
@@ -31,7 +33,7 @@ vi.mock('@opencode-manager/shared/config/env', () => ({
 }))
 
 import path from 'path'
-import { readdir, rm, cp } from 'fs/promises'
+import { readdir, rm, cp, mkdtemp, rename } from 'fs/promises'
 import { Database as SQLiteDatabase } from 'bun:sqlite'
 import { ensureDirectoryExists, fileExists, readFileContent, writeFileContent } from '../../src/services/file-operations'
 import { SettingsService } from '../../src/services/settings'
@@ -44,6 +46,8 @@ const mockWriteFileContent = writeFileContent as ReturnType<typeof vi.fn>
 const mockEnsureDirectoryExists = ensureDirectoryExists as ReturnType<typeof vi.fn>
 const MockSettingsService = SettingsService as unknown as ReturnType<typeof vi.fn>
 const MockSQLiteDatabase = SQLiteDatabase as unknown as ReturnType<typeof vi.fn>
+const mockMkdtemp = mkdtemp as unknown as ReturnType<typeof vi.fn>
+const mockRename = rename as unknown as ReturnType<typeof vi.fn>
 
 describe('opencode-import service', () => {
   const mockDb = {} as unknown as Database
@@ -58,6 +62,8 @@ describe('opencode-import service', () => {
     MockSettingsService.mockImplementation(() => settingsService)
     mockReadFileContent.mockResolvedValue('{"$schema":"https://opencode.ai/config.json"}')
     mockReaddir.mockResolvedValue([])
+    mockMkdtemp.mockResolvedValue('/tmp/workspace/.opencode/state/opencode-import-123')
+    mockRename.mockResolvedValue(undefined)
   })
 
   it('detects importable host config and state paths with opencode.db', async () => {
@@ -121,8 +127,12 @@ describe('opencode-import service', () => {
       '/tmp/workspace/.config/opencode/opencode.json',
       '{"$schema":"https://opencode.ai/config.json"}'
     )
-    expect(mockEnsureDirectoryExists).toHaveBeenCalledWith('/tmp/workspace/.opencode/state/opencode')
+    expect(mockEnsureDirectoryExists).toHaveBeenCalledWith('/tmp/workspace/.opencode/state')
     expect(MockSQLiteDatabase).toHaveBeenCalledWith('/import/opencode-state/opencode.db')
+    expect(mockRename).toHaveBeenCalledWith(
+      '/tmp/workspace/.opencode/state/opencode-import-123',
+      '/tmp/workspace/.opencode/state/opencode'
+    )
   })
 
   it('does not report state imported when source db is missing', async () => {
@@ -215,33 +225,50 @@ describe('opencode-import service', () => {
     expect(MockSQLiteDatabase).not.toHaveBeenCalled()
   })
 
-  it('removes stale non-DB artifacts before copying new state during overwrite import', async () => {
+  it('blocks import when workspace state exists and overwriteState is not enabled', async () => {
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
+    process.env.OPENCODE_IMPORT_STATE_PATH = '/import/opencode-state'
+
+    mockFileExists.mockImplementation(async (candidate: string) => {
+      return candidate === '/import/opencode-config/opencode.json'
+        || candidate === '/import/opencode-state'
+        || candidate === '/import/opencode-state/opencode.db'
+        || candidate === '/tmp/workspace/.opencode/state/opencode/opencode.db'
+    })
+
+    await expect(syncOpenCodeImport({
+      db: mockDb,
+      userId: 'default',
+      overwriteState: false,
+      protectExistingState: true,
+    })).rejects.toThrow('OpenCode host import was blocked to protect existing workspace state')
+
+    expect(settingsService.updateOpenCodeConfig).not.toHaveBeenCalled()
+    expect(mockEnsureDirectoryExists).not.toHaveBeenCalled()
+  })
+
+  it('stages imported state before replacing the target directory', async () => {
     const { importOpenCodeStateDirectory } = await import('../../src/services/opencode-import')
 
     const sourcePath = '/import/opencode-state'
     const targetPath = '/workspace/.opencode/state/opencode'
+    const stagedPath = '/workspace/.opencode/state/opencode-import-123'
 
     mockFileExists.mockImplementation(async (candidate: string) => {
       if (candidate === path.join(sourcePath, 'opencode.db')) {
         return true
       }
-      if (candidate === path.join(targetPath, 'opencode.db')) {
-        return true
-      }
       return false
     })
 
+    mockEnsureDirectoryExists.mockResolvedValue(undefined)
     mockReaddir.mockResolvedValue([
       { name: 'stale-file.txt', isDirectory: () => false },
-      { name: 'stale-folder', isDirectory: () => true },
       { name: 'opencode.db', isDirectory: () => false },
-      { name: 'opencode.db-shm', isDirectory: () => false },
-      { name: 'opencode.db-wal', isDirectory: () => false },
     ] as any)
-
-    mockEnsureDirectoryExists.mockResolvedValue(undefined)
     const mockRm = vi.mocked(rm)
     mockRm.mockResolvedValue(undefined)
+    mockMkdtemp.mockResolvedValue(stagedPath)
 
     const mockCp = vi.mocked(cp)
     mockCp.mockResolvedValue(undefined)
@@ -256,15 +283,43 @@ describe('opencode-import service', () => {
     const result = await importOpenCodeStateDirectory(sourcePath, targetPath)
 
     expect(result).toBe(true)
-    expect(mockRm).toHaveBeenCalledWith(
-      path.join(targetPath, 'stale-file.txt'),
-      { recursive: true, force: true }
+    expect(mockCp).toHaveBeenCalledWith(
+      path.join(sourcePath, 'stale-file.txt'),
+      path.join(stagedPath, 'stale-file.txt'),
+      expect.any(Object)
     )
-    expect(mockRm).toHaveBeenCalledWith(
-      path.join(targetPath, 'stale-folder'),
-      { recursive: true, force: true }
-    )
-    expect(mockCp).toHaveBeenCalled()
     expect(mockExec).toHaveBeenCalled()
+    expect(mockRm).toHaveBeenCalledWith(targetPath, { recursive: true, force: true })
+    expect(mockRename).toHaveBeenCalledWith(stagedPath, targetPath)
+  })
+
+  it('cleans up the staged import directory when snapshotting fails', async () => {
+    const { importOpenCodeStateDirectory } = await import('../../src/services/opencode-import')
+
+    const sourcePath = '/import/opencode-state'
+    const targetPath = '/workspace/.opencode/state/opencode'
+    const stagedPath = '/workspace/.opencode/state/opencode-import-456'
+
+    mockFileExists.mockImplementation(async (candidate: string) => candidate === path.join(sourcePath, 'opencode.db'))
+    mockEnsureDirectoryExists.mockResolvedValue(undefined)
+    mockMkdtemp.mockResolvedValue(stagedPath)
+
+    const mockExec = vi.fn(() => {
+      throw new Error('snapshot failed')
+    })
+    const mockClose = vi.fn()
+    MockSQLiteDatabase.mockImplementationOnce(() => ({
+      exec: mockExec,
+      close: mockClose,
+    }))
+
+    const mockRm = vi.mocked(rm)
+    mockRm.mockResolvedValue(undefined)
+
+    await expect(importOpenCodeStateDirectory(sourcePath, targetPath)).rejects.toThrow('snapshot failed')
+
+    expect(mockRm).toHaveBeenCalledWith(stagedPath, { recursive: true, force: true })
+    expect(mockRm).not.toHaveBeenCalledWith(targetPath, { recursive: true, force: true })
+    expect(mockRename).not.toHaveBeenCalled()
   })
 })

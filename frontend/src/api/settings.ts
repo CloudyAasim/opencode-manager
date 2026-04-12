@@ -151,7 +151,7 @@ export const settingsApi = {
     return fetchWrapper(`${API_BASE_URL}/api/settings/opencode-import/status`)
   },
 
-  syncOpenCodeImport: async (overwriteState = true): Promise<SyncOpenCodeImportResponse> => {
+  syncOpenCodeImport: async (overwriteState = false): Promise<SyncOpenCodeImportResponse> => {
     return fetchWrapper(`${API_BASE_URL}/api/settings/opencode-import`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -25,7 +25,7 @@ import { DEFAULT_AGENTS_MD } from '../constants'
 import { validateSSHPrivateKey } from '../utils/ssh-validation'
 import { encryptSecret } from '../utils/crypto'
 import { compareVersions, isValidVersion } from '../utils/version-utils'
-import { getImportedSessionDirectories, getOpenCodeImportStatus, syncOpenCodeImport } from '../services/opencode-import'
+import { getImportedSessionDirectories, getOpenCodeImportStatus, OpenCodeImportProtectionError, syncOpenCodeImport } from '../services/opencode-import'
 import { relinkReposFromSessionDirectories } from '../services/repo'
 import {
   listManagedSkills,
@@ -459,7 +459,8 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
       const result = await syncOpenCodeImport({
         db,
         userId,
-        overwriteState: body.overwriteState ?? true,
+        overwriteState: body.overwriteState ?? false,
+        protectExistingState: true,
       })
 
       if (!result.configImported && !result.stateImported) {
@@ -498,6 +499,13 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
       logger.error('Failed to import existing OpenCode host data:', error)
       if (error instanceof z.ZodError) {
         return c.json({ error: 'Invalid OpenCode import request', details: error.issues }, 400)
+      }
+      if (error instanceof OpenCodeImportProtectionError) {
+        return c.json({
+          error: error.message,
+          code: error.code,
+          detail: error.detail,
+        }, 409)
       }
       return c.json({
         error: 'Failed to import existing OpenCode host data',

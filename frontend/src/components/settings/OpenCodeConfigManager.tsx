@@ -23,6 +23,7 @@ import { useServerHealth } from '@/hooks/useServerHealth'
 import { parseJsonc, hasJsoncComments } from '@/lib/jsonc'
 import { showToast } from '@/lib/toast'
 import { invalidateConfigCaches } from '@/lib/queryInvalidation'
+import { FetchError } from '@/api/fetchWrapper'
 import type { OpenCodeConfig, OpenCodeImportStatus } from '@/api/types/settings'
 
 interface Command {
@@ -162,7 +163,7 @@ export function OpenCodeConfigManager() {
   })
 
   const syncOpenCodeImportMutation = useMutation({
-    mutationFn: async () => settingsApi.syncOpenCodeImport(true),
+    mutationFn: async () => settingsApi.syncOpenCodeImport(),
     onSuccess: async () => {
       await fetchConfigs()
       invalidateConfigCaches(queryClient)
@@ -171,6 +172,10 @@ export function OpenCodeConfigManager() {
   })
 
   const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof FetchError) {
+      return error.detail || error.message || fallback
+    }
+
     if (error && typeof error === 'object' && 'response' in error) {
       const response = (error as { response?: { data?: { details?: string; error?: string } } }).response
       return response?.data?.details || response?.data?.error || fallback
@@ -180,6 +185,14 @@ export function OpenCodeConfigManager() {
 
   const getRestartErrorMessage = (error: unknown): string => {
     return getApiErrorMessage(error, 'Failed to restart OpenCode server')
+  }
+
+  const getOpenCodeImportErrorMessage = (error: unknown): string => {
+    if (error instanceof FetchError && error.code === 'OPENCODE_IMPORT_PROTECTED') {
+      return error.detail || error.message
+    }
+
+    return getApiErrorMessage(error, 'Failed to import existing OpenCode host data')
   }
 
   const fetchConfigs = async () => {
@@ -455,12 +468,12 @@ export function OpenCodeConfigManager() {
        <Card>
          <CardHeader className="pb-3">
            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-             <div>
-               <CardTitle className="text-sm sm:text-base">Existing OpenCode Host Import</CardTitle>
-               <p className="text-sm text-muted-foreground mt-1">
-                 Re-import your standalone OpenCode config and session state into this workspace, then restart the server so existing chats can reconnect.
-               </p>
-             </div>
+              <div>
+                <CardTitle className="text-sm sm:text-base">Existing OpenCode Host Import</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Import your standalone OpenCode config and session state into this workspace, then restart the server so existing chats can reconnect.
+                </p>
+              </div>
              <Button
                variant="outline"
                size="sm"
@@ -477,7 +490,7 @@ export function OpenCodeConfigManager() {
                       : ''
                     showToast.success(`Imported existing OpenCode ${importedParts || 'data'} and restarted the server.${relinkSummary}`, { id: 'opencode-import' })
                   } catch (error) {
-                    showToast.error(getApiErrorMessage(error, 'Failed to import existing OpenCode host data'), { id: 'opencode-import' })
+                    showToast.error(getOpenCodeImportErrorMessage(error), { id: 'opencode-import' })
                   }
                 }}
               >
@@ -512,10 +525,21 @@ export function OpenCodeConfigManager() {
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 {importStatus?.workspaceStateExists
-                  ? 'A workspace session database already exists. Import will replace it with the detected host state.'
+                  ? 'A workspace session database already exists. Import is blocked to protect it from being replaced by detected host state.'
                   : 'No workspace session database exists yet. Import will seed it from the detected host state.'}
               </p>
             </div>
+            {syncOpenCodeImportMutation.error && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+                <p className="font-medium text-destructive">Import blocked</p>
+                <p className="mt-1 text-sm text-destructive/90">
+                  {getOpenCodeImportErrorMessage(syncOpenCodeImportMutation.error)}
+                </p>
+                <p className="mt-2 text-xs text-destructive/80">
+                  This workspace already has OpenCode session state, so host state import was stopped to prevent accidental replacement of existing chats and history. If you want to use host state instead, clear the workspace state first and then run the import again.
+                </p>
+              </div>
+            )}
             {syncOpenCodeImportMutation.data?.relinkedRepos && (
               <div className="rounded-lg border border-border p-3">
                 <p className="font-medium">Last Relink Result</p>

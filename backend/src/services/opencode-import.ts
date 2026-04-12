@@ -1,6 +1,6 @@
 import os from 'os'
 import path from 'path'
-import { cp, readdir, rm } from 'fs/promises'
+import { cp, mkdtemp, readdir, rename, rm } from 'fs/promises'
 import { Database as SQLiteDatabase, type Database } from 'bun:sqlite'
 import { OpenCodeConfigSchema } from '@opencode-manager/shared/schemas'
 import { getOpenCodeConfigFilePath, getWorkspacePath } from '@opencode-manager/shared/config/env'
@@ -22,11 +22,23 @@ export interface SyncOpenCodeImportOptions {
   db: Database
   userId?: string
   overwriteState?: boolean
+  protectExistingState?: boolean
 }
 
 export interface SyncOpenCodeImportResult extends OpenCodeImportStatus {
   configImported: boolean
   stateImported: boolean
+}
+
+export class OpenCodeImportProtectionError extends Error {
+  code = 'OPENCODE_IMPORT_PROTECTED'
+  detail: string
+
+  constructor(detail: string) {
+    super('OpenCode host import was blocked to protect existing workspace state')
+    this.name = 'OpenCodeImportProtectionError'
+    this.detail = detail
+  }
 }
 
 export interface ImportedSessionDirectorySummary {
@@ -95,6 +107,8 @@ export async function importOpenCodeStateDirectory(sourcePath: string, targetPat
   const resolvedSourcePath = path.resolve(sourcePath)
   const resolvedTargetPath = path.resolve(targetPath)
   const sourceDbPath = path.join(resolvedSourcePath, 'opencode.db')
+  const targetParentPath = path.dirname(resolvedTargetPath)
+  const targetDirectoryName = path.basename(resolvedTargetPath)
 
   if (resolvedSourcePath === resolvedTargetPath) {
     return false
@@ -104,22 +118,21 @@ export async function importOpenCodeStateDirectory(sourcePath: string, targetPat
     return false
   }
 
-  await ensureDirectoryExists(resolvedTargetPath)
+  await ensureDirectoryExists(targetParentPath)
 
-  const existingEntries = await readdir(resolvedTargetPath, { withFileTypes: true })
-  for (const entry of existingEntries) {
-    if (!OPENCODE_STATE_DB_FILENAMES.has(entry.name)) {
-      await rm(path.join(resolvedTargetPath, entry.name), { recursive: true, force: true })
-    }
+  const stagedTargetPath = await mkdtemp(path.join(targetParentPath, `${targetDirectoryName}-import-`))
+
+  try {
+    await copyOpenCodeStateFiles(resolvedSourcePath, stagedTargetPath)
+    snapshotOpenCodeDatabase(sourceDbPath, path.join(stagedTargetPath, 'opencode.db'))
+
+    await rm(resolvedTargetPath, { recursive: true, force: true })
+    await rename(stagedTargetPath, resolvedTargetPath)
+    return true
+  } catch (error) {
+    await rm(stagedTargetPath, { recursive: true, force: true })
+    throw error
   }
-
-  await rm(path.join(resolvedTargetPath, 'opencode.db'), { force: true })
-  await rm(path.join(resolvedTargetPath, 'opencode.db-shm'), { force: true })
-  await rm(path.join(resolvedTargetPath, 'opencode.db-wal'), { force: true })
-
-  await copyOpenCodeStateFiles(resolvedSourcePath, resolvedTargetPath)
-  snapshotOpenCodeDatabase(sourceDbPath, path.join(resolvedTargetPath, 'opencode.db'))
-  return true
 }
 
 export async function getOpenCodeImportStatus(): Promise<OpenCodeImportStatus> {
@@ -175,14 +188,21 @@ async function importOpenCodeConfigFromSource(db: Database, userId: string, sour
 export async function syncOpenCodeImport(options: SyncOpenCodeImportOptions): Promise<SyncOpenCodeImportResult> {
   const initialStatus = await getOpenCodeImportStatus()
   const userId = options.userId || 'default'
+  const overwriteState = options.overwriteState === true
   let configImported = false
   let stateImported = false
+
+  if (options.protectExistingState && initialStatus.stateSourcePath && initialStatus.workspaceStateExists && !overwriteState) {
+    throw new OpenCodeImportProtectionError(
+      `Import was blocked because workspace state already exists at ${initialStatus.workspaceStatePath}. Clear the workspace state first if you want to replace it with host state.`
+    )
+  }
 
   if (initialStatus.configSourcePath) {
     configImported = await importOpenCodeConfigFromSource(options.db, userId, initialStatus.configSourcePath, initialStatus.workspaceConfigPath)
   }
 
-  if (initialStatus.stateSourcePath && ((options.overwriteState ?? true) || !initialStatus.workspaceStateExists)) {
+  if (initialStatus.stateSourcePath && (overwriteState || !initialStatus.workspaceStateExists)) {
     stateImported = await importOpenCodeStateDirectory(initialStatus.stateSourcePath, initialStatus.workspaceStatePath)
   }
 

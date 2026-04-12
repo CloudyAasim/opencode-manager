@@ -66,6 +66,15 @@ vi.mock('../../src/services/opencode-single-server', () => ({
 }))
 
 vi.mock('../../src/services/opencode-import', () => ({
+  OpenCodeImportProtectionError: class OpenCodeImportProtectionError extends Error {
+    code = 'OPENCODE_IMPORT_PROTECTED'
+    detail: string
+
+    constructor(detail: string) {
+      super('OpenCode host import was blocked to protect existing workspace state')
+      this.detail = detail
+    }
+  },
   getOpenCodeImportStatus: vi.fn(),
   syncOpenCodeImport: vi.fn(),
   getImportedSessionDirectories: vi.fn(),
@@ -100,7 +109,7 @@ vi.mock('@opencode-manager/shared/config/env', () => ({
 }))
 
 import { createSettingsRoutes } from '../../src/routes/settings'
-import { getImportedSessionDirectories, getOpenCodeImportStatus, syncOpenCodeImport } from '../../src/services/opencode-import'
+import { getImportedSessionDirectories, getOpenCodeImportStatus, OpenCodeImportProtectionError, syncOpenCodeImport } from '../../src/services/opencode-import'
 import { relinkReposFromSessionDirectories } from '../../src/services/repo'
 import { opencodeServerManager } from '../../src/services/opencode-single-server'
 
@@ -205,6 +214,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         db: testDb,
         userId: 'default',
         overwriteState: true,
+        protectExistingState: true,
       })
       expect(mockGetImportedSessionDirectories).toHaveBeenCalledWith('/tmp/test-workspace/.opencode/state/opencode')
       expect(mockRelinkReposFromSessionDirectories).toHaveBeenCalled()
@@ -233,6 +243,26 @@ describe('Settings Routes - OpenCode Upgrade', () => {
 
       expect(res.status).toBe(404)
       expect(json.error).toBe('No importable OpenCode host data found')
+      expect(mockRestart).not.toHaveBeenCalled()
+    })
+
+    it('should return 409 when import is blocked to protect workspace state', async () => {
+      mockSyncOpenCodeImport.mockRejectedValueOnce(
+        new OpenCodeImportProtectionError('Workspace state already exists and must be cleared before import')
+      )
+
+      const req = new Request('http://localhost/opencode-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const res = await settingsApp.fetch(req)
+      const json = await res.json() as Record<string, unknown>
+
+      expect(res.status).toBe(409)
+      expect(json.error).toBe('OpenCode host import was blocked to protect existing workspace state')
+      expect(json.code).toBe('OPENCODE_IMPORT_PROTECTED')
+      expect(json.detail).toBe('Workspace state already exists and must be cleared before import')
       expect(mockRestart).not.toHaveBeenCalled()
     })
 
