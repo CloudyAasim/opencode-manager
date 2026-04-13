@@ -1,27 +1,18 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Plus, Trash2, Edit, Box } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { OpenCodeModelDialog, type NewProviderConfig } from './OpenCodeModelDialog'
+import type { ModelConfig, ProviderConfig } from '@/api/types/settings'
 
-export interface ConfigModel {
-  name?: string
-  limit?: {
-    context?: number
-    output?: number
-  }
-  [key: string]: unknown
-}
-
-export interface ConfigProvider {
-  name?: string
-  npm?: string
+export type ConfigModel = Partial<ModelConfig> & Record<string, unknown>
+export type ConfigProvider = Omit<Partial<ProviderConfig>, 'models' | 'env'> & {
   api?: string
-  options?: Record<string, unknown>
+  npm?: string
+  env?: string[]
   models?: Record<string, ConfigModel>
-  [key: string]: unknown
-}
+} & Record<string, unknown>
 
 interface ProviderModels {
   providerId: string
@@ -44,6 +35,7 @@ export function OpenCodeModelsEditor({ providers, onChange }: OpenCodeModelsEdit
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingModel, setEditingModel] = useState<EditingModel | null>(null)
   const [selectedProviderId, setSelectedProviderId] = useState<string>('')
+  const availableProviderIds = useMemo(() => Object.keys(providers), [providers])
 
   const providerEntries: ProviderModels[] = Object.entries(providers).map(
     ([providerId, provider]) => ({
@@ -107,13 +99,15 @@ export function OpenCodeModelsEditor({ providers, onChange }: OpenCodeModelsEdit
     }
 
     const targetProvider = updatedProviders[providerId] || {}
+    const oldModel = targetProvider.models?.[modelId] || {}
     updatedProviders[providerId] = {
       ...targetProvider,
       models: {
         ...(targetProvider.models || {}),
         [modelId]: {
-          ...(targetProvider.models?.[modelId] || {}),
+          ...(oldModel),
           ...model,
+          ...(model.limit === undefined ? { limit: undefined } : {}),
         },
       },
     }
@@ -160,7 +154,7 @@ export function OpenCodeModelsEditor({ providers, onChange }: OpenCodeModelsEdit
             open={isCreateDialogOpen}
             onOpenChange={setIsCreateDialogOpen}
             onSubmit={handleModelSubmit}
-            availableProviders={Object.keys(providers)}
+            availableProviders={availableProviderIds}
             existingProviders={providers}
             selectedProviderId={selectedProviderId}
           />
@@ -248,10 +242,10 @@ export function OpenCodeModelsEditor({ providers, onChange }: OpenCodeModelsEdit
             handleModelSubmit(providerId, modelId, model, undefined, editingModel.providerId, editingModel.modelId)
           }
         }}
-        availableProviders={Object.keys(providers)}
+        availableProviders={availableProviderIds}
         existingProviders={providers}
         selectedProviderId={editingModel?.providerId || ''}
-        editingModel={editingModel ? { providerId: editingModel.providerId, modelId: editingModel.modelId, model: editingModel.model } : undefined}
+        editingModel={editingModel || undefined}
       />
     </div>
   )

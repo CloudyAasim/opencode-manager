@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type { Database } from 'bun:sqlite'
 import { DiscoverReposRequestSchema } from '@opencode-manager/shared/schemas'
-import * as db from '../db/queries'
+import { listRepos, getRepoById, updateLastAccessed, updateRepoConfigName } from '../db/queries'
 import * as repoService from '../services/repo'
 import * as archiveService from '../services/archive'
 import { SettingsService } from '../services/settings'
@@ -61,7 +61,7 @@ export function createRepoRoutes(database: Database, gitAuthService: GitAuthServ
         if (configContent) {
           const openCodeConfigPath = getOpenCodeConfigFilePath()
           await writeFileContent(openCodeConfigPath, configContent)
-          db.updateRepoConfigName(database, repo.id, openCodeConfigName)
+          updateRepoConfigName(database, repo.id, openCodeConfigName)
           logger.info(`Applied config '${openCodeConfigName}' to: ${openCodeConfigPath}`)
         }
       }
@@ -100,7 +100,7 @@ app.get('/', async (c) => {
     try {
       const settingsService = new SettingsService(database)
       const settings = settingsService.getSettings()
-      const repos = db.listRepos(database, settings.preferences.repoOrder)
+      const repos = listRepos(database, settings.preferences.repoOrder)
 
       const reposWithCurrentBranch = await Promise.all(
         repos.map(async (repo) => {
@@ -139,7 +139,7 @@ app.get('/', async (c) => {
   app.get('/:id', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
-      const repo = db.getRepoById(database, id)
+      const repo = getRepoById(database, id)
       
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
@@ -153,11 +153,29 @@ app.get('/', async (c) => {
       return c.json({ error: getErrorMessage(error) }, 500)
     }
   })
+
+  app.post('/:id/access', async (c) => {
+    try {
+      const id = parseInt(c.req.param('id'))
+      const repo = getRepoById(database, id)
+      
+      if (!repo) {
+        return c.json({ error: 'Repo not found' }, 404)
+      }
+      
+      updateLastAccessed(database, id)
+      
+      return c.json({ success: true })
+    } catch (error: unknown) {
+      logger.error('Failed to update repo access:', error)
+      return c.json({ error: getErrorMessage(error) }, 500)
+    }
+  })
   
   app.delete('/:id', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
-      const repo = db.getRepoById(database, id)
+      const repo = getRepoById(database, id)
       
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
@@ -177,7 +195,7 @@ app.get('/', async (c) => {
       const id = parseInt(c.req.param('id'))
       await repoService.pullRepo(database, gitAuthService, id)
       
-      const repo = db.getRepoById(database, id)
+      const repo = getRepoById(database, id)
       return c.json(repo)
     } catch (error: unknown) {
       logger.error('Failed to pull repo:', error)
@@ -188,7 +206,7 @@ app.get('/', async (c) => {
   app.post('/:id/config/switch', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
-      const repo = db.getRepoById(database, id)
+      const repo = getRepoById(database, id)
       
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
@@ -212,7 +230,7 @@ app.get('/', async (c) => {
       
       await writeFileContent(openCodeConfigPath, configContent)
       
-      db.updateRepoConfigName(database, id, configName)
+      updateRepoConfigName(database, id, configName)
       
       logger.info(`Switched config for repo ${id} to '${configName}'`)
       logger.info(`Updated OpenCode config: ${openCodeConfigPath}`)
@@ -221,7 +239,7 @@ app.get('/', async (c) => {
       await opencodeServerManager.stop()
       await opencodeServerManager.start()
       
-      const updatedRepo = db.getRepoById(database, id)
+      const updatedRepo = getRepoById(database, id)
       return c.json(updatedRepo)
     } catch (error: unknown) {
       logger.error('Failed to switch repo config:', error)
@@ -232,7 +250,7 @@ app.get('/', async (c) => {
   app.post('/:id/branch/switch', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
-      const repo = db.getRepoById(database, id)
+      const repo = getRepoById(database, id)
       
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
@@ -247,7 +265,7 @@ app.get('/', async (c) => {
       
       await repoService.switchBranch(database, gitAuthService, id, branch)
       
-      const updatedRepo = db.getRepoById(database, id)
+      const updatedRepo = getRepoById(database, id)
       const currentBranch = await repoService.getCurrentBranch(updatedRepo!, gitAuthService.getGitEnvironment())
       
       return c.json({ ...updatedRepo, currentBranch })
@@ -260,7 +278,7 @@ app.get('/', async (c) => {
   app.post('/:id/branch/create', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
-      const repo = db.getRepoById(database, id)
+      const repo = getRepoById(database, id)
       
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
@@ -275,7 +293,7 @@ app.get('/', async (c) => {
       
       await repoService.createBranch(database, gitAuthService, id, branch)
       
-      const updatedRepo = db.getRepoById(database, id)
+      const updatedRepo = getRepoById(database, id)
       const currentBranch = await repoService.getCurrentBranch(updatedRepo!, gitAuthService.getGitEnvironment())
       
       return c.json({ ...updatedRepo, currentBranch })
@@ -288,7 +306,7 @@ app.get('/', async (c) => {
   app.get('/:id/download', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
-      const repo = db.getRepoById(database, id)
+      const repo = getRepoById(database, id)
 
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
@@ -335,7 +353,7 @@ app.get('/', async (c) => {
   app.post('/:id/reset-permissions', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
-      const repo = db.getRepoById(database, id)
+      const repo = getRepoById(database, id)
       
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)

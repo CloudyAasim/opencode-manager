@@ -4,6 +4,7 @@ import { useCommands } from '@/hooks/useCommands'
 import { useCommandHandler } from '@/hooks/useCommandHandler'
 import { useFileSearch } from '@/hooks/useFileSearch'
 import { useModelSelection } from '@/hooks/useModelSelection'
+import { useOpenCodeClient } from '@/hooks/useOpenCode'
 import { useVariants } from '@/hooks/useVariants'
 import { useSessionAgent } from '@/hooks/useSessionAgent'
 import { useSTT } from '@/hooks/useSTT'
@@ -23,6 +24,8 @@ import { SessionStatusIndicator } from '@/components/ui/session-status-indicator
 import { ModelQuickSelect } from '@/components/model/ModelQuickSelect'
 import { AgentQuickSelect } from '@/components/agent/AgentQuickSelect'
 import { detectMentionTrigger, parsePromptToParts, getFilename, filterAgentsByQuery } from '@/lib/promptParser'
+import { formatModelName, getProviders } from '@/api/providers'
+import { useQuery } from '@tanstack/react-query'
 
 
 import type { components } from '@/api/opencode-types'
@@ -205,6 +208,9 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
         variant: currentVariant
       })
       setStoredAgent(sessionID, agentUsed)
+      if (model) {
+        setStoredModel({ providerID: model.providerID, modelID: model.modelID })
+      }
       setPrompt('')
       setAttachedFiles(new Map())
       revokeBlobUrls(imageAttachments)
@@ -256,6 +262,9 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
     })
 
     setStoredAgent(sessionID, agentUsed)
+    if (model) {
+      setStoredModel({ providerID: model.providerID, modelID: model.modelID })
+    }
     setPrompt('')
     setAttachedFiles(new Map())
     revokeBlobUrls(imageAttachments)
@@ -733,9 +742,26 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
   const currentMode = localMode ?? sessionAgent.agent
   const setStoredAgent = useSessionAgentStore((s) => s.setAgent)
 
-const { model, modelString } = useModelSelection(opcodeUrl, directory)
+  const client = useOpenCodeClient(opcodeUrl, directory)
+  const { data: providersData } = useQuery({
+    queryKey: ['opencode', 'providers', opcodeUrl, directory],
+    queryFn: () => getProviders(),
+    enabled: !!client,
+    staleTime: 30000,
+  })
+
+const { model, modelString, setModel: setStoredModel } = useModelSelection(opcodeUrl, directory)
   const currentModel = modelString || ''
-  const displayModelName = model?.modelID || currentModel
+  const displayModelName = useMemo(() => {
+    if (!model) {
+      return currentModel
+    }
+
+    const provider = providersData?.providers.find((item) => item.id === model.providerID)
+    const modelData = provider?.models?.[model.modelID]
+
+    return modelData ? formatModelName(modelData) : model.modelID || currentModel
+  }, [currentModel, model, providersData])
   const isMobile = useMobile()
   const { setShowDialog, hasForSession: hasPermissionsForSession } = usePermissions()
   const hasPendingPermissionForSession = hasPermissionsForSession(sessionID)

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getRepo } from '@/api/repos'
 import { useProjectSummary, useKvEntries } from '@/hooks/useMemories'
 import { useLoopStatus } from '@/hooks/useLoopStatus'
+import { useRepoActivity } from '@/hooks/useRepoActivity'
 import { Header } from '@/components/ui/header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +28,8 @@ export function Memories() {
     queryFn: () => getRepo(repoId!),
     enabled: repoId !== undefined,
   })
+
+  useRepoActivity(repoId ?? 0, Boolean(repo))
 
   const { data: projectSummary, isLoading: projectSummaryLoading } = useProjectSummary(repoId)
   const { data: kvEntries } = useKvEntries(projectSummary?.projectId ?? undefined)

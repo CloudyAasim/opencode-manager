@@ -294,5 +294,46 @@ describe('OpenCodeModelDialog', () => {
 
       expect(screen.getByRole('button', { name: /update/i })).toBeInTheDocument()
     })
+
+    it('should preserve the original backing model id when renaming a model key', async () => {
+      const editingModel = {
+        providerId: 'openai',
+        modelId: 'gpt-4o',
+        model: {
+          name: 'GPT-4o',
+          limit: { context: 128000, output: 4096 },
+          reasoning: true,
+        } as ConfigModel,
+      }
+
+      const onSubmit = vi.fn()
+      const { OpenCodeModelDialog } = await import('./OpenCodeModelDialog')
+      render(
+        <OpenCodeModelDialog
+          {...defaultProps}
+          onSubmit={onSubmit}
+          editingModel={editingModel}
+          open={true}
+        />
+      )
+
+      fireEvent.change(document.querySelector('input[name="modelId"]') as HTMLInputElement, {
+        target: { value: 'my-friendly-model' },
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /update/i }))
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          'openai',
+          'my-friendly-model',
+          expect.objectContaining({
+            id: 'gpt-4o',
+            name: 'GPT-4o',
+            reasoning: true,
+          })
+        )
+      })
+    })
   })
 })

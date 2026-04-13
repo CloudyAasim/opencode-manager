@@ -173,12 +173,41 @@ export function OpenCodeConfigManager() {
 
   const getApiErrorMessage = (error: unknown, fallback: string): string => {
     if (error instanceof FetchError) {
-      return error.detail || error.message || fallback
+      let message = error.detail || error.message || fallback
+
+      if (error.validationIssues && error.validationIssues.length > 0) {
+        const issues = error.validationIssues
+          .map((issue) => `${issue.path}: ${issue.message}`)
+          .join('; ')
+        message = `Validation failed: ${issues}`
+      }
+
+      if (error.removedFields && error.removedFields.length > 0) {
+        message += ` (removed invalid fields: ${error.removedFields.join(', ')})`
+      }
+
+      return message
     }
 
     if (error && typeof error === 'object' && 'response' in error) {
-      const response = (error as { response?: { data?: { details?: string; error?: string } } }).response
-      return response?.data?.details || response?.data?.error || fallback
+      const response = (error as { response?: { data?: { details?: string; error?: string; validationIssues?: Array<{ path: string; message: string }>; removedFields?: string[] } } }).response
+      const data = response?.data
+      
+      let message = data?.details || data?.error || fallback
+      
+      if (data?.validationIssues && data.validationIssues.length > 0) {
+        const issues = data.validationIssues
+          .map((issue) => `${issue.path}: ${issue.message}`)
+          .join('; ')
+        message = `Validation failed: ${issues}`
+      }
+      
+      if (data?.removedFields && data.removedFields.length > 0) {
+        const removed = data.removedFields.join(', ')
+        message += ` (removed invalid fields: ${removed})`
+      }
+      
+      return message
     }
     return fallback
   }
@@ -212,7 +241,7 @@ export function OpenCodeConfigManager() {
       setIsUpdating(true)
       const previousContent = configs.find(c => c.name === configName)?.content
 
-      await settingsApi.updateOpenCodeConfig(configName, { content: newContent })
+      const result = await settingsApi.updateOpenCodeConfig(configName, { content: newContent })
 
       setConfigs(prev => prev.map(config =>
         config.name === configName
@@ -227,17 +256,26 @@ export function OpenCodeConfigManager() {
       const agentsChanged = JSON.stringify(previousContent?.agent) !== JSON.stringify(newContent.agent)
       const pluginsChanged = JSON.stringify(previousContent?.plugin) !== JSON.stringify(newContent.plugin)
       const skillsChanged = JSON.stringify(previousContent?.skills) !== JSON.stringify(newContent.skills)
-      if (restartServer || agentsChanged || pluginsChanged || skillsChanged) {
+      const providersChanged = JSON.stringify(previousContent?.provider) !== JSON.stringify(newContent.provider)
+      if (restartServer || agentsChanged || pluginsChanged || skillsChanged || providersChanged) {
         showToast.loading('Reloading server...', { id: 'update-restart' })
         try {
           await reloadConfigMutation.mutateAsync()
-          showToast.success('Configuration updated and server reloaded', { id: 'update-restart' })
+          if (result.removedFields && result.removedFields.length > 0) {
+            showToast.info(`Configuration updated after removing invalid fields: ${result.removedFields.join(', ')}`, { id: 'update-restart' })
+          } else {
+            showToast.success('Configuration updated and server reloaded', { id: 'update-restart' })
+          }
         } catch (error) {
           showToast.error(getRestartErrorMessage(error), { id: 'update-restart' })
           throw error
         }
       } else {
-        showToast.success('Configuration updated')
+        if (result.removedFields && result.removedFields.length > 0) {
+          showToast.info(`Configuration applied after removing invalid fields: ${result.removedFields.join(', ')}`, { id: 'update-restart' })
+        } else {
+          showToast.success('Configuration updated')
+        }
         invalidateConfigCaches(queryClient)
       }
     } catch (error) {
@@ -271,7 +309,7 @@ export function OpenCodeConfigManager() {
         throw new Error(`Invalid fields found: ${foundForbidden.join(', ')}. These fields are managed automatically.`)
       }
 
-      await settingsApi.createOpenCodeConfig({
+      const result = await settingsApi.createOpenCodeConfig({
         name: name.trim(),
         content: rawContent,
         isDefault,
@@ -281,13 +319,10 @@ export function OpenCodeConfigManager() {
       await fetchConfigs()
 
       if (isDefault) {
-        showToast.loading('Reloading server...', { id: 'create-config' })
-        try {
-          await reloadConfigMutation.mutateAsync()
-          showToast.success('Configuration created and server reloaded', { id: 'create-config' })
-        } catch (error) {
-          showToast.error(getRestartErrorMessage(error), { id: 'create-config' })
-          throw error
+        if (result.removedFields && result.removedFields.length > 0) {
+          showToast.info(`Configuration created after removing invalid fields: ${result.removedFields.join(', ')}`, { id: 'create-config' })
+        } else {
+          showToast.success('Configuration created and applied', { id: 'create-config' })
         }
       } else {
         showToast.success('Configuration created', { id: 'create-config' })
@@ -323,13 +358,16 @@ export function OpenCodeConfigManager() {
   }
 
   const setDefaultConfig = async (config: OpenCodeConfig) => {
-    showToast.loading('Setting default config and reloading server...', { id: 'set-default' })
+    showToast.loading('Setting default config...', { id: 'set-default' })
     try {
       setIsUpdating(true)
-      await settingsApi.setDefaultOpenCodeConfig(config.name)
+      const result = await settingsApi.setDefaultOpenCodeConfig(config.name)
       await fetchConfigs()
-      await reloadConfigMutation.mutateAsync()
-      showToast.success('Default config updated and server reloaded', { id: 'set-default' })
+      if (result.removedFields && result.removedFields.length > 0) {
+        showToast.info(`Default config updated after removing invalid fields: ${result.removedFields.join(', ')}`, { id: 'set-default' })
+      } else {
+        showToast.success('Default config updated and applied', { id: 'set-default' })
+      }
     } catch (error) {
       console.error('Failed to set default config:', error)
       showToast.error(getApiErrorMessage(error, 'Failed to set default config'), { id: 'set-default' })

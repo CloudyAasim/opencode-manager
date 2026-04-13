@@ -14,6 +14,7 @@ interface RepoRow {
   clone_status: string
   cloned_at: number
   last_pulled?: number
+  last_accessed_at?: number
   opencode_config_name?: string
   is_worktree?: number
   is_local?: number
@@ -33,10 +34,18 @@ function rowToRepo(row: RepoRow): Repo {
     cloneStatus: row.clone_status as Repo['cloneStatus'],
     clonedAt: row.cloned_at,
     lastPulled: row.last_pulled,
+    lastAccessedAt: row.last_accessed_at,
     openCodeConfigName: row.opencode_config_name,
     isWorktree: row.is_worktree ? Boolean(row.is_worktree) : undefined,
     isLocal: row.is_local ? Boolean(row.is_local) : undefined,
   }
+}
+
+export function getRepoById(db: Database, id: number): Repo | null {
+  const stmt = db.prepare('SELECT * FROM repos WHERE id = ?')
+  const row = stmt.get(id) as RepoRow | undefined
+  
+  return row ? rowToRepo(row) : null
 }
 
 export function createRepo(db: Database, repo: CreateRepoInput): Repo {
@@ -53,8 +62,8 @@ export function createRepo(db: Database, repo: CreateRepoInput): Repo {
   }
   
   const stmt = db.prepare(`
-    INSERT INTO repos (repo_url, local_path, source_path, branch, default_branch, clone_status, cloned_at, is_worktree, is_local)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO repos (repo_url, local_path, source_path, branch, default_branch, clone_status, cloned_at, last_accessed_at, is_worktree, is_local)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   
   try {
@@ -65,6 +74,7 @@ export function createRepo(db: Database, repo: CreateRepoInput): Repo {
       repo.branch || null,
       repo.defaultBranch,
       repo.cloneStatus,
+      repo.clonedAt,
       repo.clonedAt,
       repo.isWorktree ? 1 : 0,
       repo.isLocal ? 1 : 0
@@ -94,13 +104,6 @@ export function createRepo(db: Database, repo: CreateRepoInput): Repo {
     
     throw new Error(`Failed to create repository: ${errorMessage}`)
   }
-}
-
-export function getRepoById(db: Database, id: number): Repo | null {
-  const stmt = db.prepare('SELECT * FROM repos WHERE id = ?')
-  const row = stmt.get(id) as RepoRow | undefined
-  
-  return row ? rowToRepo(row) : null
 }
 
 export function getRepoByUrlAndBranch(db: Database, repoUrl: string, branch?: string): Repo | null {
@@ -189,6 +192,14 @@ export function updateLastPulled(db: Database, id: number): void {
   }
 }
 
+export function updateLastAccessed(db: Database, id: number): void {
+  const stmt = db.prepare('UPDATE repos SET last_accessed_at = ? WHERE id = ?')
+  const result = stmt.run(Date.now(), id)
+  if (result.changes === 0) {
+    throw new Error(`Repository with id ${id} not found`)
+  }
+}
+
 export function updateRepoBranch(db: Database, id: number, branch: string): void {
   const stmt = db.prepare('UPDATE repos SET branch = ? WHERE id = ?')
   const result = stmt.run(branch, id)
@@ -201,3 +212,4 @@ export function deleteRepo(db: Database, id: number): void {
   const stmt = db.prepare('DELETE FROM repos WHERE id = ?')
   stmt.run(id)
 }
+

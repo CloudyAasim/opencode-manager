@@ -62,6 +62,7 @@ export interface OpenCodeProvider {
 
 export interface Model {
   id: string;
+  key?: string;
   name: string;
   release_date?: string;
   attachment?: boolean;
@@ -162,7 +163,8 @@ async function getProvidersFromOpenCodeServer(): Promise<{ providers: Provider[]
 
         Object.entries(openCodeProvider.models).forEach(([modelId, openCodeModel]) => {
           models[modelId] = {
-            id: modelId,
+            id: openCodeModel.api.id || modelId,
+            key: modelId,
             name: openCodeModel.name,
             attachment: openCodeModel.capabilities.attachment,
             reasoning: openCodeModel.capabilities.reasoning,
@@ -235,7 +237,8 @@ async function getConfiguredProviders(connectedIds: Set<string>): Promise<Provid
           if (!modelConfig || typeof modelConfig !== "object") continue;
 
           models.push({
-            id: modelId,
+            id: typeof modelConfig.id === 'string' ? modelConfig.id : modelId,
+            key: modelId,
             name: modelConfig.name || modelId,
             limit: modelConfig.limit ? {
               context: modelConfig.limit.context || 0,
@@ -276,7 +279,8 @@ export async function getProvidersWithModels(): Promise<ProviderWithModels[]> {
     .map((provider) => {
       const models = Object.entries(provider.models || {}).map(([id, model]) => ({
         ...model,
-        id: id,
+        id: model.id || id,
+        key: id,
         name: model.name || id,
       }));
       return {

@@ -100,7 +100,7 @@ const ModelCard = memo(function ModelCard({
           ? "bg-blue-600/20 border-blue-500"
           : "bg-card border-border hover:bg-accent"
       }`}
-      onClick={() => onSelect(provider.id, model.id)}
+      onClick={() => onSelect(provider.id, model.key || model.id)}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
@@ -321,7 +321,7 @@ export function ModelSelectDialog({
       provider.models.map((model) => ({
         model,
         provider,
-        modelKey: `${provider.id}/${model.id}`,
+        modelKey: `${provider.id}/${model.key || model.id}`,
       }))
     );
   }, [connectedProviders]);
@@ -347,7 +347,7 @@ export function ModelSelectDialog({
     if (search) {
       filtered = filtered.filter((item) =>
         item.model.name.toLowerCase().includes(search) ||
-        item.model.id.toLowerCase().includes(search) ||
+          (item.model.key || item.model.id).toLowerCase().includes(search) ||
         item.provider.name.toLowerCase().includes(search)
       );
     }

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ContextUsageIndicator } from "@/components/session/ContextUsageIndicator";
 import { useSession, useAbortSession, useUpdateSession, useMessages, useTitleGenerating, useCreateSession } from "@/hooks/useOpenCode";
+import { useRepoActivity } from "@/hooks/useRepoActivity";
 import { OPENCODE_API_ENDPOINT } from "@/config";
 import { useSSE } from "@/hooks/useSSE";
 import { useUIState } from "@/stores/uiStateStore";
@@ -117,6 +118,8 @@ export function SessionDetail() {
     queryFn: () => getRepo(repoId),
     enabled: !!repoId,
   });
+
+  useRepoActivity(repoId, Boolean(repo));
 
   const opcodeUrl = OPENCODE_API_ENDPOINT;
   

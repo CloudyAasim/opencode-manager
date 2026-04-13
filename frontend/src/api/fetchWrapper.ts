@@ -35,7 +35,12 @@ async function handleResponse(response: Response): Promise<never> {
     data.error || 'Request failed',
     response.status,
     data.code,
-    detail
+    detail,
+    {
+      details: data.details,
+      validationIssues: data.validationIssues,
+      removedFields: data.removedFields,
+    }
   )
 }
 

@@ -13,6 +13,7 @@ export const RepoSchema = z.object({
   cloneStatus: RepoStatusSchema,
   clonedAt: z.number(),
   lastPulled: z.number().optional(),
+  lastAccessedAt: z.number().optional(),
   openCodeConfigName: z.string().optional(),
   isWorktree: z.boolean().optional(),
   isLocal: z.boolean().optional(),

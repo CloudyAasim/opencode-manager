@@ -14,6 +14,7 @@ import {
   useRunRepoSchedule,
   useUpdateRepoSchedule,
 } from '@/hooks/useSchedules'
+import { useRepoActivity } from '@/hooks/useRepoActivity'
 import { ScheduleJobDialog, JobsTab, JobDetailTab, RunHistoryTab, ScheduleTabMenu } from '@/components/schedules'
 import { toUpdateScheduleRequest, getJobStatusTone } from '@/components/schedules/schedule-utils'
 import { Header } from '@/components/ui/header'
@@ -39,6 +40,9 @@ export function Schedules() {
     queryFn: () => getRepo(repoId!),
     enabled: repoId !== undefined,
   })
+
+  useRepoActivity(repoId ?? 0, Boolean(repo))
+
   const { data: jobs, isLoading: jobsLoading } = useRepoSchedules(repoId)
   const { data: selectedJob, isFetching: isJobFetching } = useRepoSchedule(repoId, selectedJobId)
   const { data: runs, isLoading: runsLoading } = useRepoScheduleRuns(repoId, selectedJobId, 30)

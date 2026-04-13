@@ -10,6 +10,7 @@ export interface Repo {
   cloneStatus: 'cloning' | 'ready' | 'error'
   clonedAt: number
   lastPulled?: number
+  lastAccessedAt?: number
   openCodeConfigName?: string
   isWorktree?: boolean
   isLocal?: boolean

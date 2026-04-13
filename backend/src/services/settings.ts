@@ -38,6 +38,10 @@ interface OpenCodeConfigResponseWithRaw {
   defaultConfig: OpenCodeConfigWithRaw | null
 }
 
+interface CreateOpenCodeConfigOptions {
+  suppressAutoDefault?: boolean
+}
+
 
 export class SettingsService {
   private static lastKnownGoodConfigContent: string | null = null
@@ -216,7 +220,8 @@ export class SettingsService {
 
   createOpenCodeConfig(
     request: CreateOpenCodeConfigRequest,
-    userId: string = 'default'
+    userId: string = 'default',
+    options: CreateOpenCodeConfigOptions = {}
   ): OpenCodeConfigWithRaw {
     // Check for existing config with the same name
     const existing = this.getOpenCodeConfigByName(request.name, userId)
@@ -239,7 +244,7 @@ export class SettingsService {
       .query('SELECT COUNT(*) as count FROM opencode_configs WHERE user_id = ?')
       .get(userId) as { count: number }
     
-    const shouldBeDefault = request.isDefault || existingCount.count === 0
+    const shouldBeDefault = request.isDefault || (!options.suppressAutoDefault && existingCount.count === 0)
 
     if (shouldBeDefault) {
       this.db

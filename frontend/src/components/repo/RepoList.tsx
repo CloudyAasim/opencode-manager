@@ -6,14 +6,44 @@ import { CSS } from "@dnd-kit/utilities"
 import { listRepos, deleteRepo, updateRepoOrder } from "@/api/repos"
 import { fetchReposGitStatus } from "@/api/git"
 import { DeleteDialog } from "@/components/ui/delete-dialog"
-import { ListToolbar } from "@/components/ui/list-toolbar"
 import { GitBranch, Search, GripVertical } from "lucide-react"
 import type { Repo } from "@/api/types"
 import type { GitStatusResponse } from "@/types/git"
 import { RepoCard } from "./RepoCard"
 import { RepoCardSkeleton } from "./RepoCardSkeleton"
 import { useMobile } from "@/hooks/useMobile"
-import { getRepoDisplayName } from "@/lib/utils"
+import { useSettings } from "@/hooks/useSettings"
+import {
+  buildRepoViewModels,
+  filterReposBySearch,
+  filterReposByMode,
+  sortRepos,
+  groupReposIntoSections,
+  countAttentionItems,
+  type RepoFilterMode,
+  type RepoSortMode,
+} from "./repo-list-state"
+import { RepoListControls } from "./RepoListControls"
+
+function formatActivityLabel(timestamp: number): string {
+  const now = Date.now()
+  const diff = now - timestamp
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) {
+    return days === 1 ? '1d ago' : `${days}d ago`
+  }
+  if (hours > 0) {
+    return hours === 1 ? '1h ago' : `${hours}h ago`
+  }
+  if (minutes > 0) {
+    return minutes === 1 ? '1m ago' : `${minutes}m ago`
+  }
+  return 'just now'
+}
 
 interface RepoCardWrapperProps {
   repo: Repo
@@ -22,6 +52,9 @@ interface RepoCardWrapperProps {
   isSelected: boolean
   onSelect: (id: number, selected: boolean) => void
   gitStatus?: GitStatusResponse
+  manageMode: boolean
+  isMobile: boolean
+  activityLabel?: string
 }
 
 function SortableRepoCard({
@@ -31,7 +64,11 @@ function SortableRepoCard({
   isSelected,
   onSelect,
   gitStatus,
-}: RepoCardWrapperProps) {
+  manageMode,
+  isMobile,
+  activityLabel,
+  isManualSort,
+}: RepoCardWrapperProps & { isManualSort: boolean }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: repo.id })
 
   const style = {
@@ -43,15 +80,17 @@ function SortableRepoCard({
   return (
     <div ref={setNodeRef} style={style}>
       <div className="relative">
-        <div
-          ref={setActivatorNodeRef}
-          {...listeners}
-          {...attributes}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing touch-none p-1 rounded hover:bg-accent/80"
-        >
-          <GripVertical className="w-4 h-4 text-muted-foreground" />
-        </div>
-        <div className="pl-8">
+        {isManualSort && (
+          <div
+            ref={setActivatorNodeRef}
+            {...listeners}
+            {...attributes}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing touch-none p-1 rounded hover:bg-accent/80"
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </div>
+        )}
+        <div className={isManualSort ? 'pl-8' : ''}>
           <RepoCard
             repo={repo}
             onDelete={onDelete}
@@ -59,6 +98,9 @@ function SortableRepoCard({
             isSelected={isSelected}
             onSelect={onSelect}
             gitStatus={gitStatus}
+            manageMode={manageMode}
+            isMobile={isMobile}
+            activityLabel={activityLabel}
           />
         </div>
       </div>
@@ -73,6 +115,9 @@ function StaticRepoCard({
   isSelected,
   onSelect,
   gitStatus,
+  manageMode,
+  isMobile,
+  activityLabel,
 }: RepoCardWrapperProps) {
   return (
     <RepoCard
@@ -82,6 +127,9 @@ function StaticRepoCard({
       isSelected={isSelected}
       onSelect={onSelect}
       gitStatus={gitStatus}
+      manageMode={manageMode}
+      isMobile={isMobile}
+      activityLabel={activityLabel}
     />
   )
 }
@@ -89,13 +137,23 @@ function StaticRepoCard({
 export function RepoList() {
   const queryClient = useQueryClient()
   const isMobile = useMobile()
+  const { preferences, updateSettings } = useSettings()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [repoToDelete, setRepoToDelete] = useState<number | null>(null)
   const [selectedRepos, setSelectedRepos] = useState<Set<number>>(new Set())
   const [searchQuery, setSearchQuery] = useState("")
-  const [reorderMode, setReorderMode] = useState(false)
-  
-  const isDragEnabled = !isMobile || reorderMode
+  const [filterMode, setFilterMode] = useState<RepoFilterMode>('recent')
+  const [manageMode, setManageMode] = useState(false)
+
+  const sortMode = (preferences?.repoSortMode as RepoSortMode) || 'recent'
+  const repoOrder = preferences?.repoOrder
+
+  const handleSortModeChange = (newSortMode: RepoSortMode) => {
+    updateSettings({ repoSortMode: newSortMode })
+  }
+
+  const isManualSort = sortMode === 'manual'
+  const isDragEnabled = !isMobile || (manageMode && isManualSort)
 
   const {
     data: repos,
@@ -128,6 +186,28 @@ export function RepoList() {
     staleTime: 60 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   })
+
+  const viewModels = useMemo(() => {
+    if (!repos) return []
+    return buildRepoViewModels(repos, gitStatuses)
+  }, [repos, gitStatuses])
+
+  const filteredViewModels = useMemo(() => {
+    const searched = filterReposBySearch(viewModels, searchQuery)
+    return filterReposByMode(searched, filterMode)
+  }, [viewModels, searchQuery, filterMode])
+
+  const sortedViewModels = useMemo(() => {
+    return sortRepos(filteredViewModels, sortMode, repoOrder)
+  }, [filteredViewModels, sortMode, repoOrder])
+
+  const sections = useMemo(() => {
+    return groupReposIntoSections(sortedViewModels, filterMode, sortMode)
+  }, [sortedViewModels, filterMode, sortMode])
+
+  const attentionCount = useMemo(() => {
+    return countAttentionItems(viewModels)
+  }, [viewModels])
 
   const deleteMutation = useMutation({
     mutationFn: deleteRepo,
@@ -252,30 +332,6 @@ export function RepoList() {
     )
   }
 
-  const dedupedRepos = repos.reduce((acc, repo) => {
-    if (repo.isWorktree) {
-      acc.push(repo)
-    } else {
-      const key = repo.repoUrl || repo.sourcePath || repo.localPath
-      const existing = acc.find((r) => (r.repoUrl || r.sourcePath || r.localPath) === key && !r.isWorktree)
-
-      if (!existing) {
-        acc.push(repo)
-      }
-    }
-
-    return acc
-  }, [] as Repo[])
-
-  const filteredRepos = dedupedRepos.filter((repo) => {
-    const repoName = getRepoDisplayName(repo.repoUrl, repo.localPath, repo.sourcePath)
-    const searchTarget = repo.repoUrl || repo.sourcePath || repo.localPath || ""
-    return (
-      repoName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      searchTarget.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })
-
   const handleSelectRepo = (id: number, selected: boolean) => {
     const newSelected = new Set(selectedRepos)
     if (selected) {
@@ -286,60 +342,29 @@ export function RepoList() {
     setSelectedRepos(newSelected)
   }
 
-  const handleSelectAll = () => {
-    const allFilteredSelected = filteredRepos.every((repo) =>
-      selectedRepos.has(repo.id),
-    )
-
-    if (allFilteredSelected) {
-      setSelectedRepos(new Set())
-    } else {
-      const filteredIds = filteredRepos.map((repo) => repo.id)
-      setSelectedRepos(new Set([...selectedRepos, ...filteredIds]))
-    }
-  }
-
-  const handleBatchDelete = () => {
-    if (selectedRepos.size > 0) {
-      setDeleteDialogOpen(true)
-    }
-  }
-
-  const handleDeleteAll = () => {
-    if (filteredRepos.length === 0) return
-    setSelectedRepos(new Set(filteredRepos.map((r) => r.id)))
-    setDeleteDialogOpen(true)
-  }
-
   return (
     <>
       <div className="px-0 md:p-4 h-full flex flex-col">
-        <div className=" px-2 md:px-0">
-          <ListToolbar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            selectedCount={selectedRepos.size}
-            totalCount={filteredRepos.length}
-            allSelected={
-              filteredRepos.length > 0 &&
-              filteredRepos.every((repo) => selectedRepos.has(repo.id))
-            }
-            onToggleSelectAll={handleSelectAll}
-            onDelete={handleBatchDelete}
-            onDeleteAll={handleDeleteAll}
-            reorderMode={reorderMode}
-            onToggleReorderMode={() => setReorderMode((m) => !m)}
-            showReorderToggle={isMobile}
-          />
-        </div>
+        <RepoListControls
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          filterMode={filterMode}
+          onFilterModeChange={setFilterMode}
+          sortMode={sortMode}
+          onSortModeChange={handleSortModeChange}
+          manageMode={manageMode}
+          onManageModeChange={setManageMode}
+          filteredCount={sortedViewModels.length}
+          attentionCount={attentionCount}
+        />
 
         <div className="mx-2 md:mx-0 flex-1 min-h-0">
           <div className="h-full overflow-y-auto pt-4 md:pb-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
-            {filteredRepos.length === 0 ? (
+            {sortedViewModels.length === 0 ? (
               <div className="text-center p-12">
                 <Search className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
                 <p className="text-zinc-500">
-                  No repositories found matching "{searchQuery}"
+                  {sections[0]?.emptyMessage || `No repositories found${searchQuery ? ` matching "${searchQuery}"` : ''}`}
                 </p>
               </div>
             ) : isDragEnabled ? (
@@ -348,9 +373,9 @@ export function RepoList() {
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <SortableContext items={filteredRepos.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={sortedViewModels.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 md:gap-4 w-full md:pb-0">
-                    {filteredRepos.map((repo) => (
+                    {sortedViewModels.map((repo) => (
                       <SortableRepoCard
                         key={repo.id}
                         repo={repo}
@@ -364,6 +389,10 @@ export function RepoList() {
                         isSelected={selectedRepos.has(repo.id)}
                         onSelect={handleSelectRepo}
                         gitStatus={gitStatuses?.get(repo.id)}
+                        manageMode={manageMode}
+                        isMobile={isMobile}
+                        isManualSort={isManualSort}
+                        activityLabel={formatActivityLabel(repo.activityTimestamp)}
                       />
                     ))}
                   </div>
@@ -371,7 +400,7 @@ export function RepoList() {
               </DndContext>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 md:gap-4 w-full md:pb-0">
-                {filteredRepos.map((repo) => (
+                {sortedViewModels.map((repo) => (
                   <StaticRepoCard
                     key={repo.id}
                     repo={repo}
@@ -385,6 +414,9 @@ export function RepoList() {
                     isSelected={selectedRepos.has(repo.id)}
                     onSelect={handleSelectRepo}
                     gitStatus={gitStatuses?.get(repo.id)}
+                    manageMode={manageMode}
+                    isMobile={isMobile}
+                    activityLabel={formatActivityLabel(repo.activityTimestamp)}
                   />
                 ))}
               </div>

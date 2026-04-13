@@ -21,6 +21,7 @@ describe('Database Queries', () => {
 
   describe('createRepo', () => {
     it('should insert new repo record', () => {
+      const clonedAt = Date.now()
       const repo = {
         repoUrl: 'https://github.com/test/repo',
         localPath: 'repos/test-repo',
@@ -28,7 +29,7 @@ describe('Database Queries', () => {
         branch: 'main',
         defaultBranch: 'main',
         cloneStatus: 'ready' as const,
-        clonedAt: Date.now(),
+        clonedAt,
         isWorktree: false,
         isLocal: true,
       }
@@ -55,6 +56,7 @@ describe('Database Queries', () => {
           default_branch: repo.defaultBranch,
           clone_status: repo.cloneStatus,
           cloned_at: repo.clonedAt,
+          last_accessed_at: clonedAt,
           is_worktree: 0
         })
       }
@@ -76,6 +78,7 @@ describe('Database Queries', () => {
         repo.defaultBranch,
         repo.cloneStatus,
         repo.clonedAt,
+        clonedAt,
         repo.isWorktree ? 1 : 0,
         1
       )
@@ -86,6 +89,7 @@ describe('Database Queries', () => {
   describe('getRepoById', () => {
     it('should retrieve repo by ID', () => {
       const clonedAt = Date.now()
+      const lastAccessedAt = Date.now()
       const repoRow = {
         id: 1,
         repo_url: 'https://github.com/test/repo',
@@ -96,6 +100,7 @@ describe('Database Queries', () => {
         clone_status: 'ready',
         cloned_at: clonedAt,
         last_pulled: null,
+        last_accessed_at: lastAccessedAt,
         opencode_config_name: null,
         is_worktree: 0,
         is_local: 0
@@ -119,6 +124,7 @@ describe('Database Queries', () => {
         cloneStatus: 'ready',
         clonedAt: clonedAt,
         lastPulled: null,
+        lastAccessedAt: lastAccessedAt,
         openCodeConfigName: null,
         isWorktree: undefined,
         isLocal: undefined
@@ -223,6 +229,31 @@ describe('Database Queries', () => {
         'UPDATE repos SET last_pulled = ? WHERE id = ?'
       )
       expect(stmt.run).toHaveBeenCalledWith(expect.any(Number), 1)
+    })
+  })
+
+  describe('updateLastAccessed', () => {
+    it('should update repo last accessed timestamp', () => {
+      const stmt = {
+        run: vi.fn().mockReturnValue({ changes: 1 })
+      }
+      mockDb.prepare.mockReturnValue(stmt)
+
+      db.updateLastAccessed(mockDb, 1)
+
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        'UPDATE repos SET last_accessed_at = ? WHERE id = ?'
+      )
+      expect(stmt.run).toHaveBeenCalledWith(expect.any(Number), 1)
+    })
+
+    it('should throw error when repo not found', () => {
+      const stmt = {
+        run: vi.fn().mockReturnValue({ changes: 0 })
+      }
+      mockDb.prepare.mockReturnValue(stmt)
+
+      expect(() => db.updateLastAccessed(mockDb, 999)).toThrow('Repository with id 999 not found')
     })
   })
 

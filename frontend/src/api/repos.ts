@@ -157,3 +157,9 @@ export async function resetRepoPermissions(id: number): Promise<void> {
     method: 'POST',
   })
 }
+
+export async function touchRepoActivity(id: number): Promise<void> {
+  return fetchWrapperVoid(`${API_BASE_URL}/api/repos/${id}/access`, {
+    method: 'POST',
+  })
+}

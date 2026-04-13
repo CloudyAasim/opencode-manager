@@ -46,13 +46,19 @@ vi.mock('child_process', () => ({
   execSync: vi.fn(),
 }))
 
+vi.mock('../../src/services/proxy', () => ({
+  patchOpenCodeConfig: vi.fn(),
+}))
+
 import { promises as fs } from 'fs'
 import { execSync } from 'child_process'
+import { ConfigReloadError } from '../../src/services/opencode-single-server'
 
 vi.mock('../../src/utils/logger', () => ({
   logger: {
     info: vi.fn(),
     error: vi.fn(),
+    warn: vi.fn(),
   },
 }))
 
@@ -208,5 +214,64 @@ describe('OpenCodeServerManager - reinitializeBinDirectory', () => {
         expect.any(Error)
       )
     })
+  })
+})
+
+describe('ConfigReloadError', () => {
+  it('should create error with validation issues and removed fields', () => {
+    const issues = [{ path: 'command.review', message: 'Invalid' }]
+    const removed = ['command.review']
+    const error = new ConfigReloadError('Test error', issues, removed)
+
+    expect(error.name).toBe('ConfigReloadError')
+    expect(error.message).toBe('Test error')
+    expect(error.validationIssues).toEqual(issues)
+    expect(error.removedFields).toEqual(removed)
+  })
+
+  it('should default to empty arrays for issues and removed fields', () => {
+    const error = new ConfigReloadError('Test error')
+
+    expect(error.validationIssues).toEqual([])
+    expect(error.removedFields).toEqual([])
+  })
+})
+
+describe('OpenCodeServerManager - reloadConfig', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should call fetch to get current config before patching', async () => {
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/config')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ command: { review: 'test' } })
+        })
+      }
+      if (url.includes('/doc')) {
+        return Promise.resolve({ ok: true })
+      }
+      return Promise.resolve({ ok: false })
+    })
+    global.fetch = mockFetch as unknown as typeof fetch
+
+    vi.mock('../../src/services/proxy', () => ({
+      patchOpenCodeConfig: vi.fn().mockResolvedValue({ success: true }),
+    }))
+
+    const { opencodeServerManager } = await import('../../src/services/opencode-single-server')
+
+    await opencodeServerManager.reloadConfig()
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/config'),
+      expect.objectContaining({ method: 'GET' })
+    )
   })
 })

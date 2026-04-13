@@ -11,6 +11,7 @@ import { RepoMcpDialog } from "@/components/repo/RepoMcpDialog";
 import { RepoSkillsDialog } from "@/components/repo/RepoSkillsDialog";
 import { SourceControlPanel } from "@/components/source-control";
 import { useCreateSession } from "@/hooks/useOpenCode";
+import { useRepoActivity } from "@/hooks/useRepoActivity";
 import { useSSE } from "@/hooks/useSSE";
 import { OPENCODE_API_ENDPOINT } from "@/config";
 import { useSwipeBack } from "@/hooks/useMobile";
@@ -52,6 +53,8 @@ export function RepoDetail() {
     queryFn: () => getRepo(repoId),
     enabled: !!repoId,
   });
+
+  useRepoActivity(repoId, Boolean(repo));
 
   const { data: memoryPluginStatus } = useQuery({
     queryKey: ["memory-plugin-status"],

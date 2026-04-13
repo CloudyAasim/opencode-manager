@@ -9,6 +9,7 @@ import migration007 from './007-schedules'
 import migration008 from './008-schedule-cron-support'
 import migration009 from './009-repo-source-path'
 import migration010 from './009-prompt-templates'
+import migration011 from './011-repo-last-accessed'
 
 export const allMigrations: Migration[] = [
   migration001,
@@ -21,4 +22,5 @@ export const allMigrations: Migration[] = [
   migration008,
   migration009,
   migration010,
+  migration011,
 ]

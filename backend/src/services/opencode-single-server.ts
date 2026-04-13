@@ -19,6 +19,7 @@ import { SettingsService } from './settings'
 import { getWorkspacePath, getOpenCodeConfigFilePath, ENV } from '@opencode-manager/shared/config/env'
 import type { Database } from 'bun:sqlite'
 import { compareVersions } from '../utils/version-utils'
+import { patchOpenCodeConfig } from './proxy'
 
 const OPENCODE_SERVER_PORT = ENV.OPENCODE.PORT
 const OPENCODE_SERVER_HOST = ENV.OPENCODE.HOST
@@ -28,6 +29,18 @@ const MAX_STDERR_SIZE = 10240
 type StartupValidationIssue = {
   path: string
   message: string
+}
+
+export class ConfigReloadError extends Error {
+  validationIssues: StartupValidationIssue[]
+  removedFields: string[]
+
+  constructor(message: string, validationIssues: StartupValidationIssue[] = [], removedFields: string[] = []) {
+    super(message)
+    this.name = 'ConfigReloadError'
+    this.validationIssues = validationIssues
+    this.removedFields = removedFields
+  }
 }
 
 function parseStartupValidationIssues(stderrOutput: string): StartupValidationIssue[] {
@@ -379,16 +392,22 @@ class OpenCodeServerManager {
         throw new Error(`Failed to get current config: ${response.status}`)
       }
 
-      const currentConfig = await response.json()
+      const currentConfig = await response.json() as Record<string, unknown>
       logger.info('Triggering OpenCode config reload via PATCH')
-      const patchResponse = await fetch(`http://${OPENCODE_SERVER_HOST}:${OPENCODE_SERVER_PORT}/config`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentConfig)
-      })
-
-      if (!patchResponse.ok) {
-        throw new Error(`Failed to reload config: ${patchResponse.status}`)
+      
+      const patchResult = await patchOpenCodeConfig(currentConfig)
+      if (!patchResult.success) {
+        const errorMessage = patchResult.error || 'Failed to reload config'
+        const validationIssues = patchResult.details || []
+        const removedFields = patchResult.removedFields || []
+        if (validationIssues.length > 0) {
+          const issueSummary = validationIssues.map((d) => `${d.path}: ${d.message}`).join('; ')
+          logger.error(`Config reload validation errors: ${issueSummary}`)
+        }
+        if (removedFields.length > 0) {
+          logger.info(`Removed fields during config reload: ${removedFields.join(', ')}`)
+        }
+        throw new ConfigReloadError(errorMessage, validationIssues, removedFields)
       }
 
       logger.info('OpenCode configuration reloaded successfully')

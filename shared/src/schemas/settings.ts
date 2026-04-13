@@ -126,6 +126,7 @@ export const UserPreferencesSchema = z.object({
   notifications: NotificationPreferencesSchema.optional(),
   lastKnownGoodConfig: z.string().optional(),
   repoOrder: z.array(z.number()).optional(),
+  repoSortMode: z.enum(['recent', 'manual', 'name']).optional(),
 });
 
 export const DEFAULT_TTS_CONFIG: TTSConfig = {
@@ -170,6 +171,7 @@ export const DEFAULT_USER_PREFERENCES = {
   tts: DEFAULT_TTS_CONFIG,
   stt: DEFAULT_STT_CONFIG,
   notifications: DEFAULT_NOTIFICATION_PREFERENCES,
+  repoSortMode: 'recent' as const,
 };
 
 export const SettingsResponseSchema = z.object({

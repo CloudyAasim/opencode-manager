@@ -6,6 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '
 import type { OpenCodeConfig } from '@/api/types/settings'
 import { parseJsonc } from '@/lib/jsonc'
 import { FetchError } from '@/api/fetchWrapper'
+import { OpenCodeConfigSchema } from '@opencode-manager/shared'
+
+type ValidationIssue = {
+  path: string
+  message: string
+}
 
 interface OpenCodeConfigEditorProps {
   config: OpenCodeConfig | null
@@ -25,6 +31,8 @@ export function OpenCodeConfigEditor({
   const [editConfigContent, setEditConfigContent] = useState('')
   const [editError, setEditError] = useState('')
   const [editErrorLine, setEditErrorLine] = useState<number | null>(null)
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([])
+  const [removedFields, setRemovedFields] = useState<string[]>([])
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -32,6 +40,8 @@ export function OpenCodeConfigEditor({
       setEditConfigContent(config.rawContent || JSON.stringify(config.content, null, 2))
       setEditError('')
       setEditErrorLine(null)
+      setValidationIssues([])
+      setRemovedFields([])
     }
   }, [config, isOpen])
 
@@ -41,11 +51,34 @@ export function OpenCodeConfigEditor({
     }
   }, [isOpen])
 
+  const resetErrors = () => {
+    setEditError('')
+    setEditErrorLine(null)
+    setValidationIssues([])
+    setRemovedFields([])
+  }
+
+  const getIssueText = (issue: ValidationIssue) => {
+    return `${issue.path}: ${issue.message}`
+  }
+
   const updateConfig = async () => {
     if (!config) return
 
     try {
-      parseJsonc<Record<string, unknown>>(editConfigContent)
+      resetErrors()
+      const parsedConfig = parseJsonc<Record<string, unknown>>(editConfigContent)
+      const validationResult = OpenCodeConfigSchema.safeParse(parsedConfig)
+      if (!validationResult.success) {
+        const issues = validationResult.error.issues.map((issue) => ({
+          path: issue.path.length > 0 ? issue.path.map(String).join('.') : 'root',
+          message: issue.message,
+        }))
+        setValidationIssues(issues)
+        setEditError(`Configuration validation failed: ${issues.map(getIssueText).join('; ')}`)
+        return
+      }
+
       await onUpdate(editConfigContent)
       onClose()
     } catch (error) {
@@ -58,6 +91,8 @@ export function OpenCodeConfigEditor({
         }
         setEditError(`Invalid JSON/JSONC: ${error.message}`)
       } else if (error instanceof FetchError) {
+        setValidationIssues(error.validationIssues || [])
+        setRemovedFields(error.removedFields || [])
         setEditError(error.detail || error.message)
       } else if (error instanceof Error) {
         setEditError(error.message)
@@ -103,19 +138,30 @@ export function OpenCodeConfigEditor({
             value={editConfigContent}
             onChange={(e) => {
               setEditConfigContent(e.target.value)
-              setEditError('')
-              setEditErrorLine(null)
+              resetErrors()
             }}
             className={`flex-1 font-mono text-[16px] sm:text-xs md:text-sm resize-none h-full rounded-none sm:rounded-md ${editErrorLine ? 'error-highlight' : ''}`}
           />
           {editError && (
-            <div className="absolute bottom-0 left-0 right-0 bg-background/95 border-t p-2 sm:p-3">
-              <p className="text-xs sm:text-sm text-red-500">
+            <div className="absolute bottom-0 left-0 right-0 bg-background/95 border-t p-2 sm:p-3 space-y-2">
+              <p className="text-xs sm:text-sm text-red-500 break-words">
                 {editError}
                 {editErrorLine && (
                   <span className="ml-2 text-xs">(Line {editErrorLine})</span>
                 )}
               </p>
+              {validationIssues.length > 0 && (
+                <ul className="max-h-28 overflow-auto space-y-1 text-xs sm:text-sm text-red-500 list-disc pl-4">
+                  {validationIssues.map((issue) => (
+                    <li key={getIssueText(issue)}>{getIssueText(issue)}</li>
+                  ))}
+                </ul>
+              )}
+              {removedFields.length > 0 && (
+                <p className="text-xs sm:text-sm text-amber-600 break-words">
+                  Removed invalid fields: {removedFields.join(', ')}
+                </p>
+              )}
             </div>
           )}
         </div>

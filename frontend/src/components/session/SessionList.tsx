@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { useSessions, useDeleteSession } from "@/hooks/useOpenCode";
+import { useSessions, useDeleteSession, useCreateSession } from "@/hooks/useOpenCode";
 import { ListToolbar } from "@/components/ui/list-toolbar";
 import { DeleteSessionDialog } from "./DeleteSessionDialog";
 import { SessionCard } from "./SessionCard";
+import { Card } from "@/components/ui/card";
 
 interface SessionListProps {
   opcodeUrl: string;
@@ -19,6 +20,9 @@ export const SessionList = ({
 }: SessionListProps) => {
   const { data: sessions, isLoading } = useSessions(opcodeUrl, directory);
   const deleteSession = useDeleteSession(opcodeUrl, directory);
+  const createSession = useCreateSession(opcodeUrl, directory, (newSession) => {
+    onSelectSession(newSession.id);
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<
     string | string[] | null
@@ -68,8 +72,18 @@ export const SessionList = ({
 
   if (!sessions || sessions.length === 0) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">
-        No sessions yet. Create one to get started.
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-4 min-h-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
+        <Card
+          className="p-6 cursor-pointer hover:bg-accent hover:border-border transition-all border-dashed"
+          onClick={() => createSession.mutate({ agent: undefined })}
+        >
+          <div className="flex flex-col items-center justify-center gap-2 text-center">
+            <p className="font-medium">No sessions yet</p>
+            <p className="text-sm text-muted-foreground">
+              Click here to start a new session
+            </p>
+          </div>
+        </Card>
       </div>
     );
   }
