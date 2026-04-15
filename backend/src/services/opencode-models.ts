@@ -111,25 +111,6 @@ export async function resolveOpenCodeModel(
         return parsedCandidate
       }
     }
-
-    const parsedCandidate = parseModel(candidate)
-    if (!parsedCandidate) {
-      continue
-    }
-
-    const providerDefaultModel = defaultModels[parsedCandidate.providerID]
-    if (!providerDefaultModel) {
-      continue
-    }
-
-    const providerDefault = `${parsedCandidate.providerID}/${providerDefaultModel}`
-    if (availableModels.has(providerDefault)) {
-      return {
-        providerID: parsedCandidate.providerID,
-        modelID: providerDefaultModel,
-        model: providerDefault,
-      }
-    }
   }
 
   for (const [providerID, modelID] of Object.entries(defaultModels)) {
