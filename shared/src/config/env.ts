@@ -53,6 +53,7 @@ export const ENV = {
   OPENCODE: {
     PORT: getEnvNumber('OPENCODE_SERVER_PORT', DEFAULTS.OPENCODE.PORT),
     HOST: getEnvString('OPENCODE_HOST', DEFAULTS.OPENCODE.HOST),
+    PUBLIC_URL: getEnvString('OPENCODE_PUBLIC_URL', ''), // Public URL for OAuth callbacks
   },
 
   DATABASE: {

@@ -13,6 +13,7 @@ export const DEFAULTS = {
   OPENCODE: {
     PORT: 5551,
     HOST: '127.0.0.1',
+    PUBLIC_URL: '', // Optional: public URL for OAuth callbacks (e.g., https://mydomain.com)
   },
 
   DATABASE: {

@@ -1,9 +1,3 @@
-export const OAuthMethod = {
-  CODE: 0,
-} as const
-
-export type OAuthMethodType = (typeof OAuthMethod)[keyof typeof OAuthMethod]
-
 const ERROR_MAPPINGS: Record<string, string> = {
   'invalid code': 'Invalid authorization code. Please try the OAuth flow again.',
   'expired': 'Authorization code has expired. Please try the OAuth flow again.',

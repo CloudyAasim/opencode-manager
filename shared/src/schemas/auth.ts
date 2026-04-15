@@ -22,15 +22,39 @@ export const CredentialListResponseSchema = z.object({
   providers: z.array(z.string()),
 });
 
+export const PromptFieldSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("text"),
+    key: z.string(),
+    message: z.string(),
+    placeholder: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal("select"),
+    key: z.string(),
+    message: z.string(),
+    options: z.array(z.object({
+      label: z.string(),
+      value: z.string(),
+    })),
+    when: z.object({
+      key: z.string(),
+      value: z.string(),
+    }).optional(),
+  }),
+]);
+
 export const ProviderAuthMethodSchema = z.object({
   type: z.enum(["oauth", "api"]),
   label: z.string(),
+  prompts: z.array(PromptFieldSchema).optional(),
 });
 
 export const ProviderAuthMethodsSchema = z.record(z.string(), z.array(ProviderAuthMethodSchema));
 
 export const OAuthAuthorizeRequestSchema = z.object({
   method: z.number(),
+  inputs: z.record(z.string(), z.string()).optional(),
 });
 
 export const OAuthAuthorizeResponseSchema = z.object({
@@ -46,4 +70,4 @@ export const OAuthCallbackRequestSchema = z.object({
 
 export const ProviderAuthMethodsResponseSchema = z.object({
   providers: z.record(z.string(), z.array(ProviderAuthMethodSchema)),
-});
+}).or(ProviderAuthMethodsSchema);

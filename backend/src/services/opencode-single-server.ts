@@ -23,6 +23,7 @@ import { patchOpenCodeConfig } from './proxy'
 
 const OPENCODE_SERVER_PORT = ENV.OPENCODE.PORT
 const OPENCODE_SERVER_HOST = ENV.OPENCODE.HOST
+const OPENCODE_SERVER_PUBLIC_URL = ENV.OPENCODE.PUBLIC_URL
 const MIN_OPENCODE_VERSION = '1.0.137'
 const MAX_STDERR_SIZE = 10240
 
@@ -247,6 +248,7 @@ class OpenCodeServerManager {
           GIT_SSH_COMMAND: gitSshCommand,
           XDG_DATA_HOME: path.join(openCodeServerDirectory, '.opencode/state'),
           XDG_CONFIG_HOME: path.join(openCodeServerDirectory, '.config'),
+          ...(OPENCODE_SERVER_PUBLIC_URL ? { OPENCODE_PUBLIC_URL: OPENCODE_SERVER_PUBLIC_URL } : {}),
           OPENCODE_CONFIG: openCodeConfigPath,
         }
       }

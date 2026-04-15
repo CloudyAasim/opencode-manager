@@ -5,12 +5,13 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, ExternalLink, CheckCircle } from 'lucide-react'
 import { oauthApi, type OAuthAuthorizeResponse } from '@/api/oauth'
-import { mapOAuthError, OAuthMethod } from '@/lib/oauthErrors'
+import { mapOAuthError } from '@/lib/oauthErrors'
 
 interface OAuthCallbackDialogProps {
   providerId: string
   providerName: string
   authResponse: OAuthAuthorizeResponse
+  methodIndex: number
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
@@ -20,6 +21,7 @@ export function OAuthCallbackDialog({
   providerId, 
   providerName, 
   authResponse,
+  methodIndex,
   open, 
   onOpenChange, 
   onSuccess 
@@ -29,19 +31,19 @@ export function OAuthCallbackDialog({
   const [authCode, setAuthCode] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const handleCodeCallback = async () => {
-    if (!authCode.trim()) {
-      setError('Please enter the authorization code')
-      return
-    }
-
+  const handleCallback = async () => {
     setIsLoading(true)
     setLoadingMessage('Completing authentication...')
     setError(null)
 
     try {
       setLoadingMessage('Restarting server with new credentials...')
-      await oauthApi.callback(providerId, { method: OAuthMethod.CODE, code: authCode.trim() })
+      await oauthApi.callback(
+        providerId, 
+        authResponse.method === 'code' 
+          ? { method: methodIndex, code: authCode.trim() }
+          : { method: methodIndex }
+      )
       onSuccess()
     } catch (err) {
       setError(mapOAuthError(err, 'callback'))
@@ -62,13 +64,18 @@ export function OAuthCallbackDialog({
     onOpenChange(false)
   }
 
+  const isAutoMethod = authResponse.method === 'auto'
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-card border-border max-w-lg">
         <DialogHeader>
           <DialogTitle>Complete {providerName} Authentication</DialogTitle>
           <DialogDescription>
-            Enter the authorization code from the provider.
+            {isAutoMethod 
+              ? 'Follow the instructions below to complete authentication.'
+              : 'Enter the authorization code from the provider.'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -93,22 +100,24 @@ export function OAuthCallbackDialog({
               </Button>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="authCode">Authorization Code</Label>
-              <Input
-                id="authCode"
-                value={authCode}
-                onChange={(e) => setAuthCode(e.target.value)}
-                placeholder="Enter the authorization code..."
-                className="bg-background border-border"
-                disabled={isLoading}
-              />
-            </div>
+            {!isAutoMethod && (
+              <div className="space-y-2">
+                <Label htmlFor="authCode">Authorization Code</Label>
+                <Input
+                  id="authCode"
+                  value={authCode}
+                  onChange={(e) => setAuthCode(e.target.value)}
+                  placeholder="Enter the authorization code..."
+                  className="bg-background border-border"
+                  disabled={isLoading}
+                />
+              </div>
+            )}
 
             <Button
-              onClick={handleCodeCallback}
+              onClick={handleCallback}
               className="w-full"
-              disabled={isLoading || !authCode.trim()}
+              disabled={isLoading || (!isAutoMethod && !authCode.trim())}
             >
               {isLoading ? (
                 <>

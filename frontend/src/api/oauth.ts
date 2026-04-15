@@ -1,21 +1,14 @@
 import { API_BASE_URL } from "@/config"
+import type { components, operations } from "./opencode-types"
 import { fetchWrapper, FetchError } from "./fetchWrapper"
 
-export interface OAuthAuthorizeResponse {
-  url: string
-  method: "code"
-  instructions: string
-}
+type OpenCodeAuthorizeRequest = NonNullable<operations["provider.oauth.authorize"]["requestBody"]>["content"]["application/json"]
 
-export interface OAuthCallbackRequest {
-  method: number
-  code?: string
-}
+export type OAuthAuthorizeResponse = components["schemas"]["ProviderAuthAuthorization"]
 
-export interface ProviderAuthMethod {
-  type: "oauth" | "api"
-  label: string
-}
+export type OAuthCallbackRequest = NonNullable<operations["provider.oauth.callback"]["requestBody"]>["content"]["application/json"]
+
+export type ProviderAuthMethod = components["schemas"]["ProviderAuthMethod"]
 
 export interface ProviderAuthMethods {
   [providerId: string]: ProviderAuthMethod[]
@@ -29,12 +22,12 @@ function handleApiError(error: unknown, context: string): never {
 }
 
 export const oauthApi = {
-  authorize: async (providerId: string, method: number): Promise<OAuthAuthorizeResponse> => {
+  authorize: async (providerId: string, method: number, inputs?: OpenCodeAuthorizeRequest["inputs"]): Promise<OAuthAuthorizeResponse> => {
     try {
       return await fetchWrapper(`${API_BASE_URL}/api/oauth/${providerId}/oauth/authorize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method }),
+        body: JSON.stringify({ method, inputs }),
       })
     } catch (error) {
       handleApiError(error, "OAuth authorization failed")

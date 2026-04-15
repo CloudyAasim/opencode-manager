@@ -19,6 +19,7 @@ export function ProviderSettings() {
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false)
   const [oauthCallbackDialogOpen, setOauthCallbackDialogOpen] = useState(false)
   const [oauthResponse, setOauthResponse] = useState<OAuthAuthorizeResponse | null>(null)
+  const [oauthMethodIndex, setOauthMethodIndex] = useState<number | null>(null)
   const [connectedExpanded, setConnectedExpanded] = useState(false)
   const [availableExpanded, setAvailableExpanded] = useState(false)
   const [availableSearch, setAvailableSearch] = useState('')
@@ -68,14 +69,16 @@ export function ProviderSettings() {
     setDeleteTarget(null)
   }
 
-  const handleOAuthAuthorize = (response: OAuthAuthorizeResponse) => {
+  const handleOAuthAuthorize = (response: OAuthAuthorizeResponse, methodIndex: number) => {
     setOauthResponse(response)
+    setOauthMethodIndex(methodIndex)
     setOauthDialogOpen(false)
     setOauthCallbackDialogOpen(true)
   }
 
   const handleOAuthDialogClose = () => {
     setOauthDialogOpen(false)
+    setOauthMethodIndex(null)
     setSelectedProvider(null)
   }
 
@@ -83,6 +86,7 @@ export function ProviderSettings() {
     invalidateProviderCaches(queryClient)
     setOauthCallbackDialogOpen(false)
     setOauthResponse(null)
+    setOauthMethodIndex(null)
     setSelectedProvider(null)
   }
 
@@ -239,17 +243,19 @@ export function ProviderSettings() {
         <OAuthAuthorizeDialog
           providerId={selectedProvider}
           providerName={selectedProviderName}
+          methods={authMethods?.[selectedProvider] || []}
           open={oauthDialogOpen}
           onOpenChange={handleOAuthDialogClose}
           onSuccess={handleOAuthAuthorize}
         />
       )}
 
-      {selectedProvider && oauthResponse && (
+      {selectedProvider && oauthResponse && oauthMethodIndex !== null && (
         <OAuthCallbackDialog
           providerId={selectedProvider}
           providerName={selectedProviderName}
           authResponse={oauthResponse}
+          methodIndex={oauthMethodIndex}
           open={oauthCallbackDialogOpen}
           onOpenChange={setOauthCallbackDialogOpen}
           onSuccess={handleOAuthSuccess}

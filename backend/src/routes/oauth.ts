@@ -18,7 +18,7 @@ export function createOAuthRoutes() {
       const body = await c.req.json()
       const validated = OAuthAuthorizeRequestSchema.parse(body)
       
-      // Proxy to OpenCode server
+      // Proxy to OpenCode server - only method and inputs are supported
       const response = await proxyRequest(
         new Request(
           `${OPENCODE_SERVER_URL}/provider/${providerId}/oauth/authorize`,
