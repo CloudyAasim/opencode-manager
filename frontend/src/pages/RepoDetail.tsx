@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRepo } from "@/api/repos";
@@ -14,7 +14,6 @@ import { useCreateSession } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
 import { useSSE } from "@/hooks/useSSE";
 import { OPENCODE_API_ENDPOINT } from "@/config";
-import { useSwipeBack } from "@/hooks/useMobile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -34,19 +33,6 @@ export function RepoDetail() {
   const [skillsDialogOpen, setSkillsDialogOpen] = useState(false);
   const [sourceControlOpen, setSourceControlOpen] = useState(false);
   const [resetPermissionsOpen, setResetPermissionsOpen] = useState(false);
-  const pageRef = useRef<HTMLDivElement>(null);
-  
-  const handleSwipeBack = useCallback(() => {
-    navigate("/");
-  }, [navigate]);
-  
-  const { bind: bindSwipe, swipeStyles } = useSwipeBack(handleSwipeBack, {
-    enabled: !fileBrowserOpen && !switchConfigOpen,
-  });
-  
-  useEffect(() => {
-    return bindSwipe(pageRef.current);
-  }, [bindSwipe]);
 
   const { data: repo, isLoading: repoLoading } = useQuery({
     queryKey: ["repo", repoId],
@@ -124,9 +110,7 @@ export function RepoDetail() {
 
   return (
     <div
-      ref={pageRef}
       className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col"
-      style={swipeStyles}
     >
     <Header>
       <Header.BackButton to="/" />

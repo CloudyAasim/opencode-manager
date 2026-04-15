@@ -108,6 +108,24 @@ body {
   animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@keyframes page-slide-in-from-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes page-slide-in-from-left {
+  from { transform: translateX(-30%); opacity: 0.7; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.page-slide-in-push {
+  animation: page-slide-in-from-right 300ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+.page-slide-in-pop {
+  animation: page-slide-in-from-left 300ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
 @keyframes shine-loading {
   0% {
     background-position: -200% 0;

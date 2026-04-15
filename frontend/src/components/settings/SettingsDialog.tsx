@@ -11,7 +11,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Volume2, Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useSwipeBack } from '@/hooks/useMobile'
+import { useSwipeToClose } from '@/hooks/useMobile'
 import { useSettingsDialog } from '@/hooks/useSettingsDialog'
 
 type SettingsView = 'menu' | 'general' | 'git' | 'shortcuts' | 'opencode' | 'providers' | 'account' | 'voice' | 'notifications'
@@ -30,7 +30,7 @@ export function SettingsDialog() {
     }
   }, [mobileView, close])
 
-  const { bind: bindSwipe, swipeStyles } = useSwipeBack(handleSwipeBack, {
+  const { bind: bindSwipe, swipeStyles } = useSwipeToClose(handleSwipeBack, {
     enabled: isOpen,
   })
 

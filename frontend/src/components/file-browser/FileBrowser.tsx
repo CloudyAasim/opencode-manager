@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { FileTree } from './FileTree'
 import { FileOperations } from './FileOperations'
 import { FilePreview } from './FilePreview'
@@ -14,6 +14,21 @@ import { API_BASE_URL } from '@/config'
 import { useMobile } from '@/hooks/useMobile'
 import { useFile } from '@/api/files'
 
+export interface FileBrowserHandle {
+  goBack: () => void
+  canGoBack: () => boolean
+  getCurrentPath: () => string
+}
+
+interface FileBrowserProps {
+  basePath?: string
+  onFileSelect?: (file: FileInfo) => void
+  embedded?: boolean
+  initialSelectedFile?: string
+  onDirectoryLoad?: (info: { workspaceRoot?: string; currentPath: string }) => void
+  onPreviewStateChange?: (isOpen: boolean) => void
+}
+
 interface UploadItem {
   file: File
   relativePath: string
@@ -25,14 +40,6 @@ interface UploadProgress {
   currentFile: string
   errors: string[]
   cancelled: boolean
-}
-
-interface FileBrowserProps {
-  basePath?: string
-  onFileSelect?: (file: FileInfo) => void
-  embedded?: boolean
-  initialSelectedFile?: string
-  onDirectoryLoad?: (info: { workspaceRoot?: string; currentPath: string }) => void
 }
 
 async function readFileEntry(entry: FileSystemFileEntry): Promise<File> {
@@ -115,7 +122,7 @@ function getUploadItemsFromFileList(fileList: FileList): UploadItem[] {
   return items
 }
 
-export function FileBrowser({ basePath = '', onFileSelect, embedded = false, initialSelectedFile, onDirectoryLoad }: FileBrowserProps) {
+export const FileBrowser = forwardRef<FileBrowserHandle, FileBrowserProps>(function FileBrowser({ basePath = '', onFileSelect, embedded = false, initialSelectedFile, onDirectoryLoad, onPreviewStateChange }, ref) {
   const [currentPath, setCurrentPath] = useState(basePath)
   const [files, setFiles] = useState<FileInfo | null>(null)
   const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null)
@@ -137,9 +144,10 @@ useEffect(() => {
     setSelectedFile(initialFileData)
     if (isMobile) {
       setIsPreviewModalOpen(true)
+      onPreviewStateChange?.(true)
     }
   }
-}, [initialFileData, isMobile])
+}, [initialFileData, isMobile, onPreviewStateChange])
 
 useEffect(() => {
   if (initialFileError) {
@@ -168,6 +176,27 @@ useEffect(() => {
     }
   }, [onDirectoryLoad])
 
+  const getPathParts = useCallback((path: string) => path.split('/').filter(Boolean), [])
+
+  const goToParentDirectory = useCallback(() => {
+    const pathParts = getPathParts(currentPath)
+    if (pathParts.length > 0) {
+      pathParts.pop()
+      const parentPath = pathParts.join('/')
+      loadFiles(parentPath || basePath)
+    }
+  }, [currentPath, basePath, loadFiles, getPathParts])
+
+  useImperativeHandle(ref, () => ({
+    goBack: goToParentDirectory,
+    canGoBack: () => {
+      const pathParts = getPathParts(currentPath)
+      const joinedPath = pathParts.join('/')
+      return pathParts.length > 0 && joinedPath !== basePath
+    },
+    getCurrentPath: () => currentPath,
+  }), [currentPath, basePath, goToParentDirectory, getPathParts])
+
   const handleFileSelect = useCallback(async (file: FileInfo) => {
     if (file.isDirectory) {
       setSelectedFile(null)
@@ -189,6 +218,7 @@ useEffect(() => {
       // On mobile, open preview in modal
       if (isMobile) {
         setIsPreviewModalOpen(true)
+        onPreviewStateChange?.(true)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load file')
@@ -196,12 +226,13 @@ useEffect(() => {
     } finally {
       setLoading(false)
     }
-  }, [onFileSelect, isMobile])
+  }, [onFileSelect, isMobile, onPreviewStateChange])
 
   const handleCloseModal = useCallback(() => {
     setIsPreviewModalOpen(false)
     setSelectedFile(null)
-  }, [])
+    onPreviewStateChange?.(false)
+  }, [onPreviewStateChange])
 
   const handleDirectoryClick = (path: string) => {
     loadFiles(path)
@@ -404,7 +435,7 @@ useEffect(() => {
   const canDismissDialog = isUploadComplete || uploadProgress?.cancelled
 
   const uploadDialog = (
-    <Dialog open={!!uploadProgress} onOpenChange={(open) => { if (!open && canDismissDialog) setUploadProgress(null) }}>
+    <Dialog open={!!uploadProgress} onOpenChange={(open: boolean) => { if (!open && canDismissDialog) setUploadProgress(null) }}>
       <DialogContent className="sm:max-w-md" hideCloseButton={!canDismissDialog}>
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
@@ -525,6 +556,7 @@ useEffect(() => {
                   onRename={handleRename}
                   currentPath={currentPath}
                   basePath={basePath}
+                  onNavigateUp={goToParentDirectory}
                 />
               )}
             </div>
@@ -624,6 +656,7 @@ useEffect(() => {
                   onRename={handleRename}
                   currentPath={currentPath}
                   basePath={basePath}
+                  onNavigateUp={goToParentDirectory}
                 />
               </div>
             )}
@@ -654,4 +687,4 @@ useEffect(() => {
       {uploadDialog}
     </div>
   )
-}
+})

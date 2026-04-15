@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.4.17",

@@ -21,6 +21,8 @@ import { AuthProvider } from './contexts/AuthContext'
 import { EventProvider, usePermissions, useEventContext } from '@/contexts/EventContext'
 import { PermissionRequestDialog } from './components/session/PermissionRequestDialog'
 import { SSHHostKeyDialog } from './components/ssh/SSHHostKeyDialog'
+import { PageTransition } from './components/ui/PageTransition'
+import { useNavigationDirection } from './hooks/useNavigationDirection'
 import { loginLoader, setupLoader, registerLoader, protectedLoader } from './lib/auth-loaders'
 
 const queryClient = new QueryClient({
@@ -69,6 +71,7 @@ function PermissionDialogWrapper() {
 function AppShell() {
   const navigate = useNavigate()
   useTheme()
+  useNavigationDirection()
 
   useEffect(() => {
     const channel = new BroadcastChannel('notification-click')
@@ -84,7 +87,9 @@ function AppShell() {
   return (
     <AuthProvider>
       <EventProvider>
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
         <PermissionDialogWrapper />
         <SSHHostKeyDialogWrapper />
         <SettingsDialog />

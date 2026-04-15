@@ -3,7 +3,7 @@ import { FilePreview } from "./FilePreview";
 import { FullscreenSheet } from "@/components/ui/fullscreen-sheet";
 import type { FileInfo } from "@/types/files";
 import { GPU_ACCELERATED_STYLE, MODAL_TRANSITION_MS } from "@/lib/utils";
-import { useSwipeBack } from "@/hooks/useMobile";
+import { useSwipeToClose } from "@/hooks/useMobile";
 
 interface MobileFilePreviewModalProps {
   isOpen: boolean;
@@ -22,7 +22,17 @@ export const MobileFilePreviewModal = memo(function MobileFilePreviewModal({
   const isClosingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const { bind, swipeStyles } = useSwipeBack(onClose, {
+  const handleClose = useCallback(() => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    onClose();
+    setTimeout(() => {
+      setLocalFile(null);
+      isClosingRef.current = false;
+    }, MODAL_TRANSITION_MS);
+  }, [onClose]);
+  
+  const { bind, swipeStyles } = useSwipeToClose(handleClose, {
     enabled: isOpen,
   });
   
@@ -37,15 +47,21 @@ export const MobileFilePreviewModal = memo(function MobileFilePreviewModal({
     }
   }, [isOpen, file]);
 
-  const handleClose = useCallback(() => {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    onClose();
-    setTimeout(() => {
-      setLocalFile(null);
-      isClosingRef.current = false;
-    }, MODAL_TRANSITION_MS);
-  }, [onClose]);
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        handleClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, handleClose]);
 
   if (!isOpen || !localFile) {
     return null;

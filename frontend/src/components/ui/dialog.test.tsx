@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import {
   Dialog,
@@ -130,5 +130,96 @@ describe("DialogContent", () => {
       </Dialog>
     );
     expect(screen.getByText("Test Child Content")).toBeInTheDocument();
+  });
+
+  it("accepts mobileSwipeToClose prop without breaking rendering", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <Dialog open onOpenChange={onOpenChange}>
+        <DialogContent mobileFullscreen mobileSwipeToClose data-testid="dialog-content">
+          <DialogHeader>
+            <DialogTitle>Swipe Dialog</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+    const content = screen.getByTestId("dialog-content");
+    expect(content).toBeInTheDocument();
+    expect(content).toHaveClass("inset-0");
+  });
+
+  it("applies safe-area padding when mobileSwipeToClose is used with mobileFullscreen", () => {
+    render(
+      <Dialog open>
+        <DialogContent mobileFullscreen mobileSwipeToClose data-testid="dialog-content">
+          <DialogHeader>
+            <DialogTitle>Test Dialog</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+    const content = screen.getByTestId("dialog-content");
+    expect(content).toHaveStyle({ paddingTop: "env(safe-area-inset-top, 0px)" });
+  });
+
+  it('renders hidden close trigger when mobileSwipeToClose is enabled', () => {
+    const onOpenChange = vi.fn();
+    render(
+      <Dialog open onOpenChange={onOpenChange}>
+        <DialogContent mobileFullscreen mobileSwipeToClose>
+          <DialogHeader>
+            <DialogTitle>Swipe Dialog</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+    const closeTrigger = document.querySelector('[data-swipe-close-trigger]');
+    expect(closeTrigger).toBeInTheDocument();
+  });
+
+  it('closes dialog when hidden close trigger is activated', () => {
+    const onOpenChange = vi.fn();
+    render(
+      <Dialog open onOpenChange={onOpenChange}>
+        <DialogContent mobileFullscreen mobileSwipeToClose>
+          <DialogHeader>
+            <DialogTitle>Swipe Dialog</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+    
+    const closeTrigger = document.querySelector('[data-swipe-close-trigger]') as HTMLButtonElement | null;
+    expect(closeTrigger).toBeInTheDocument();
+    
+    if (closeTrigger) {
+      closeTrigger.click();
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    }
+  });
+
+  it('binds swipe handler when mobileSwipeToClose and mobileFullscreen are enabled', () => {
+    const onOpenChange = vi.fn();
+    render(
+      <Dialog open onOpenChange={onOpenChange}>
+        <DialogContent mobileFullscreen mobileSwipeToClose data-testid="swipe-dialog">
+          <DialogHeader>
+            <DialogTitle>Swipe Dialog</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+    
+    const content = screen.getByTestId('swipe-dialog');
+    const closeTrigger = document.querySelector('[data-swipe-close-trigger]') as HTMLButtonElement | null;
+    
+    expect(content).toBeInTheDocument();
+    expect(closeTrigger).toBeInTheDocument();
+    
+    const clickSpy = vi.spyOn(closeTrigger as HTMLButtonElement, 'click');
+    closeTrigger?.click();
+    
+    expect(clickSpy).toHaveBeenCalled();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

@@ -1,12 +1,12 @@
 import { useEffect, useState, memo, useCallback, useRef } from 'react'
-import { FileBrowser } from './FileBrowser'
+import { FileBrowser, type FileBrowserHandle } from './FileBrowser'
 import { Button } from '@/components/ui/button'
 import { PathDisplay } from '@/components/ui/path-display'
 import { FullscreenSheet, FullscreenSheetHeader, FullscreenSheetContent } from '@/components/ui/fullscreen-sheet'
 import { DownloadDialog } from '@/components/ui/download-dialog'
 import { X, Download } from 'lucide-react'
 import { GPU_ACCELERATED_STYLE, MODAL_TRANSITION_MS } from '@/lib/utils'
-import { useSwipeBack } from '@/hooks/useMobile'
+import { useSwipeToClose } from '@/hooks/useMobile'
 import { downloadDirectoryAsZip } from '@/api/files'
 import { downloadRepo } from '@/api/repos'
 import {
@@ -32,10 +32,14 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
   const [shouldRender, setShouldRender] = useState(false)
   const [currentPath, setCurrentPath] = useState<string>(basePath || '.')
   const [downloadDialog, setDownloadDialog] = useState<{ type: 'directory' | 'repository' } | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const fileBrowserRef = useRef<FileBrowserHandle>(null)
 
-  const { bind, swipeStyles } = useSwipeBack(onClose, {
-    enabled: isOpen && !isEditing,
+  const { bind, swipeStyles } = useSwipeToClose(onClose, {
+    enabled: isOpen && !isEditing && !isPreviewOpen,
+    canSwipeBack: () => fileBrowserRef.current?.canGoBack() ?? false,
+    onSwipeBack: () => fileBrowserRef.current?.goBack(),
   })
 
   useEffect(() => {
@@ -46,6 +50,7 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
     if (isOpen) {
       setShouldRender(true)
     } else {
+      setIsPreviewOpen(false)
       const timer = setTimeout(() => setShouldRender(false), MODAL_TRANSITION_MS)
       return () => clearTimeout(timer)
     }
@@ -91,7 +96,7 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && isOpen && !isPreviewOpen) {
         onClose()
       }
     }
@@ -111,7 +116,7 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
       document.removeEventListener('editModeChange', handleEditModeChange as EventListener)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, isPreviewOpen])
 
   if (!isOpen && !shouldRender) return null
 
@@ -176,10 +181,12 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
 
         <FullscreenSheetContent>
           <FileBrowser
+            ref={fileBrowserRef}
             basePath={normalizedBasePath}
             embedded={true}
             initialSelectedFile={initialSelectedFile}
             onDirectoryLoad={handleDirectoryLoad}
+            onPreviewStateChange={setIsPreviewOpen}
           />
         </FullscreenSheetContent>
       </FullscreenSheet>

@@ -32,6 +32,7 @@ interface FileTreeProps {
   onRename: (oldPath: string, newPath: string) => void
   currentPath?: string
   basePath?: string
+  onNavigateUp?: () => void
 }
 
 interface TreeNodeProps {
@@ -238,18 +239,11 @@ function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, o
   )
 }
 
-export const FileTree = memo(function FileTree({ files, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename, currentPath = '', basePath = '' }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename, currentPath = '', basePath = '', onNavigateUp }: FileTreeProps) {
   const handleGoUp = () => {
-    // If currentPath has content and is different from basePath, go up
-    if (currentPath !== basePath) {
-      const pathParts = currentPath.split('/').filter(p => p)
-      pathParts.pop()
-      const parentPath = pathParts.join('/')
-      onDirectoryClick(parentPath)
-    }
+    onNavigateUp?.()
   }
 
-  // Show ".." if we're not at the base path (empty string means root)
   const showGoUp = currentPath && currentPath !== basePath
 
   return (

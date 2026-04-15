@@ -21,10 +21,14 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "0.0.0.0",
       port: 5173,
+      allowedHosts: ["argentina-somatopleuric-chauncey.ngrok-free.dev"],
       proxy: {
         "/api": {
           target: `http://localhost:${backendPort}`,
           changeOrigin: true,
+          headers: {
+            'Access-Control-Allow-Origin': 'https://argentina-somatopleuric-chauncey.ngrok-free.dev',
+          },
         },
       },
     },

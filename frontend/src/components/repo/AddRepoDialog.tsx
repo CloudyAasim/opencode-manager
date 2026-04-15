@@ -100,7 +100,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent mobileFullscreen className="content-start gap-0 sm:max-w-[500px] sm:max-h-[80vh] sm:h-auto sm:top-[50%] sm:translate-y-[-50%] bg-[#141414] border-[#2a2a2a]">
+      <DialogContent mobileFullscreen mobileSwipeToClose className="content-start gap-0 sm:max-w-[500px] sm:max-h-[80vh] sm:h-auto sm:top-[50%] sm:translate-y-[-50%] bg-[#141414] border-[#2a2a2a]">
         <DialogHeader className="px-4 sm:px-6 pt-2 sm:pt-6 pb-2 sm:pb-3 h-fit">
           <DialogTitle className="text-xl bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
             Add Repository

@@ -25,7 +25,7 @@ import { useModelSelection } from "@/hooks/useModelSelection";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSettingsDialog } from "@/hooks/useSettingsDialog";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
-import { useSwipeBack, useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/useMobile";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { useTTS } from "@/hooks/useTTS";
 import { useEffect, useRef, useCallback, useMemo } from "react";
@@ -63,7 +63,6 @@ export function SessionDetail() {
   const { preferences, updateSettings } = useSettings();
   const { open: openSettings } = useSettingsDialog();
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
   const promptInputRef = useRef<PromptInputHandle>(null);
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
@@ -77,24 +76,12 @@ export function SessionDetail() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasPromptContent, setHasPromptContent] = useState(false);
   const [minimizedQuestion, setMinimizedQuestion] = useState<QuestionRequest | null>(null);
-  
-  const handleSwipeBack = useCallback(() => {
-    navigate(`/repos/${repoId}`);
-  }, [navigate, repoId]);
-  
-  const { bind: bindSwipe, swipeStyles } = useSwipeBack(handleSwipeBack, {
-    enabled: !fileBrowserOpen && !modelDialogOpen && !sessionsDialogOpen,
-  });
 
   const isMobile = useMobile();
   const { keyboardHeight } = useVisualViewport();
   const inputBottomOffset = isMobile ? keyboardHeight : 0;
   const promptOverlayRef = useRef<HTMLDivElement>(null);
   const [promptOverlayHeight, setPromptOverlayHeight] = useState(112);
-
-  useEffect(() => {
-    return bindSwipe(pageRef.current);
-  }, [bindSwipe]);
 
   useEffect(() => {
     const el = promptOverlayRef.current;
@@ -370,9 +357,7 @@ export function SessionDetail() {
 
   return (
     <div
-      ref={pageRef}
       className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col"
-      style={swipeStyles}
     >
       <Header>
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">

@@ -62,6 +62,7 @@ export function FilePreviewDialog({ isOpen, onClose, filePath, repoBasePath, onF
         className="w-screen h-screen max-w-none max-h-none p-0 bg-background border-0 flex flex-col"
         hideCloseButton
         fullscreen
+        mobileSwipeToClose
       >
         <div className="flex-1 overflow-hidden min-h-0">
           {isLoading ? (
