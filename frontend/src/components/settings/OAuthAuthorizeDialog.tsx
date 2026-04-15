@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -61,10 +61,22 @@ export function OAuthAuthorizeDialog({
   const [error, setError] = useState<string | null>(null)
   const [selectedMethodIndex, setSelectedMethodIndex] = useState<number | null>(null)
   const [promptInputs, setPromptInputs] = useState<Record<number, Record<string, string>>>({})
+  const [autoStarted, setAutoStarted] = useState(false)
 
-  const getMethodInputs = (methodIndex: number) => promptInputs[methodIndex] || {}
+  const getMethodInputs = useCallback((methodIndex: number) => promptInputs[methodIndex] || {}, [promptInputs])
 
-  const handleAuthorize = async (methodIndex: number) => {
+  const oauthMethods = useMemo(() => {
+    return methods
+      .flatMap((method, index) => method.type === 'oauth' ? [{ method, index }] : [])
+      .filter(({ method }: { method: ProviderAuthMethod }) => {
+        if (providerId === 'openai' && isBrowserLocalMethod(method)) {
+          return false
+        }
+        return true
+      })
+  }, [methods, providerId])
+
+  const handleAuthorize = useCallback(async (methodIndex: number) => {
     const method = methods[methodIndex]
     const methodInputs = getMethodInputs(methodIndex)
     const visiblePrompts = getVisiblePrompts(method, methodInputs)
@@ -93,7 +105,18 @@ export function OAuthAuthorizeDialog({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [methods, providerId, onSuccess, getMethodInputs])
+
+  useEffect(() => {
+    if (open && oauthMethods.length === 1 && !autoStarted && !isLoading) {
+      const { index } = oauthMethods[0]
+      setAutoStarted(true)
+      setSelectedMethodIndex(index)
+      if (!hasPrompts(methods[index])) {
+        void handleAuthorize(index)
+      }
+    }
+  }, [open, oauthMethods, autoStarted, isLoading, methods, handleAuthorize])
 
   const handleMethodSelection = (methodIndex: number) => {
     setError(null)
@@ -121,11 +144,9 @@ export function OAuthAuthorizeDialog({
     onOpenChange(false)
   }
 
-  const oauthMethods = methods.flatMap((method, index) => method.type === 'oauth' ? [{ method, index }] : [])
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-card border-border max-w-lg">
+      <DialogContent className="bg-card border-border w-full sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Connect to {providerName}</DialogTitle>
           <DialogDescription>
@@ -148,25 +169,25 @@ export function OAuthAuthorizeDialog({
             
             return (
               <div key={index} className="space-y-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <Button
                     onClick={() => handleMethodSelection(index)}
                     disabled={isLoading}
-                    className="flex-1 justify-start"
+                    className="flex-1 justify-start min-w-0"
                     variant={selectedMethodIndex === index ? 'default' : 'outline'}
                   >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    {isLoading && selectedMethodIndex === index ? 'Authorizing...' : method.label}
+                    <ExternalLink className="h-4 w-4 mr-2 shrink-0" />
+                    <span className="truncate">{isLoading && selectedMethodIndex === index ? 'Authorizing...' : method.label}</span>
                   </Button>
                   {isBrowserLocal && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs shrink-0">
                       Localhost only
                     </Badge>
                   )}
                 </div>
 
                 {selectedMethodIndex === index && hasPrompts(method) && (
-                  <div className="space-y-3 pl-10 pr-1 py-2">
+                  <div className="space-y-3 pl-4 sm:pl-10 pr-1 py-2">
                     {visiblePrompts.map((prompt) => (
                       prompt.type === 'text' ? (
                         <div key={prompt.key} className="space-y-2">
@@ -214,7 +235,7 @@ export function OAuthAuthorizeDialog({
                 )}
                 
                 {isBrowserLocal && (
-                  <p className="text-xs text-muted-foreground pl-1">
+                  <p className="text-xs text-muted-foreground pl-1 break-words">
                     This method relies on a callback server started by OpenCode and may not work when OCM is remote.
                   </p>
                 )}

@@ -29,6 +29,8 @@ export function useTitleGenerating(sessionID: string | undefined) {
   );
 
   useEffect(() => {
+    setIsGenerating(sessionID ? titleGeneratingSessionsState.has(sessionID) : false);
+
     const listener = () => {
       setIsGenerating(sessionID ? titleGeneratingSessionsState.has(sessionID) : false);
     };
@@ -155,7 +157,7 @@ export const useDeleteSession = (opcodeUrl: string | null | undefined, directory
       
       return results
     },
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["opencode", "sessions", opcodeUrl, directory] });
     },
   });
@@ -366,6 +368,12 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
     onError: (error, variables) => {
       const { sessionID } = variables;
       const messagesQueryKey = ["opencode", "messages", opcodeUrl, sessionID, directory];
+
+      setSessionStatus(sessionID, { type: "idle" });
+      queryClient.setQueryData<MessageWithParts[]>(
+        messagesQueryKey,
+        (old) => old?.filter((msgWithParts) => !msgWithParts.info.id.startsWith("optimistic_")),
+      );
       
       const isNetworkError = error instanceof TypeError ||
         (error instanceof FetchError && error.code === 'TIMEOUT');
@@ -380,12 +388,6 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
         reconnectSSE();
         return;
       }
-      
-      setSessionStatus(sessionID, { type: "idle" });
-      queryClient.setQueryData<MessageWithParts[]>(
-        messagesQueryKey,
-        (old) => old?.filter((msgWithParts) => !msgWithParts.info.id.startsWith("optimistic_")),
-      );
       
       const parsed = parseNetworkError(error);
       showToast.error(parsed.title, {

@@ -67,6 +67,15 @@ function getIssuePath(value: unknown): string {
   }
 
   if (typeof value === 'string' && value.length > 0) {
+    if (value.startsWith('/')) {
+      const pointerPath = value
+        .split('/')
+        .filter(Boolean)
+        .map((part) => part.replace(/~1/g, '/').replace(/~0/g, '~'))
+        .join('.')
+      return pointerPath || 'root'
+    }
+
     return value
   }
 
