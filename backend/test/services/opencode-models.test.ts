@@ -100,6 +100,90 @@ describe('resolveOpenCodeModel', () => {
     })
   })
 
+  it('falls back to config.model when small_model is unavailable', async () => {
+    proxyToOpenCodeWithDirectory.mockImplementation((path: string) => {
+      if (path === '/config') {
+        return Promise.resolve(jsonResponse({
+          model: 'openai/gpt-5',
+          small_model: 'openai/gpt-5-unavailable',
+        }))
+      }
+
+      return Promise.resolve(jsonResponse({
+        providers: [
+          { id: 'openai', models: { 'gpt-5': {}, 'gpt-5-mini': {} } },
+        ],
+        default: { openai: 'gpt-5-mini' },
+      }))
+    })
+
+    const result = await resolveOpenCodeModel('/workspace/repos/sample-project', {
+      preferSmallModel: true,
+    })
+
+    expect(result).toEqual({
+      providerID: 'openai',
+      modelID: 'gpt-5',
+      model: 'openai/gpt-5',
+    })
+  })
+
+  it('falls back to provider default only after all configured candidates fail', async () => {
+    proxyToOpenCodeWithDirectory.mockImplementation((path: string) => {
+      if (path === '/config') {
+        return Promise.resolve(jsonResponse({
+          model: 'openai/gpt-5-configured',
+          small_model: 'openai/gpt-5-small-unavailable',
+        }))
+      }
+
+      return Promise.resolve(jsonResponse({
+        providers: [
+          { id: 'openai', models: { 'gpt-5-mini': {}, 'gpt-5-turbo': {}, 'gpt-5-configured': {} } },
+        ],
+        default: { openai: 'gpt-5-mini' },
+      }))
+    })
+
+    const result = await resolveOpenCodeModel('/workspace/repos/sample-project', {
+      preferSmallModel: true,
+    })
+
+    expect(result).toEqual({
+      providerID: 'openai',
+      modelID: 'gpt-5-configured',
+      model: 'openai/gpt-5-configured',
+    })
+  })
+
+  it('falls back to provider default when both small_model and model are unavailable', async () => {
+    proxyToOpenCodeWithDirectory.mockImplementation((path: string) => {
+      if (path === '/config') {
+        return Promise.resolve(jsonResponse({
+          model: 'openai/gpt-5-unavailable',
+          small_model: 'openai/gpt-5-also-unavailable',
+        }))
+      }
+
+      return Promise.resolve(jsonResponse({
+        providers: [
+          { id: 'openai', models: { 'gpt-5-mini': {}, 'gpt-5-turbo': {} } },
+        ],
+        default: { openai: 'gpt-5-mini' },
+      }))
+    })
+
+    const result = await resolveOpenCodeModel('/workspace/repos/sample-project', {
+      preferSmallModel: true,
+    })
+
+    expect(result).toEqual({
+      providerID: 'openai',
+      modelID: 'gpt-5-mini',
+      model: 'openai/gpt-5-mini',
+    })
+  })
+
   it('falls back to the first available model when defaults are missing', async () => {
     proxyToOpenCodeWithDirectory.mockImplementation((path: string) => {
       if (path === '/config') {
