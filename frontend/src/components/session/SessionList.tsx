@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
 import { useSessions, useDeleteSession, useCreateSession } from "@/hooks/useOpenCode";
-import { ListToolbar } from "@/components/ui/list-toolbar";
 import { DeleteSessionDialog } from "./DeleteSessionDialog";
 import { SessionCard } from "./SessionCard";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Trash2, Pencil, X } from "lucide-react";
 
 interface SessionListProps {
   opcodeUrl: string;
@@ -24,13 +26,9 @@ export const SessionList = ({
     onSelectSession(newSession.id);
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<
-    string | string[] | null
-  >(null);
+  const [sessionToDelete, setSessionToDelete] = useState<string | string[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(
-    new Set(),
-  );
+  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const [manageMode, setManageMode] = useState(false);
 
   const filteredSessions = useMemo(() => {
@@ -53,14 +51,12 @@ export const SessionList = ({
   }, [sessions, searchQuery, directory]);
 
   const todaySessions = useMemo(() => {
-    if (!filteredSessions) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return filteredSessions.filter((session) => new Date(session.time.updated) >= today);
   }, [filteredSessions]);
 
   const olderSessions = useMemo(() => {
-    if (!filteredSessions) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return filteredSessions.filter((session) => new Date(session.time.updated) < today);
@@ -88,10 +84,7 @@ export const SessionList = ({
     );
   }
 
-  const handleDelete = (
-    sessionId: string,
-    e: React.MouseEvent<HTMLButtonElement>,
-  ) => {
+  const handleDelete = (sessionId: string, e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     setSessionToDelete(sessionId);
     setDeleteDialogOpen(true);
@@ -103,6 +96,7 @@ export const SessionList = ({
       setDeleteDialogOpen(false);
       setSessionToDelete(null);
       setSelectedSessions(new Set());
+      setManageMode(false);
     }
   };
 
@@ -110,6 +104,7 @@ export const SessionList = ({
     setDeleteDialogOpen(false);
     setSessionToDelete(null);
     setSelectedSessions(new Set());
+    setManageMode(false);
   };
 
   const toggleSessionSelection = (sessionId: string, selected: boolean) => {
@@ -122,29 +117,15 @@ export const SessionList = ({
     setSelectedSessions(newSelected);
   };
 
-  const toggleManageMode = () => {
-    setManageMode((prev) => {
-      if (!prev) {
-        return true;
-      } else {
-        setSelectedSessions(new Set());
-        return false;
-      }
-    });
-  };
+  const allVisibleSelected =
+    filteredSessions.length > 0 &&
+    filteredSessions.every((s) => selectedSessions.has(s.id));
 
   const toggleSelectAll = () => {
-    if (!filteredSessions || filteredSessions.length === 0) return;
-    
-    const allFilteredSelected = filteredSessions.every((session) =>
-      selectedSessions.has(session.id),
-    );
-
-    if (allFilteredSelected) {
+    if (allVisibleSelected) {
       setSelectedSessions(new Set());
     } else {
-      const filteredIds = filteredSessions.map((s) => s.id);
-      setSelectedSessions(new Set(filteredIds));
+      setSelectedSessions(new Set(filteredSessions.map((s) => s.id)));
     }
   };
 
@@ -155,30 +136,60 @@ export const SessionList = ({
     }
   };
 
-  const handleDeleteAll = () => {
-    if (!filteredSessions || filteredSessions.length === 0) return;
-    setSessionToDelete(filteredSessions.map((s) => s.id));
-    setDeleteDialogOpen(true);
-  };
-
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="px-4 pt-2 flex-shrink-0">
-        <ListToolbar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          selectedCount={selectedSessions.size}
-          totalCount={filteredSessions.length}
-          allSelected={
-            filteredSessions.length > 0 &&
-            filteredSessions.every((session) => selectedSessions.has(session.id))
-          }
-          onToggleSelectAll={toggleSelectAll}
-          onDelete={handleBulkDelete}
-          onDeleteAll={handleDeleteAll}
-          manageMode={manageMode}
-          onToggleManageMode={toggleManageMode}
-        />
+        {manageMode ? (
+          <div className="flex items-center gap-2 bg-accent/50 rounded-md p-2">
+            <span className="text-sm font-medium text-foreground shrink-0">
+              {selectedSessions.size} selected
+            </span>
+            <Button variant="ghost" onClick={toggleSelectAll} className="shrink-0 h-9 text-xs" size="sm">
+              {allVisibleSelected ? "Unselect All" : "Select All"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleBulkDelete}
+              disabled={selectedSessions.size === 0}
+              className="shrink-0 h-9 text-xs text-destructive hover:text-destructive"
+              size="sm"
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              Delete
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { setSelectedSessions(new Set()); setManageMode(false); }}
+              className="shrink-0 size-9 ml-auto text-destructive hover:text-destructive"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search sessions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0 size-9"
+              onClick={() => {
+                setManageMode(true);
+              }}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-4 min-h-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
@@ -202,9 +213,7 @@ export const SessionList = ({
                       isActive={activeSessionID === session.id}
                       manageMode={manageMode}
                       onSelect={onSelectSession}
-                      onToggleSelection={(selected) => {
-                        toggleSessionSelection(session.id, selected);
-                      }}
+                      onToggleSelection={(selected) => toggleSessionSelection(session.id, selected)}
                       onDelete={(e) => handleDelete(session.id, e)}
                     />
                   ))}
@@ -222,9 +231,7 @@ export const SessionList = ({
                   isActive={activeSessionID === session.id}
                   manageMode={manageMode}
                   onSelect={onSelectSession}
-                  onToggleSelection={(selected) => {
-                    toggleSessionSelection(session.id, selected);
-                  }}
+                  onToggleSelection={(selected) => toggleSessionSelection(session.id, selected)}
                   onDelete={(e) => handleDelete(session.id, e)}
                 />
               ))}
@@ -239,9 +246,7 @@ export const SessionList = ({
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
         isDeleting={deleteSession.isPending}
-        sessionCount={
-          Array.isArray(sessionToDelete) ? sessionToDelete.length : 1
-        }
+        sessionCount={Array.isArray(sessionToDelete) ? sessionToDelete.length : 1}
       />
     </div>
   );

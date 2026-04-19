@@ -12,10 +12,13 @@ vi.mock('../api/git', () => ({
   gitCommit: vi.fn(),
   gitStageFiles: vi.fn(),
   gitUnstageFiles: vi.fn(),
+  gitDiscardFiles: vi.fn(),
+  gitReset: vi.fn(),
   fetchGitLog: vi.fn(),
   fetchGitDiff: vi.fn(),
   createBranch: vi.fn(),
   switchBranch: vi.fn(),
+  getApiErrorMessage: vi.fn((error: unknown) => typeof error === 'string' ? error : String(error)),
 }))
 vi.mock('../lib/toast', () => ({
   showToast: {
@@ -30,13 +33,15 @@ vi.mock('../lib/toast', () => ({
 }))
 
 const mockInvalidateQueries = vi.fn()
+const mockSetQueryData = vi.fn()
 
 vi.mock('@tanstack/react-query', async () => {
   const actual = await vi.importActual('@tanstack/react-query')
   return {
     ...actual,
     useQueryClient: vi.fn(() => ({
-      invalidateQueries: mockInvalidateQueries
+      invalidateQueries: mockInvalidateQueries,
+      setQueryData: mockSetQueryData,
     }))
   }
 })
@@ -134,8 +139,7 @@ describe('useGit', () => {
         result.current.push.mutateAsync()
       })
 
-      expect(gitApi.gitPush).toHaveBeenCalledWith(1)
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['gitStatus', 1] })
+      expect(gitApi.gitPush).toHaveBeenCalledWith(1, false)
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['fileDiff', 1] })
       expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['gitLog', 1] })
     })

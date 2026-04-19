@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRepo } from "@/api/repos";
-import { settingsApi } from "@/api/settings";
 import { SessionList } from "@/components/session/SessionList";
 import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
 import { Header } from "@/components/ui/header";
@@ -12,11 +11,12 @@ import { RepoSkillsDialog } from "@/components/repo/RepoSkillsDialog";
 import { SourceControlPanel } from "@/components/source-control";
 import { useCreateSession } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
+import { useMemoryPluginStatus } from "@/hooks/useMemoryPluginStatus";
 import { useSSE } from "@/hooks/useSSE";
+import { useDialogParam } from "@/hooks/useDialogParam";
 import { OPENCODE_API_ENDPOINT } from "@/config";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Plug, FolderOpen, Plus, GitBranch, GitCommitHorizontal, ShieldOff, Brain, Loader2, CalendarClock, Sparkles } from "lucide-react";
 import { ResetPermissionsDialog } from "@/components/repo/ResetPermissionsDialog";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
@@ -27,12 +27,12 @@ export function RepoDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const repoId = Number(id) || 0;
-  const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
+  const [fileBrowserOpen, setFileBrowserOpen] = useDialogParam('files');
   const [switchConfigOpen, setSwitchConfigOpen] = useState(false);
-  const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
-  const [skillsDialogOpen, setSkillsDialogOpen] = useState(false);
-  const [sourceControlOpen, setSourceControlOpen] = useState(false);
-  const [resetPermissionsOpen, setResetPermissionsOpen] = useState(false);
+  const [mcpDialogOpen, setMcpDialogOpen] = useDialogParam('mcp');
+  const [skillsDialogOpen, setSkillsDialogOpen] = useDialogParam('skills');
+  const [sourceControlOpen, setSourceControlOpen] = useDialogParam('sourceControl');
+  const [resetPermissionsOpen, setResetPermissionsOpen] = useDialogParam('resetPermissions');
 
   const { data: repo, isLoading: repoLoading } = useQuery({
     queryKey: ["repo", repoId],
@@ -42,11 +42,7 @@ export function RepoDetail() {
 
   useRepoActivity(repoId, Boolean(repo));
 
-  const { data: memoryPluginStatus } = useQuery({
-    queryKey: ["memory-plugin-status"],
-    queryFn: () => settingsApi.getMemoryPluginStatus(),
-    staleTime: 60000,
-  });
+  const { memoryPluginEnabled } = useMemoryPluginStatus();
 
   const opcodeUrl = OPENCODE_API_ENDPOINT;
   
@@ -110,7 +106,7 @@ export function RepoDetail() {
 
   return (
     <div
-      className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col"
+      className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0"
     >
     <Header>
       <Header.BackButton to="/" />
@@ -172,7 +168,7 @@ export function RepoDetail() {
           <ShieldOff className="w-4 h-4 sm:mr-2" />
           <span className="hidden sm:inline">Reset Permissions</span>
         </Button>
-        {memoryPluginStatus?.memoryPluginEnabled && (
+        {memoryPluginEnabled && (
           <Button
             variant="outline"
             onClick={() => navigate(`/repos/${repoId}/memories`)}
@@ -192,39 +188,22 @@ export function RepoDetail() {
           <CalendarClock className="w-4 h-4 sm:mr-2" />
           <span className="hidden sm:inline">Schedules</span>
         </Button>
-        <Header.MobileDropdown>
-          <DropdownMenuItem onClick={() => setFileBrowserOpen(true)}>
-            <FolderOpen className="w-4 h-4 mr-2" /> Files
-          </DropdownMenuItem>
-          {memoryPluginStatus?.memoryPluginEnabled && (
-            <DropdownMenuItem onClick={() => navigate(`/repos/${repoId}/memories`)}>
-              <Brain className="w-4 h-4 mr-2" /> Memory
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onClick={() => setMcpDialogOpen(true)}>
-            <Plug className="w-4 h-4 mr-2" /> MCP
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSkillsDialogOpen(true)}>
-            <Sparkles className="w-4 h-4 mr-2" /> Skills
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setResetPermissionsOpen(true)}>
-            <ShieldOff className="w-4 h-4 mr-2" /> Reset Permissions
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate(`/repos/${repoId}/schedules`)}>
-            <CalendarClock className="w-4 h-4 mr-2" /> Schedules
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSourceControlOpen(true)}>
-            <GitCommitHorizontal className="w-4 h-4 mr-2" /> Source Control
-          </DropdownMenuItem>
-        </Header.MobileDropdown>
         <Button
           onClick={() => handleCreateSession()}
           disabled={!opcodeUrl || createSessionMutation.isPending}
           size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 hover:scale-105"
+          className="hidden sm:inline-flex bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 hover:scale-105"
         >
-          <Plus className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">New Session</span>
+          <Plus className="w-4 h-4 mr-2" />
+          <span>New Session</span>
+        </Button>
+        <Button
+          onClick={() => handleCreateSession()}
+          disabled={!opcodeUrl || createSessionMutation.isPending}
+          size="sm"
+          className="sm:hidden h-10 w-10 p-0 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 hover:scale-105"
+        >
+          <Plus className="w-5 h-5" />
         </Button>
       </Header.Actions>
     </Header>

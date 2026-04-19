@@ -24,6 +24,17 @@ const mockProviders: Record<string, ConfigProvider> = {
   },
 }
 
+const findTrashButton = (): HTMLButtonElement | null => {
+  const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+  for (const btn of buttons) {
+    const svg = btn.querySelector('svg')
+    if (svg && svg.getAttribute('class')?.includes('trash')) {
+      return btn
+    }
+  }
+  return null
+}
+
 describe('OpenCodeModelsEditor', () => {
   describe('rendering', () => {
     it('should render empty state when no providers configured', () => {
@@ -68,15 +79,7 @@ describe('OpenCodeModelsEditor', () => {
       const onChange = vi.fn()
       render(<OpenCodeModelsEditor providers={mockProviders} onChange={onChange} />)
 
-      const deleteButtons = document.querySelectorAll('button')
-      let deleteButton: HTMLButtonElement | null = null
-      deleteButtons.forEach(btn => {
-        const svg = btn.querySelector('svg')
-        if (svg && svg.className.baseVal.includes('Trash2')) {
-          deleteButton = btn as HTMLButtonElement
-        }
-      })
-
+      const deleteButton = findTrashButton()
       expect(deleteButton).not.toBeNull()
       if (deleteButton) {
         fireEvent.click(deleteButton)
@@ -107,15 +110,7 @@ describe('OpenCodeModelsEditor', () => {
 
       render(<OpenCodeModelsEditor providers={providersWithExtras} onChange={onChange} />)
 
-      const deleteButtons = document.querySelectorAll('button')
-      let deleteButton: HTMLButtonElement | null = null
-      deleteButtons.forEach(btn => {
-        const svg = btn.querySelector('svg')
-        if (svg && svg.className.baseVal.includes('Trash2')) {
-          deleteButton = btn as HTMLButtonElement
-        }
-      })
-
+      const deleteButton = findTrashButton()
       if (deleteButton) {
         fireEvent.click(deleteButton)
       }
@@ -155,15 +150,13 @@ describe('OpenCodeModelDialog', () => {
       })
     })
 
-    it('should require display name when submitting empty form', async () => {
+    it('should disable create button when required fields are empty', async () => {
       const { OpenCodeModelDialog } = await import('./OpenCodeModelDialog')
       render(<OpenCodeModelDialog {...defaultProps} />)
 
-      const createButton = screen.getByRole('button', { name: /create/i })
-      fireEvent.click(createButton)
-
       await waitFor(() => {
-        expect(screen.getByText(/display name is required/i)).toBeInTheDocument()
+        const createButton = screen.getByRole('button', { name: /create/i })
+        expect(createButton).toBeDisabled()
       })
     })
 
@@ -172,15 +165,12 @@ describe('OpenCodeModelDialog', () => {
       render(<OpenCodeModelDialog {...defaultProps} />)
 
       const modelIdInput = document.querySelector('input[name="modelId"]') as HTMLInputElement
-      if (modelIdInput) {
-        fireEvent.change(modelIdInput, { target: { value: 'invalid model id!' } })
-        const createButton = screen.getByRole('button', { name: /create/i })
-        fireEvent.click(createButton)
+      expect(modelIdInput).not.toBeNull()
+      fireEvent.change(modelIdInput, { target: { value: 'invalid model id!' } })
 
-        await waitFor(() => {
-          expect(screen.getByText(/alphanumeric/i)).toBeInTheDocument()
-        })
-      }
+      await waitFor(() => {
+        expect(screen.getByText(/must use only letters, numbers/i)).toBeInTheDocument()
+      })
     })
   })
 
@@ -191,15 +181,18 @@ describe('OpenCodeModelDialog', () => {
       render(<OpenCodeModelDialog {...defaultProps} onSubmit={onSubmit} />)
 
       const modelIdInput = document.querySelector('input[name="modelId"]') as HTMLInputElement
-      const nameInput = document.querySelector('input[name="name"]') as HTMLInputElement
+      const displayNameInput = document.querySelector('input[name="displayName"]') as HTMLInputElement
 
-      if (modelIdInput && nameInput) {
-        fireEvent.change(modelIdInput, { target: { value: 'gpt-5' } })
-        fireEvent.change(nameInput, { target: { value: 'GPT-5' } })
-      }
+      expect(modelIdInput).not.toBeNull()
+      expect(displayNameInput).not.toBeNull()
+      fireEvent.change(modelIdInput, { target: { value: 'gpt-5' } })
+      fireEvent.change(displayNameInput, { target: { value: 'GPT-5' } })
 
-      const createButton = screen.getByRole('button', { name: /create/i })
-      fireEvent.click(createButton)
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /create/i })).not.toBeDisabled()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /create/i }))
 
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledWith(
@@ -218,19 +211,25 @@ describe('OpenCodeModelDialog', () => {
       render(<OpenCodeModelDialog {...defaultProps} onSubmit={onSubmit} />)
 
       const modelIdInput = document.querySelector('input[name="modelId"]') as HTMLInputElement
-      const nameInput = document.querySelector('input[name="name"]') as HTMLInputElement
+      const displayNameInput = document.querySelector('input[name="displayName"]') as HTMLInputElement
       const contextLimitInput = document.querySelector('input[name="contextLimit"]') as HTMLInputElement
       const outputLimitInput = document.querySelector('input[name="outputLimit"]') as HTMLInputElement
 
-      if (modelIdInput && nameInput && contextLimitInput && outputLimitInput) {
-        fireEvent.change(modelIdInput, { target: { value: 'gpt-5' } })
-        fireEvent.change(nameInput, { target: { value: 'GPT-5' } })
-        fireEvent.change(contextLimitInput, { target: { value: '256000' } })
-        fireEvent.change(outputLimitInput, { target: { value: '8192' } })
-      }
+      expect(modelIdInput).not.toBeNull()
+      expect(displayNameInput).not.toBeNull()
+      expect(contextLimitInput).not.toBeNull()
+      expect(outputLimitInput).not.toBeNull()
 
-      const createButton = screen.getByRole('button', { name: /create/i })
-      fireEvent.click(createButton)
+      fireEvent.change(modelIdInput, { target: { value: 'gpt-5' } })
+      fireEvent.change(displayNameInput, { target: { value: 'GPT-5' } })
+      fireEvent.change(contextLimitInput, { target: { value: '256000' } })
+      fireEvent.change(outputLimitInput, { target: { value: '8192' } })
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /create/i })).not.toBeDisabled()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /create/i }))
 
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledWith(
@@ -300,6 +299,7 @@ describe('OpenCodeModelDialog', () => {
         providerId: 'openai',
         modelId: 'gpt-4o',
         model: {
+          id: 'gpt-4o',
           name: 'GPT-4o',
           limit: { context: 128000, output: 4096 },
           reasoning: true,
@@ -319,6 +319,10 @@ describe('OpenCodeModelDialog', () => {
 
       fireEvent.change(document.querySelector('input[name="modelId"]') as HTMLInputElement, {
         target: { value: 'my-friendly-model' },
+      })
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /update/i })).not.toBeDisabled()
       })
 
       fireEvent.click(screen.getByRole('button', { name: /update/i }))

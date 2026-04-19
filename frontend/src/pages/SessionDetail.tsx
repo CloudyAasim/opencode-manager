@@ -5,7 +5,7 @@ import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/components/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/components/message/PromptInput";
 import { FloatingTTSButton } from '@/components/message/FloatingTTSButton'
-import { X, FolderOpen, Plug, Settings, CornerUpLeft, GitCommitHorizontal, Brain, ShieldOff, Code, Sparkles } from "lucide-react";
+import { X, FolderOpen, Plug, Settings, CornerUpLeft, GitCommitHorizontal, Brain, ShieldOff, Sparkles } from "lucide-react";
 import { ModelSelectDialog } from "@/components/model/ModelSelectDialog";
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/components/session/SessionList";
@@ -13,7 +13,6 @@ import { SessionList } from "@/components/session/SessionList";
 import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ContextUsageIndicator } from "@/components/session/ContextUsageIndicator";
 import { useSession, useAbortSession, useUpdateSession, useMessages, useCreateSession } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
@@ -49,6 +48,9 @@ import { MinimizedQuestionIndicator } from "@/components/session/MinimizedQuesti
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
 import { SourceControlPanel } from "@/components/source-control";
 import { SessionTodoDisplay } from "@/components/message/SessionTodoDisplay";
+import { useDialogParam } from "@/hooks/useDialogParam";
+import { SessionMoreButton } from "@/components/navigation/SessionMoreButton";
+import { useMemoryPluginStatus } from "@/hooks/useMemoryPluginStatus";
 
 const compareMessageIds = (id1: string, id2: string): number => {
   const num1 = parseInt(id1, 10)
@@ -67,12 +69,12 @@ export function SessionDetail() {
   const promptInputRef = useRef<PromptInputHandle>(null);
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
-  const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
-  const [lspDialogOpen, setLspDialogOpen] = useState(false);
-  const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
-  const [skillsDialogOpen, setSkillsDialogOpen] = useState(false);
-  const [sourceControlOpen, setSourceControlOpen] = useState(false);
-  const [resetPermissionsOpen, setResetPermissionsOpen] = useState(false);
+  const [fileBrowserOpen, setFileBrowserOpen] = useDialogParam('files');
+  const [lspDialogOpen, setLspDialogOpen] = useDialogParam('lsp');
+  const [mcpDialogOpen, setMcpDialogOpen] = useDialogParam('mcp');
+  const [skillsDialogOpen, setSkillsDialogOpen] = useDialogParam('skills');
+  const [sourceControlOpen, setSourceControlOpen] = useDialogParam('sourceControl');
+  const [resetPermissionsOpen, setResetPermissionsOpen] = useDialogParam('resetPermissions');
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>();
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasPromptContent, setHasPromptContent] = useState(false);
@@ -108,6 +110,8 @@ export function SessionDetail() {
   });
 
   useRepoActivity(repoId, Boolean(repo));
+
+  const { memoryPluginEnabled } = useMemoryPluginStatus();
 
   const opcodeUrl = OPENCODE_API_ENDPOINT;
   
@@ -259,7 +263,7 @@ export function SessionDetail() {
     undo: handleUndo,
     redo: handleRedo,
     fork: handleFork,
-    toggleSidebar: () => setFileBrowserOpen(prev => !prev),
+    toggleSidebar: () => setFileBrowserOpen(!fileBrowserOpen),
     toggleMode: () => {
       const modeButton = document.querySelector(
         "[data-toggle-mode]",
@@ -294,7 +298,7 @@ export function SessionDetail() {
     
     setSelectedFilePath(pathToOpen)
     setFileBrowserOpen(true)
-  }, [repo?.fullPath]);
+  }, [repo?.fullPath, setFileBrowserOpen]);
 
   const handleSessionTitleUpdate = useCallback((newTitle: string) => {
     if (sessionId) {
@@ -305,7 +309,7 @@ export function SessionDetail() {
   const handleFileBrowserClose = useCallback(() => {
     setFileBrowserOpen(false)
     setSelectedFilePath(undefined)
-  }, []);
+  }, [setFileBrowserOpen]);
 
   const handleChildSessionClick = useCallback((childSessionId: string) => {
     navigate(`/repos/${repoId}/sessions/${childSessionId}`)
@@ -413,11 +417,13 @@ export function SessionDetail() {
             <FolderOpen className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Files</span>
           </Button>
-          <LspStatusButton
-            opcodeUrl={opcodeUrl}
-            directory={repoDirectory}
-            onClick={() => setLspDialogOpen(true)}
-          />
+          <div className="hidden md:flex">
+            <LspStatusButton
+              opcodeUrl={opcodeUrl}
+              directory={repoDirectory}
+              onClick={() => setLspDialogOpen(true)}
+            />
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -445,15 +451,17 @@ export function SessionDetail() {
             <GitCommitHorizontal className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Source</span>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/repos/${repoId}/memories`)}
-            className="hidden md:flex text-foreground border-border hover:bg-accent transition-all duration-200 hover:scale-105"
-          >
-            <Brain className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Memory</span>
-          </Button>
+          {memoryPluginEnabled && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/repos/${repoId}/memories`)}
+              className="hidden md:flex text-foreground border-border hover:bg-accent transition-all duration-200 hover:scale-105"
+            >
+              <Brain className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Memory</span>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -472,29 +480,7 @@ export function SessionDetail() {
             <Settings className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Settings</span>
           </Button>
-          <Header.MobileDropdown>
-            <DropdownMenuItem onClick={() => setFileBrowserOpen(true)}>
-              <FolderOpen className="w-4 h-4 mr-2" /> Files
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(`/repos/${repoId}/memories`)}>
-              <Brain className="w-4 h-4 mr-2" /> Memory
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setMcpDialogOpen(true)}>
-              <Plug className="w-4 h-4 mr-2" /> MCP
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSkillsDialogOpen(true)}>
-              <Sparkles className="w-4 h-4 mr-2" /> Skills
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLspDialogOpen(true)}>
-              <Code className="w-4 h-4 mr-2" /> LSP
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setResetPermissionsOpen(true)}>
-              <ShieldOff className="w-4 h-4 mr-2" /> Reset Permissions
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSourceControlOpen(true)}>
-              <GitCommitHorizontal className="w-4 h-4 mr-2" /> Source Control
-            </DropdownMenuItem>
-          </Header.MobileDropdown>
+          <SessionMoreButton />
         </Header.Actions>
       </Header>
 
@@ -525,9 +511,9 @@ export function SessionDetail() {
           >
             <div className="relative w-[94%] md:max-w-4xl">
               <div className="absolute -top-5 right-0 md:right-4 z-50 flex flex-col items-end gap-2">
-                {ttsEnabled && !hasPromptContent && !hasActiveStream && ((lastAssistantMessage && lastAssistantText) || preferences?.tts?.autoPlay) && (
+                {ttsEnabled && !hasPromptContent && !hasActiveStream && lastAssistantMessage && lastAssistantText && (
                   <FloatingTTSButton
-                    messageId={lastAssistantMessage?.info.id ?? ''}
+                    messageId={lastAssistantMessage.info.id}
                     content={lastAssistantText}
                   />
                 )}

@@ -16,7 +16,6 @@ import { McpManager } from './McpManager'
 import { SkillsEditor } from './SkillsEditor'
 import { OpenCodeModelsEditor, type ConfigProvider } from './OpenCodeModelsEditor'
 import { VersionSelectDialog } from './VersionSelectDialog'
-import { MemoryPluginConfig } from './MemoryPluginConfig'
 import { settingsApi } from '@/api/settings'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useServerHealth } from '@/hooks/useServerHealth'
@@ -599,28 +598,7 @@ export function OpenCodeConfigManager() {
           </CardContent>
         </Card>
 
-        <MemoryPluginConfig 
-           memoryPluginEnabled={((configs.find(c => c.isDefault)?.content?.plugin as string[] | undefined) ?? []).includes('@opencode-manager/memory')}
-           onToggle={async (enabled) => {
-              const defaultConfig = configs.find(c => c.isDefault)
-              if (!defaultConfig) return
-              
-              const currentPlugins = (defaultConfig.content?.plugin as string[] | undefined) ?? []
-             const memoryPlugin = '@opencode-manager/memory'
-             const newPlugins = enabled
-               ? currentPlugins.includes(memoryPlugin)
-                 ? currentPlugins
-                 : [...currentPlugins, memoryPlugin]
-               : currentPlugins.filter(p => p !== memoryPlugin)
-             
-             await updateConfigContent(defaultConfig.name, {
-               ...defaultConfig.content,
-               plugin: newPlugins.length > 0 ? newPlugins : undefined
-             }, true)
-             
-             queryClient.invalidateQueries({ queryKey: ['memory-plugin-status'] })
-           }}
-         />
+        
         
         <CreateConfigDialog
         isOpen={isCreateDialogOpen}

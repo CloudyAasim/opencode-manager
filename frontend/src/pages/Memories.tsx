@@ -69,7 +69,7 @@ export function Memories() {
   }
 
   return (
-    <div className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col">
+    <div className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
       <Header>
         <Header.BackButton to={`/repos/${repoId}`} />
         <div className="min-w-0 flex-1 flex justify-center ml-2">
@@ -87,15 +87,15 @@ export function Memories() {
                 <Plus className="w-4 h-4 mr-2" />
                 New Memory
               </Button>
-              <Button onClick={() => setCreateOpen(true)} size="sm" className="sm:hidden">
-                <Plus className="w-4 h-4" />
+              <Button onClick={() => setCreateOpen(true)} size="sm" className="sm:hidden h-10 w-10 p-0">
+                <Plus className="w-5 h-5" />
               </Button>
             </>
           )}
         </Header.Actions>
       </Header>
 
-      <div className="flex-1 overflow-auto p-4 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
+      <div className="flex-1 overflow-auto p-4 pb-20 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
         {stats && (
           <Card className="mb-6 hidden sm:block">
             <CardContent className="p-4">

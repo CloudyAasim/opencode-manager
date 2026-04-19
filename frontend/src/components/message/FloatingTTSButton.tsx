@@ -56,6 +56,8 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
       return
     }
 
+    setIsLongPressVisual(false)
+
     if (isAnyPlaybackActive) {
       stop()
       return
@@ -74,15 +76,11 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
 
   const showStop = isAnyPlaybackActive
   const pillTitle = showStop
-    ? 'Stop playback (hold to toggle auto-play)'
+    ? 'Stop playback'
     : hasContent
-      ? autoPlay
-        ? 'Play latest reply (auto-play enabled; hold to toggle auto-play)'
-        : 'Play latest reply (hold to toggle auto-play)'
-      : autoPlay
-        ? 'Auto-play enabled (hold to toggle auto-play)'
-        : 'Hold to toggle auto-play'
-  const pillAriaLabel = pillTitle
+      ? 'Play latest reply'
+      : 'TTS controls'
+  const pillAriaLabel = `${pillTitle}. ${autoPlay ? 'Auto-play enabled.' : 'Auto-play disabled.'} hold to toggle auto-play`
   const buttonToneClasses = showStop
     ? 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-red-600 to-red-700 border border-red-500/60 shadow-red-500/30 ring-red-500/20 hover:ring-red-500/40 text-white'
     : autoPlay

@@ -662,11 +662,11 @@ describe('FileBrowserSheet swipe decision integration', () => {
     expect(parentPath).toBe('test')
   })
 
-  it('FileBrowserSheet wires useSwipeToClose with canSwipeBack and onSwipeBack callbacks', () => {
+  it('FileBrowserSheet wires useSwipeBack with canBack and onBack callbacks', () => {
     const mockOnClose = vi.fn()
     
-    const mockUseSwipeToClose = vi.spyOn(useMobile, 'useSwipeToClose')
-    mockUseSwipeToClose.mockReturnValue({
+    const mockUseSwipeBack = vi.spyOn(useMobile, 'useSwipeBack')
+    mockUseSwipeBack.mockReturnValue({
       bind: vi.fn(),
       swipeProgress: 0,
       swipeStyles: { transform: undefined, transition: 'transform 0.2s ease-out' },
@@ -681,18 +681,18 @@ describe('FileBrowserSheet swipe decision integration', () => {
       { wrapper: createWrapper() }
     )
     
-    expect(mockUseSwipeToClose).toHaveBeenCalled()
+    expect(mockUseSwipeBack).toHaveBeenCalled()
     
-    const callArgs = mockUseSwipeToClose.mock.calls[0]
+    const callArgs = mockUseSwipeBack.mock.calls[0]
     expect(callArgs).toBeDefined()
     expect(callArgs![0]).toBe(mockOnClose)
     
     const options = callArgs![1]!
     expect(options.enabled).toBe(true)
-    expect(typeof options.canSwipeBack).toBe('function')
-    expect(typeof options.onSwipeBack).toBe('function')
+    expect(typeof options.canBack).toBe('function')
+    expect(typeof options.onBack).toBe('function')
     
-    mockUseSwipeToClose.mockRestore()
+    mockUseSwipeBack.mockRestore()
   })
 
   it('FileBrowserSheet swipe completion: path decision logic for nested path', () => {
@@ -726,13 +726,13 @@ describe('FileBrowserSheet swipe decision integration', () => {
     expect(parentPath).toBe('test/deep')
   })
 
-  it('FileBrowserSheet swipe completion calls onSwipeBack for nested path', () => {
+  it('FileBrowserSheet swipe completion calls onBack for nested path', () => {
     const mockOnClose = vi.fn()
     
-    const mockUseSwipeToClose = vi.spyOn(useMobile, 'useSwipeToClose')
-    mockUseSwipeToClose.mockImplementation((onClose, _options) => {
-      if (_options?.canSwipeBack && _options.canSwipeBack()) {
-        _options.onSwipeBack?.()
+    const mockUseSwipeBack = vi.spyOn(useMobile, 'useSwipeBack')
+    mockUseSwipeBack.mockImplementation((onClose, _options) => {
+      if (_options?.canBack && _options.canBack()) {
+        _options.onBack?.()
       }
       return {
         bind: vi.fn(),
@@ -758,29 +758,30 @@ describe('FileBrowserSheet swipe decision integration', () => {
     expect(canGoBack).toBe(true)
     expect(mockOnClose).not.toHaveBeenCalled()
     
-    mockUseSwipeToClose.mockRestore()
+    mockUseSwipeBack.mockRestore()
   })
 
   it('FileBrowserSheet swipe completion calls onClose for base path', () => {
     const mockOnClose = vi.fn()
-    const mockOnSwipeBack = vi.fn()
+    const mockOnBack = vi.fn()
     
     const basePath = 'test'
     const currentPath = basePath
+    
     const pathParts = currentPath.split('/').filter(Boolean)
     const joinedPath = pathParts.join('/')
     const canGoBack = joinedPath !== basePath
     
     expect(canGoBack).toBe(false)
     expect(mockOnClose).not.toHaveBeenCalled()
-    expect(mockOnSwipeBack).not.toHaveBeenCalled()
+    expect(mockOnBack).not.toHaveBeenCalled()
   })
 
   it('FileBrowserSheet back-vs-close outcome: verifies swipe completion calls correct action', () => {
     const mockOnClose = vi.fn()
     
-    const mockUseSwipeToClose = vi.spyOn(useMobile, 'useSwipeToClose')
-    mockUseSwipeToClose.mockReturnValue({
+    const mockUseSwipeBack = vi.spyOn(useMobile, 'useSwipeBack')
+    mockUseSwipeBack.mockReturnValue({
       bind: vi.fn(),
       swipeProgress: 0,
       swipeStyles: { transform: undefined, transition: 'transform 0.2s ease-out' },
@@ -796,16 +797,16 @@ describe('FileBrowserSheet swipe decision integration', () => {
       </QueryClientProvider>
     )
     
-    expect(mockUseSwipeToClose).toHaveBeenCalled()
+    expect(mockUseSwipeBack).toHaveBeenCalled()
     
-    const callArgs = mockUseSwipeToClose.mock.calls[0]
+    const callArgs = mockUseSwipeBack.mock.calls[0]
     expect(callArgs).toBeDefined()
     expect(callArgs![0]).toBe(mockOnClose)
     
     const options = callArgs![1]!
     expect(options.enabled).toBe(true)
-    expect(options.canSwipeBack).toBeDefined()
-    expect(options.onSwipeBack).toBeDefined()
+    expect(options.canBack).toBeDefined()
+    expect(options.onBack).toBeDefined()
     
     const nestedPath = 'test/deep'
     const nestedPathParts = nestedPath.split('/').filter(Boolean)
@@ -821,17 +822,17 @@ describe('FileBrowserSheet swipe decision integration', () => {
     
     expect(canGoBackBase).toBe(false)
     
-    mockUseSwipeToClose.mockRestore()
+    mockUseSwipeBack.mockRestore()
   })
 
   it('FileBrowserSheet back-vs-close: swipe completion decision is wired correctly', () => {
     const mockOnClose = vi.fn()
     
-    const mockUseSwipeToClose = vi.spyOn(useMobile, 'useSwipeToClose')
-    mockUseSwipeToClose.mockImplementation((onClose, options) => {
-      const canBack = options?.canSwipeBack?.()
+    const mockUseSwipeBack = vi.spyOn(useMobile, 'useSwipeBack')
+    mockUseSwipeBack.mockImplementation((onClose, options) => {
+      const canBack = options?.canBack?.()
       if (canBack) {
-        options?.onSwipeBack?.()
+        options?.onBack?.()
       } else {
         onClose()
       }
@@ -852,11 +853,11 @@ describe('FileBrowserSheet swipe decision integration', () => {
       </QueryClientProvider>
     )
     
-    const callArgs = mockUseSwipeToClose.mock.calls[0]
+    const callArgs = mockUseSwipeBack.mock.calls[0]
     const options = callArgs![1]!
     
-    expect(options.canSwipeBack).toBeDefined()
-    expect(options.onSwipeBack).toBeDefined()
+    expect(options.canBack).toBeDefined()
+    expect(options.onBack).toBeDefined()
     
     const currentPath = 'test/deep'
     const pathParts = currentPath.split('/').filter(Boolean)
@@ -865,7 +866,229 @@ describe('FileBrowserSheet swipe decision integration', () => {
     
     expect(canGoBack).toBe(true)
     
-    mockUseSwipeToClose.mockRestore()
+    mockUseSwipeBack.mockRestore()
+  })
+
+  it('FileBrowserSheet swipe decision integration: callback chain verification', () => {
+    const basePath = 'test'
+    const nestedPath = 'test/deep'
+    
+    const pathParts = nestedPath.split('/').filter(Boolean)
+    const joinedPath = pathParts.join('/')
+    const canGoBack = pathParts.length > 0 && joinedPath !== basePath
+    
+    expect(canGoBack).toBe(true)
+    expect(joinedPath).toBe('test/deep')
+    
+    const parentPath = pathParts.slice(0, -1).join('/')
+    expect(parentPath).toBe('test')
+  })
+
+  it('FileBrowserSheet wires useSwipeBack with canBack and onBack callbacks', () => {
+    const mockOnClose = vi.fn()
+    
+    const mockUseSwipeBack = vi.spyOn(useMobile, 'useSwipeBack')
+    mockUseSwipeBack.mockReturnValue({
+      bind: vi.fn(),
+      swipeProgress: 0,
+      swipeStyles: { transform: undefined, transition: 'transform 0.2s ease-out' },
+    })
+    
+    render(
+      <FileBrowserSheet
+        isOpen={true}
+        onClose={mockOnClose}
+        basePath="test/deep"
+      />,
+      { wrapper: createWrapper() }
+    )
+    
+    expect(mockUseSwipeBack).toHaveBeenCalled()
+    
+    const callArgs = mockUseSwipeBack.mock.calls[0]
+    expect(callArgs).toBeDefined()
+    expect(callArgs![0]).toBe(mockOnClose)
+    
+    const options = callArgs![1]!
+    expect(options.enabled).toBe(true)
+    expect(typeof options.canBack).toBe('function')
+    expect(typeof options.onBack).toBe('function')
+    
+    mockUseSwipeBack.mockRestore()
+  })
+
+  it('FileBrowserSheet swipe completion: path decision logic for nested path', () => {
+    const basePath = 'test'
+    const currentPath = 'test/deep/nested'
+    
+    const pathParts = currentPath.split('/').filter(Boolean)
+    const joinedPath = pathParts.join('/')
+    const canGoBack = pathParts.length > 0 && joinedPath !== basePath
+    
+    expect(canGoBack).toBe(true)
+  })
+
+  it('FileBrowserSheet swipe completion: path decision logic for base path', () => {
+    const basePath = 'test'
+    const currentPath = basePath
+    
+    const pathParts = currentPath.split('/').filter(Boolean)
+    const joinedPath = pathParts.join('/')
+    const canGoBack = pathParts.length > 0 && joinedPath !== basePath
+    
+    expect(canGoBack).toBe(false)
+  })
+
+  it('FileBrowserSheet swipe completion: parent path computation', () => {
+    const currentPath = 'test/deep/nested'
+    const pathParts = currentPath.split('/').filter(Boolean)
+    pathParts.pop()
+    const parentPath = pathParts.join('/')
+    
+    expect(parentPath).toBe('test/deep')
+  })
+
+  it('FileBrowserSheet swipe completion calls onBack for nested path', () => {
+    const mockOnClose = vi.fn()
+    
+    const mockUseSwipeBack = vi.spyOn(useMobile, 'useSwipeBack')
+    mockUseSwipeBack.mockImplementation((onClose, _options) => {
+      if (_options?.canBack && _options.canBack()) {
+        _options.onBack?.()
+      }
+      return {
+        bind: vi.fn(),
+        swipeProgress: 0,
+        swipeStyles: { transform: undefined, transition: 'transform 0.2s ease-out' },
+      }
+    })
+    
+    render(
+      <FileBrowserSheet
+        isOpen={true}
+        onClose={mockOnClose}
+        basePath="test"
+      />,
+      { wrapper: createWrapper() }
+    )
+    
+    const testPath = 'test/deep'
+    const pathParts = testPath.split('/').filter(Boolean)
+    const joinedPath = pathParts.join('/')
+    const canGoBack = joinedPath !== 'test'
+    
+    expect(canGoBack).toBe(true)
+    expect(mockOnClose).not.toHaveBeenCalled()
+    
+    mockUseSwipeBack.mockRestore()
+  })
+
+  it('FileBrowserSheet swipe completion calls onClose for base path', () => {
+    const mockOnClose = vi.fn()
+    const mockOnBack = vi.fn()
+    
+    const basePath = 'test'
+    const currentPath = basePath
+    
+    const pathParts = currentPath.split('/').filter(Boolean)
+    const joinedPath = pathParts.join('/')
+    const canGoBack = joinedPath !== basePath
+    
+    expect(canGoBack).toBe(false)
+    expect(mockOnClose).not.toHaveBeenCalled()
+    expect(mockOnBack).not.toHaveBeenCalled()
+  })
+
+  it('FileBrowserSheet back-vs-close outcome: verifies swipe completion calls correct action', () => {
+    const mockOnClose = vi.fn()
+    
+    const mockUseSwipeBack = vi.spyOn(useMobile, 'useSwipeBack')
+    mockUseSwipeBack.mockReturnValue({
+      bind: vi.fn(),
+      swipeProgress: 0,
+      swipeStyles: { transform: undefined, transition: 'transform 0.2s ease-out' },
+    })
+    
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <FileBrowserSheet
+          isOpen={true}
+          onClose={mockOnClose}
+          basePath="test"
+        />
+      </QueryClientProvider>
+    )
+    
+    expect(mockUseSwipeBack).toHaveBeenCalled()
+    
+    const callArgs = mockUseSwipeBack.mock.calls[0]
+    expect(callArgs).toBeDefined()
+    expect(callArgs![0]).toBe(mockOnClose)
+    
+    const options = callArgs![1]!
+    expect(options.enabled).toBe(true)
+    expect(options.canBack).toBeDefined()
+    expect(options.onBack).toBeDefined()
+    
+    const nestedPath = 'test/deep'
+    const nestedPathParts = nestedPath.split('/').filter(Boolean)
+    const nestedJoinedPath = nestedPathParts.join('/')
+    const canGoBackNested = nestedJoinedPath !== 'test'
+    
+    expect(canGoBackNested).toBe(true)
+    
+    const basePath = 'test'
+    const basePathParts = basePath.split('/').filter(Boolean)
+    const baseJoinedPath = basePathParts.join('/')
+    const canGoBackBase = baseJoinedPath !== 'test'
+    
+    expect(canGoBackBase).toBe(false)
+    
+    mockUseSwipeBack.mockRestore()
+  })
+
+  it('FileBrowserSheet back-vs-close: swipe completion decision is wired correctly', () => {
+    const mockOnClose = vi.fn()
+    
+    const mockUseSwipeBack = vi.spyOn(useMobile, 'useSwipeBack')
+    mockUseSwipeBack.mockImplementation((onClose, options) => {
+      const canBack = options?.canBack?.()
+      if (canBack) {
+        options?.onBack?.()
+      } else {
+        onClose()
+      }
+      return {
+        bind: vi.fn(),
+        swipeProgress: 0,
+        swipeStyles: { transform: undefined, transition: 'transform 0.2s ease-out' },
+      }
+    })
+    
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <FileBrowserSheet
+          isOpen={true}
+          onClose={mockOnClose}
+          basePath="test/deep"
+        />
+      </QueryClientProvider>
+    )
+    
+    const callArgs = mockUseSwipeBack.mock.calls[0]
+    const options = callArgs![1]!
+    
+    expect(options.canBack).toBeDefined()
+    expect(options.onBack).toBeDefined()
+    
+    const currentPath = 'test/deep'
+    const pathParts = currentPath.split('/').filter(Boolean)
+    const joinedPath = pathParts.join('/')
+    const canGoBack = joinedPath !== 'test'
+    
+    expect(canGoBack).toBe(true)
+    
+    mockUseSwipeBack.mockRestore()
   })
 })
 

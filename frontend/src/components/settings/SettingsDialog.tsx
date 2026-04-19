@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { GeneralSettings } from '@/components/settings/GeneralSettings'
 import { GitSettings } from '@/components/settings/GitSettings'
 import { KeyboardShortcuts } from '@/components/settings/KeyboardShortcuts'
@@ -11,7 +11,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Volume2, Bell, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useSwipeToClose } from '@/hooks/useMobile'
+import { useSwipeBack } from '@/hooks/useMobile'
 import { useSettingsDialog } from '@/hooks/useSettingsDialog'
 
 type SettingsView = 'menu' | 'general' | 'git' | 'shortcuts' | 'opencode' | 'providers' | 'account' | 'voice' | 'notifications'
@@ -21,17 +21,10 @@ export function SettingsDialog() {
   const [mobileView, setMobileView] = useState<SettingsView>('menu')
   const contentRef = useRef<HTMLDivElement>(null)
 
-  const handleSwipeBack = useCallback(() => {
-    if (mobileView === 'menu') {
-      setMobileView('menu')
-      close()
-    } else {
-      setMobileView('menu')
-    }
-  }, [mobileView, close])
-
-  const { bind: bindSwipe, swipeStyles } = useSwipeToClose(handleSwipeBack, {
+  const { bind: bindSwipe, swipeStyles } = useSwipeBack(close, {
     enabled: isOpen,
+    canBack: () => mobileView !== 'menu',
+    onBack: () => setMobileView('menu'),
   })
 
   useEffect(() => {

@@ -254,6 +254,8 @@ describe('OpenCodeServerManager - reloadConfig', () => {
     const mockPatchResult = { success: true }
     vi.mocked(patchOpenCodeConfig).mockResolvedValue(mockPatchResult)
 
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }))
+
     const { opencodeServerManager } = await import('../../src/services/opencode-single-server')
 
     await opencodeServerManager.reloadConfig()
@@ -263,5 +265,7 @@ describe('OpenCodeServerManager - reloadConfig', () => {
       'utf-8'
     )
     expect(patchOpenCodeConfig).toHaveBeenCalled()
+
+    fetchSpy.mockRestore()
   })
 })

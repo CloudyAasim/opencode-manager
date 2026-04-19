@@ -16,6 +16,7 @@ import {
 } from '@/hooks/useSchedules'
 import { useRepoActivity } from '@/hooks/useRepoActivity'
 import { ScheduleJobDialog, JobsTab, JobDetailTab, RunHistoryTab, ScheduleTabMenu } from '@/components/schedules'
+import { useScheduleTab } from '@/hooks/useMobileTabBar'
 import { toUpdateScheduleRequest, getJobStatusTone } from '@/components/schedules/schedule-utils'
 import { Header } from '@/components/ui/header'
 import { Button } from '@/components/ui/button'
@@ -33,7 +34,7 @@ export function Schedules() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingJob, setEditingJob] = useState<ScheduleJob | undefined>()
   const [deleteJobId, setDeleteJobId] = useState<number | null>(null)
-  const [activeTab, setActiveTab] = useState<'jobs' | 'detail' | 'runs'>('jobs')
+  const { scheduleTab: activeTab, setScheduleTab: setActiveTab } = useScheduleTab()
 
   const { data: repo, isLoading: repoLoading } = useQuery({
     queryKey: ['repo', repoId],
@@ -66,7 +67,7 @@ export function Schedules() {
       setSelectedJobId(jobs[0]?.id ?? null)
       setActiveTab('jobs')
     }
-  }, [jobs, selectedJobId])
+  }, [jobs, selectedJobId, setActiveTab])
 
   useEffect(() => {
     if (!runs?.length) {
@@ -194,7 +195,7 @@ export function Schedules() {
   }
 
   return (
-    <div className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col">
+    <div className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
       <Header>
         <Header.BackButton to={`/repos/${repoId}`} />
         <div className="min-w-0 flex-1 px-3">
@@ -209,8 +210,8 @@ export function Schedules() {
               <Plus className="w-4 h-4 mr-2" />
               New Schedule
             </Button>
-            <Button onClick={() => { setEditingJob(undefined); setDialogOpen(true) }} size="sm" className="sm:hidden">
-              <Plus className="w-4 h-4" />
+            <Button onClick={() => { setEditingJob(undefined); setDialogOpen(true) }} size="sm" className="sm:hidden h-10 w-10 p-0">
+              <Plus className="w-5 h-5" />
             </Button>
           </Header.Actions>
         </div>
@@ -275,7 +276,12 @@ export function Schedules() {
       </div>
 
       {hasJobs && (
-        <ScheduleTabMenu activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="sm:block hidden">
+          <ScheduleTabMenu
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab)}
+          />
+        </div>
       )}
 
       <ScheduleJobDialog

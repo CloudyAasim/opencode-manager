@@ -73,7 +73,7 @@ export function RunHistoryCards({
 
   return (
     <div className="flex flex-col min-h-0 flex-1 h-full">
-      <div className="min-h-0 flex-1 overflow-y-auto pt-4 pb-6 px-2 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
+      <div className="min-h-0 flex-1 overflow-y-auto pt-4 px-2 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
         {runs.map((run, index) => {
           const isExpanded = expandedRunId === run.id
           const displayRun = isExpanded && runDetail ? runDetail : run

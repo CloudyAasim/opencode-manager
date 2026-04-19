@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react'
-import { useNavigationStore } from '@/stores/navigationStore'
+import { useSwipeNavigation } from '@/contexts/SwipeNavigationContext'
 
 export function useMobile() {
   const [isMobile, setIsMobile] = useState(false)
@@ -18,253 +18,215 @@ export function useMobile() {
   return isMobile
 }
 
-const EDGE_WIDTH = 30
 const VELOCITY_THRESHOLD = 0.3
-const PROGRESS_THRESHOLD = 0.35
 const ANIMATION_DURATION = 300
 
-interface SwipeState {
-  startX: number
-  startY: number
-  currentX: number
-  startTime: number
-  isSwiping: boolean
-  isEdgeSwipe: boolean
-  directionLocked: boolean
-}
-
-const initialSwipeState: SwipeState = {
-  startX: 0,
-  startY: 0,
-  currentX: 0,
-  startTime: 0,
-  isSwiping: false,
-  isEdgeSwipe: false,
-  directionLocked: false,
-}
-
-export function useSwipeBack(): {
-  bindSwipe: (el: HTMLElement | null) => (() => void) | undefined
-  pageStyles: CSSProperties
-  underlayStyles: CSSProperties
-  isSwiping: boolean
-} {
-  const isMobile = useMobile()
-  const swipeRef = useRef<SwipeState>({ ...initialSwipeState })
-  const [progress, setProgress] = useState(0)
-  const [animatingOut, setAnimatingOut] = useState(false)
-  const swipeDisableCount = useNavigationStore((s) => s.swipeDisableCount)
-  const setPhase = useNavigationStore((s) => s.setPhase)
-  const setSwipeProgress = useNavigationStore((s) => s.setSwipeProgress)
-
-  const enabled = isMobile && swipeDisableCount === 0
-
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (!enabled || animatingOut) return
-
-    const touch = e.touches[0]
-    const isEdge = touch.clientX <= EDGE_WIDTH
-
-    swipeRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      currentX: touch.clientX,
-      startTime: Date.now(),
-      isSwiping: false,
-      isEdgeSwipe: isEdge,
-      directionLocked: false,
-    }
-  }, [enabled, animatingOut])
-
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!enabled) return
-
-    const state = swipeRef.current
-    if (!state.isEdgeSwipe) return
-
-    const touch = e.touches[0]
-    const deltaX = touch.clientX - state.startX
-    const deltaY = Math.abs(touch.clientY - state.startY)
-
-    if (!state.directionLocked) {
-      if (Math.abs(deltaX) > 10 || deltaY > 10) {
-        if (deltaX > 0 && deltaX > deltaY * 2) {
-          state.directionLocked = true
-          state.isSwiping = true
-          setPhase('swiping')
-        } else {
-          state.isEdgeSwipe = false
-          return
-        }
-      } else {
-        return
-      }
-    }
-
-    if (state.isSwiping) {
-      e.preventDefault()
-      state.currentX = touch.clientX
-      const p = Math.max(0, Math.min(1, deltaX / window.innerWidth))
-      setProgress(p)
-      setSwipeProgress(p)
-    }
-  }, [enabled, setPhase, setSwipeProgress])
-
-  const handleTouchEnd = useCallback(() => {
-    if (!enabled) return
-
-    const state = swipeRef.current
-
-    if (state.isSwiping) {
-      const deltaX = state.currentX - state.startX
-      const elapsed = Date.now() - state.startTime
-      const velocity = deltaX / elapsed
-      const currentProgress = Math.max(0, Math.min(1, deltaX / window.innerWidth))
-
-      if (velocity > VELOCITY_THRESHOLD || currentProgress > PROGRESS_THRESHOLD) {
-        setAnimatingOut(true)
-        setProgress(1)
-        setSwipeProgress(1)
-        setTimeout(() => {
-          setAnimatingOut(false)
-          setProgress(0)
-          setSwipeProgress(0)
-          setPhase('idle')
-          window.history.back()
-        }, ANIMATION_DURATION)
-      } else {
-        setAnimatingOut(true)
-        setProgress(0)
-        setSwipeProgress(0)
-        setTimeout(() => {
-          setAnimatingOut(false)
-          setPhase('idle')
-        }, ANIMATION_DURATION)
-      }
-    }
-
-    swipeRef.current = { ...initialSwipeState }
-  }, [enabled, setPhase, setSwipeProgress])
-
-  const bindSwipe = useCallback((element: HTMLElement | null) => {
-    if (!element || !enabled) return undefined
-
-    element.addEventListener('touchstart', handleTouchStart, { passive: true })
-    element.addEventListener('touchmove', handleTouchMove, { passive: false })
-    element.addEventListener('touchend', handleTouchEnd, { passive: true })
-    element.addEventListener('touchcancel', handleTouchEnd, { passive: true })
-
-    return () => {
-      element.removeEventListener('touchstart', handleTouchStart)
-      element.removeEventListener('touchmove', handleTouchMove)
-      element.removeEventListener('touchend', handleTouchEnd)
-      element.removeEventListener('touchcancel', handleTouchEnd)
-    }
-  }, [enabled, handleTouchStart, handleTouchMove, handleTouchEnd])
-
-  const isSwiping = progress > 0
-
-  const pageStyles: CSSProperties = isSwiping || animatingOut
-    ? {
-        transform: `translateX(${progress * 100}%)`,
-        transition: animatingOut ? `transform ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.9, 0.3, 1)` : undefined,
-        willChange: 'transform',
-        boxShadow: isSwiping ? '-8px 0 32px rgba(0, 0, 0, 0.15)' : undefined,
-      }
-    : {}
-
-  const underlayStyles: CSSProperties = isSwiping || animatingOut
-    ? {
-        opacity: 0.4 * (1 - progress),
-        transform: `translateX(${-70 * (1 - progress)}px)`,
-        transition: animatingOut ? `all ${ANIMATION_DURATION}ms cubic-bezier(0.2, 0.9, 0.3, 1)` : undefined,
-      }
-    : { opacity: 0 }
-
-  return { bindSwipe, pageStyles, underlayStyles, isSwiping }
-}
-
-export function useDisableSwipeBack(active = true) {
-  const disableSwipe = useNavigationStore((s) => s.disableSwipe)
-  const enableSwipe = useNavigationStore((s) => s.enableSwipe)
-
-  useEffect(() => {
-    if (!active) return
-    disableSwipe()
-    return () => enableSwipe()
-  }, [active, disableSwipe, enableSwipe])
-}
-
-interface SwipeToCloseOptions {
+export interface UseSwipeBackOptions {
   threshold?: number
   edgeWidth?: number
   enabled?: boolean
-  canSwipeBack?: () => boolean
-  onSwipeBack?: () => void
+  canBack?: () => boolean
+  onBack?: () => void
+  velocityThreshold?: number
+  suspendsRouteSwipe?: boolean
 }
 
-export function useSwipeToClose(
+export interface UseSwipeDismissOptions {
+  threshold?: number
+  enabled?: boolean
+  velocityThreshold?: number
+  suspendsRouteSwipe?: boolean
+}
+
+function useSwipeHandlers(
   onClose: () => void,
-  options: SwipeToCloseOptions = {}
+  options: UseSwipeBackOptions & { direction: 'horizontal' | 'vertical' } = { direction: 'horizontal' }
 ) {
   const {
     threshold = 80,
     edgeWidth = 30,
     enabled = true,
-    canSwipeBack,
-    onSwipeBack,
+    canBack,
+    onBack,
+    direction = 'horizontal',
+    velocityThreshold = VELOCITY_THRESHOLD,
   } = options
 
   const isMobile = useMobile()
-  const swipeRef = useRef<{ startX: number; startY: number; currentX: number; isSwiping: boolean; isEdgeSwipe: boolean }>({
-    startX: 0, startY: 0, currentX: 0, isSwiping: false, isEdgeSwipe: false,
+  const swipeRef = useRef<{
+    startX: number
+    startY: number
+    currentX: number
+    currentY: number
+    isSwiping: boolean
+    isEdgeSwipe: boolean
+    startTime: number
+    blockedByScroll: boolean
+  }>({
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    isSwiping: false,
+    isEdgeSwipe: false,
+    startTime: 0,
+    blockedByScroll: false,
   })
   const [swipeProgress, setSwipeProgress] = useState(0)
+  const [swipeDeltaPx, setSwipeDeltaPx] = useState(0)
+  const [dismissing, setDismissing] = useState(false)
 
-  useDisableSwipeBack(enabled && isMobile)
+  useEffect(() => {
+    if (!enabled) {
+      setDismissing(false)
+      setSwipeDeltaPx(0)
+      setSwipeProgress(0)
+    }
+  }, [enabled])
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     if (!enabled || !isMobile) return
+
     const touch = e.touches[0]
-    swipeRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      currentX: touch.clientX,
-      isSwiping: false,
-      isEdgeSwipe: touch.clientX <= edgeWidth,
+
+    if (direction === 'vertical') {
+      const target = e.target as Element
+      let scrollable: Element | null = target
+      while (scrollable && scrollable !== e.currentTarget) {
+        if (scrollable.scrollHeight > scrollable.clientHeight) {
+          const style = window.getComputedStyle(scrollable)
+          if (style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflow === 'auto' || style.overflow === 'scroll') {
+            break
+          }
+        }
+        scrollable = scrollable.parentElement
+      }
+      const blockedByScroll = scrollable && scrollable !== e.currentTarget && scrollable.scrollTop > 0
+
+      swipeRef.current = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        currentX: touch.clientX,
+        currentY: touch.clientY,
+        isSwiping: false,
+        isEdgeSwipe: false,
+        startTime: Date.now(),
+        blockedByScroll: !!blockedByScroll,
+      }
+    } else {
+      swipeRef.current = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        currentX: touch.clientX,
+        currentY: touch.clientY,
+        isSwiping: false,
+        isEdgeSwipe: touch.clientX <= edgeWidth,
+        startTime: Date.now(),
+        blockedByScroll: false,
+      }
     }
-  }, [enabled, isMobile, edgeWidth])
+  }, [enabled, isMobile, edgeWidth, direction])
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!enabled || !isMobile) return
+
     const state = swipeRef.current
-    if (!state.isEdgeSwipe) return
     const touch = e.touches[0]
-    const deltaX = touch.clientX - state.startX
-    const deltaY = Math.abs(touch.clientY - state.startY)
-    if (!state.isSwiping && deltaX > 10 && deltaX > deltaY * 2) {
-      state.isSwiping = true
+
+    if (direction === 'vertical') {
+      if (state.blockedByScroll) return
+
+      const deltaX = touch.clientX - state.startX
+      const deltaY = touch.clientY - state.startY
+
+      if (!state.isSwiping) {
+        if (Math.abs(deltaY) > 10 && deltaY > 0 && deltaY > Math.abs(deltaX) * 1.5) {
+          state.isSwiping = true
+        } else {
+          return
+        }
+      }
+
+      if (state.isSwiping) {
+        e.preventDefault()
+        state.currentY = touch.clientY
+        const clamped = Math.max(deltaY, 0)
+        setSwipeDeltaPx(clamped)
+        setSwipeProgress(Math.min(clamped / threshold, 1.5))
+      }
+    } else {
+      if (!state.isEdgeSwipe) return
+
+      const deltaX = touch.clientX - state.startX
+      const deltaY = Math.abs(touch.clientY - state.startY)
+
+      if (!state.isSwiping) {
+        if (deltaX > 10 && deltaX > deltaY * 2) {
+          state.isSwiping = true
+        } else {
+          return
+        }
+      }
+
+      if (state.isSwiping) {
+        e.preventDefault()
+        state.currentX = touch.clientX
+        setSwipeProgress(Math.min(Math.max(deltaX / threshold, 0), 1.5))
+      }
     }
-    if (state.isSwiping) {
-      e.preventDefault()
-      state.currentX = touch.clientX
-      setSwipeProgress(Math.min(Math.max(deltaX / threshold, 0), 1.5))
-    }
-  }, [enabled, isMobile, threshold])
+  }, [enabled, isMobile, threshold, direction])
 
   const handleTouchEnd = useCallback(() => {
     if (!enabled || !isMobile) return
+
     const state = swipeRef.current
-    if (state.isSwiping && state.currentX - state.startX >= threshold) {
-      if (canSwipeBack?.()) {
-        onSwipeBack?.()
+
+    if (state.isSwiping) {
+      if (direction === 'vertical') {
+        const deltaY = state.currentY - state.startY
+        const elapsed = Date.now() - state.startTime
+        const velocity = deltaY / Math.max(elapsed, 1)
+
+        if (deltaY >= threshold || velocity >= velocityThreshold) {
+          setDismissing(true)
+          setTimeout(() => {
+            if (canBack?.()) {
+              onBack?.()
+            } else {
+              onClose()
+            }
+          }, ANIMATION_DURATION)
+        } else {
+          setSwipeDeltaPx(0)
+          setSwipeProgress(0)
+        }
       } else {
-        onClose()
+        const deltaX = state.currentX - state.startX
+        if (deltaX >= threshold) {
+          if (canBack?.()) {
+            onBack?.()
+          } else {
+            onClose()
+          }
+        }
+        setSwipeProgress(0)
       }
+    } else {
+      setSwipeProgress(0)
+      setSwipeDeltaPx(0)
     }
-    swipeRef.current = { startX: 0, startY: 0, currentX: 0, isSwiping: false, isEdgeSwipe: false }
-    setSwipeProgress(0)
-  }, [enabled, isMobile, threshold, onClose, canSwipeBack, onSwipeBack])
+
+    swipeRef.current = {
+      startX: 0,
+      startY: 0,
+      currentX: 0,
+      currentY: 0,
+      isSwiping: false,
+      isEdgeSwipe: false,
+      startTime: 0,
+      blockedByScroll: false,
+    }
+  }, [enabled, isMobile, threshold, direction, velocityThreshold, onClose, canBack, onBack])
 
   const bind = useCallback((element: HTMLElement | null) => {
     if (!element || !enabled || !isMobile) return undefined
@@ -280,10 +242,137 @@ export function useSwipeToClose(
     }
   }, [enabled, isMobile, handleTouchStart, handleTouchMove, handleTouchEnd])
 
-  const swipeStyles = {
-    transform: swipeProgress > 0 ? `translateX(${swipeProgress * 50}px)` : undefined,
-    transition: swipeProgress === 0 ? 'transform 0.2s ease-out' : undefined,
-  }
+  const swipeStyles: CSSProperties = direction === 'vertical'
+    ? dismissing
+      ? {
+          transform: 'translateY(100%)',
+          transition: `transform ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+        }
+      : swipeDeltaPx > 0
+        ? { transform: `translateY(${swipeDeltaPx}px)` }
+        : { transform: 'translateY(0)', transition: 'transform 0.2s ease-out' }
+    : {
+        transform: swipeProgress > 0 ? `translateX(${swipeProgress * 50}px)` : undefined,
+        transition: swipeProgress === 0 ? 'transform 0.2s ease-out' : undefined,
+      }
 
   return { bind, swipeProgress, swipeStyles }
+}
+
+export function useSwipeBack(
+  onClose: () => void,
+  options: UseSwipeBackOptions = {}
+) {
+  const {
+    threshold = 80,
+    edgeWidth = 30,
+    enabled = true,
+    canBack,
+    onBack,
+    velocityThreshold = VELOCITY_THRESHOLD,
+    suspendsRouteSwipe = true,
+  } = options
+
+  const isMobile = useMobile()
+  const swipeNav = useSwipeNavigation()
+  const shouldSuspend = enabled && isMobile && suspendsRouteSwipe !== false
+
+  useEffect(() => {
+    if (shouldSuspend) {
+      swipeNav?.suspend()
+      return () => {
+        swipeNav?.resume()
+      }
+    }
+    return undefined
+  }, [shouldSuspend, swipeNav])
+
+  const wrappedOnBack = useCallback(() => {
+    if (!suspendsRouteSwipe && swipeNav?.isSuspended()) {
+      return
+    }
+    onBack?.()
+  }, [onBack, suspendsRouteSwipe, swipeNav])
+
+  const wrappedOnClose = useCallback(() => {
+    if (!suspendsRouteSwipe && swipeNav?.isSuspended()) {
+      return
+    }
+    onClose()
+  }, [onClose, suspendsRouteSwipe, swipeNav])
+
+  const { bind, swipeProgress, swipeStyles } = useSwipeHandlers(wrappedOnClose, {
+    threshold,
+    edgeWidth,
+    enabled,
+    canBack,
+    onBack: wrappedOnBack,
+    velocityThreshold,
+    direction: 'horizontal',
+  })
+
+  const wrappedBind = useCallback(
+    (element: HTMLElement | null) => {
+      const cleanup = bind(element)
+      return () => {
+        cleanup?.()
+      }
+    },
+    [bind]
+  )
+
+  return { bind: wrappedBind, swipeProgress, swipeStyles }
+}
+
+export function useSwipeDismiss(
+  onClose: () => void,
+  options: UseSwipeDismissOptions = {}
+) {
+  const {
+    threshold = 80,
+    enabled = true,
+    velocityThreshold = VELOCITY_THRESHOLD,
+    suspendsRouteSwipe = true,
+  } = options
+
+  const isMobile = useMobile()
+  const swipeNav = useSwipeNavigation()
+  const shouldSuspend = enabled && isMobile && suspendsRouteSwipe !== false
+
+  useEffect(() => {
+    if (shouldSuspend) {
+      swipeNav?.suspend()
+      return () => {
+        swipeNav?.resume()
+      }
+    }
+    return undefined
+  }, [shouldSuspend, swipeNav])
+
+  const wrappedOnClose = useCallback(() => {
+    if (!suspendsRouteSwipe && swipeNav?.isSuspended()) {
+      return
+    }
+    onClose()
+  }, [onClose, suspendsRouteSwipe, swipeNav])
+
+  const { bind, swipeProgress, swipeStyles } = useSwipeHandlers(wrappedOnClose, {
+    threshold,
+    edgeWidth: 30,
+    enabled,
+    velocityThreshold,
+    direction: 'vertical',
+  })
+
+  const wrappedBind = useCallback(
+    (element: HTMLElement | null) => {
+      const cleanup = bind(element)
+      return () => {
+        cleanup?.()
+      }
+    },
+    [bind]
+  )
+
+  return { bind: wrappedBind, swipeProgress, swipeStyles }
 }

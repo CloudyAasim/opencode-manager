@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RepoCard } from './RepoCard'
 
 const mockNavigate = vi.fn()
@@ -15,7 +16,7 @@ vi.mock('react-router-dom', async () => {
 const defaultProps = {
   repo: {
     id: 1,
-    repoUrl: 'https://github.com/test/repo',
+    repoUrl: 'https://github.com/test/test-repo',
     localPath: 'repos/test-repo',
     fullPath: '/Users/test/repos/test-repo',
     branch: 'main',
@@ -31,7 +32,14 @@ const defaultProps = {
 }
 
 const renderWithRouter = (ui: React.ReactElement) => {
-  return render(<BrowserRouter>{ui}</BrowserRouter>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>{ui}</BrowserRouter>
+    </QueryClientProvider>
+  )
 }
 
 describe('RepoCard', () => {
@@ -50,8 +58,10 @@ describe('RepoCard', () => {
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 
-  it('should not show checkbox when manageMode is false', () => {
-    renderWithRouter(<RepoCard {...defaultProps} manageMode={false} />)
+  it('should not show checkbox when onSelect is not provided', () => {
+    const { onSelect, ...propsWithoutSelect } = defaultProps
+    void onSelect
+    renderWithRouter(<RepoCard {...propsWithoutSelect} />)
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   })
 
@@ -88,9 +98,9 @@ describe('RepoCard', () => {
         hasChanges: true,
       },
     }
-    renderWithRouter(<RepoCard {...props} />)
+    const { container } = renderWithRouter(<RepoCard {...props} />)
 
-    const indicator = screen.getByTestId('dirty-indicator') || screen.container.querySelector('.bg-orange-500')
+    const indicator = container.querySelector('.bg-orange-500')
     expect(indicator).toBeTruthy()
   })
 
@@ -107,8 +117,8 @@ describe('RepoCard', () => {
     }
     renderWithRouter(<RepoCard {...props} />)
 
-    expect(screen.getByText('↑2')).toBeInTheDocument()
-    expect(screen.getByText('↓1')).toBeInTheDocument()
+    expect(screen.getByText(/↑2/)).toBeInTheDocument()
+    expect(screen.getByText(/↓1/)).toBeInTheDocument()
   })
 
   it('should display activity label when provided', () => {

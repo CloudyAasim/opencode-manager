@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { OpenCodeClient } from '@/api/opencode'
 import { listRepos } from '@/api/repos'
@@ -117,7 +117,6 @@ const EventContext = createContext<EventContextValue | null>(null)
 export function EventProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const location = useLocation()
 
   const [sshHostKeyRequest, setSSHHostKeyRequest] = useState<SSHHostKeyRequest | null>(null)
 
@@ -322,22 +321,22 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     const repoId = getRepoIdForSession(currentQuestion.sessionID)
     if (repoId) {
       const targetPath = `/repos/${repoId}/sessions/${currentQuestion.sessionID}`
-      if (location.pathname !== targetPath) {
+      if (window.location.pathname !== targetPath) {
         navigate(targetPath)
       }
     }
-  }, [currentQuestion, getRepoIdForSession, navigate, location.pathname])
+  }, [currentQuestion, getRepoIdForSession, navigate])
 
   const navigateToCurrentPermission = useCallback(() => {
     if (!currentPermission) return
     const repoId = getRepoIdForSession(currentPermission.sessionID)
     if (repoId) {
       const targetPath = `/repos/${repoId}/sessions/${currentPermission.sessionID}`
-      if (location.pathname !== targetPath) {
+      if (window.location.pathname !== targetPath) {
         navigate(targetPath)
       }
     }
-  }, [currentPermission, getRepoIdForSession, navigate, location.pathname])
+  }, [currentPermission, getRepoIdForSession, navigate])
 
   const fetchInitialPendingData = useCallback(async () => {
     if (!repos || repos.length === 0) return
@@ -533,4 +532,9 @@ export function usePermissions() {
 export function useQuestions() {
   const { questions } = useEventContext()
   return questions
+}
+
+export function usePendingAlerts(): boolean {
+  const { permissions, questions } = useEventContext()
+  return permissions.pendingCount + questions.pendingCount > 0
 }

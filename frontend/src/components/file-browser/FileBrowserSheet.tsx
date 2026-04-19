@@ -6,7 +6,7 @@ import { FullscreenSheet, FullscreenSheetHeader, FullscreenSheetContent } from '
 import { DownloadDialog } from '@/components/ui/download-dialog'
 import { X, Download } from 'lucide-react'
 import { GPU_ACCELERATED_STYLE, MODAL_TRANSITION_MS } from '@/lib/utils'
-import { useSwipeToClose } from '@/hooks/useMobile'
+import { useSwipeBack } from '@/hooks/useMobile'
 import { downloadDirectoryAsZip } from '@/api/files'
 import { downloadRepo } from '@/api/repos'
 import {
@@ -36,10 +36,10 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
   const containerRef = useRef<HTMLDivElement>(null)
   const fileBrowserRef = useRef<FileBrowserHandle>(null)
 
-  const { bind, swipeStyles } = useSwipeToClose(onClose, {
+  const { bind, swipeStyles } = useSwipeBack(onClose, {
     enabled: isOpen && !isEditing && !isPreviewOpen,
-    canSwipeBack: () => fileBrowserRef.current?.canGoBack() ?? false,
-    onSwipeBack: () => fileBrowserRef.current?.goBack(),
+    canBack: () => fileBrowserRef.current?.canGoBack() ?? false,
+    onBack: () => fileBrowserRef.current?.goBack(),
   })
 
   useEffect(() => {

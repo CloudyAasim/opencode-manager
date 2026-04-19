@@ -149,22 +149,22 @@ describe('repo-list-state', () => {
 
     it('should filter by display name', () => {
       const repos = [
-        createMockRepo({ id: 1, localPath: 'repos/test-repo' }),
-        createMockRepo({ id: 2, localPath: 'repos/other-repo' }),
+        createMockRepo({ id: 1, repoUrl: 'https://github.com/org/test-repo', localPath: 'repos/test-repo' }),
+        createMockRepo({ id: 2, repoUrl: 'https://github.com/org/other-repo', localPath: 'repos/other-repo' }),
       ]
       const viewModels = repos.map(r => ({ ...r, attentionState: getAttentionState(r), activityTimestamp: getActivityTimestamp(r) }))
-      const result = filterReposBySearch(viewModels, 'test')
+      const result = filterReposBySearch(viewModels, 'test-repo')
       expect(result).toHaveLength(1)
       expect(result[0].id).toBe(1)
     })
 
     it('should filter case-insensitively', () => {
       const repos = [
-        createMockRepo({ id: 1, localPath: 'repos/test-repo' }),
-        createMockRepo({ id: 2, localPath: 'repos/other-repo' }),
+        createMockRepo({ id: 1, repoUrl: 'https://github.com/org/test-repo', localPath: 'repos/test-repo' }),
+        createMockRepo({ id: 2, repoUrl: 'https://github.com/org/other-repo', localPath: 'repos/other-repo' }),
       ]
       const viewModels = repos.map(r => ({ ...r, attentionState: getAttentionState(r), activityTimestamp: getActivityTimestamp(r) }))
-      const result = filterReposBySearch(viewModels, 'TEST')
+      const result = filterReposBySearch(viewModels, 'TEST-REPO')
       expect(result).toHaveLength(1)
     })
   })
@@ -253,9 +253,9 @@ describe('repo-list-state', () => {
 
     it('should sort alphabetically by name', () => {
       const repos = [
-        createViewModel(1, { localPath: 'repos/zebra' }),
-        createViewModel(2, { localPath: 'repos/alpha' }),
-        createViewModel(3, { localPath: 'repos/middle' }),
+        createViewModel(1, { repoUrl: 'https://github.com/org/zebra', localPath: 'repos/zebra' }),
+        createViewModel(2, { repoUrl: 'https://github.com/org/alpha', localPath: 'repos/alpha' }),
+        createViewModel(3, { repoUrl: 'https://github.com/org/middle', localPath: 'repos/middle' }),
       ]
       const result = sortRepos(repos, 'name')
       expect(result[0].id).toBe(2)
@@ -315,15 +315,17 @@ describe('repo-list-state', () => {
 
     it('should return attention section for attention filter', () => {
       const now = Date.now()
-      const repos = [
-        createViewModel(1, {
+      const repos: RepoViewModel[] = [
+        {
+          ...createMockRepo({ id: 1 }),
           activityTimestamp: now,
           attentionState: { hasChanges: true, ahead: 0, behind: 0, isCloneStatusReady: true }
-        }),
-        createViewModel(2, {
+        },
+        {
+          ...createMockRepo({ id: 2 }),
           activityTimestamp: now,
           attentionState: { hasChanges: false, ahead: 0, behind: 0, isCloneStatusReady: true }
-        }),
+        },
       ]
       const result = groupReposIntoSections(repos, 'attention', 'recent')
       expect(result).toHaveLength(1)

@@ -3,7 +3,7 @@ import { FilePreview } from "./FilePreview";
 import { FullscreenSheet } from "@/components/ui/fullscreen-sheet";
 import type { FileInfo } from "@/types/files";
 import { GPU_ACCELERATED_STYLE, MODAL_TRANSITION_MS } from "@/lib/utils";
-import { useSwipeToClose } from "@/hooks/useMobile";
+import { useSwipeBack } from "@/hooks/useMobile";
 
 interface MobileFilePreviewModalProps {
   isOpen: boolean;
@@ -32,7 +32,7 @@ export const MobileFilePreviewModal = memo(function MobileFilePreviewModal({
     }, MODAL_TRANSITION_MS);
   }, [onClose]);
   
-  const { bind, swipeStyles } = useSwipeToClose(handleClose, {
+  const { bind, swipeStyles } = useSwipeBack(handleClose, {
     enabled: isOpen,
   });
   

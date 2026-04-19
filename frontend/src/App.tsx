@@ -1,7 +1,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createBrowserRouter, RouterProvider, Outlet, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { createBrowserRouter, RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
 import { Toaster } from 'sonner'
 import { Repos } from './pages/Repos'
 import { RepoDetail } from './pages/RepoDetail'
@@ -15,14 +15,16 @@ import { Setup } from './pages/Setup'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
+import { MobileTabBar } from '@/components/navigation/MobileTabBar'
+import { MobileSheetHost } from '@/components/navigation/MobileSheetHost'
 import { useTheme } from './hooks/useTheme'
+import { useSwipeBack } from './hooks/useMobile'
 import { TTSProvider } from './contexts/TTSContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { EventProvider, usePermissions, useEventContext } from '@/contexts/EventContext'
+import { SwipeNavigationProvider } from '@/contexts/SwipeNavigationContext'
 import { PermissionRequestDialog } from './components/session/PermissionRequestDialog'
 import { SSHHostKeyDialog } from './components/ssh/SSHHostKeyDialog'
-import { PageTransition } from './components/ui/PageTransition'
-import { useNavigationDirection } from './hooks/useNavigationDirection'
 import { loginLoader, setupLoader, registerLoader, protectedLoader } from './lib/auth-loaders'
 
 const queryClient = new QueryClient({
@@ -70,8 +72,61 @@ function PermissionDialogWrapper() {
 
 function AppShell() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const rootRef = useRef<HTMLDivElement>(null)
   useTheme()
-  useNavigationDirection()
+
+  const getSwipeBackTarget = () => {
+    const path = location.pathname
+    if (path.match(/^\/repos\/[^/]+\/sessions\/[^/]+$/)) {
+      const repoId = path.split('/')[2]
+      return `/repos/${repoId}`
+    }
+    if (path.match(/^\/repos\/[^/]+$/)) {
+      return '/'
+    }
+    if (path.match(/^\/repos\/[^/]+\/memories$/)) {
+      const repoId = path.split('/')[2]
+      return `/repos/${repoId}`
+    }
+    if (path.match(/^\/repos\/[^/]+\/schedules$/)) {
+      const repoId = path.split('/')[2]
+      return `/repos/${repoId}`
+    }
+    if (path === '/schedules') {
+      return '/'
+    }
+    return null
+  }
+
+  const canSwipeBack = () => {
+    const path = location.pathname
+    return !['/login', '/setup', '/register', '/'].includes(path) && getSwipeBackTarget() !== null
+  }
+
+  const handleSwipeBack = () => {
+    const target = getSwipeBackTarget()
+    if (target) {
+      navigate(target)
+    }
+  }
+
+  const { bind: bindRouteSwipe } = useSwipeBack(
+    () => {},
+    {
+      enabled: true,
+      suspendsRouteSwipe: false,
+      canBack: canSwipeBack,
+      onBack: handleSwipeBack,
+    }
+  )
+
+  useEffect(() => {
+    const cleanup = bindRouteSwipe(rootRef.current)
+    return () => {
+      cleanup?.()
+    }
+  }, [bindRouteSwipe])
 
   useEffect(() => {
     const channel = new BroadcastChannel('notification-click')
@@ -87,9 +142,11 @@ function AppShell() {
   return (
     <AuthProvider>
       <EventProvider>
-        <PageTransition>
+        <div ref={rootRef} className="contents">
           <Outlet />
-        </PageTransition>
+        </div>
+        <MobileTabBar />
+        <MobileSheetHost />
         <PermissionDialogWrapper />
         <SSHHostKeyDialogWrapper />
         <SettingsDialog />
@@ -164,7 +221,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TTSProvider>
-        <RouterProvider router={router} />
+        <SwipeNavigationProvider>
+          <RouterProvider router={router} />
+        </SwipeNavigationProvider>
       </TTSProvider>
     </QueryClientProvider>
   )

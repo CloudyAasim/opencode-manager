@@ -3,7 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { useSwipeToClose } from '@/hooks/useMobile'
+import { useSwipeBack } from '@/hooks/useMobile'
 
 const Dialog = DialogPrimitive.Root
 
@@ -64,7 +64,7 @@ const DialogContent = React.forwardRef<
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
-  const { bind: swipeBind } = useSwipeToClose(
+  const { bind: swipeBind } = useSwipeBack(
     () => closeTriggerRef.current?.click(),
     { enabled: isMobileFullscreenMode && mobileSwipeToClose === true && isMobile }
   )

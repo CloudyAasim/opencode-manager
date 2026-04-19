@@ -340,9 +340,9 @@ export function GlobalSchedules() {
             <Button
               onClick={() => { setEditingJob(null); setSelectedRepoId(undefined); setDialogOpen(true) }}
               size="sm"
-              className="sm:hidden"
+              className="sm:hidden h-10 w-10 p-0"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
             </Button>
           </Header.Actions>
         </div>
@@ -361,7 +361,7 @@ export function GlobalSchedules() {
         </div>
 
         <TabsContent value="jobs" className="mt-0 flex-1 min-h-0 flex flex-col overflow-hidden">
-          <div className="border-b border-border px-4 py-3 space-y-2">
+          <div className="px-4 pt-1 space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">Filter by repo:</span>
               <Combobox
@@ -510,7 +510,7 @@ export function GlobalSchedules() {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto p-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-4 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
             {!hasJobs ? (
               <div className="flex min-h-full items-center justify-center">
                 <Card className="max-w-md border-dashed border-border/70">
@@ -672,7 +672,7 @@ export function GlobalSchedules() {
         </TabsContent>
 
         <TabsContent value="runs" className="mt-0 flex-1 min-h-0 flex flex-col overflow-hidden">
-          <div className="border-b border-border px-4 py-3 space-y-2">
+          <div className="px-4 pt-1 space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">Filter by repo:</span>
               <Combobox
@@ -821,7 +821,7 @@ export function GlobalSchedules() {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto p-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-4 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
             {runsLoading && allRuns.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

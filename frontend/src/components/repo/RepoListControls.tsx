@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -99,11 +99,11 @@ export function RepoListControls({
           </Button>
           <Button
             variant="ghost"
+            size="icon"
             onClick={onClearSelection}
-            className="shrink-0 h-9 text-xs ml-auto"
-            size="sm"
+            className="shrink-0 size-9 ml-auto text-destructive hover:text-destructive"
           >
-            Cancel
+            <X className="w-4 h-4" />
           </Button>
         </div>
       </div>

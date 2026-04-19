@@ -70,7 +70,11 @@ export const SessionCard = ({
           } hover:shadow-lg`}
           onClick={() => {
             if (!isOpen) {
-              onSelect(session.id);
+              if (manageMode) {
+                onToggleSelection(!isSelected);
+              } else {
+                onSelect(session.id);
+              }
             }
           }}
         >

@@ -24,22 +24,16 @@ export function Repos() {
           <Header.Title logo>OpenCode</Header.Title>
         </div>
         <Header.Actions>
-          <PendingActionsGroup />
+          <div className="hidden sm:flex items-center gap-1">
+            <PendingActionsGroup />
+          </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setFileBrowserOpen(true)}
-            className="text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 h-8 w-8"
+            className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 h-8 w-8"
           >
             <FolderOpen className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/schedules')}
-            size="icon"
-            className="sm:hidden text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 h-8 w-8"
-          >
-            <CalendarClock className="w-4 h-4" />
           </Button>
           <Button
             variant="outline"
@@ -50,14 +44,20 @@ export function Repos() {
             <CalendarClock className="w-4 h-4 mr-2" />
             All Schedules
           </Button>
-          <Button onClick={() => setAddRepoOpen(true)} size="sm">
+          <Button onClick={() => setAddRepoOpen(true)} size="sm" className="hidden sm:inline-flex">
             <Plus className="w-4 h-4 mr-1" />
             Repo
           </Button>
-          <Header.Settings />
+          <Button onClick={() => setAddRepoOpen(true)} size="sm" className="sm:hidden">
+            <Plus className="w-4 h-4 mr-1" />
+            Repo
+          </Button>
+          <span className="hidden sm:block">
+            <Header.Settings />
+          </span>
         </Header.Actions>
       </Header>
-      <div className="container mx-auto flex-1 pt-2 px-2 min-h-0 overflow-auto">
+      <div className="container mx-auto flex-1 pt-2 px-2 min-h-0 overflow-auto pb-[calc(env(safe-area-inset-bottom)+60px)] sm:pb-0">
 
         <RepoList />
       </div>
