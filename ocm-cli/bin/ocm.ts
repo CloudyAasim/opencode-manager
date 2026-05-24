@@ -7,6 +7,9 @@ import { mirrorUp, mirrorDown, prepareMirror } from '../src/mirror.js'
 import type { RemoteRepoSummary } from '../src/mirror.js'
 import { getBranchName } from '../src/local-repo.js'
 import { resolveTarget } from '../src/resolve-target.js'
+import packageJson from '../package.json' with { type: 'json' }
+
+const VERSION = packageJson.version
 
 const USAGE = `ocm - OpenCode Manager workspace launcher
 
@@ -21,6 +24,7 @@ Usage:
   ocm use <repoId|name>     Attach to a specific repo and remember it as last
   ocm push [--force] [--create] [--yes]   Mirror $PWD to the matching Manager repo (or create one)
   ocm pull [--force]                      Mirror the matching Manager repo over $PWD
+  ocm --version             Show the installed ocm version
   ocm --help                Show this help
 `
 
@@ -155,9 +159,11 @@ async function cmdLogout(): Promise<void> {
 async function cmdStatus(): Promise<void> {
   const state = readState()
   if (!state) {
+    info(`version:      ${VERSION}`)
     info('no state. run: ocm login <url>')
     return
   }
+  info(`version:      ${VERSION}`)
   info(`manager url:  ${state.managerUrl}`)
   info(`token in kc:  ${getToken(state.managerUrl) ? 'yes' : 'no'}`)
   if (state.lastRepoId !== undefined) {
@@ -374,6 +380,11 @@ async function main(): Promise<void> {
 
   if (cmd === '--help' || cmd === '-h' || cmd === 'help') {
     process.stdout.write(USAGE)
+    return
+  }
+
+  if (cmd === '--version' || cmd === '-v' || cmd === 'version') {
+    info(VERSION)
     return
   }
 
