@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRepo } from "@/api/repos";
+import { getRepo, workspaceLabel } from "@/api/repos";
 import { SessionList } from "@/components/session/SessionList";
 import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
 import { Header } from "@/components/ui/header";
@@ -11,12 +11,17 @@ import { RepoSkillsDialog } from "@/components/repo/RepoSkillsDialog";
 import { SourceControlPanel } from "@/components/source-control";
 import { useCreateSession } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
+import { useCreateRepoWorkspace, useDeleteRepoWorkspaces, useRepoSiblings } from "@/hooks/useRepoSiblings";
 import { useSSE } from "@/hooks/useSSE";
 import { useDialogParam } from "@/hooks/useDialogParam";
+import { useWorktreeTab } from "@/hooks/useWorktreeTab";
+import { WorktreeTabs } from "@/components/repo/WorktreeTabs";
+import { WorkspaceManager } from "@/components/repo/WorkspaceManager";
 import { OPENCODE_API_ENDPOINT } from "@/config";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GitBranch, Plus, Loader2 } from "lucide-react";
+import { GitBranch, Plus, Loader2, Layers } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ResetPermissionsDialog } from "@/components/repo/ResetPermissionsDialog";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
 import { invalidateConfigCaches } from "@/lib/queryInvalidation";
@@ -34,6 +39,10 @@ export function RepoDetail() {
   const [skillsDialogOpen, setSkillsDialogOpen] = useDialogParam('skills');
   const [sourceControlOpen, setSourceControlOpen] = useDialogParam('sourceControl');
   const [resetPermissionsOpen, setResetPermissionsOpen] = useDialogParam('resetPermissions');
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
+  const [activeWorkspaceDirectory, setActiveWorkspaceDirectory] = useState<string | undefined>();
+  const { activeTab, setActiveTab } = useWorktreeTab();
 
   const { data: repo, isLoading: repoLoading } = useQuery({
     queryKey: ["repo", repoId],
@@ -43,27 +52,105 @@ export function RepoDetail() {
 
   useRepoActivity(repoId, Boolean(repo));
 
+  const { data: siblings } = useRepoSiblings(repoId);
+  const deleteWorkspaces = useDeleteRepoWorkspaces(repoId);
+  const createWorkspace = useCreateRepoWorkspace(repoId);
+
   const opcodeUrl = OPENCODE_API_ENDPOINT;
-  
-  const repoDirectory = repo?.fullPath;
 
-  useSSE(opcodeUrl, repoDirectory);
+  const workspaceSiblings = useMemo(
+    () => (siblings ?? []).filter((sibling) => !!sibling.workspaceId && !!sibling.fullPath),
+    [siblings],
+  );
 
-  const createSessionMutation = useCreateSession(opcodeUrl, repoDirectory, (session) => {
-    navigate(`/repos/${repoId}/sessions/${session.id}`);
+  const workspaceDirectories = useMemo(
+    () => workspaceSiblings.map((sibling) => sibling.fullPath).filter(Boolean),
+    [workspaceSiblings],
+  );
+
+  const baseDirectory = repo?.fullPath;
+  const subscriptionDirectories = useMemo(() => {
+    const set = new Set<string>();
+    if (baseDirectory) set.add(baseDirectory);
+    workspaceDirectories.forEach((dir) => set.add(dir));
+    return Array.from(set);
+  }, [baseDirectory, workspaceDirectories]);
+
+  useEffect(() => {
+    if (workspaceDirectories.length === 0) {
+      setActiveWorkspaceDirectory(undefined);
+      return;
+    }
+
+    setActiveWorkspaceDirectory((current) => (
+      current && workspaceDirectories.includes(current) ? current : workspaceDirectories[0]
+    ));
+  }, [workspaceDirectories]);
+
+  const workspaceComposerDirectory = activeWorkspaceDirectory ?? workspaceDirectories[0];
+  const sessionListDirectories = activeTab === 'workspaces' ? workspaceDirectories : (baseDirectory ? [baseDirectory] : []);
+  const composerDirectory = activeTab === 'workspaces' ? workspaceComposerDirectory : baseDirectory;
+
+  const directoryLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    workspaceSiblings.forEach((sibling) => {
+      if (sibling.fullPath) {
+        labels[sibling.fullPath] = workspaceLabel(sibling);
+      }
+    });
+    return labels;
+  }, [workspaceSiblings]);
+
+  const activeWorkspaceLabel = activeWorkspaceDirectory ? directoryLabels[activeWorkspaceDirectory] : undefined;
+
+  useSSE(opcodeUrl, subscriptionDirectories);
+
+  const sessionUrl = useCallback(
+    (sessionId: string) => {
+      const base = `/repos/${repoId}/sessions/${sessionId}`;
+      return activeTab === 'workspaces' ? `${base}?tab=workspaces` : base;
+    },
+    [repoId, activeTab],
+  );
+
+  const createSessionMutation = useCreateSession(opcodeUrl, composerDirectory, (session) => {
+    navigate(sessionUrl(session.id));
   });
 
   const handleCreateSession = async (options?: {
     agentSlug?: string;
     promptSlug?: string;
   }) => {
+    if (activeTab === 'workspaces' && !workspaceComposerDirectory) {
+      setCreateWorkspaceOpen(true);
+      return;
+    }
+
     await createSessionMutation.mutateAsync({
       agent: options?.agentSlug,
     });
   };
 
+  const handleCreateWorkspace = async () => {
+    const workspace = await createWorkspace.mutateAsync();
+    if (workspace.directory) {
+      setActiveWorkspaceDirectory(workspace.directory);
+    }
+    setActiveTab('workspaces');
+    setCreateWorkspaceOpen(false);
+  };
+
+  const handleOpenWorkspaceSelector = () => {
+    if (workspaceSiblings.length === 0) {
+      setCreateWorkspaceOpen(true);
+      return;
+    }
+    setActiveTab('workspaces');
+    setWorkspaceSelectorOpen(true);
+  };
+
   const handleSelectSession = (sessionId: string) => {
-    navigate(`/repos/${repoId}/sessions/${sessionId}`);
+    navigate(sessionUrl(sessionId));
   };
 
   useSidebarAction('new-session', () => {
@@ -137,15 +224,45 @@ export function RepoDetail() {
         </Header.Actions>
       </Header>
 
+      <WorktreeTabs
+        workspaces={workspaceSiblings}
+        value={activeTab}
+        onValueChange={setActiveTab}
+        baseLabel={currentBranch}
+        activeWorkspaceLabel={activeWorkspaceLabel}
+        onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
+        onWorkspaceMenu={handleOpenWorkspaceSelector}
+      />
+
+      <WorkspaceManager
+        open={workspaceSelectorOpen}
+        onOpenChange={setWorkspaceSelectorOpen}
+        workspaces={workspaceSiblings}
+        activeWorkspaceDirectory={activeWorkspaceDirectory}
+        onActiveWorkspaceChange={setActiveWorkspaceDirectory}
+        onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
+        onDelete={(workspaceIds) => deleteWorkspaces.mutate(workspaceIds)}
+        isDeleting={deleteWorkspaces.isPending}
+      />
+
       <div className="flex-1 flex flex-col min-h-0">
-        {opcodeUrl && repoDirectory && (
+        {opcodeUrl && sessionListDirectories.length > 0 && (
           <SessionList
             opcodeUrl={opcodeUrl}
-            directory={repoDirectory}
+            directories={sessionListDirectories}
+            directoryLabels={activeTab === 'workspaces' ? directoryLabels : undefined}
+            createDirectory={activeTab === 'workspaces' ? workspaceComposerDirectory : baseDirectory}
             onSelectSession={handleSelectSession}
           />
         )}
       </div>
+
+      <CreateWorkspaceDialog
+        open={createWorkspaceOpen}
+        onOpenChange={setCreateWorkspaceOpen}
+        onCreate={handleCreateWorkspace}
+        isCreating={createWorkspace.isPending}
+      />
 
       <FileBrowserSheet
         isOpen={fileBrowserOpen}
@@ -159,7 +276,7 @@ export function RepoDetail() {
       <RepoMcpDialog
         open={mcpDialogOpen}
         onOpenChange={setMcpDialogOpen}
-        directory={repoDirectory}
+        directory={composerDirectory}
       />
 
       <RepoSkillsDialog
@@ -196,8 +313,57 @@ export function RepoDetail() {
         open={resetPermissionsOpen}
         onOpenChange={setResetPermissionsOpen}
         repoId={repoId}
-        repoDirectory={repoDirectory}
+        repoDirectory={composerDirectory}
       />
     </div>
+  );
+}
+
+interface CreateWorkspaceDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreate: () => Promise<void>;
+  isCreating: boolean;
+}
+
+function CreateWorkspaceDialog({ open, onOpenChange, onCreate, isCreating }: CreateWorkspaceDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-purple-400" />
+            Create Workspace
+          </DialogTitle>
+          <DialogDescription>
+            Create an OpenCode worktree workspace for this repository.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <GitBranch className="h-4 w-4 text-purple-400" />
+            Worktree
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            OpenCode will create and manage a git worktree workspace.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
+            Cancel
+          </Button>
+          <Button onClick={() => { void onCreate(); }} disabled={isCreating} className="bg-blue-600 hover:bg-blue-700 text-white">
+            {isCreating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Workspace'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

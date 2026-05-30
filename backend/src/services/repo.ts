@@ -1,5 +1,5 @@
 import fs from 'fs/promises'
-import { existsSync, rmSync } from 'node:fs'
+import { existsSync, rmSync, realpathSync } from 'node:fs'
 import { executeCommand } from '../utils/process'
 import { ensureDirectoryExists } from './file-operations'
 import { createRepo, getRepoByLocalPath, getRepoBySourcePath, getRepoById, updateRepoStatus, updateRepoBranch, updateLastPulled, deleteRepo, getRepoByUrlAndBranch } from '../db/queries'
@@ -14,10 +14,22 @@ import path from 'path'
 import { parseSSHHost } from '../utils/ssh-key-manager'
 import { getErrorMessage } from '../utils/error-utils'
 import { sseAggregator } from './sse-aggregator'
+import { resolveProjectId, isGitMainCheckout } from './project-id-resolver'
+import { listRepos } from '../db/queries'
+import { SettingsService } from './settings'
+import type { OpenCodeClient } from './opencode/client'
 
 const GIT_CLONE_TIMEOUT = 300000
 const DEFAULT_DISCOVERY_MAX_DEPTH = 4
 const DISCOVERY_SKIP_DIRECTORIES = new Set(['.git', 'node_modules'])
+
+function canonical(dir: string): string {
+  try {
+    return realpathSync(path.resolve(dir))
+  } catch {
+    return path.resolve(dir)
+  }
+}
 
 function enhanceCloneError(error: unknown, repoUrl: string, originalMessage: string): Error {
   const message = originalMessage.toLowerCase()
@@ -1090,4 +1102,114 @@ export function isRepoInUse(db: Database, repoId: number): boolean {
   }
 
   return sseAggregator.getActiveDirectories().includes(repo.fullPath)
+}
+
+export async function getSiblingRepos(
+  database: Database,
+  repoId: number,
+  gitEnv: Record<string, string>,
+  openCodeClient?: OpenCodeClient,
+): Promise<Array<Repo & { currentBranch: string | undefined }>> {
+  const settingsService = new SettingsService(database)
+  const settings = settingsService.getSettings()
+  const allRepos = listRepos(database, settings.preferences.repoOrder)
+
+  const target = allRepos.find((r) => r.id === repoId)
+  if (!target || target.cloneStatus !== 'ready') return []
+
+  const targetProjectId = await resolveProjectId(target.fullPath)
+  if (!targetProjectId) return []
+
+  const ready = allRepos.filter((r) => r.cloneStatus === 'ready')
+  const withProjectIds = await Promise.all(
+    ready.map(async (repo) => ({
+      repo,
+      projectId: await resolveProjectId(repo.fullPath).catch(() => null),
+    })),
+  )
+
+  const matching = withProjectIds
+    .filter((entry) => entry.projectId === targetProjectId)
+    .map((entry) => entry.repo)
+
+  const repoSiblings = await Promise.all(
+    matching.map(async (repo) => ({
+      ...repo,
+      currentBranch: (await getCurrentBranch(repo, gitEnv)) ?? undefined,
+    })),
+  )
+
+  if (!openCodeClient) return repoSiblings
+
+  try {
+    const workspaces = await openCodeClient.getJson<Array<{
+      id: string
+      type: string
+      name: string | null
+      branch: string | null
+      directory: string | null
+      projectID: string
+    }>>('/experimental/workspace', { directory: target.fullPath })
+
+    // Normalize paths so a workspace pointing at a real repo directory can never
+    // be exposed as deletable. Deleting an OpenCode workspace recursively removes
+    // its directory, so the current repo directory and all known managed repo
+    // directories must be excluded regardless of trailing slashes or symlinks.
+    // Workspaces that are git main checkouts (not linked worktrees) are also
+    // excluded so the project's origin/main repository can never be surfaced
+    // as deletable.
+    const knownDirectories = new Set(repoSiblings.map((repo) => canonical(repo.fullPath)))
+    const targetDirectory = canonical(target.fullPath)
+    const reposRoot = canonical(getReposPath())
+
+    const candidates = workspaces.filter((workspace) => {
+      if (workspace.projectID !== targetProjectId) return false
+      if (!workspace.directory) return false
+
+      const workspaceDirectory = canonical(workspace.directory)
+      if (workspaceDirectory === targetDirectory) return false
+      if (workspaceDirectory === reposRoot) return false
+      if (knownDirectories.has(workspaceDirectory)) return false
+
+      return true
+    })
+
+    const mainChecks = await Promise.all(
+      candidates.map((workspace) => isGitMainCheckout(workspace.directory!).catch(() => false)),
+    )
+
+    const uniqueWorkspaces = new Map<string, typeof candidates[number]>()
+    candidates
+      .filter((_, index) => !mainChecks[index])
+      .forEach((workspace) => {
+        const directory = canonical(workspace.directory!)
+        if (!uniqueWorkspaces.has(directory)) {
+          uniqueWorkspaces.set(directory, workspace)
+        }
+      })
+
+    const workspaceSiblings = Array.from(uniqueWorkspaces.values())
+      .map((workspace) => ({
+        id: -1,
+        repoUrl: target.repoUrl,
+        localPath: workspace.name ?? workspace.id,
+        fullPath: workspace.directory!,
+        sourcePath: workspace.directory!,
+        branch: workspace.branch ?? undefined,
+        defaultBranch: target.defaultBranch,
+        cloneStatus: 'ready' as const,
+        clonedAt: Date.now(),
+        isWorktree: true,
+        isLocal: true,
+        currentBranch: workspace.branch ?? undefined,
+        workspaceId: workspace.id,
+        workspaceType: workspace.type,
+        workspaceName: workspace.name ?? undefined,
+      }))
+
+    return [...repoSiblings, ...workspaceSiblings]
+  } catch (error) {
+    logger.warn('Failed to list OpenCode workspaces:', error)
+    return repoSiblings
+  }
 }

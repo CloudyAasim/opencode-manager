@@ -15,6 +15,7 @@ import {
   parseSSHHost
 } from '../utils/ssh-key-manager'
 import { decryptSecret } from '../utils/crypto'
+import { BLOCKED_SERVER_ENV_KEYS, DEFAULT_SERVER_ENV_VARS } from '@opencode-manager/shared'
 import { SettingsService } from './settings'
 import { getWorkspacePath, getOpenCodeConfigFilePath, ENV } from '@opencode-manager/shared/config/env'
 import { parseJsonc } from '@opencode-manager/shared/utils'
@@ -199,11 +200,28 @@ class OpenCodeServerManager {
 
     let gitCredentials: GitCredential[] = []
     let gitIdentityEnv: Record<string, string> = {}
+    let userEnvVars: Record<string, string> = {}
     if (this.db) {
       try {
         const settingsService = new SettingsService(this.db)
         const settings = settingsService.getSettings('default')
         gitCredentials = settings.preferences.gitCredentials || []
+        const disabledDefaultEnvVars = new Set(settings.preferences.disabledDefaultServerEnvVars || [])
+        const rawEnvVars = [
+          ...DEFAULT_SERVER_ENV_VARS.filter((envVar) => !disabledDefaultEnvVars.has(envVar.key)),
+          ...(settings.preferences.serverEnvVars || []),
+        ]
+        if (rawEnvVars.length > 0) {
+          userEnvVars = Object.fromEntries(
+            rawEnvVars
+              .filter(({ key }) => {
+                const normalizedKey = key.trim()
+                return normalizedKey !== '' && !(BLOCKED_SERVER_ENV_KEYS as readonly string[]).includes(normalizedKey)
+              })
+              .map(({ key, value }) => [key.trim(), value])
+          )
+          logger.info(`Injecting ${Object.keys(userEnvVars).length} custom server env vars`)
+        }
 
         const identity = await resolveGitIdentity(settings.preferences.gitIdentity, gitCredentials)
         if (identity) {
@@ -327,6 +345,7 @@ class OpenCodeServerManager {
         stdio: isDevelopment ? 'inherit' : ['ignore', 'pipe', 'pipe'],
         env: {
           ...cleanEnv,
+          ...userEnvVars,
           ...gitEnv,
           ...gitIdentityEnv,
           GIT_SSH_COMMAND: gitSshCommand,

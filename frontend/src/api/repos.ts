@@ -38,6 +38,48 @@ export async function getRepo(id: number): Promise<Repo> {
   return fetchWrapper(`${API_BASE_URL}/api/repos/${id}`)
 }
 
+export type RepoSibling = Repo & {
+  currentBranch?: string
+  workspaceId?: string
+  workspaceType?: string
+  workspaceName?: string
+}
+
+export function workspaceLabel(workspace: RepoSibling): string {
+  return (
+    workspace.currentBranch ||
+    workspace.branch ||
+    workspace.workspaceName ||
+    workspace.workspaceId ||
+    'workspace'
+  )
+}
+
+export interface RepoWorkspace {
+  id: string
+  type: string
+  name?: string | null
+  branch?: string | null
+  directory?: string | null
+  projectID?: string
+}
+
+export async function getRepoSiblings(id: number): Promise<RepoSibling[]> {
+  return fetchWrapper(`${API_BASE_URL}/api/repos/${id}/siblings`)
+}
+
+export async function deleteRepoWorkspace(repoId: number, workspaceId: string): Promise<void> {
+  return fetchWrapperVoid(`${API_BASE_URL}/api/repos/${repoId}/workspaces/${workspaceId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function createRepoWorkspace(repoId: number): Promise<RepoWorkspace> {
+  return fetchWrapper(`${API_BASE_URL}/api/repos/${repoId}/workspaces`, {
+    method: 'POST',
+  })
+}
+
 export async function deleteRepo(id: number): Promise<void> {
   return fetchWrapperVoid(`${API_BASE_URL}/api/repos/${id}`, {
     method: 'DELETE',
