@@ -2,7 +2,7 @@
 
 Mobile-first web interface for [OpenCode](https://opencode.ai) AI agents. Manage, control, and code from any device - your phone, tablet, or desktop.
 
-![OpenCode Manager Demo](images/ocmgr-demo.gif)
+![OpenCode Manager](images/ocmgr-main.webp)
 
 ## Quick Start
 

@@ -22,8 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/ocmgr-demo.gif" alt="OpenCode Manager Demo" height="400" />
-  <img src="https://github.com/user-attachments/assets/c8087451-8b97-4178-952b-b8149f5c258a" alt="Git Commit Demo" height="400" />
+  <img src="docs/images/ocmgr-main.webp" alt="OpenCode Manager" style="width: 100%; max-width: 1000px; border: none" />
 </p>
 
 ## Quick Start
