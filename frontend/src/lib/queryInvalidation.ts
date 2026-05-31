@@ -34,3 +34,28 @@ export function invalidateSessionCaches(queryClient: QueryClient) {
         query.queryKey[1] === 'messages'),
   })
 }
+
+export function invalidateSessionListCaches(queryClient: QueryClient, opcodeUrl?: string | null) {
+  queryClient.invalidateQueries({
+    predicate: (query) => {
+      if (query.queryKey[0] !== 'opencode') return false
+      if (query.queryKey[1] !== 'sessions') return false
+      if (opcodeUrl && query.queryKey[2] !== opcodeUrl) return false
+      return true
+    },
+  })
+}
+
+const sessionListInvalidationTimers = new WeakMap<QueryClient, ReturnType<typeof setTimeout>>()
+
+export function invalidateSessionListCachesDebounced(queryClient: QueryClient, delayMs = 200) {
+  const existing = sessionListInvalidationTimers.get(queryClient)
+  if (existing) clearTimeout(existing)
+  sessionListInvalidationTimers.set(
+    queryClient,
+    setTimeout(() => {
+      sessionListInvalidationTimers.delete(queryClient)
+      invalidateSessionListCaches(queryClient)
+    }, delayMs),
+  )
+}
