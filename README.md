@@ -40,25 +40,20 @@ On first launch, you'll be prompted to create an admin account. That's it!
 
 For local development setup, see the [Development Guide](https://chriswritescode-dev.github.io/opencode-manager/development/setup/).
 
-## Screenshots
-
-<table>
-<tr>
-<td align="center"><strong>Chat (Mobile)</strong><br/><img src="https://github.com/user-attachments/assets/a48cc728-e540-4247-879a-c5f36c3fd6de" alt="chat-mobile" width="200" /></td>
-<td align="center"><strong>File Browser (Mobile)</strong><br/><img src="https://github.com/user-attachments/assets/24243e5e-ab02-44ff-a719-263f61c3178b" alt="files-mobile" width="200" /></td>
-<td align="center"><strong>Inline Diff View</strong><br/><img src="https://github.com/user-attachments/assets/b94c0ca0-d960-4888-8a25-a31ed6d5068d" alt="inline-diff-view" width="300" /></td>
-</tr>
-</table>
 
 ## Features
 
-- **Repositories & Git** — Multi-repo management with local discovery, SSH auth, worktrees, unified diffs, branch/commit management
-- **Chat & Sessions** — Real-time SSE streaming, slash commands, `@file` mentions, Plan/Build modes, Mermaid diagrams
+- **Repositories & Git** — Multi-repo management, local discovery, SSH auth, worktrees, unified diffs, branch and commit management
+- **Chat & Sessions** — Real-time SSE streaming, slash commands, `@file` mentions, Plan/Build modes, Mermaid diagram rendering
 - **Files** — Directory browser with tree view, syntax highlighting, create/rename/delete, ZIP download
+- **Assistant Mode** — Dedicated AI workspace with auto-provisioned skills for schedules, notifications, settings, and repo operations
 - **Schedules** — Recurring repo jobs with reusable prompts, run history, linked sessions, markdown-rendered output
-- **AI & OpenCode** — Model/provider configuration, OAuth for Anthropic/GitHub Copilot, custom agents, OpenCode server supervision and proxying
-- **Audio** — Text-to-speech and speech-to-text (browser + OpenAI-compatible)
-- **Mobile & Notifications** — Responsive PWA, mobile-first navigation, push notification support
+- **MCP Servers** — Add, configure, authenticate, and manage local or remote MCP servers with OAuth support
+- **AI Configuration** — Model/provider setup, API keys, OAuth for Anthropic and GitHub Copilot, custom agent definitions
+- **Skills** — Extend agent capabilities with shareable, scoped skill definitions
+- **Notifications** — Push notifications for session events, questions, errors, and completions
+- **Audio** — Text-to-speech and speech-to-text (browser native and OpenAI-compatible APIs)
+- **Mobile & PWA** — Responsive mobile-first UI, installable on any device, iOS-optimized
 
 ## Architecture
 
