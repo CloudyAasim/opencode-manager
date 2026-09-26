@@ -309,22 +309,6 @@ app.route('/api', protectedApi)
 
 app.route('/api/opencode', createAuthenticatedOpenCodeProxyRoutes(openCodeClient, requireAuth, db))
 
-app.get('/.well-known/acme-challenge/:token', async (c) => {
-  const token = c.req.param('token')
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(token)) {
-    return c.notFound()
-  }
-  const directory = process.env.ACME_CHALLENGE_DIR ?? '/app/data/acme-challenge'
-  try {
-    const fs = await import('fs/promises')
-    const path = await import('path')
-    const content = await fs.readFile(path.join(directory, token), 'utf-8')
-    return c.text(content)
-  } catch {
-    return c.notFound()
-  }
-})
-
 const isProduction = ENV.SERVER.NODE_ENV === 'production'
 
 if (isProduction) {
