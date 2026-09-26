@@ -48,16 +48,23 @@ worker.addEventListener("activate", (event) => {
   );
 });
 
-async function networkFirstShell(request: Request): Promise<Response> {
+async function handleNavigation(event: FetchEvent): Promise<Response> {
   const cache = await caches.open(APP_SHELL_CACHE);
-  try {
-    const response = await fetch(request);
-    if (response.ok) cache.put(APP_SHELL_URL, response.clone());
+  const cached = await cache.match(APP_SHELL_URL);
+  const network = fetch(event.request).then((response) => {
+    if (response.ok) void cache.put(APP_SHELL_URL, response.clone());
     return response;
-  } catch (error) {
-    const cached = await cache.match(APP_SHELL_URL);
-    if (cached) return cached;
-    throw error;
+  });
+
+  if (cached) {
+    event.waitUntil(network.catch(() => undefined));
+    return cached;
+  }
+
+  try {
+    return await network;
+  } catch {
+    return Response.error();
   }
 }
 
@@ -82,7 +89,7 @@ worker.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/") || url.pathname === "/sw.js") return;
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirstShell(request));
+    event.respondWith(handleNavigation(event));
     return;
   }
 

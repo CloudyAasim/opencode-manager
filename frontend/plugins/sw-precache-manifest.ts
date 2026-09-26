@@ -1,16 +1,28 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Plugin } from "vite";
 
 const SW_FILENAME = "sw.js";
-const PRECACHE_DIR_PREFIXES = ["assets/"];
 const PRECACHE_ROOT_FILES = [
   "index.html",
   "manifest.json",
   "favicon.svg",
   "icons/icon-192x192.png",
 ];
+const ROUTE_CHUNK_NAMES = new Set([
+  "Login",
+  "Register",
+  "Setup",
+  "Repos",
+  "RepoDetail",
+  "SessionDetail",
+  "Schedules",
+  "GlobalSchedules",
+  "Terminal",
+  "AssistantRedirect",
+]);
+const SMALL_ASSET_LIMIT_BYTES = 128 * 1024;
 
 async function collectFiles(dir: string, base = dir): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -26,13 +38,6 @@ async function collectFiles(dir: string, base = dir): Promise<string[]> {
 
 function toUrl(relativePath: string): string {
   return "/" + relativePath.split(path.sep).join("/");
-}
-
-function isPrecacheTarget(relativePath: string): boolean {
-  const url = toUrl(relativePath);
-  if (url === `/${SW_FILENAME}` || url.endsWith(".map")) return false;
-  if (PRECACHE_ROOT_FILES.includes(relativePath)) return true;
-  return PRECACHE_DIR_PREFIXES.some((prefix) => url.startsWith(`/${prefix}`));
 }
 
 export function swPrecacheManifest(): Plugin {
@@ -53,11 +58,36 @@ export function swPrecacheManifest(): Plugin {
         throw new Error(`[sw-precache-manifest] ${SW_FILENAME} not found in ${outDir}`);
       }
 
-      const relativePaths = (await collectFiles(outDir)).filter(isPrecacheTarget).sort();
+      const indexHtml = await readFile(path.join(outDir, "index.html"), "utf-8");
+      const entryAssets = new Set(
+        Array.from(indexHtml.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g), (match) => match[1])
+      );
+
+      const shouldPrecache = async (relativePath: string): Promise<boolean> => {
+        const url = toUrl(relativePath);
+        if (url === `/${SW_FILENAME}` || url.endsWith(".map")) return false;
+        if (PRECACHE_ROOT_FILES.includes(relativePath)) return true;
+        if (!url.startsWith("/assets/")) return false;
+        if (url.endsWith(".css")) return true;
+        if (entryAssets.has(url)) return true;
+
+        const baseName = path.basename(relativePath);
+        if (!baseName.endsWith(".js")) return false;
+        const chunkName = baseName.split("-")[0];
+        if (ROUTE_CHUNK_NAMES.has(chunkName)) return true;
+        const info = await stat(path.join(outDir, relativePath));
+        return info.size <= SMALL_ASSET_LIMIT_BYTES;
+      };
+
+      const relativePaths = (await collectFiles(outDir)).sort();
+      const selected: string[] = [];
+      for (const relativePath of relativePaths) {
+        if (await shouldPrecache(relativePath)) selected.push(relativePath);
+      }
 
       const hash = createHash("sha256");
       const urls: string[] = [];
-      for (const relativePath of relativePaths) {
+      for (const relativePath of selected) {
         const content = await readFile(path.join(outDir, relativePath));
         const url = toUrl(relativePath);
         urls.push(url);
