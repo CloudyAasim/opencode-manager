@@ -3,16 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter, RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useCallback } from 'react'
 import { Toaster } from 'sonner'
-import { Repos } from './pages/Repos'
-import { RepoDetail } from './pages/RepoDetail'
-import { SessionDetail } from './pages/SessionDetail'
-import { Schedules } from './pages/Schedules'
-import { GlobalSchedules } from './pages/GlobalSchedules'
-import { Login } from './pages/Login'
-import { Register } from './pages/Register'
-import { Setup } from './pages/Setup'
-import { AssistantRedirect } from './pages/AssistantRedirect'
-import { TerminalPage } from './pages/Terminal'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
@@ -196,57 +186,57 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/login',
-        element: <Login />,
+        lazy: async () => ({ Component: (await import('./pages/Login')).Login }),
         loader: loginLoader,
       },
       {
         path: '/register',
-        element: <Register />,
+        lazy: async () => ({ Component: (await import('./pages/Register')).Register }),
         loader: registerLoader,
       },
       {
         path: '/setup',
-        element: <Setup />,
+        lazy: async () => ({ Component: (await import('./pages/Setup')).Setup }),
         loader: setupLoader,
       },
       {
         path: '/',
-        element: <Repos />,
+        lazy: async () => ({ Component: (await import('./pages/Repos')).Repos }),
         loader: protectedLoader,
       },
       {
         path: '/assistant',
-        element: <AssistantRedirect />,
+        lazy: async () => ({ Component: (await import('./pages/AssistantRedirect')).AssistantRedirect }),
         loader: protectedLoader,
       },
       {
         path: '/repos/:id',
-        element: <RepoDetail />,
+        lazy: async () => ({ Component: (await import('./pages/RepoDetail')).RepoDetail }),
         loader: protectedLoader,
       },
       {
         path: '/repos/:id/assistant',
-        element: <AssistantRedirect />,
+        lazy: async () => ({ Component: (await import('./pages/AssistantRedirect')).AssistantRedirect }),
         loader: protectedLoader,
       },
       {
         path: '/repos/:id/sessions/:sessionId',
-        element: <SessionDetail />,
+        lazy: async () => ({ Component: (await import('./pages/SessionDetail')).SessionDetail }),
         loader: protectedLoader,
       },
       {
         path: '/repos/:id/schedules',
-        element: <Schedules />,
+        lazy: async () => ({ Component: (await import('./pages/Schedules')).Schedules }),
         loader: protectedLoader,
       },
       {
         path: '/schedules',
-        element: <GlobalSchedules />,
+        lazy: async () => ({ Component: (await import('./pages/GlobalSchedules')).GlobalSchedules }),
         loader: protectedLoader,
       },
       {
         path: '/terminal',
-        element: <TerminalPage />,
+        lazy: async () => ({ Component: (await import('./pages/Terminal')).TerminalPage }),
         loader: adminLoader,
       },
     ],
