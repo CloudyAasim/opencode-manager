@@ -70,14 +70,14 @@ jobs:
             DOKKU_ORIGINS="https://$DOMAIN"
             DOKKU_CORS="https://$DOMAIN"
             DOKKU_SECURE_COOKIES=true
-            DOKKU_PORT_MAP="http:80:5003 http:8080:5003 https:443:5003"
+            DOKKU_PORT_MAP="http:80:5003 https:443:5003"
             DOKKU_BASE_URL="https://$DOMAIN"
           else
-            DOKKU_ORIGINS="http://$DOMAIN:8080,https://$DOMAIN"
-            DOKKU_CORS="http://$DOMAIN:8080"
+            DOKKU_ORIGINS="http://$DOMAIN,https://$DOMAIN"
+            DOKKU_CORS="http://$DOMAIN"
             DOKKU_SECURE_COOKIES=false
-            DOKKU_PORT_MAP="http:80:5003 http:8080:5003"
-            DOKKU_BASE_URL="http://$DOMAIN:8080"
+            DOKKU_PORT_MAP="http:80:5003"
+            DOKKU_BASE_URL="http://$DOMAIN"
           fi
 
           # Output is suppressed because Dokku echoes variable values; the values
@@ -146,7 +146,8 @@ jobs:
           echo "########## ps:report ##########"; dokku ps:report "$APP" || true
           echo "########## logs (tail 200) ##########"; dokku logs "$APP" --num 200 || true
           echo "########## probe ##########"
-          curl -v -m 15 "http://APP_DOMAIN:8080/api/health" 2>&1 | tail -15 || true
+          BASE="${{ steps.configure.outputs.base_url }}"
+          curl -v -m 15 "${BASE:-https://APP_DOMAIN}/api/health" 2>&1 | tail -15 || true
 
       - name: Smoke test
         env:
