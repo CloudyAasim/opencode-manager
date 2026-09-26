@@ -3,10 +3,10 @@ import { useSettings } from './useSettings'
 
 export function useTheme() {
   const { preferences } = useSettings()
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark')
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('light')
 
   useEffect(() => {
-    const theme = preferences?.theme || 'dark'
+    const theme = preferences?.theme || 'light'
     const root = document.documentElement
 
     const applyTheme = (isDark: boolean) => {

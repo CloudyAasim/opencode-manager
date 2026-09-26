@@ -54,7 +54,7 @@ describe('internal/settings routes', () => {
     })
     expect(res.status).toBe(200)
     const body = await res.json() as { preferences: { theme: string; mode: string } }
-    expect(body.preferences.theme).toBe('dark')
+    expect(body.preferences.theme).toBe('light')
     expect(body.preferences.mode).toBe('build')
   })
 

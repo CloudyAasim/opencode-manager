@@ -188,7 +188,7 @@ export const DEFAULT_STT_CONFIG: STTConfig = {
 };
 
 export const DEFAULT_USER_PREFERENCES = {
-  theme: "dark" as const,
+  theme: "light" as const,
   mode: "build" as const,
   autoScroll: true,
   expandDiffs: true,
