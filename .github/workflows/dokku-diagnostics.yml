@@ -33,5 +33,7 @@ jobs:
           dokku run "$APP" unshare -Urm --propagation unchanged true || echo "unshare_unchanged_failed=$?"
           echo "########## root mount propagation ##########"
           dokku run "$APP" grep -w / /proc/self/mountinfo || true
-          echo "########## bwrap --unshare-user confinement echo ##########"
-          dokku run "$APP" bwrap --unshare-user --ro-bind /usr /usr --ro-bind /bin /bin --ro-bind /sbin /sbin --ro-bind /lib /lib --ro-bind /lib64 /lib64 --proc /proc --dev /dev --tmpfs /tmp --bind /workspace /workspace --chdir /workspace /bin/echo bwrap-user-ok || echo "bwrap_user_failed=$?"
+          echo "########## nested bwrap (outer userns) echo ##########"
+          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged bwrap --dev /dev --proc /proc --tmpfs /tmp --ro-bind /usr /usr --ro-bind /bin /bin --ro-bind /sbin /sbin --ro-bind /lib /lib --ro-bind /lib64 /lib64 --bind /workspace /workspace --chdir /workspace /bin/echo nested-bwrap-ok || echo "nested_bwrap_failed=$?"
+          echo "########## nested bwrap root listing ##########"
+          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged bwrap --dev /dev --proc /proc --tmpfs /tmp --ro-bind /usr /usr --ro-bind /bin /bin --ro-bind /sbin /sbin --ro-bind /lib /lib --ro-bind /lib64 /lib64 --bind /workspace /workspace --chdir /workspace /bin/ls / || echo "nested_ls_failed=$?"
