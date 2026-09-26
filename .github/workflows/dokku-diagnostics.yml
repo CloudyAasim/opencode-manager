@@ -29,9 +29,9 @@ jobs:
           dokku run "$APP" cat /proc/sys/user/max_user_namespaces || true
           echo "########## unshare -Ur true (exit) ##########"
           dokku run "$APP" unshare -Ur true; echo "userns_exit=$? (continuing)"
-          echo "########## unshare -Urm true (exit) ##########"
-          dokku run "$APP" unshare -Urm true || echo "userns_mount_failed=$?"
-          echo "########## bwrap --version ##########"
-          dokku run "$APP" bwrap --version || echo "bwrap_missing"
-          echo "########## bwrap confinement echo ##########"
-          dokku run "$APP" bwrap --ro-bind /usr /usr --ro-bind /bin /bin --ro-bind /sbin /sbin --ro-bind /lib /lib --ro-bind /lib64 /lib64 --proc /proc --dev /dev --tmpfs /tmp --bind /workspace /workspace --chdir /workspace /bin/echo bwrap-ok || echo "bwrap_run_failed=$?"
+          echo "########## unshare -Urm --propagation unchanged (exit) ##########"
+          dokku run "$APP" unshare -Urm --propagation unchanged true || echo "unshare_unchanged_failed=$?"
+          echo "########## root mount propagation ##########"
+          dokku run "$APP" grep -w / /proc/self/mountinfo || true
+          echo "########## bwrap --unshare-user confinement echo ##########"
+          dokku run "$APP" bwrap --unshare-user --ro-bind /usr /usr --ro-bind /bin /bin --ro-bind /sbin /sbin --ro-bind /lib /lib --ro-bind /lib64 /lib64 --proc /proc --dev /dev --tmpfs /tmp --bind /workspace /workspace --chdir /workspace /bin/echo bwrap-user-ok || echo "bwrap_user_failed=$?"
