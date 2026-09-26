@@ -5,7 +5,6 @@ import { SetCredentialRequestSchema } from '../../../shared/src/schemas/auth'
 import { logger } from '../utils/logger'
 import { getAccessScope } from '../auth/access-scope'
 import type { OpenCodeClient } from '../services/opencode/client'
-import { reloadOpenCodeConfig } from '../services/opencode-restart'
 import type { OpenCodeSupervisor } from '../services/opencode-supervisor'
 import {
   addRecentModel,
@@ -22,7 +21,7 @@ const UpdateModelStateSchema = z.object({
   removeRecent: ModelSelectionSchema.optional(),
 }).strict()
 
-export function createProvidersRoutes(openCodeClient: OpenCodeClient, openCodeSupervisor?: OpenCodeSupervisor) {
+export function createProvidersRoutes(_openCodeClient: OpenCodeClient, _openCodeSupervisor?: OpenCodeSupervisor) {
   const app = new Hono()
   const userProviderService = new UserProviderService()
   const currentUsername = () => getAccessScope()?.username ?? null
@@ -100,12 +99,6 @@ export function createProvidersRoutes(openCodeClient: OpenCodeClient, openCodeSu
 
       await userProviderService.set(username, providerId, validated.apiKey)
 
-      try {
-        await reloadOpenCodeConfig(openCodeSupervisor)
-      } catch (reloadError) {
-        logger.warn(`Failed to reload OpenCode config after saving credentials for ${providerId}:`, reloadError)
-      }
-
       return c.json({ success: true })
     } catch (error) {
       logger.error('Failed to set provider credentials:', error)
@@ -125,12 +118,6 @@ export function createProvidersRoutes(openCodeClient: OpenCodeClient, openCodeSu
       const providerId = c.req.param('id')
 
       await userProviderService.delete(username, providerId)
-
-      try {
-        await reloadOpenCodeConfig(openCodeSupervisor)
-      } catch (reloadError) {
-        logger.warn(`Failed to reload OpenCode config after deleting credentials for ${providerId}:`, reloadError)
-      }
 
       return c.json({ success: true })
     } catch (error) {
