@@ -92,8 +92,8 @@ export class UserAdminService {
   isUsernameTaken(username: string): boolean {
     const row = this.db
       .prepare('SELECT 1 FROM "user" WHERE lower(username) = ?')
-      .get(normalizeUsername(username)) as { 1: number } | undefined
-    return row !== undefined
+      .get(normalizeUsername(username))
+    return Boolean(row)
   }
 
   private resolveUsername(desired: string | undefined, email: string): string {
