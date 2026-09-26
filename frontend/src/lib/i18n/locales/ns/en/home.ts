@@ -5,4 +5,9 @@ export const home = {
   files: 'Files',
   schedules: 'Schedules',
   newRepo: 'New Repo',
+  stats: {
+    repos: 'Repositories',
+    schedules: 'Schedules',
+    enabled: 'Enabled schedules',
+  },
 }
