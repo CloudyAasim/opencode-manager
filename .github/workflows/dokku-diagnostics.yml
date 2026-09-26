@@ -7,7 +7,7 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Collect Dokku TLS-relevant diagnostics
+      - name: Enable HTTPS (Let's Encrypt)
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
           SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
@@ -15,6 +15,8 @@ jobs:
           set -uo pipefail
           HOST=SERVER_HOST
           APP=opencode-manager
+          DOMAIN=APP_DOMAIN
+          EMAIL=admin@BASE_DOMAIN
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
@@ -22,24 +24,39 @@ jobs:
           dokku() { ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15 "dokku@$HOST" "$@"; }
           section() { echo; echo "########## $* ##########"; }
 
-          section "plugin:list"; dokku plugin:list || true
-          section "domains:report"; dokku domains:report "$APP" || true
-          section "ports:report"; dokku ports:report "$APP" || true
-          section "proxy:report"; dokku proxy:report "$APP" || true
-          section "nginx:show-config"; dokku nginx:show-config "$APP" || true
-          section "letsencrypt:list"; dokku letsencrypt:list || true
-          section "letsencrypt:report"; dokku letsencrypt:report || true
-          section "certificates"; dokku certs:report "$APP" || true
+          section "add domain"
+          dokku domains:add "$APP" "$DOMAIN" || true
 
-      - name: Network probes for the domain
+          section "ensure letsencrypt plugin"
+          if dokku plugin:list | grep -q letsencrypt; then
+            echo "letsencrypt plugin already installed"
+          else
+            dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git || true
+          fi
+
+          section "configure email"
+          dokku letsencrypt:set "$APP" email "$EMAIL" || true
+
+          section "enable letsencrypt"
+          dokku letsencrypt:enable "$APP" || true
+
+          section "domains:report"
+          dokku domains:report "$APP" || true
+
+          section "certs:report"
+          dokku certs:report "$APP" || true
+
+          section "nginx:show-config"
+          dokku nginx:show-config "$APP" || true
+
+      - name: HTTPS probes
         run: |
           set -uo pipefail
-          HOST=SERVER_HOST
           DOMAIN=APP_DOMAIN
-          echo "### resolve $DOMAIN"; getent hosts "$DOMAIN" || true
-          echo "### http://$DOMAIN/"; curl -v -m 15 "http://$DOMAIN/" 2>&1 | tail -20 || true
-          echo "### http://$DOMAIN:8080/api/health"; curl -sS -m 15 -o /dev/null -w "code=%{http_code}\n" "http://$DOMAIN:8080/api/health" || true
-          echo "### https://$DOMAIN/"; curl -vk -m 15 "https://$DOMAIN/" 2>&1 | tail -20 || true
-          for p in 80 443 8080; do
-            if timeout 8 bash -c "cat < /dev/null > /dev/tcp/$HOST/$p" 2>/dev/null; then echo "tcp $p: open"; else echo "tcp $p: closed/timeout"; fi
-          done
+          echo "### https://$DOMAIN/api/health"
+          curl -sS -m 20 -o /tmp/health.json -w "code=%{http_code}\n" "https://$DOMAIN/api/health" || true
+          head -c 300 /tmp/health.json 2>/dev/null || true; echo
+          echo "### http://$DOMAIN/ (expect redirect or 200)"
+          curl -sS -m 20 -D - -o /dev/null "http://$DOMAIN/" 2>&1 | grep -iE "^HTTP|^location" || true
+          echo "### cert issuer"
+          echo | timeout 15 openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -issuer -subject -dates 2>/dev/null || echo "cert probe failed"
