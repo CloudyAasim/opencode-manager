@@ -18,7 +18,6 @@ import json
 import os
 import pty
 import select
-import shutil
 import signal
 import struct
 import sys
@@ -26,7 +25,6 @@ import termios
 
 CTRL_FD = 3
 READ_SIZE = 65536
-BWRAP_READ_ONLY_DIRS = ("/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc", "/opt", "/run")
 
 
 def build_shell_argv(shell: str) -> list:
@@ -34,43 +32,25 @@ def build_shell_argv(shell: str) -> list:
     if not bind:
         return [shell, "-i"]
 
-    bwrap = shutil.which("bwrap")
-    if not bwrap:
-        sys.stderr.write("terminal-pty: bwrap not found; running without workspace isolation\n")
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "terminal-sandbox.sh")
+    if not os.path.exists(script):
+        sys.stderr.write("terminal-pty: sandbox script not found; running without workspace isolation\n")
         return [shell, "-i"]
 
-    argv = [
-        bwrap,
-        "--die-with-parent",
-        "--unshare-pid",
-        "--unshare-uts",
-        "--unshare-ipc",
-        "--proc",
-        "/proc",
-        "--dev",
-        "/dev",
-        "--tmpfs",
-        "/tmp",
-    ]
-    for directory in BWRAP_READ_ONLY_DIRS:
-        if os.path.exists(directory):
-            argv += ["--ro-bind", directory, directory]
-    argv += [
-        "--bind",
-        bind,
-        "/workspace",
-        "--chdir",
-        "/workspace",
-        "--setenv",
-        "HOME",
-        "/workspace",
-        "--setenv",
-        "PWD",
-        "/workspace",
+    return [
+        "unshare",
+        "--user",
+        "--map-root-user",
+        "--mount",
+        "--propagation",
+        "unchanged",
+        "--",
+        "/bin/sh",
+        script,
         shell,
+        bind,
         "-i",
     ]
-    return argv
 
 
 def set_winsize(fd: int, cols: int, rows: int) -> None:
