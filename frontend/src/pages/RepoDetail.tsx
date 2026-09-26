@@ -112,12 +112,17 @@ export function RepoDetail() {
   );
 
   const { data: existingSessions } = useSessionsAcrossDirectories(opcodeUrl, sessionListDirectories, { limit: 25 });
+  const latestSessionId = existingSessions[0]?.id;
 
   useEffect(() => {
-    if (existingSessions.length > 0) {
-      navigate(sessionUrl(existingSessions[0].id), { replace: true });
-    }
-  }, [existingSessions, navigate, sessionUrl]);
+    if (!latestSessionId) return;
+    const suffix = repoId === 0
+      ? '?assistant=1'
+      : activeTab === 'workspaces'
+        ? '?repoTab=workspaces'
+        : '';
+    navigate(`/repos/${repoId}/sessions/${latestSessionId}${suffix}`, { replace: true });
+  }, [latestSessionId, navigate, repoId, activeTab]);
 
   const createSessionMutation = useCreateSession(opcodeUrl, composerDirectory, (session) => {
     navigate(sessionUrl(session.id));
