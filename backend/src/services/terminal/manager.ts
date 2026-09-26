@@ -23,6 +23,7 @@ export interface TerminalActor {
   id: string
   email: string
   username: string | null
+  role?: 'admin' | 'user'
   ipAddress: string | null
   userAgent: string | null
 }
@@ -137,12 +138,14 @@ export class TerminalManager {
     const rows = clampDimension(options.rows, ENV.TERMINAL.ROWS)
     const id = randomUUID()
     const cwd = resolveUserTerminalHome(actor.id, actor.username)
+    const isolateWorkspace = ENV.TERMINAL.ISOLATE && actor.role !== 'admin' ? cwd : undefined
 
     const pty = this.spawner.spawn({
       shell: ENV.TERMINAL.SHELL,
       cwd,
       cols,
       rows,
+      isolateWorkspace,
     })
 
     const session = new TerminalSession(

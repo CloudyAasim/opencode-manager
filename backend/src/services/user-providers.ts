@@ -1,13 +1,17 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import { getUserWorkspacePath } from '@opencode-manager/shared/config/env'
+import { getUserSettingPath, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
 import { logger } from '../utils/logger'
 import { mkdirSafe } from '../utils/fs-safe'
 
 type ProviderEntry = { options?: Record<string, unknown> } & Record<string, unknown>
 
-function workspaceRoot(username: string): string {
-  return getUserWorkspacePath(username)
+function settingRoot(username: string): string {
+  return getUserSettingPath(username)
+}
+
+function reposRoot(username: string): string {
+  return path.join(getUserWorkspacePath(username), 'repos')
 }
 
 function configPathIn(directory: string): string {
@@ -35,12 +39,12 @@ function providersOf(config: Record<string, unknown>): Record<string, ProviderEn
 }
 
 async function listConfigDirectories(username: string): Promise<string[]> {
-  const root = workspaceRoot(username)
-  const directories = [root, path.join(root, 'assistant')]
+  const setting = settingRoot(username)
+  const directories = [setting, path.join(setting, 'assistant')]
   try {
-    const entries = await fs.readdir(path.join(root, 'repos'), { withFileTypes: true })
+    const entries = await fs.readdir(reposRoot(username), { withFileTypes: true })
     for (const entry of entries) {
-      if (entry.isDirectory()) directories.push(path.join(root, 'repos', entry.name))
+      if (entry.isDirectory()) directories.push(path.join(reposRoot(username), entry.name))
     }
   } catch {
     // no repos directory yet
@@ -70,7 +74,7 @@ async function upsertProvider(configPath: string, providerId: string, apiKey: st
  */
 export class UserProviderService {
   async list(username: string): Promise<string[]> {
-    const config = await readConfig(configPathIn(workspaceRoot(username)))
+    const config = await readConfig(configPathIn(settingRoot(username)))
     return Object.entries(providersOf(config))
       .filter(([, entry]) => Boolean(entry?.options?.apiKey))
       .map(([providerId]) => providerId)

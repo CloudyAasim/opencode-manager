@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import type { Database } from 'bun:sqlite'
 import { hashPassword } from 'better-auth/crypto'
-import { ENV, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
+import { ENV, getUserSettingPath, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
 import { deriveUsernameFromEmail, isValidUsername, normalizeUsername, uniquifyUsername } from '@opencode-manager/shared/utils'
 import type { AuthInstance } from '../auth'
 import { withInternalSignup } from '../auth/internal-signup'
@@ -107,6 +107,7 @@ export class UserAdminService {
   private async ensureWorkspace(username: string): Promise<void> {
     try {
       await mkdir(getUserWorkspacePath(username), { recursive: true, mode: 0o700 })
+      await mkdir(getUserSettingPath(username), { recursive: true, mode: 0o700 })
     } catch (error) {
       logger.warn(`Failed to create the workspace directory for ${username}`, error)
     }

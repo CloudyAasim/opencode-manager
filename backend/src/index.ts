@@ -35,6 +35,7 @@ import { createAuthRoutes, createAuthInfoRoutes } from './routes/auth'
 import { createAuth } from './auth'
 import { createAuthMiddleware } from './auth/middleware'
 import { runWithAccessScope } from './auth/access-scope'
+import { migrateUserWorkspaceLayout } from './services/workspace-layout'
 import { principalFrom, resolveAccessRoots, resolveBrowseRoot, resolveRepoBase } from './auth/ownership'
 import type { Session } from './auth'
 import { createSecurityHeadersMiddleware } from './middleware/security-headers'
@@ -194,6 +195,7 @@ try {
   await ensureDirectoryExists(getWorkspacePath())
   await ensureDirectoryExists(getReposPath())
   await ensureDirectoryExists(getConfigPath())
+  await migrateUserWorkspaceLayout()
   logger.info('Workspace directories initialized')
 
   await cleanupExpiredCache()

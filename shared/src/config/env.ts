@@ -144,6 +144,7 @@ export const ENV = {
 
   TERMINAL: {
     ENABLED: getEnvBoolean('OCM_TERMINAL_ENABLED', DEFAULTS.TERMINAL.ENABLED),
+    ISOLATE: getEnvBoolean('OCM_TERMINAL_ISOLATE', true),
     SHELL: getEnvString('OCM_TERMINAL_SHELL', DEFAULTS.TERMINAL.SHELL),
     get CWD() { return resolveTerminalCwd() },
     COLS: getEnvNumber('OCM_TERMINAL_COLS', DEFAULTS.TERMINAL.COLS),
@@ -161,7 +162,8 @@ export const ENV = {
 
 export const getWorkspacePath = () => ENV.WORKSPACE.BASE_PATH
 export const getUsersWorkspacePath = () => path.join(getWorkspacePath(), 'users')
-export const getUserWorkspacePath = (username: string) => path.join(getUsersWorkspacePath(), username)
+export const getUserWorkspacePath = (username: string) => path.join(getUsersWorkspacePath(), username, 'workspace')
+export const getUserSettingPath = (username: string) => path.join(getUsersWorkspacePath(), username, 'setting')
 export const getUserReposPath = (username: string) => path.join(getUserWorkspacePath(username), ENV.WORKSPACE.REPOS_DIR)
 export const getReposPath = () => path.join(ENV.WORKSPACE.BASE_PATH, ENV.WORKSPACE.REPOS_DIR)
 export const getScheduleWorktreesPath = () => path.join(ENV.WORKSPACE.BASE_PATH, ENV.WORKSPACE.SCHEDULE_WORKTREES_DIR)

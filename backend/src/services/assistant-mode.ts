@@ -14,7 +14,7 @@ import {
 } from './file-operations'
 import { ASSISTANT_NOTIFICATION_LIMITS, OpenCodeConfigSchema } from '@opencode-manager/shared/schemas'
 import { ASSISTANT_REPO_ID, ASSISTANT_OPENCODE_DIR_NAME } from '@opencode-manager/shared/utils'
-import { getAssistantModePath, getReposPath, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
+import { getAssistantModePath, getReposPath, getUserSettingPath } from '@opencode-manager/shared/config/env'
 import type { Database } from 'bun:sqlite'
 import { MANAGER_TOOL_NAME } from './opencode-manager-tool-plugin'
 import { ensureAssistantRepo } from '../db/queries'
@@ -36,7 +36,7 @@ const ASSISTANT_DEFAULT_AGENT_FILENAME = `${ASSISTANT_DEFAULT_AGENT_NAME}.md`
 
 export function getAssistantModeDirectory(username?: string | null): string {
   if (username) {
-    return path.resolve(getUserWorkspacePath(username), 'assistant')
+    return path.resolve(getUserSettingPath(username), 'assistant')
   }
 
   const assistantDir = getAssistantModePath()

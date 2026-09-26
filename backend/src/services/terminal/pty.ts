@@ -10,6 +10,7 @@ export interface PtySpawnOptions {
   cols: number
   rows: number
   env?: Record<string, string>
+  isolateWorkspace?: string
 }
 
 export interface PtyProcess {
@@ -76,6 +77,7 @@ export class NodePtySpawner implements PtySpawner {
         OCM_PTY_CWD: options.cwd,
         OCM_PTY_COLS: String(options.cols),
         OCM_PTY_ROWS: String(options.rows),
+        ...(options.isolateWorkspace ? { OCM_PTY_BIND: options.isolateWorkspace } : {}),
       },
       stdio: ['pipe', 'pipe', 'pipe', 'pipe'],
     })

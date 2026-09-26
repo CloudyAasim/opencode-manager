@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { chmodSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
-import { ENV } from '@opencode-manager/shared/config/env'
+import { ENV, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
 import { logger } from '../../utils/logger'
 
 export function safeUserDirectoryName(userId: string): string {
@@ -19,8 +19,10 @@ export function resolveUserTerminalHome(userId: string, username?: string | null
   const base = path.resolve(ENV.TERMINAL.CWD)
   if (!ENV.TERMINAL.PER_USER_HOME) return base
 
-  const leaf = username && /^[a-z][a-z0-9]{2,31}$/.test(username) ? username : safeUserDirectoryName(userId)
-  const home = path.resolve(base, ENV.TERMINAL.USERS_DIR, leaf)
+  const validUsername = username && /^[a-z][a-z0-9]{2,31}$/.test(username) ? username : null
+  const home = validUsername
+    ? path.resolve(getUserWorkspacePath(validUsername))
+    : path.resolve(base, ENV.TERMINAL.USERS_DIR, safeUserDirectoryName(userId))
   if (!isInsideDirectory(base, home)) {
     logger.warn(`Computed terminal home escapes the workspace root for user ${userId}; using ${base}`)
     return base

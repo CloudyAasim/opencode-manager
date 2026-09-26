@@ -54,6 +54,7 @@ function actorOf(c: TerminalContext): TerminalActor {
     id: user?.id ?? 'unknown',
     email: user?.email ?? 'unknown',
     username: user?.username ?? null,
+    role: user?.role === 'admin' ? 'admin' : 'user',
     ipAddress: getTrustedClientIp(c.req.raw.headers),
     userAgent: c.req.header('user-agent') ?? null,
   }

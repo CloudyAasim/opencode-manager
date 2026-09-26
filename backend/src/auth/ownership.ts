@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import path from 'node:path'
 import type { Session } from './index'
-import { getReposPath, getUserReposPath, getUserWorkspacePath, getWorkspacePath } from '@opencode-manager/shared/config/env'
+import { getReposPath, getUserReposPath, getUserSettingPath, getUserWorkspacePath, getWorkspacePath } from '@opencode-manager/shared/config/env'
 
 export interface Principal {
   id: string
@@ -77,7 +77,8 @@ export function accessibleRepoOwnerPaths(db: Database, principal: Principal): st
 export function resolveAccessRoots(db: Database, principal: Principal | null): string[] {
   if (!principal) return []
   if (principal.role === 'admin') return [path.resolve(getWorkspacePath())]
-  const roots = [path.resolve(getUserWorkspacePath(principal.username ?? principal.id))]
+  const username = principal.username ?? principal.id
+  const roots = [path.resolve(getUserWorkspacePath(username)), path.resolve(getUserSettingPath(username))]
   for (const repoPath of accessibleRepoOwnerPaths(db, principal)) {
     roots.push(path.resolve(repoPath))
   }

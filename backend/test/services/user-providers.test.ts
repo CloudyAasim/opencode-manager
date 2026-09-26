@@ -33,7 +33,7 @@ describe('UserProviderService', () => {
     expect(await service.has('alice', 'openai')).toBe(false)
 
     const aliceConfig = JSON.parse(
-      await fs.readFile(path.join(workspace, 'users', 'alice', 'opencode.json'), 'utf-8'),
+      await fs.readFile(path.join(workspace, 'users', 'alice', 'setting', 'opencode.json'), 'utf-8'),
     ) as { provider: Record<string, { options: { apiKey: string } }> }
     expect(aliceConfig.provider.anthropic?.options.apiKey).toBe('alice-key')
 

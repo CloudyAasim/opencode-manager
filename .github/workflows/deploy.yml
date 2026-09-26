@@ -67,6 +67,10 @@ jobs:
           echo "== disabling zero-downtime checks (broken host healthchecker) =="
           dokku checks:disable "$APP" || true
 
+          echo "== allow unprivileged user namespaces for the sandboxed terminal (bwrap) =="
+          dokku docker-options:add "$APP" deploy "--security-opt seccomp=unconfined" || true
+          dokku docker-options:add "$APP" run "--security-opt seccomp=unconfined" || true
+
           echo "== configuring environment =="
           # TLS is managed manually (dokku letsencrypt). Detect it so an automated
           # deploy never downgrades origins/cookies or drops the https port map.
@@ -101,7 +105,7 @@ jobs:
             "PASSKEY_ORIGIN=https://$DOMAIN" \
             OCM_ALLOW_SERVER_ENV_EDIT=false \
             OCM_TERMINAL_ENABLED=true \
-            OCM_TERMINAL_ADMINS_ONLY=true \
+            OCM_TERMINAL_ADMINS_ONLY=false \
             >/dev/null
 
           echo "== configuring domain and port mapping =="
