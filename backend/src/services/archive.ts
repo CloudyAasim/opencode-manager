@@ -5,11 +5,11 @@ import path from 'path'
 import os from 'os'
 import { logger } from '../utils/logger'
 import { canonicalPath } from '../utils/fs-safe'
-import { getReposPath } from '@opencode-manager/shared/config/env'
 import { assertWithinAccessScope } from '../auth/access-scope'
+import { fileBase } from './file-paths'
 
 async function resolvePath(userPath: string): Promise<string> {
-  const absolutePath = path.isAbsolute(userPath) ? userPath : path.join(getReposPath(), userPath)
+  const absolutePath = path.isAbsolute(userPath) ? userPath : path.join(fileBase(), userPath)
   assertWithinAccessScope(absolutePath)
   return canonicalPath(absolutePath)
 }

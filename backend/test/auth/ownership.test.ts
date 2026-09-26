@@ -48,23 +48,23 @@ describe('ownership helpers', () => {
     expect(canAccessRepo(db, 999, admin)).toBe(false)
   })
 
-  it('scopes normal users to their own repos only', () => {
+  it('scopes normal users to their own and shared repos', () => {
     expect(canAccessRepo(db, 1, alice)).toBe(true)
     expect(canAccessRepo(db, 2, alice)).toBe(false)
-    expect(canAccessRepo(db, 3, alice)).toBe(false)
-    expect(canAccessRepo(db, 0, alice)).toBe(false)
+    expect(canAccessRepo(db, 3, alice)).toBe(true)
+    expect(canAccessRepo(db, 0, alice)).toBe(true)
   })
 
   it('scopes repo ownership by owner id', () => {
     expect(canAccessRepoOwner('alice', alice)).toBe(true)
     expect(canAccessRepoOwner('bob', alice)).toBe(false)
-    expect(canAccessRepoOwner(null, alice)).toBe(false)
+    expect(canAccessRepoOwner(null, alice)).toBe(true)
     expect(canAccessRepoOwner(null, admin)).toBe(true)
     expect(canAccessRepoOwner('alice', null)).toBe(false)
   })
 
   it('lists accessible repo ids', () => {
-    expect(accessibleRepoIds(db, alice).sort()).toEqual([1])
+    expect(accessibleRepoIds(db, alice).sort()).toEqual([0, 1, 3])
     expect(accessibleRepoIds(db, admin).sort()).toEqual([0, 1, 2, 3])
     expect(accessibleRepoIds(db, null)).toEqual([])
   })

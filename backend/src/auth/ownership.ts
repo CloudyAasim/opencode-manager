@@ -43,6 +43,7 @@ export function setRepoOwner(db: Database, repoId: number, ownerId: string | nul
 export function canAccessRepoOwner(ownerId: string | null | undefined, principal: Principal | null): boolean {
   if (!principal) return false
   if (principal.role === 'admin') return true
+  if (ownerId === null || ownerId === undefined) return true
   return ownerId === principal.id
 }
 
@@ -60,15 +61,27 @@ export function accessibleRepoIds(db: Database, principal: Principal | null): nu
     return rows.map((row) => row.id)
   }
   const rows = db
-    .prepare('SELECT id FROM repos WHERE user_id = ?')
+    .prepare('SELECT id FROM repos WHERE user_id IS NULL OR user_id = ?')
     .all(principal.id) as { id: number }[]
   return rows.map((row) => row.id)
 }
 
-export function resolveAccessRoots(_db: Database, principal: Principal | null): string[] {
+export function accessibleRepoOwnerPaths(db: Database, principal: Principal): string[] {
+  const rows = principal.role === 'admin'
+    ? db.prepare('SELECT source_path, local_path FROM repos').all()
+    : db.prepare('SELECT source_path, local_path FROM repos WHERE user_id IS NULL OR user_id = ?').all(principal.id)
+  return (rows as { source_path: string | null; local_path: string }[])
+    .map((row) => row.source_path || path.join(getReposPath(), row.local_path))
+}
+
+export function resolveAccessRoots(db: Database, principal: Principal | null): string[] {
   if (!principal) return []
   if (principal.role === 'admin') return [path.resolve(getWorkspacePath())]
-  return [path.resolve(getUserWorkspacePath(principal.username ?? principal.id))]
+  const roots = [path.resolve(getUserWorkspacePath(principal.username ?? principal.id))]
+  for (const repoPath of accessibleRepoOwnerPaths(db, principal)) {
+    roots.push(path.resolve(repoPath))
+  }
+  return Array.from(new Set(roots))
 }
 
 export function resolveBrowseRoot(principal: Principal | null): string {

@@ -1,12 +1,12 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { logger } from '../utils/logger'
-import { getReposPath } from '@opencode-manager/shared/config/env'
 import { mkdirSafe } from '../utils/fs-safe'
 import { assertWithinAccessScope } from '../auth/access-scope'
+import { fileBase } from './file-paths'
 
 function resolveFilePath(filePath: string): string {
-  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(getReposPath(), filePath)
+  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(fileBase(), filePath)
   assertWithinAccessScope(fullPath)
   return fullPath
 }

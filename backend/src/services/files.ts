@@ -14,12 +14,12 @@ import {
   getFileStats, 
   listDirectory 
 } from './file-operations'
-import { getReposPath, getWorkspacePath, FILE_LIMITS } from '@opencode-manager/shared/config/env'
+import { getWorkspacePath, FILE_LIMITS } from '@opencode-manager/shared/config/env'
 import { getAccessScope, isWithinRoots } from '../auth/access-scope'
+import { fileBase } from './file-paths'
 import { ALLOWED_MIME_TYPES, type AllowedMimeType } from '@opencode-manager/shared'
 import type { ChunkedFileInfo, PatchOperation } from '@opencode-manager/shared'
 
-const SHARED_WORKSPACE_BASE = getReposPath()
 const WORKSPACE_BASE = getWorkspacePath()
 
 interface FileInfo {
@@ -104,7 +104,7 @@ export async function getFile(userPath: string): Promise<FileInfo> {
           return a.name.localeCompare(b.name)
         }),
         lastModified: stats.lastModified,
-        workspaceRoot: SHARED_WORKSPACE_BASE,
+        workspaceRoot: fileBase(),
       }
     } else {
       // It's a file - get content
@@ -240,7 +240,7 @@ function validatePath(userPath: string): string {
   const normalized = path.normalize(trimmed || '.')
   const resolved = path.isAbsolute(trimmed)
     ? path.resolve(trimmed)
-    : path.resolve(SHARED_WORKSPACE_BASE, normalized)
+    : path.resolve(fileBase(), normalized)
 
   const scope = getAccessScope()
   if (scope) {
