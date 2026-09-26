@@ -1,8 +1,9 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { AuthService } from '../services/auth'
+import { UserProviderService } from '../services/user-providers'
 import { SetCredentialRequestSchema } from '../../../shared/src/schemas/auth'
 import { logger } from '../utils/logger'
+import { getAccessScope } from '../auth/access-scope'
 import type { OpenCodeClient } from '../services/opencode/client'
 import { reloadOpenCodeConfig } from '../services/opencode-restart'
 import type { OpenCodeSupervisor } from '../services/opencode-supervisor'
@@ -23,7 +24,8 @@ const UpdateModelStateSchema = z.object({
 
 export function createProvidersRoutes(openCodeClient: OpenCodeClient, openCodeSupervisor?: OpenCodeSupervisor) {
   const app = new Hono()
-  const authService = new AuthService()
+  const userProviderService = new UserProviderService()
+  const currentUsername = () => getAccessScope()?.username ?? null
 
   app.get('/model-state', async (c) => {
     try {
@@ -65,7 +67,8 @@ export function createProvidersRoutes(openCodeClient: OpenCodeClient, openCodeSu
 
   app.get('/credentials', async (c) => {
     try {
-      const providers = await authService.list()
+      const username = currentUsername()
+      const providers = username ? await userProviderService.list(username) : []
       return c.json({ providers })
     } catch (error) {
       logger.error('Failed to list provider credentials:', error)
@@ -76,7 +79,8 @@ export function createProvidersRoutes(openCodeClient: OpenCodeClient, openCodeSu
   app.get('/:id/credentials/status', async (c) => {
     try {
       const providerId = c.req.param('id')
-      const hasCredentials = await authService.has(providerId)
+      const username = currentUsername()
+      const hasCredentials = username ? await userProviderService.has(username, providerId) : false
       return c.json({ hasCredentials })
     } catch (error) {
       logger.error('Failed to check credential status:', error)
@@ -86,23 +90,22 @@ export function createProvidersRoutes(openCodeClient: OpenCodeClient, openCodeSu
 
   app.post('/:id/credentials', async (c) => {
     try {
+      const username = currentUsername()
+      if (!username) {
+        return c.json({ error: 'Unauthorized' }, 401)
+      }
       const providerId = c.req.param('id')
       const body = await c.req.json()
       const validated = SetCredentialRequestSchema.parse(body)
-      
-      const openCodeSuccess = await openCodeClient.setProviderAuth(providerId, validated.apiKey)
-      if (!openCodeSuccess) {
-        logger.warn(`Failed to set OpenCode auth for ${providerId}, saving locally only`)
-      }
-      
-      await authService.set(providerId, validated.apiKey)
-      
+
+      await userProviderService.set(username, providerId, validated.apiKey)
+
       try {
         await reloadOpenCodeConfig(openCodeSupervisor)
       } catch (reloadError) {
         logger.warn(`Failed to reload OpenCode config after saving credentials for ${providerId}:`, reloadError)
       }
-      
+
       return c.json({ success: true })
     } catch (error) {
       logger.error('Failed to set provider credentials:', error)
@@ -115,21 +118,20 @@ export function createProvidersRoutes(openCodeClient: OpenCodeClient, openCodeSu
 
   app.delete('/:id/credentials', async (c) => {
     try {
-      const providerId = c.req.param('id')
-      
-      const openCodeSuccess = await openCodeClient.deleteProviderAuth(providerId)
-      if (!openCodeSuccess) {
-        logger.warn(`Failed to delete OpenCode auth for ${providerId}, removing locally only`)
+      const username = currentUsername()
+      if (!username) {
+        return c.json({ error: 'Unauthorized' }, 401)
       }
-      
-      await authService.delete(providerId)
-      
+      const providerId = c.req.param('id')
+
+      await userProviderService.delete(username, providerId)
+
       try {
         await reloadOpenCodeConfig(openCodeSupervisor)
       } catch (reloadError) {
         logger.warn(`Failed to reload OpenCode config after deleting credentials for ${providerId}:`, reloadError)
       }
-      
+
       return c.json({ success: true })
     } catch (error) {
       logger.error('Failed to delete provider credentials:', error)

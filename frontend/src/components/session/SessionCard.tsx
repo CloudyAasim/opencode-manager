@@ -10,6 +10,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { useI18n } from '@/lib/i18n';
 
+function displaySessionTitle(title: string | undefined, t: (key: string) => string): string {
+  if (!title || /^New session - /.test(title)) return t('session.card.untitled')
+  return title
+}
+
 interface SessionCardProps {
   session: Session;
   isSelected: boolean;
@@ -109,7 +114,7 @@ export const SessionCard = ({
                   <div className="flex items-center gap-1">
                     {isPinned && <Pin className="w-3 h-3 text-warning shrink-0" />}
                     <h3 className="text-base font-semibold text-primary truncate">
-                      {session.title || t('session.card.untitled')}
+                      {displaySessionTitle(session.title, t)}
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
@@ -131,7 +136,7 @@ export const SessionCard = ({
                   <div className="flex items-center gap-1">
                     {isPinned && <Pin className="w-3 h-3 text-warning shrink-0" />}
                     <h3 className="text-sm font-semibold text-primary truncate">
-                      {session.title || t('session.card.untitled')}
+                      {displaySessionTitle(session.title, t)}
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">

@@ -5,6 +5,7 @@ export interface AccessScope {
   roots: string[]
   browseRoot: string
   repoBase: string
+  username?: string | null
 }
 
 const storage = new AsyncLocalStorage<AccessScope>()

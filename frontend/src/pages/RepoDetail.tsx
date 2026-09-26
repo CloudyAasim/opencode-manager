@@ -186,7 +186,7 @@ export function RepoDetail() {
     );
   }
 
-  const repoName = getRepoDisplayName(repo);
+  const repoName = repoId === 0 ? t('misc.assistant.title') : getRepoDisplayName(repo);
   const branchToDisplay = repo.currentBranch || repo.branch;
   const displayName = branchToDisplay ? `${repoName} (${branchToDisplay})` : repoName;
   const currentBranch = repo.currentBranch || repo.branch || "main";

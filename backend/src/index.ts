@@ -291,7 +291,7 @@ protectedApi.use('/*', async (c, next) => {
   const roots = resolveAccessRoots(db, principal)
   const browseRoot = resolveBrowseRoot(principal)
   const repoBase = resolveRepoBase(principal)
-  await runWithAccessScope({ roots, browseRoot, repoBase }, () => next())
+  await runWithAccessScope({ roots, browseRoot, repoBase, username: principal?.username ?? null }, () => next())
 })
 
 protectedApi.route('/repos', createRepoRoutes(db, gitAuthService, scheduleService, openCodeClient))
