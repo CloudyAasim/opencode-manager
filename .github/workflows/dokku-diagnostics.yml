@@ -33,11 +33,13 @@ jobs:
           dokku run "$APP" unshare -Urm --propagation unchanged true || echo "unshare_unchanged_failed=$?"
           echo "########## root mount propagation ##########"
           dokku run "$APP" grep -w / /proc/self/mountinfo || true
-          echo "########## overlayfs ro view in userns ##########"
-          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged mount -t overlay overlay -o ro,lowerdir=/usr /mnt || echo "overlay_ro_failed=$?"
-          echo "########## overlayfs ro view, then write (must fail) ##########"
-          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged mount -t overlay overlay -o ro,lowerdir=/usr /mnt || true
-          echo "########## overlayfs ro with userxattr ##########"
-          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged mount -t overlay overlay -o ro,lowerdir=/usr,userxattr /mnt || echo "overlay_userxattr_failed=$?"
-          echo "########## overlayfs with tmpfs upper (ephemeral writable) ##########"
-          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged mount -t overlay overlay -o lowerdir=/usr,upperdir=/tmp,workdir=/tmp /mnt || echo "overlay_upper_failed=$?"
+          echo "########## userns write to /usr (must fail) ##########"
+          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged touch /usr/.ocm-probe || echo "usr_write_denied=$?"
+          echo "########## userns write to /opt (must fail) ##########"
+          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged touch /opt/.ocm-probe || echo "opt_write_denied=$?"
+          echo "########## userns write to /etc (must fail) ##########"
+          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged touch /etc/.ocm-probe || echo "etc_write_denied=$?"
+          echo "########## userns write to /workspace (must succeed) ##########"
+          dokku run "$APP" unshare --user --map-root-user --mount --propagation unchanged touch /workspace/.ocm-sandbox-probe || echo "workspace_write_failed=$?"
+          echo "########## world-writable files under /usr /opt ##########"
+          dokku run "$APP" find /usr /opt -xdev -perm -0002 -type f || true
