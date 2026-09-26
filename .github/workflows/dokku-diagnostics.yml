@@ -7,7 +7,7 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Revert domain change and report
+      - name: Collect Dokku diagnostics
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
           SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
@@ -15,7 +15,6 @@ jobs:
           set -uo pipefail
           HOST=SERVER_HOST
           APP=opencode-manager
-          DOMAIN=APP_DOMAIN
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
@@ -23,8 +22,18 @@ jobs:
           dokku() { ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15 "dokku@$HOST" "$@"; }
           section() { echo; echo "########## $* ##########"; }
 
-          section "remove domain"; dokku domains:remove "$APP" "$DOMAIN" || true
+          section "version"; dokku version || true
+          section "ps:report"; dokku ps:report "$APP" || true
           section "domains:report"; dokku domains:report "$APP" || true
           section "ports:report"; dokku ports:report "$APP" || true
           section "certs:report"; dokku certs:report "$APP" || true
-          section "ps:report"; dokku ps:report "$APP" || true
+          section "storage:report"; dokku storage:report "$APP" || true
+          section "checks:report"; dokku checks:report "$APP" || true
+          section "logs (tail 200)"; dokku logs "$APP" --num 200 || true
+
+      - name: HTTP probes
+        run: |
+          set -uo pipefail
+          HOST=SERVER_HOST
+          curl -sS -m 15 -o /dev/null -w "index=%{http_code}\n" "http://$HOST:8080/" || true
+          curl -sS -m 15 "http://$HOST:8080/api/health" | head -c 300 || true; echo
