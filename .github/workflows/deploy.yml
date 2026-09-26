@@ -16,7 +16,7 @@ jobs:
       - name: Push to dokku
         uses: dokku/github-action@master
         with:
-          git_remote_url: 'ssh://dokku@dokku.BASE_DOMAIN:22/opencode-manager'
+          git_remote_url: 'ssh://dokku@SERVER_HOST:22/opencode-manager'
           ssh_private_key: ${{ secrets.DEBAINDOKKU001 }}
           ssh_host_key: ${{ secrets.SSH_HOST_KEY }}
           branch: main
