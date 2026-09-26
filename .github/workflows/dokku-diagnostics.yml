@@ -7,7 +7,7 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe OpenCode inside the app image
+      - name: Collect Dokku TLS-relevant diagnostics
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
           SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
@@ -22,17 +22,24 @@ jobs:
           dokku() { ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15 "dokku@$HOST" "$@"; }
           section() { echo; echo "########## $* ##########"; }
 
-          section "opencode version"
-          dokku run "$APP" opencode --version 2>&1 | tail -5 || true
+          section "plugin:list"; dokku plugin:list || true
+          section "domains:report"; dokku domains:report "$APP" || true
+          section "ports:report"; dokku ports:report "$APP" || true
+          section "proxy:report"; dokku proxy:report "$APP" || true
+          section "nginx:show-config"; dokku nginx:show-config "$APP" || true
+          section "letsencrypt:list"; dokku letsencrypt:list || true
+          section "letsencrypt:report"; dokku letsencrypt:report || true
+          section "certificates"; dokku certs:report "$APP" || true
 
-          section "opencode serve --help"
-          dokku run "$APP" opencode serve --help 2>&1 | tail -40 || true
-
-          section "manual opencode serve (20s)"
-          dokku run "$APP" sh -c 'timeout 20 opencode serve --port 5559 --hostname 127.0.0.1 2>&1 | head -60' 2>&1 | tail -60 || true
-
-          section "recent opencode-tagged app logs"
-          dokku logs "$APP" --num 1500 2>&1 | grep -aiE "opencode|error|stderr|EADDR|panic|throw" | grep -aivE "Proxy request failed|at async|Unable to connect|health-watch" | tail -80 || true
-
-          section "health"
-          dokku run "$APP" sh -c 'curl -sS -m 5 http://127.0.0.1:5551/global/health 2>&1 | head -c 400' 2>&1 | tail -5 || true
+      - name: Network probes for the domain
+        run: |
+          set -uo pipefail
+          HOST=SERVER_HOST
+          DOMAIN=APP_DOMAIN
+          echo "### resolve $DOMAIN"; getent hosts "$DOMAIN" || true
+          echo "### http://$DOMAIN/"; curl -v -m 15 "http://$DOMAIN/" 2>&1 | tail -20 || true
+          echo "### http://$DOMAIN:8080/api/health"; curl -sS -m 15 -o /dev/null -w "code=%{http_code}\n" "http://$DOMAIN:8080/api/health" || true
+          echo "### https://$DOMAIN/"; curl -vk -m 15 "https://$DOMAIN/" 2>&1 | tail -20 || true
+          for p in 80 443 8080; do
+            if timeout 8 bash -c "cat < /dev/null > /dev/tcp/$HOST/$p" 2>/dev/null; then echo "tcp $p: open"; else echo "tcp $p: closed/timeout"; fi
+          done
