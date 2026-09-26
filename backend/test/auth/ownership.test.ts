@@ -30,8 +30,9 @@ describe('ownership helpers', () => {
   })
 
   it('derives a principal from a session user', () => {
-    expect(principalFrom({ id: 'alice', role: 'admin' } as never)).toEqual({ id: 'alice', role: 'admin' })
-    expect(principalFrom({ id: 'alice' } as never)).toEqual({ id: 'alice', role: 'user' })
+    expect(principalFrom({ id: 'alice', role: 'admin' } as never)).toEqual({ id: 'alice', role: 'admin', username: null })
+    expect(principalFrom({ id: 'alice' } as never)).toEqual({ id: 'alice', role: 'user', username: null })
+    expect(principalFrom({ id: 'alice', username: 'alice' } as never)).toEqual({ id: 'alice', role: 'user', username: 'alice' })
     expect(principalFrom(undefined)).toBeNull()
   })
 

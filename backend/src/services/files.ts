@@ -15,6 +15,7 @@ import {
   listDirectory 
 } from './file-operations'
 import { getReposPath, getWorkspacePath, FILE_LIMITS } from '@opencode-manager/shared/config/env'
+import { getAccessScope, isWithinRoots } from '../auth/access-scope'
 import { ALLOWED_MIME_TYPES, type AllowedMimeType } from '@opencode-manager/shared'
 import type { ChunkedFileInfo, PatchOperation } from '@opencode-manager/shared'
 
@@ -237,9 +238,18 @@ export async function renameOrMoveFile(userPath: string, body: { newPath: string
 function validatePath(userPath: string): string {
   const trimmed = userPath.trim()
   const normalized = path.normalize(trimmed || '.')
-  const fullPath = path.join(SHARED_WORKSPACE_BASE, normalized)
-  const resolved = path.resolve(fullPath)
-  
+  const resolved = path.isAbsolute(trimmed)
+    ? path.resolve(trimmed)
+    : path.resolve(SHARED_WORKSPACE_BASE, normalized)
+
+  const scope = getAccessScope()
+  if (scope) {
+    if (!isWithinRoots(resolved, scope.roots)) {
+      throw { message: 'Path is outside the allowed workspace', statusCode: 403 }
+    }
+    return resolved
+  }
+
   const basePath = path.resolve(WORKSPACE_BASE)
   if (resolved !== basePath && !resolved.startsWith(`${basePath}${path.sep}`)) {
     throw { message: 'Path traversal detected', statusCode: 403 }

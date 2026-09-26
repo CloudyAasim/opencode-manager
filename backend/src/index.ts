@@ -34,6 +34,9 @@ import { createMcpOauthProxyRoutes } from './routes/mcp-oauth-proxy'
 import { createAuthRoutes, createAuthInfoRoutes } from './routes/auth'
 import { createAuth } from './auth'
 import { createAuthMiddleware } from './auth/middleware'
+import { runWithAccessScope } from './auth/access-scope'
+import { principalFrom, resolveAccessRoots, resolveBrowseRoot } from './auth/ownership'
+import type { Session } from './auth'
 import { createSecurityHeadersMiddleware } from './middleware/security-headers'
 import { createAdminUserRoutes } from './routes/admin-users'
 import { createAuditRoutes } from './routes/admin-audit'
@@ -281,8 +284,14 @@ app.route('/api/mcp-oauth-proxy', createMcpOauthProxyRoutes(openCodeClient, requ
 app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
 app.route('/api/opencode-proxy', createOpenCodeProxyRoutes(db, settingsService))
 
-const protectedApi = new Hono()
+const protectedApi = new Hono<{ Variables: { session: Session['session']; user: Session['user'] } }>()
 protectedApi.use('/*', requireAuth)
+protectedApi.use('/*', async (c, next) => {
+  const principal = principalFrom(c.get('user'))
+  const roots = resolveAccessRoots(db, principal)
+  const browseRoot = resolveBrowseRoot(principal)
+  await runWithAccessScope({ roots, browseRoot }, () => next())
+})
 
 protectedApi.route('/repos', createRepoRoutes(db, gitAuthService, scheduleService, openCodeClient))
 protectedApi.route('/admin/users', createAdminUserRoutes(userAdminService, {

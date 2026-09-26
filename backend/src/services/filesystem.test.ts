@@ -5,19 +5,12 @@ import os from 'node:os'
 import { browseDirectory } from './filesystem'
 
 let tmpRoot: string
-const originalBrowseRoot = process.env.REPO_BROWSE_ROOT
 
 beforeEach(async () => {
   tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'ocm-browse-'))
-  process.env.REPO_BROWSE_ROOT = tmpRoot
 })
 
 afterEach(async () => {
-  if (originalBrowseRoot === undefined) {
-    delete process.env.REPO_BROWSE_ROOT
-  } else {
-    process.env.REPO_BROWSE_ROOT = originalBrowseRoot
-  }
   await fs.rm(tmpRoot, { recursive: true, force: true })
 })
 
@@ -27,7 +20,7 @@ describe('browseDirectory', () => {
     await fs.mkdir(path.join(tmpRoot, 'archive'))
     await fs.writeFile(path.join(tmpRoot, 'readme.txt'), 'ignored file')
 
-    const result = await browseDirectory()
+    const result = await browseDirectory(undefined, tmpRoot)
 
     expect(result.isRoot).toBe(true)
     expect(result.parentPath).toBeNull()
@@ -41,7 +34,7 @@ describe('browseDirectory', () => {
     await fs.mkdir(path.join(repoDir, '.git'))
     await fs.mkdir(path.join(tmpRoot, 'plain'))
 
-    const result = await browseDirectory()
+    const result = await browseDirectory(undefined, tmpRoot)
 
     const repo = result.entries.find((e) => e.name === 'my-repo')
     const plain = result.entries.find((e) => e.name === 'plain')
@@ -53,7 +46,7 @@ describe('browseDirectory', () => {
     await fs.mkdir(path.join(tmpRoot, '.hidden'))
     await fs.mkdir(path.join(tmpRoot, 'visible'))
 
-    const result = await browseDirectory()
+    const result = await browseDirectory(undefined, tmpRoot)
 
     expect(result.entries.map((e) => e.name)).toEqual(['visible'])
   })
@@ -63,7 +56,7 @@ describe('browseDirectory', () => {
     await fs.mkdir(sub)
     await fs.mkdir(path.join(sub, 'level2'))
 
-    const result = await browseDirectory(sub)
+    const result = await browseDirectory(sub, tmpRoot)
 
     expect(result.isRoot).toBe(false)
     expect(result.parentPath).toBe(path.resolve(tmpRoot))
@@ -73,14 +66,14 @@ describe('browseDirectory', () => {
   it('rejects paths outside the browse root with 403', async () => {
     const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'ocm-outside-'))
     try {
-      await expect(browseDirectory(outside)).rejects.toMatchObject({ statusCode: 403 })
+      await expect(browseDirectory(outside, tmpRoot)).rejects.toMatchObject({ statusCode: 403 })
     } finally {
       await fs.rm(outside, { recursive: true, force: true })
     }
   })
 
   it('rejects traversal above the root with 403', async () => {
-    await expect(browseDirectory(path.join(tmpRoot, '..'))).rejects.toMatchObject({ statusCode: 403 })
+    await expect(browseDirectory(path.join(tmpRoot, '..'), tmpRoot)).rejects.toMatchObject({ statusCode: 403 })
   })
 
   it('rejects a symlink inside the root that escapes the root with 403', async () => {
@@ -89,25 +82,24 @@ describe('browseDirectory', () => {
       const linkPath = path.join(tmpRoot, 'escape-link')
       await fs.symlink(outside, linkPath)
 
-      await expect(browseDirectory(linkPath)).rejects.toMatchObject({ statusCode: 403 })
+      await expect(browseDirectory(linkPath, tmpRoot)).rejects.toMatchObject({ statusCode: 403 })
     } finally {
       await fs.rm(outside, { recursive: true, force: true })
     }
   })
 
   it('returns 404 for a non-existent directory', async () => {
-    await expect(browseDirectory(path.join(tmpRoot, 'nope'))).rejects.toMatchObject({ statusCode: 404 })
+    await expect(browseDirectory(path.join(tmpRoot, 'nope'), tmpRoot)).rejects.toMatchObject({ statusCode: 404 })
   })
 
   it('returns 400 when the path is a file', async () => {
     const filePath = path.join(tmpRoot, 'file.txt')
     await fs.writeFile(filePath, 'data')
 
-    await expect(browseDirectory(filePath)).rejects.toMatchObject({ statusCode: 400 })
+    await expect(browseDirectory(filePath, tmpRoot)).rejects.toMatchObject({ statusCode: 400 })
   })
 
-  it('returns 501 when REPO_BROWSE_ROOT is not configured', async () => {
-    delete process.env.REPO_BROWSE_ROOT
-    await expect(browseDirectory()).rejects.toMatchObject({ statusCode: 501 })
+  it('returns 501 when the browse root is not configured', async () => {
+    await expect(browseDirectory(undefined, '')).rejects.toMatchObject({ statusCode: 501 })
   })
 })

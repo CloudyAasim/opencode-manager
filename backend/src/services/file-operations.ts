@@ -3,10 +3,17 @@ import path from 'path'
 import { logger } from '../utils/logger'
 import { getReposPath } from '@opencode-manager/shared/config/env'
 import { mkdirSafe } from '../utils/fs-safe'
+import { assertWithinAccessScope } from '../auth/access-scope'
+
+function resolveFilePath(filePath: string): string {
+  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(getReposPath(), filePath)
+  assertWithinAccessScope(fullPath)
+  return fullPath
+}
 
 export async function readFileContent(filePath: string): Promise<string> {
   try {
-    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(getReposPath(), filePath)
+    const fullPath = resolveFilePath(filePath)
     return await fs.readFile(fullPath, 'utf8')
   } catch (error) {
     throw new Error(`Failed to read file ${filePath}: ${error}`)
@@ -15,7 +22,7 @@ export async function readFileContent(filePath: string): Promise<string> {
 
 export async function readFileAsBase64(filePath: string): Promise<string> {
   try {
-    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(getReposPath(), filePath)
+    const fullPath = resolveFilePath(filePath)
     const buffer = await fs.readFile(fullPath)
     return buffer.toString('base64')
   } catch (error) {
@@ -28,7 +35,7 @@ export async function writeFileContent(
   content: string | Buffer
 ): Promise<void> {
   try {
-    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(getReposPath(), filePath)
+    const fullPath = resolveFilePath(filePath)
     
     await mkdirSafe(path.dirname(fullPath))
     
@@ -42,6 +49,7 @@ export async function writeFileContent(
 export async function ensureDirectoryExists(dirPath: string): Promise<void> {
   try {
     const fullPath = path.isAbsolute(dirPath) ? dirPath : path.resolve(dirPath)
+    assertWithinAccessScope(fullPath)
     await mkdirSafe(fullPath)
   } catch (error) {
     throw new Error(`Failed to create directory ${dirPath}: ${error}`)
@@ -50,7 +58,7 @@ export async function ensureDirectoryExists(dirPath: string): Promise<void> {
 
 export async function fileExists(filePath: string): Promise<boolean> {
   try {
-    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(getReposPath(), filePath)
+    const fullPath = resolveFilePath(filePath)
     await fs.access(fullPath)
     return true
   } catch {
@@ -62,7 +70,7 @@ export async function fileExists(filePath: string): Promise<boolean> {
 
 export async function deletePath(filePath: string): Promise<void> {
   try {
-    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(getReposPath(), filePath)
+    const fullPath = resolveFilePath(filePath)
     const stats = await fs.stat(fullPath)
     
     if (stats.isDirectory()) {
@@ -77,7 +85,7 @@ export async function deletePath(filePath: string): Promise<void> {
 
 export async function getFileStats(filePath: string): Promise<{ size: number; lastModified: Date; isDirectory: boolean }> {
   try {
-    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(getReposPath(), filePath)
+    const fullPath = resolveFilePath(filePath)
     const stats = await fs.stat(fullPath)
     
     return {
@@ -127,7 +135,7 @@ export async function listDirectory(dirPath: string): Promise<Array<{
   lastModified: Date
 }>> {
   try {
-    const fullPath = path.isAbsolute(dirPath) ? dirPath : path.join(getReposPath(), dirPath)
+    const fullPath = resolveFilePath(dirPath)
     const entries = await fs.readdir(fullPath, { withFileTypes: true })
     
     const result = []

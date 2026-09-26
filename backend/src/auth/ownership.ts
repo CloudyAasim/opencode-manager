@@ -1,15 +1,18 @@
 import type { Database } from 'bun:sqlite'
+import path from 'node:path'
 import type { Session } from './index'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
+import { getReposPath, getUserWorkspacePath, getWorkspacePath } from '@opencode-manager/shared/config/env'
 
 export interface Principal {
   id: string
   role: 'admin' | 'user'
+  username?: string | null
 }
 
 export function principalFrom(user: Session['user'] | undefined | null): Principal | null {
   if (!user?.id) return null
-  return { id: user.id, role: user.role === 'admin' ? 'admin' : 'user' }
+  return { id: user.id, role: user.role === 'admin' ? 'admin' : 'user', username: user.username ?? null }
 }
 
 export function principalIsAdmin(principal: Principal | null): boolean {
@@ -58,4 +61,33 @@ export function accessibleRepoIds(db: Database, principal: Principal | null): nu
     .prepare('SELECT id FROM repos WHERE user_id IS NULL OR user_id = ?')
     .all(principal.id) as { id: number }[]
   return rows.map((row) => row.id)
+}
+
+export function ownedRepoPaths(db: Database, principal: Principal): string[] {
+  const rows = principal.role === 'admin'
+    ? db.prepare('SELECT source_path, local_path FROM repos').all()
+    : db.prepare('SELECT source_path, local_path FROM repos WHERE user_id IS NULL OR user_id = ?').all(principal.id)
+  return (rows as { source_path: string | null; local_path: string }[])
+    .map((row) => row.source_path || path.join(getReposPath(), row.local_path))
+}
+
+export function resolveAccessRoots(db: Database, principal: Principal | null): string[] {
+  if (!principal) return []
+  const workspaceRoot = path.resolve(getWorkspacePath())
+  if (principal.role === 'admin') return [workspaceRoot]
+  const roots = [path.resolve(getUserWorkspacePath(principal.username ?? principal.id))]
+  for (const repoPath of ownedRepoPaths(db, principal)) {
+    roots.push(path.resolve(repoPath))
+  }
+  return Array.from(new Set(roots))
+}
+
+export function resolveBrowseRoot(principal: Principal | null): string {
+  if (!principal) {
+    return process.env.REPO_BROWSE_ROOT ? path.resolve(process.env.REPO_BROWSE_ROOT) : ''
+  }
+  if (principal.role === 'admin') {
+    return process.env.REPO_BROWSE_ROOT ? path.resolve(process.env.REPO_BROWSE_ROOT) : path.resolve(getWorkspacePath())
+  }
+  return path.resolve(getUserWorkspacePath(principal.username ?? principal.id))
 }

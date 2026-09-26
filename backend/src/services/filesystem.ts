@@ -1,17 +1,16 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { getBrowseRootPath } from '@opencode-manager/shared/config/env'
 import type { BrowseDirectoryResponse, DirectoryEntry } from '@opencode-manager/shared/types'
 
-function getRoot(): string {
-  const configured = getBrowseRootPath()
-  if (!configured) {
+function resolveRoot(configured: string): string {
+  const trimmed = (configured ?? '').trim()
+  if (!trimmed) {
     throw {
       message: 'Folder browsing is disabled. Set REPO_BROWSE_ROOT in the server environment to enable it.',
       statusCode: 501,
     }
   }
-  return path.resolve(configured)
+  return path.resolve(trimmed)
 }
 
 async function resolveWithinRoot(root: string, requestedPath?: string): Promise<string> {
@@ -46,9 +45,9 @@ async function isGitRepo(entryPath: string): Promise<boolean> {
   }
 }
 
-export async function browseDirectory(requestedPath?: string): Promise<BrowseDirectoryResponse> {
-  const root = getRoot()
-  const targetPath = await resolveWithinRoot(root, requestedPath)
+export async function browseDirectory(requestedPath: string | undefined, root: string): Promise<BrowseDirectoryResponse> {
+  const resolvedRoot = resolveRoot(root)
+  const targetPath = await resolveWithinRoot(resolvedRoot, requestedPath)
 
   let stats
   try {
@@ -77,7 +76,7 @@ export async function browseDirectory(requestedPath?: string): Promise<BrowseDir
 
   entries.sort((a, b) => a.name.localeCompare(b.name))
 
-  const isRoot = targetPath === root
+  const isRoot = targetPath === resolvedRoot
   const parentPath = isRoot ? null : path.dirname(targetPath)
 
   return {
