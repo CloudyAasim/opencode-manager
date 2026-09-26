@@ -1,0 +1,51 @@
+name: dokku-diagnostics
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect Dokku diagnostics
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
+          SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
+        run: |
+          set -uo pipefail
+          HOST=SERVER_HOST
+          APP=opencode-manager
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_HOST_KEY" | tr -d '\r' > ~/.ssh/known_hosts
+          dokku() { ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15 "dokku@$HOST" "$@"; }
+          section() { echo; echo "########## $* ##########"; }
+
+          section "version"; dokku version
+          section "ps:report"; dokku ps:report "$APP" || true
+          section "ports:report"; dokku ports:report "$APP" || true
+          section "domains:report"; dokku domains:report "$APP" || true
+          section "proxy:report"; dokku proxy:report "$APP" || true
+          section "nginx:show-config"; dokku nginx:show-config "$APP" || true
+          section "storage:report"; dokku storage:report "$APP" || true
+          section "logs (tail 300)"; dokku logs "$APP" --num 300 || true
+          section "ps:inspect"; dokku ps:inspect "$APP" || true
+          section "config"; dokku config:show "$APP" || true
+
+      - name: HTTP probes from runner
+        run: |
+          set -uo pipefail
+          HOST=SERVER_HOST
+          for url in "http://$HOST/api/health" "http://$HOST/"; do
+            echo "### $url"
+            curl -v -m 15 "$url" 2>&1 | tail -25 || true
+            echo
+          done
+          for p in 22 80 443 5003; do
+            if timeout 8 bash -c "cat < /dev/null > /dev/tcp/$HOST/$p" 2>/dev/null; then
+              echo "tcp $p: open"
+            else
+              echo "tcp $p: closed/timeout"
+            fi
+          done

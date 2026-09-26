@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '.github/**'
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
 
 concurrency:
@@ -100,6 +104,25 @@ jobs:
           ssh_private_key: ${{ secrets.DEBAINDOKKU001 }}
           ssh_host_key: ${{ secrets.SSH_HOST_KEY }}
           branch: main
+
+      - name: Collect app logs and probes
+        if: always()
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
+          SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
+        run: |
+          set -uo pipefail
+          HOST=SERVER_HOST
+          APP=opencode-manager
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_HOST_KEY" | tr -d '\r' > ~/.ssh/known_hosts
+          dokku() { ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15 "dokku@$HOST" "$@"; }
+          echo "########## ps:report ##########"; dokku ps:report "$APP" || true
+          echo "########## logs (tail 200) ##########"; dokku logs "$APP" --num 200 || true
+          echo "########## probe ##########"
+          curl -v -m 15 "http://$HOST/api/health" 2>&1 | tail -15 || true
 
       - name: Smoke test
         run: |
