@@ -22,27 +22,36 @@ jobs:
           dokku() { ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15 "dokku@$HOST" "$@"; }
           section() { echo; echo "########## $* ##########"; }
 
-          section "version"; dokku version
-          section "ps:report"; dokku ps:report "$APP" || true
-          section "ports:report"; dokku ports:report "$APP" || true
-          section "domains:report"; dokku domains:report "$APP" || true
-          section "proxy:report"; dokku proxy:report "$APP" || true
-          section "nginx:show-config"; dokku nginx:show-config "$APP" || true
-          section "storage:report"; dokku storage:report "$APP" || true
-          section "logs (tail 300)"; dokku logs "$APP" --num 300 || true
-          section "ps:inspect"; dokku ps:inspect "$APP" || true
-          section "config"; dokku config:show "$APP" || true
+          section "ensure alternate port 8080"
+          dokku ports:add "$APP" http:8080:5003 || true
+          dokku ports:set "$APP" http:80:5003 http:8080:5003 || true
+          dokku ports:report "$APP" || true
+
+          APP_IP=$(dokku ps:inspect "$APP" | grep -oE '"IPAddress": *"[0-9.]+"' | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || true)
+          section "app container ip: ${APP_IP:-unknown}"
+
+          section "direct app health (from one-off container)"
+          dokku run "$APP" curl -sS -m 10 -i "http://${APP_IP}:5003/api/health" 2>&1 | head -25 || true
+
+          section "nginx via host gateway 172.17.0.1:80 (bypasses external filtering)"
+          dokku run "$APP" curl -sS -m 10 -i -H 'Host: APP_VHOST' "http://172.17.0.1/api/health" 2>&1 | head -25 || true
+
+          section "ps:report"
+          dokku ps:report "$APP" || true
 
       - name: HTTP probes from runner
         run: |
           set -uo pipefail
           HOST=SERVER_HOST
-          for url in "http://$HOST/api/health" "http://$HOST/"; do
-            echo "### $url"
-            curl -v -m 15 "$url" 2>&1 | tail -25 || true
+          for target in "http://$HOST:80/api/health" "http://$HOST:8080/api/health" "http://$HOST:8080/"; do
+            echo "### $target"
+            curl -sS -m 12 -i "$target" 2>&1 | head -20 || true
             echo
           done
-          for p in 22 80 443 5003; do
+          echo "### Host-header variant on 8080"
+          curl -sS -m 12 -i -H 'Host: APP_VHOST' "http://$HOST:8080/api/health" 2>&1 | head -20 || true
+          echo
+          for p in 22 80 443 5003 8080; do
             if timeout 8 bash -c "cat < /dev/null > /dev/tcp/$HOST/$p" 2>/dev/null; then
               echo "tcp $p: open"
             else
