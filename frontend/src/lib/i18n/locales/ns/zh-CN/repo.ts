@@ -262,6 +262,7 @@ export const repo = {
     selectFileToPreview: '选择文件以预览',
     dropFiles: '将文件或文件夹拖放到此处以上传',
     noFiles: '此目录中没有文件',
+    refresh: '刷新',
     units: {
       bytes: '字节',
     },

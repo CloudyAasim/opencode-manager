@@ -5,13 +5,16 @@ import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/components/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/components/message/PromptInput";
 import { FloatingTTSButton } from '@/components/message/FloatingTTSButton'
-import { X, CornerUpLeft } from "lucide-react";
+import { X, CornerUpLeft, PanelRight, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info } from "lucide-react";
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/components/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
 import { FetchError } from '@/api/fetchWrapper'
 
 import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
+import { FileTreeExplorer } from "@/components/file-browser/FileTreeExplorer";
+import { FilePreview } from "@/components/file-browser/FilePreview";
+import type { FileInfo } from "@/types/files";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ContextUsageIndicator } from "@/components/session/ContextUsageIndicator";
@@ -47,7 +50,7 @@ import type { QuestionRequest } from "@/api/types";
 import { QuestionPrompt } from "@/components/session/QuestionPrompt";
 import { MinimizedQuestionIndicator } from "@/components/session/MinimizedQuestionIndicator";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
-import { SourceControlPanel } from "@/components/source-control";
+import { SourceControlPanel, ChangesTab } from "@/components/source-control";
 import { SessionSendErrorBanner } from "@/components/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/components/message/SessionTodoDisplay";
 import { useDialogParam } from "@/hooks/useDialogParam";
@@ -97,6 +100,32 @@ export function SessionDetail() {
   const [skillsDialogOpen, setSkillsDialogOpen] = useDialogParam('skills');
   const [sourceControlOpen, setSourceControlOpen] = useDialogParam('sourceControl');
   const [resetPermissionsOpen, setResetPermissionsOpen] = useDialogParam('resetPermissions');
+  const [railWidth, setRailWidth] = useState(() => {
+    const stored = Number(localStorage.getItem('ocm.sessionRailWidth'))
+    return Number.isFinite(stored) && stored >= 220 && stored <= 560 ? stored : 288
+  })
+  const [rightPanelOpen, setRightPanelOpen] = useState(false)
+  const [rightTab, setRightTab] = useState<'files' | 'info' | 'review'>('files')
+  const [panelFile, setPanelFile] = useState<FileInfo | null>(null)
+
+  useEffect(() => {
+    localStorage.setItem('ocm.sessionRailWidth', String(railWidth))
+  }, [railWidth])
+
+  const startRailResize = useCallback((event: React.MouseEvent) => {
+    event.preventDefault()
+    const startX = event.clientX
+    const startWidth = railWidth
+    const onMove = (moveEvent: MouseEvent) => {
+      setRailWidth(Math.min(560, Math.max(220, startWidth + moveEvent.clientX - startX)))
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [railWidth])
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>();
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasPromptContent, setHasPromptContent] = useState(false);
@@ -527,6 +556,15 @@ export function SessionDetail() {
               isConnected={isConnected}
               isReconnecting={isReconnecting}
             />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRightPanelOpen((open) => !open)}
+              aria-label={t('navigation.detail')}
+              className="hidden md:inline-flex text-muted-foreground hover:text-foreground"
+            >
+              <PanelRight className="w-5 h-5" />
+            </Button>
             <SessionMoreButton />
           </Header.Actions>
         </Header>
@@ -538,14 +576,49 @@ export function SessionDetail() {
 
       <div className="flex flex-1 min-h-0">
         {isDesktop && opcodeUrl && (
-          <aside className="hidden md:flex w-72 shrink-0 flex-col min-h-0 border-r border-border overflow-hidden">
-            <SessionList
-              opcodeUrl={opcodeUrl}
-              directory={repoDirectory}
-              activeSessionID={sessionId || undefined}
-              onSelectSession={(sessionID) => navigate(`/repos/${repoId}/sessions/${sessionID}${sessionRouteSuffix}`)}
+          <>
+            <aside
+              className="hidden md:flex shrink-0 flex-col min-h-0 border-r border-border overflow-hidden"
+              style={{ width: railWidth }}
+            >
+              <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2 py-1.5 scrollbar-thin">
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate('/files')}>
+                  <Folder className="h-3.5 w-3.5" />
+                  {t('navigation.files')}
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSourceControlOpen(true)}>
+                  <GitPullRequest className="h-3.5 w-3.5" />
+                  {t('navigation.sourceControl')}
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate(`/repos/${repoId}/schedules`)}>
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  {t('navigation.schedules')}
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setMcpDialogOpen(true)}>
+                  <Plug className="h-3.5 w-3.5" />
+                  {t('navigation.mcp')}
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSkillsDialogOpen(true)}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {t('navigation.skills')}
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <SessionList
+                  opcodeUrl={opcodeUrl}
+                  directory={repoDirectory}
+                  activeSessionID={sessionId || undefined}
+                  onSelectSession={(sessionID) => navigate(`/repos/${repoId}/sessions/${sessionID}${sessionRouteSuffix}`)}
+                />
+              </div>
+            </aside>
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onMouseDown={startRailResize}
+              className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
             />
-          </aside>
+          </>
         )}
         <div className="relative flex-1 overflow-hidden flex flex-col">
         <div key={sessionId} data-testid="session-message-scroll" ref={messageContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]" style={{ paddingBottom: promptOverlayHeight + inputBottomOffset + PROMPT_OVERLAY_CLEARANCE_PX }}>
@@ -635,6 +708,69 @@ export function SessionDetail() {
           </div>
         )}
         </div>
+        {isDesktop && rightPanelOpen && (
+          <aside className="hidden md:flex w-96 shrink-0 flex-col min-h-0 border-l border-border overflow-hidden">
+            <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
+              <Button variant={rightTab === 'files' ? 'secondary' : 'ghost'} size="sm" className="h-7 gap-1 px-2" onClick={() => setRightTab('files')}>
+                <Folder className="h-3.5 w-3.5" />
+                {t('navigation.files')}
+              </Button>
+              <Button variant={rightTab === 'review' ? 'secondary' : 'ghost'} size="sm" className="h-7 gap-1 px-2" onClick={() => setRightTab('review')}>
+                <GitPullRequest className="h-3.5 w-3.5" />
+                {t('navigation.sourceControl')}
+              </Button>
+              <Button variant={rightTab === 'info' ? 'secondary' : 'ghost'} size="sm" className="h-7 gap-1 px-2" onClick={() => setRightTab('info')}>
+                <Info className="h-3.5 w-3.5" />
+                {t('navigation.detail')}
+              </Button>
+              <Button variant="ghost" size="icon" className="ml-auto h-7 w-7" onClick={() => setRightPanelOpen(false)} aria-label={t('navigation.close')}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {rightTab === 'files' && (
+                <div className="flex h-full min-h-0">
+                  <FileTreeExplorer
+                    rootPath={workspaceBasePath ?? ''}
+                    selectedPath={panelFile?.path}
+                    onSelectFile={setPanelFile}
+                    className="w-1/2 border-r border-border"
+                  />
+                  <div className="w-1/2 overflow-y-auto">
+                    {panelFile && !panelFile.isDirectory ? (
+                      <FilePreview key={panelFile.path} file={panelFile} />
+                    ) : (
+                      <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
+                        {t('repo.fileBrowser.selectFileToPreview')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {rightTab === 'review' && (
+                <div className="h-full overflow-y-auto">
+                  <ChangesTab repoId={repoId} onFileSelect={(path) => handleFileClick(path)} isMobile={false} />
+                </div>
+              )}
+              {rightTab === 'info' && (
+                <div className="h-full space-y-3 overflow-y-auto p-4 text-sm">
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t('navigation.repo')}</div>
+                    <div className="font-medium">{workspaceDisplayName}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">{t('repo.workspaceRoot')}</div>
+                    <div className="break-all font-mono text-xs">{repoDirectory ?? '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Branch</div>
+                    <div className="font-mono text-xs">{repo?.currentBranch || repo?.branch || 'main'}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* Sessions Dialog */}

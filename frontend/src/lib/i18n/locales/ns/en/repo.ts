@@ -262,6 +262,7 @@ export const repo = {
     selectFileToPreview: 'Select a file to preview',
     dropFiles: 'Drop files or folders here to upload',
     noFiles: 'No files in this directory',
+    refresh: 'Refresh',
     units: {
       bytes: 'Bytes',
     },
