@@ -214,7 +214,9 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
               key={item.key}
               type="button"
               onClick={() => {
-                if (item.key === 'settings') {
+                if (item.to) {
+                  handleItemClick(item)
+                } else if (item.key === 'settings') {
                   handleSettingsClick()
                 } else if (item.key === 'logout') {
                   handleLogoutClick()

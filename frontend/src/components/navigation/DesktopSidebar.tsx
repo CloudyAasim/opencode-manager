@@ -12,7 +12,7 @@ import { Sidebar, SidebarItem } from '@/components/ui/sidebar'
 export function DesktopSidebar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { searchParams, updateParams } = useUrlParams()
+  const { updateParams } = useUrlParams()
   const { t } = useI18n()
   const [collapsed, toggle] = useSidebarCollapsed()
   const { isAuthenticated, isLoading, logout, user } = useAuth()
@@ -34,7 +34,7 @@ export function DesktopSidebar() {
     if (item.key === 'projects') return location.pathname === '/'
     if (item.key === 'assistant') return isAssistantPath(location.pathname)
     if (item.key === 'terminal') return location.pathname === '/terminal'
-    if (item.key === 'settings') return searchParams.get('settings') === 'open'
+    if (item.key === 'settings') return location.pathname === '/settings'
     if (item.key === 'files') return location.pathname === '/files'
     return false
   }
@@ -53,14 +53,6 @@ export function DesktopSidebar() {
     }
     if (item.key === 'logout') {
       logout()
-      return
-    }
-    if (item.key === 'settings') {
-      updateParams((p) => {
-        p.set('settings', 'open')
-        p.set('settingsTab', 'account')
-        p.delete('mobileTab')
-      }, 'push')
     }
   }
 

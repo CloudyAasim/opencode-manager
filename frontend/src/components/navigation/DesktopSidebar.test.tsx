@@ -137,7 +137,7 @@ describe('DesktopSidebar', () => {
     expect(screen.getByTestId('location').textContent).toBe('/files')
   })
 
-  it('opens settings by updating settings query params', () => {
+  it('navigates to settings', () => {
     mockDesktop(true)
     mockAuth()
 
@@ -151,7 +151,7 @@ describe('DesktopSidebar', () => {
 
     fireEvent.click(screen.getByText('Settings'))
 
-    expect(screen.getByTestId('location').textContent).toBe('/?dialog=files&settings=open&settingsTab=account')
+    expect(screen.getByTestId('location').textContent).toBe('/settings')
   })
 
   it('navigates to the projects list', () => {

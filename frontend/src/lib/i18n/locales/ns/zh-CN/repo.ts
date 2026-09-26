@@ -3,6 +3,7 @@ export const repo = {
   addRepository: '添加项目',
   allSchedules: '所有定时任务',
   openFiles: '打开文件',
+  selectSessionHint: '从左侧选择会话，或新建一个会话开始。',
   workspaceRoot: '工作区根目录',
   back: '返回',
   cancel: '取消',

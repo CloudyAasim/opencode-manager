@@ -153,7 +153,7 @@ describe('MoreDrawer', () => {
     expect(screen.queryByText('System')).not.toBeInTheDocument()
   })
 
-  it('navigates to settings URL when Settings is clicked', () => {
+  it('navigates to settings when Settings is clicked', () => {
     const navigateMock = vi.fn()
     vi.mocked(useNavigate).mockReturnValue(navigateMock)
     mockAuth()
@@ -161,10 +161,7 @@ describe('MoreDrawer', () => {
     const handleClose = vi.fn()
     renderMoreDrawer({ onClose: handleClose })
     fireEvent.click(screen.getByText('Settings'))
-    expect(navigateMock).toHaveBeenCalledWith(
-      { search: 'settings=open&settingsTab=account' },
-      { replace: true },
-    )
+    expect(navigateMock).toHaveBeenCalledWith('/settings')
   })
 
   it('calls logout when Logout is clicked', () => {

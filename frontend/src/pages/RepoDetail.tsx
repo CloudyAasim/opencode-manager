@@ -19,7 +19,7 @@ import { WorkspaceManager } from "@/components/repo/WorkspaceManager";
 import { OPENCODE_API_ENDPOINT } from "@/config";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GitBranch, Plus, Loader2, Layers, Folder, GitCommitHorizontal, CalendarClock, Plug, Sparkles } from "lucide-react";
+import { GitBranch, Plus, Loader2, Layers, Folder, GitCommitHorizontal, CalendarClock, Plug, Sparkles, MessageSquare } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ResetPermissionsDialog } from "@/components/repo/ResetPermissionsDialog";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
@@ -291,16 +291,31 @@ export function RepoDetail() {
         isDeleting={deleteWorkspaces.isPending}
       />
 
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex flex-1 min-h-0">
         {opcodeUrl && sessionListDirectories.length > 0 && (
-          <SessionList
-            opcodeUrl={opcodeUrl}
-            directories={sessionListDirectories}
-            directoryLabels={activeTab === 'workspaces' ? directoryLabels : undefined}
-            createDirectory={activeTab === 'workspaces' ? workspaceComposerDirectory : baseDirectory}
-            onSelectSession={handleSelectSession}
-          />
+          <aside className="w-full md:w-72 md:shrink-0 md:border-r md:border-border min-h-0 flex flex-col overflow-hidden">
+            <SessionList
+              opcodeUrl={opcodeUrl}
+              directories={sessionListDirectories}
+              directoryLabels={activeTab === 'workspaces' ? directoryLabels : undefined}
+              createDirectory={activeTab === 'workspaces' ? workspaceComposerDirectory : baseDirectory}
+              onSelectSession={handleSelectSession}
+            />
+          </aside>
         )}
+        <div className="hidden md:flex flex-1 min-h-0 flex-col items-center justify-center gap-3 p-6 text-center">
+          <MessageSquare className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">{t('repo.selectSessionHint')}</p>
+          <Button
+            onClick={() => handleCreateSession()}
+            disabled={!opcodeUrl || createSessionMutation.isPending}
+            size="sm"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            {t('navigation.newSession')}
+          </Button>
+        </div>
       </div>
 
       <CreateWorkspaceDialog

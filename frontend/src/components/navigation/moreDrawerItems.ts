@@ -39,7 +39,7 @@ export function buildNavModel(options: NavModelOptions = {}): NavModel {
   }
 
   items.push(
-    { key: 'settings', label: 'Settings', labelKey: 'navigation.settings', icon: Settings },
+    { key: 'settings', label: 'Settings', labelKey: 'navigation.settings', icon: Settings, to: '/settings' },
     { key: 'logout', label: 'Logout', labelKey: 'navigation.logout', icon: LogOut },
   )
 

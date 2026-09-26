@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { GeneralSettings } from '@/components/settings/GeneralSettings'
 import { GitSettings } from '@/components/settings/GitSettings'
 import { KeyboardShortcuts } from '@/components/settings/KeyboardShortcuts'
@@ -49,8 +50,13 @@ function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => 
   )
 }
 
-export function SettingsDialog() {
+interface SettingsDialogProps {
+  variant?: 'dialog' | 'page'
+}
+
+export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {}) {
   const { isOpen, close, activeTab, setActiveTab } = useSettingsDialog()
+  const navigate = useNavigate()
   const auth = useOptionalAuth()
   const user = auth?.user ?? null
   const { t } = useI18n()
@@ -143,26 +149,15 @@ export function SettingsDialog() {
     pushSectionHistory(tab)
   }
 
-   return (
-      <Dialog open={isOpen} modal={false} onOpenChange={(open) => !open && close()}>
-         <DialogContent
-          className="inset-0 w-full h-full max-w-none max-h-none p-0 rounded-none bg-background border-border overflow-hidden !flex !flex-col !gap-0"
-          fullscreen
-          canSwipeBack={() => mobileView !== 'menu'}
-          onSwipeBack={handleSettingsBack}
-          onInteractOutside={(e) => e.preventDefault()}
-          onFocusOutside={(e) => e.preventDefault()}
-          onPointerDownOutside={(e) => e.preventDefault()}
-          data-settings-dialog
-        >
-         <DialogTitle className="sr-only">Settings</DialogTitle>
+  const content = (
+    <>
          <div className="hidden sm:flex sm:h-full sm:min-h-0 sm:flex-col">
            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-background px-4">
              <h2 className="text-lg font-semibold text-foreground">{t('settings.title')}</h2>
              <Button
                variant="ghost"
                size="icon"
-               onClick={close}
+               onClick={() => (variant === 'page' ? navigate('/') : close())}
                aria-label="Close"
                className="text-muted-foreground hover:text-foreground"
              >
@@ -231,7 +226,7 @@ export function SettingsDialog() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={close}
+                onClick={() => (variant === 'page' ? navigate('/') : close())}
                 aria-label="Close"
                 className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex-shrink-0"
               >
@@ -278,6 +273,32 @@ export function SettingsDialog() {
            </div>
         </div>
 
+    </>
+  )
+
+  if (variant === 'page') {
+    return (
+      <>
+        <div className="flex h-full min-h-0 flex-col bg-background">{content}</div>
+        <VersionSelectDialog open={isVersionDialogOpen} onOpenChange={setIsVersionDialogOpen} />
+      </>
+    )
+  }
+
+  return (
+    <Dialog open={isOpen} modal={false} onOpenChange={(open) => !open && close()}>
+      <DialogContent
+        className="inset-0 w-full h-full max-w-none max-h-none p-0 rounded-none bg-background border-border overflow-hidden !flex !flex-col !gap-0"
+        fullscreen
+        canSwipeBack={() => mobileView !== 'menu'}
+        onSwipeBack={handleSettingsBack}
+        onInteractOutside={(e) => e.preventDefault()}
+        onFocusOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        data-settings-dialog
+      >
+        <DialogTitle className="sr-only">Settings</DialogTitle>
+        {content}
       </DialogContent>
       <VersionSelectDialog
         open={isVersionDialogOpen}

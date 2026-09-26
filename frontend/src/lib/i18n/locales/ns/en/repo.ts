@@ -3,6 +3,7 @@ export const repo = {
   addRepository: 'Add Project',
   allSchedules: 'All Schedules',
   openFiles: 'Open files',
+  selectSessionHint: 'Select a session on the left, or start a new one.',
   workspaceRoot: 'Workspace Root',
   back: 'Back',
   cancel: 'Cancel',

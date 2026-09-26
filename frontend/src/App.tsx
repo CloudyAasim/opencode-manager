@@ -231,6 +231,11 @@ const router = createBrowserRouter([
         loader: protectedLoader,
       },
       {
+        path: '/settings',
+        lazy: async () => ({ Component: (await import('./pages/Settings')).Settings }),
+        loader: protectedLoader,
+      },
+      {
         path: '/repos/:id',
         lazy: async () => ({ Component: (await import('./pages/RepoDetail')).RepoDetail }),
         loader: protectedLoader,
