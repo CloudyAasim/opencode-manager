@@ -8,6 +8,7 @@ import { CopyButton } from '@/components/ui/copy-button'
 import { showToast } from '@/lib/toast'
 import { oauthApi, type OAuthAuthorizeResponse } from '@/api/oauth'
 import { mapOAuthError } from '@/lib/oauthErrors'
+import { useI18n } from '@/lib/i18n'
 
 interface OAuthCallbackDialogProps {
   providerId: string
@@ -28,6 +29,7 @@ export function OAuthCallbackDialog({
   onOpenChange, 
   onSuccess 
 }: OAuthCallbackDialogProps) {
+  const { t } = useI18n()
   const [isLoading, setIsLoading] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState('')
   const [authCode, setAuthCode] = useState('')
@@ -35,11 +37,11 @@ export function OAuthCallbackDialog({
 
   const handleCallback = async () => {
     setIsLoading(true)
-    setLoadingMessage('Completing authentication...')
+    setLoadingMessage(t('settingsPanels.oauthCallback.completingAuth'))
     setError(null)
 
     try {
-      setLoadingMessage('Restarting server with new credentials...')
+      setLoadingMessage(t('settingsPanels.oauthCallback.restartingServer'))
       await oauthApi.callback(
         providerId, 
         authResponse.method === 'code' 
@@ -76,11 +78,11 @@ export function OAuthCallbackDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-card border-border max-w-lg">
         <DialogHeader>
-          <DialogTitle>Complete {providerName} Authentication</DialogTitle>
+          <DialogTitle>{t('settingsPanels.oauthCallback.title', { name: providerName })}</DialogTitle>
           <DialogDescription>
             {isAutoMethod 
-              ? 'Follow the instructions below to complete authentication.'
-              : 'Enter the authorization code from the provider.'
+              ? t('settingsPanels.oauthCallback.autoDescription')
+              : t('settingsPanels.oauthCallback.codeDescription')
             }
           </DialogDescription>
         </DialogHeader>
@@ -103,11 +105,11 @@ export function OAuthCallbackDialog({
                   </code>
                   <CopyButton
                     content={deviceCode}
-                    title="Copy device code"
+                    title={t('settingsPanels.oauthCallback.copyDeviceCode')}
                     variant="ghost"
                     iconSize="sm"
                     className="flex-shrink-0"
-                    onCopy={() => showToast.success('Code copied to clipboard')}
+                    onCopy={() => showToast.success(t('settingsPanels.oauthCallback.codeCopied'))}
                   />
                 </div>
               )}
@@ -120,15 +122,15 @@ export function OAuthCallbackDialog({
                   className="flex-1"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Open Authorization Page
+                  {t('settingsPanels.oauthCallback.openAuthPage')}
                 </Button>
                 <CopyButton
                   content={authResponse.url}
-                  title="Copy authorization URL"
+                  title={t('settingsPanels.oauthCallback.copyAuthUrl')}
                   variant="ghost"
                   iconSize="sm"
                   className="flex-shrink-0"
-                  onCopy={() => showToast.success('URL copied to clipboard')}
+                  onCopy={() => showToast.success(t('settingsPanels.oauthCallback.urlCopied'))}
                 />
               </div>
             </div>
@@ -136,21 +138,21 @@ export function OAuthCallbackDialog({
             {!isAutoMethod && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="authCode">Authorization Code</Label>
+                  <Label htmlFor="authCode">{t('settingsPanels.oauthCallback.authCode')}</Label>
                   <CopyButton
                     content={authCode}
-                    title="Copy authorization code"
+                    title={t('settingsPanels.oauthCallback.copyAuthCode')}
                     variant="ghost"
                     iconSize="sm"
                     className="flex-shrink-0"
-                    onCopy={() => showToast.success('Code copied to clipboard')}
+                    onCopy={() => showToast.success(t('settingsPanels.oauthCallback.codeCopied'))}
                   />
                 </div>
                 <Input
                   id="authCode"
                   value={authCode}
                   onChange={(e) => setAuthCode(e.target.value)}
-                  placeholder="Enter the authorization code..."
+                  placeholder={t('settingsPanels.oauthCallback.authCodePlaceholder')}
                   className="bg-background border-border"
                   disabled={isLoading}
                 />
@@ -165,12 +167,12 @@ export function OAuthCallbackDialog({
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {loadingMessage || 'Completing...'}
+                  {loadingMessage || t('settingsPanels.oauthCallback.completing')}
                 </>
               ) : (
                 <>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete Authentication
+                  {t('settingsPanels.oauthCallback.completeAuth')}
                 </>
               )}
             </Button>

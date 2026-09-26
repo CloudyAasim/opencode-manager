@@ -10,6 +10,7 @@ import { Mic, Loader2, XCircle, CheckCircle2, RefreshCw, Eye, EyeOff, MicOff } f
 import { Switch } from '@/components/ui/switch'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Combobox } from '@/components/ui/combobox'
+import { useI18n, i18n } from '@/lib/i18n'
 import { DEFAULT_STT_CONFIG } from '@/api/types/settings'
 
 const sttFormSchema = z.object({
@@ -27,7 +28,7 @@ const sttFormSchema = z.object({
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['endpoint'],
-        message: 'Endpoint is required for external provider',
+        message: i18n.t('settingsPanels.stt.errors.endpointRequired'),
       })
     }
   }
@@ -36,6 +37,7 @@ const sttFormSchema = z.object({
 type STTFormValues = z.infer<typeof sttFormSchema>
 
 export function STTSettings() {
+  const { t } = useI18n()
   const { preferences, updateSettings } = useSettings()
   const { startRecording, stopRecording, abortRecording, isRecording, isProcessing, transcript, interimTranscript, error: sttError, isExternalProvider } = useSTT()
 
@@ -179,19 +181,19 @@ export function STTSettings() {
   return (
     <div className="bg-card border border-border rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-foreground">Speech-to-Text</h2>
+        <h2 className="text-lg font-semibold text-foreground">{t('settingsPanels.stt.title')}</h2>
         <div className="flex items-center gap-2 text-sm">
           {saveStatus === 'saved' && (
             <>
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-green-600">Saved</span>
+              <span className="text-green-600">{t('settingsPanels.stt.saved')}</span>
             </>
           )}
           {saveStatus === 'idle' && isDirty && isValid && (
-            <span className="text-amber-600">Unsaved changes</span>
+            <span className="text-amber-600">{t('settingsPanels.stt.unsavedChanges')}</span>
           )}
           {saveStatus === 'idle' && !isDirty && (
-            <span className="text-muted-foreground">All changes saved</span>
+            <span className="text-muted-foreground">{t('settingsPanels.stt.allChangesSaved')}</span>
           )}
         </div>
       </div>
@@ -204,9 +206,9 @@ export function STTSettings() {
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border p-4">
                 <div className="space-y-0.5">
-                  <FormLabel className="text-base">Enable STT</FormLabel>
+                  <FormLabel className="text-base">{t('settingsPanels.stt.enable')}</FormLabel>
                   <FormDescription>
-                    Allow speech-to-text input for voice messages
+                    {t('settingsPanels.stt.enableDescription')}
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -228,23 +230,23 @@ export function STTSettings() {
                 name="provider"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Provider</FormLabel>
+                    <FormLabel>{t('settingsPanels.stt.provider')}</FormLabel>
                     <FormControl>
                       <Combobox
                         value={field.value}
                         onChange={field.onChange}
                         options={[
-                          ...(isWebSpeechAvailable ? [{ value: 'builtin', label: 'Built-in Browser' }] : []),
-                          { value: 'external', label: 'External API (OpenAI Whisper)' },
+                          ...(isWebSpeechAvailable ? [{ value: 'builtin', label: t('settingsPanels.stt.builtin') }] : []),
+                          { value: 'external', label: t('settingsPanels.stt.external') },
                         ]}
-                        placeholder="Select provider..."
+                        placeholder={t('settingsPanels.stt.selectProvider')}
                         allowCustomValue={false}
                       />
                     </FormControl>
                     <FormDescription>
                       {watchProvider === 'builtin' 
-                        ? "Uses browser's built-in speech recognition (free, requires Chrome/Safari/Edge)"
-                        : "Uses OpenAI Whisper API or compatible endpoint (requires API key)"
+                        ? t('settingsPanels.stt.builtinDescription')
+                        : t('settingsPanels.stt.externalDescription')
                       }
                     </FormDescription>
                     <FormMessage />
@@ -259,17 +261,17 @@ export function STTSettings() {
                     name="endpoint"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>API Endpoint</FormLabel>
+                        <FormLabel>{t('settingsPanels.stt.apiEndpoint')}</FormLabel>
                         <FormControl>
                           <input
                             type="text"
-                            placeholder="https://api.openai.com"
+                            placeholder={t('settingsPanels.stt.apiEndpointPlaceholder')}
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-[16px] md:text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             {...field}
                           />
                         </FormControl>
                         <FormDescription>
-                          Base URL for the Whisper-compatible API (e.g., OpenAI, local Whisper server)
+                          {t('settingsPanels.stt.apiEndpointDescription')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -281,12 +283,12 @@ export function STTSettings() {
                     name="apiKey"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>API Key</FormLabel>
+                        <FormLabel>{t('settingsPanels.stt.apiKey')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <input
                               type={showApiKey ? 'text' : 'password'}
-                              placeholder="sk-..."
+                              placeholder={t('settingsPanels.stt.apiKeyPlaceholder')}
                               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-[16px] md:text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               {...field}
                             />
@@ -300,7 +302,7 @@ export function STTSettings() {
                           </div>
                         </FormControl>
                         <FormDescription>
-                          Your API key for the speech-to-text service (optional for some servers)
+                          {t('settingsPanels.stt.apiKeyDescription')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -313,7 +315,7 @@ export function STTSettings() {
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between">
-                          <FormLabel>Model</FormLabel>
+                          <FormLabel>{t('settingsPanels.stt.model')}</FormLabel>
                           <button
                             type="button"
                             onClick={() => fetchModels(true)}
@@ -321,7 +323,7 @@ export function STTSettings() {
                             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
                           >
                             <RefreshCw className={`h-3 w-3 ${isLoadingModels ? 'animate-spin' : ''}`} />
-                            Refresh
+                            {t('settingsPanels.stt.refresh')}
                           </button>
                         </div>
                         <FormControl>
@@ -332,13 +334,13 @@ export function STTSettings() {
                               value: model,
                               label: model,
                             }))}
-                            placeholder="Select model..."
+                            placeholder={t('settingsPanels.stt.selectModel')}
                             disabled={isLoadingModels}
                             allowCustomValue={true}
                           />
                         </FormControl>
                         <FormDescription>
-                          The speech-to-text model to use (e.g., whisper-1)
+                          {t('settingsPanels.stt.modelDescription')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -354,7 +356,7 @@ export function STTSettings() {
                     name="language"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Language</FormLabel>
+                        <FormLabel>{t('settingsPanels.stt.language')}</FormLabel>
                         <FormControl>
                           <Combobox
                             value={field.value}
@@ -363,13 +365,13 @@ export function STTSettings() {
                               value: lang,
                               label: lang.replace('-', ' - ')
                             }))}
-                            placeholder="Select language..."
+                            placeholder={t('settingsPanels.stt.selectLanguage')}
                             disabled={!isWebSpeechAvailable}
                             allowCustomValue={false}
                           />
                         </FormControl>
                         <FormDescription>
-                          Select the language for speech recognition
+                          {t('settingsPanels.stt.languageDescription')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -389,26 +391,26 @@ export function STTSettings() {
 
               <div className="flex flex-row items-center justify-between rounded-lg border border-border p-4">
                 <div className="space-y-0.5 flex-1 mr-4">
-                  <div className="text-base font-medium">Test STT</div>
+                  <div className="text-base font-medium">{t('settingsPanels.stt.testStt')}</div>
                   <p className="text-sm text-muted-foreground">
                     {watchProvider === 'external' 
-                      ? 'Record audio, then click Stop to transcribe'
-                      : 'Verify your speech recognition is working'
+                      ? t('settingsPanels.stt.testExternalDescription')
+                      : t('settingsPanels.stt.testBuiltinDescription')
                     }
                   </p>
                   {(isTesting || isProcessing) && (
                     <div className="mt-2 p-2 bg-muted rounded max-h-24 overflow-y-auto">
-                      <p className="text-sm">{testTranscript || (isProcessing ? 'Processing...' : 'Listening...')}</p>
+                      <p className="text-sm">{testTranscript || (isProcessing ? t('settingsPanels.stt.processing') : t('settingsPanels.stt.listening'))}</p>
                       {isRecording && (
                         <div className="flex items-center gap-1 mt-1">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          <span className="text-xs text-muted-foreground">Recording...</span>
+                          <span className="text-xs text-muted-foreground">{t('settingsPanels.stt.recording')}</span>
                         </div>
                       )}
                       {isProcessing && !isRecording && (
                         <div className="flex items-center gap-1 mt-1">
                           <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          <span className="text-xs text-muted-foreground">Transcribing...</span>
+                          <span className="text-xs text-muted-foreground">{t('settingsPanels.stt.transcribing')}</span>
                         </div>
                       )}
                     </div>
@@ -417,7 +419,7 @@ export function STTSettings() {
                     <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded max-h-24 overflow-y-auto">
                       <div className="flex items-center gap-1 mb-1">
                         <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
-                        <span className="text-xs font-medium text-green-700 dark:text-green-300">Test successful</span>
+                        <span className="text-xs font-medium text-green-700 dark:text-green-300">{t('settingsPanels.stt.testSuccessful')}</span>
                       </div>
                       <p className="text-sm text-green-800 dark:text-green-200">{testTranscript}</p>
                     </div>
@@ -426,7 +428,7 @@ export function STTSettings() {
                     <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
                       <div className="flex items-center gap-1">
                         <XCircle className="h-3 w-3 text-red-600 dark:text-red-400" />
-                        <span className="text-xs font-medium text-red-700 dark:text-red-300">Test failed - {sttError || 'no speech detected'}</span>
+                        <span className="text-xs font-medium text-red-700 dark:text-red-300">{t('settingsPanels.stt.testFailed', { error: sttError || t('settingsPanels.stt.noSpeechDetected') })}</span>
                       </div>
                     </div>
                   )}
@@ -448,17 +450,17 @@ export function STTSettings() {
                   {isRecording ? (
                     <>
                       <MicOff className="w-4 h-4" />
-                      Stop
+                      {t('settingsPanels.stt.stop')}
                     </>
                   ) : isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing
+                      {t('settingsPanels.stt.processingLabel')}
                     </>
                   ) : (
                     <>
                       <Mic className="w-4 h-4" />
-                      Test
+                      {t('settingsPanels.stt.test')}
                     </>
                   )}
                 </button>

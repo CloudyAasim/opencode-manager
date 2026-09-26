@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAgents } from '@/hooks/useOpenCode'
 import { getAgentStyleVars } from '@/lib/agent-colors'
+import { useI18n } from '@/lib/i18n'
 
 interface AgentQuickSelectProps {
   opcodeUrl: string | null | undefined
@@ -55,6 +56,7 @@ export function AgentQuickSelect({
   onAgentChange,
   isBashMode = false,
 }: AgentQuickSelectProps) {
+  const { t } = useI18n()
   const { data: agents = [] } = useAgents(opcodeUrl, directory)
 
   const primaryAgents = useMemo(() => {
@@ -72,7 +74,7 @@ export function AgentQuickSelect({
   const styleVars = isBashMode 
     ? bashStyleVars 
     : getAgentStyleVars(currentAgent, findAgentColor(agents, currentAgent))
-  const displayName = isBashMode ? 'Bash' : capitalize(currentAgent)
+  const displayName = isBashMode ? t('misc.agentQuickSelect.bash') : capitalize(currentAgent)
 
   const buttonContent = (
     <button

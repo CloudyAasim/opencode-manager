@@ -5,6 +5,7 @@ import {
   getOpenCodeConfigSources,
   getPreferredOpenCodeConfigSource,
 } from '@/api/types/settings'
+import { useI18n } from '@/lib/i18n'
 import type { OpenCodeConfigFile, OpenCodeConfigSourceName } from '@/api/types/settings'
 
 interface OpenCodeConfigSourcesNoticeProps {
@@ -13,6 +14,7 @@ interface OpenCodeConfigSourcesNoticeProps {
 }
 
 export function OpenCodeConfigSourcesNotice({ config, targetName }: OpenCodeConfigSourcesNoticeProps) {
+  const { t } = useI18n()
   const sources = getOpenCodeConfigSources(config)
   if (sources.length <= 1) return null
 
@@ -27,12 +29,12 @@ export function OpenCodeConfigSourcesNotice({ config, targetName }: OpenCodeConf
       <Info className="h-4 w-4 text-blue-500" />
       <details className="group" open>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
-          <AlertTitle className="mb-0">Multiple configuration files are merged</AlertTitle>
+          <AlertTitle className="mb-0">{t('settingsPanels.configSources.mergedTitle')}</AlertTitle>
           <ChevronDown className="h-4 w-4 shrink-0 text-blue-500 transition-transform group-open:rotate-180" />
         </summary>
         <AlertDescription>
           <p>
-            OpenCode loads these files in order, with each later file overriding matching settings from the files before it:{' '}
+            {t('settingsPanels.configSources.loadsInOrder')}{' '}
             {orderedNames.map((name, index) => (
               <span key={name}>
                 {index > 0 ? ', ' : ''}
@@ -41,10 +43,12 @@ export function OpenCodeConfigSourcesNotice({ config, targetName }: OpenCodeConf
             ))}
           </p>
           <p className="mt-1">
-            Saves apply only to <code className="font-mono text-foreground">{writeTargetName}</code>. A value saved to a lower-priority file can be overridden by a higher-priority file.
+            {t('settingsPanels.configSources.savesApplyPrefix')}{' '}
+            <code className="font-mono text-foreground">{writeTargetName}</code>
+            {t('settingsPanels.configSources.savesApplySuffix')}
           </p>
           <p className="mt-1">
-            For simpler configuration, consolidate the settings you need into one file, then remove redundant files after verifying the result.
+            {t('settingsPanels.configSources.consolidate')}
           </p>
         </AlertDescription>
       </details>

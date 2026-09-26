@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface BackButtonProps {
   to?: string;
@@ -8,6 +9,7 @@ interface BackButtonProps {
 
 export function BackButton({ to = "/", className = "" }: BackButtonProps) {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const handleBack = () => {
     navigate(to);
@@ -16,7 +18,7 @@ export function BackButton({ to = "/", className = "" }: BackButtonProps) {
   return (
     <button
       onClick={handleBack}
-      aria-label="Go back"
+      aria-label={t('ui.backButton.goBack')}
       className={`text-zinc-400 hover:text-zinc-100 transition-all duration-200 hover:scale-105 text-sm md:text-md border border-zinc-700 rounded-md px-3 py-1.5 hover ${className}`}
     >
       <ArrowLeft className="w-4 h-4" />

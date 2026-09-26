@@ -4,10 +4,12 @@ import { FileBrowserSheet } from '@/components/file-browser/FileBrowserSheet'
 import { RepoQuickSwitchSheet } from '@/components/navigation/RepoQuickSwitchSheet'
 import { NotificationsSheet } from '@/components/navigation/NotificationsSheet'
 import { MoreDrawer } from '@/components/navigation/MoreDrawer'
+import { useI18n } from '@/lib/i18n'
 
 export function MobileSheetHost() {
   const isMobile = useMobile()
   const { openSheet, close } = useMobileTabBar()
+  const { t } = useI18n()
 
   if (!isMobile) return null
 
@@ -19,7 +21,7 @@ export function MobileSheetHost() {
           isOpen
           onClose={close}
           basePath=""
-          repoName="Workspace Root"
+          repoName={t('navigation.workspaceRoot')}
           allowNavigateAboveBase={true}
         />
       )}

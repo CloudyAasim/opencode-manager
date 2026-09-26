@@ -13,14 +13,15 @@ import type { SkillFileInfo, CreateSkillRequest, UpdateSkillRequest, SkillScope 
 import type { Repo } from '@/api/types'
 import { listRepos } from '@/api/repos'
 import { useQuery } from '@tanstack/react-query'
+import { useI18n, i18n } from '@/lib/i18n'
 
 const skillFormSchema = z.object({
   name: z.string()
-    .min(1, 'Skill name is required')
-    .max(64, 'Skill name must be 64 characters or less')
-    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Must be lowercase letters, numbers, and hyphens only'),
-  description: z.string().min(1, 'Description is required').max(1024, 'Description must be 1024 characters or less'),
-  body: z.string().min(1, 'Skill body is required'),
+    .min(1, i18n.t('settingsPanels.skillDialog.errors.nameRequired'))
+    .max(64, i18n.t('settingsPanels.skillDialog.errors.nameMax'))
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, i18n.t('settingsPanels.skillDialog.errors.nameFormat')),
+  description: z.string().min(1, i18n.t('settingsPanels.skillDialog.errors.descriptionRequired')).max(1024, i18n.t('settingsPanels.skillDialog.errors.descriptionMax')),
+  body: z.string().min(1, i18n.t('settingsPanels.skillDialog.errors.bodyRequired')),
   scope: z.enum(['global', 'project']),
 })
 
@@ -34,6 +35,7 @@ interface SkillDialogProps {
 }
 
 export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: SkillDialogProps) {
+  const { t } = useI18n()
   const { data: repos = [] } = useQuery<Repo[]>({
     queryKey: ['repos'],
     queryFn: listRepos,
@@ -68,7 +70,7 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
 
   const handleSubmit = (values: SkillFormValues) => {
     if (!editingSkill && values.scope === 'project' && !selectedRepoId) {
-      form.setError('scope', { message: 'Please select a repository for project-scoped skills' })
+      form.setError('scope', { message: t('settingsPanels.skillDialog.selectRepoForProject') })
       return
     }
 
@@ -106,7 +108,7 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent mobileFullscreen className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
         <DialogHeader className="p-4 sm:p-6 border-b flex flex-row items-center justify-between space-y-0">
-          <DialogTitle>{editingSkill ? 'Edit Skill' : 'Create Skill'}</DialogTitle>
+          <DialogTitle>{editingSkill ? t('settingsPanels.skillDialog.editTitle') : t('settingsPanels.skillDialog.createTitle')}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-2 sm:p-4">
@@ -117,17 +119,17 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Skill Name</FormLabel>
+                    <FormLabel>{t('settingsPanels.skillDialog.name')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="my-skill"
+                        placeholder={t('settingsPanels.skillDialog.namePlaceholder')}
                         disabled={!!editingSkill}
                         className={editingSkill ? 'bg-muted' : ''}
                       />
                     </FormControl>
                     <FormDescription>
-                      Use lowercase letters, numbers, and hyphens only
+                      {t('settingsPanels.skillDialog.nameHint')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -139,11 +141,11 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t('settingsPanels.skillDialog.description')}</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="Brief description of what this skill does"
+                        placeholder={t('settingsPanels.skillDialog.descriptionPlaceholder')}
                       />
                     </FormControl>
                     <FormMessage />
@@ -156,11 +158,11 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
                 name="body"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Skill Body</FormLabel>
+                    <FormLabel>{t('settingsPanels.skillDialog.body')}</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="## What I do&#10;&#10;- Step 1&#10;- Step 2&#10;&#10;## When to use me&#10;&#10;Use this when..."
+                        placeholder={t('settingsPanels.skillDialog.bodyPlaceholder')}
                         rows={10}
                         className="font-mono md:text-sm"
                       />
@@ -175,16 +177,16 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
                 name="scope"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Scope</FormLabel>
+                    <FormLabel>{t('settingsPanels.skillDialog.scope')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={!!editingSkill}>
                       <FormControl>
                         <SelectTrigger className={editingSkill ? 'bg-muted' : ''}>
-                          <SelectValue placeholder="Select scope" />
+                          <SelectValue placeholder={t('settingsPanels.skillDialog.selectScope')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="global">Global</SelectItem>
-                        <SelectItem value="project">Project</SelectItem>
+                        <SelectItem value="global">{t('settingsPanels.skillDialog.global')}</SelectItem>
+                        <SelectItem value="project">{t('settingsPanels.skillDialog.project')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -194,14 +196,14 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
 
               {scope === 'project' && (
                 <FormItem>
-                  <FormLabel>Repository</FormLabel>
+                  <FormLabel>{t('settingsPanels.skillDialog.repository')}</FormLabel>
                   <FormControl>
                     <Select
                       value={selectedRepoId?.toString()}
                       onValueChange={(value) => setSelectedRepoId(value ? parseInt(value, 10) : undefined)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select repository" />
+                        <SelectValue placeholder={t('settingsPanels.skillDialog.selectRepository')} />
                       </SelectTrigger>
                       <SelectContent>
                         {repos.map((repo) => (
@@ -221,14 +223,14 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
 
         <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end pb-4 p-3">
           <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
-            Cancel
+            {t('settingsPanels.skillDialog.cancel')}
           </Button>
           <Button
             onClick={() => form.handleSubmit(handleSubmit)()}
             disabled={!form.formState.isValid}
             className="flex-1 sm:flex-none"
           >
-            {editingSkill ? 'Update' : 'Create'}
+            {editingSkill ? t('settingsPanels.skillDialog.update') : t('settingsPanels.skillDialog.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

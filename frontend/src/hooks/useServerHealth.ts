@@ -71,10 +71,10 @@ export function useServerHealth(enabled = true) {
   const query = useQuery<HealthResponse>({
     queryKey: ['health'],
     queryFn: fetchHealth,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
     retry: false,
     enabled,
-    staleTime: 10000,
+    staleTime: 30000,
   })
 
   const { data: health } = query

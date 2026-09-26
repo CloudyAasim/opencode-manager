@@ -7,8 +7,10 @@ import { EditorFindBar } from '@/components/ui/editor-find-bar'
 import { useFindInText } from '@/lib/useFindInText'
 import { settingsApi } from '@/api/settings'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 
 export function AgentsMdEditor() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [content, setContent] = useState('')
   const [savedContent, setSavedContent] = useState('')
@@ -37,10 +39,10 @@ export function AgentsMdEditor() {
       setSavedContent(newContent)
       queryClient.invalidateQueries({ queryKey: ['agents-md'] })
       queryClient.invalidateQueries({ queryKey: ['opencode', 'agents'] })
-      showToast.success('AGENTS.md saved and server restarted')
+      showToast.success(t('settingsPanels.agentsMd.saved'))
     },
     onError: () => {
-      showToast.error('Failed to save AGENTS.md')
+      showToast.error(t('settingsPanels.agentsMd.saveFailed'))
     },
   })
 
@@ -54,10 +56,10 @@ export function AgentsMdEditor() {
       queryClient.invalidateQueries({ queryKey: ['agents-md'] })
       setContent(defaultContent)
       setSavedContent(defaultContent)
-      showToast.success('AGENTS.md reset to default and server restarted')
+      showToast.success(t('settingsPanels.agentsMd.resetToDefault'))
     },
     onError: () => {
-      showToast.error('Failed to reset AGENTS.md')
+      showToast.error(t('settingsPanels.agentsMd.resetFailed'))
     },
   })
 
@@ -84,7 +86,7 @@ export function AgentsMdEditor() {
   if (error) {
     return (
       <div className="text-center py-8 text-red-500">
-        Failed to load AGENTS.md
+        {t('settingsPanels.agentsMd.loadFailed')}
       </div>
     )
   }
@@ -94,7 +96,7 @@ export function AgentsMdEditor() {
       <div className="sticky top-0 z-10 flex flex-col gap-3 bg-background py-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
-            Global instructions for AI agents. This file is merged with repository-specific AGENTS.md files.
+            {t('settingsPanels.agentsMd.description')}
           </p>
         </div>
         <div className="flex flex-shrink-0 gap-2">
@@ -110,7 +112,7 @@ export function AgentsMdEditor() {
             ) : (
               <RotateCcw className="h-4 w-4 mr-1" />
             )}
-            Reset to Default
+            {t('settingsPanels.agentsMd.resetButton')}
           </Button>
           <Button
             size="sm"
@@ -123,7 +125,7 @@ export function AgentsMdEditor() {
             ) : (
               <Save className="h-4 w-4 mr-1" />
             )}
-            Save
+            {t('settingsPanels.agentsMd.save')}
           </Button>
         </div>
       </div>
@@ -137,24 +139,24 @@ export function AgentsMdEditor() {
           onPrev={prev}
           onNext={next}
           inputName="agents-md-find"
-          placeholder="Find in AGENTS.md..."
+          placeholder={t('settingsPanels.agentsMd.findPlaceholder')}
         />
 
         <div className="h-[60dvh] min-h-[320px] sm:h-[55vh]">
           <CodeEditor
-            ariaLabel="AGENTS.md content"
+            ariaLabel={t('settingsPanels.agentsMd.contentLabel')}
             value={content}
             onChange={setContent}
             highlights={matches}
             activeHighlightIndex={currentMatchIndex}
             disabled={isSaving}
-            placeholder="# Agent Instructions&#10;&#10;Add global instructions for AI agents here..."
+            placeholder={t('settingsPanels.agentsMd.placeholder')}
           />
         </div>
       </div>
 
       {hasChanges && (
-        <p className="text-xs text-amber-500">You have unsaved changes</p>
+        <p className="text-xs text-amber-500">{t('settingsPanels.agentsMd.unsavedChanges')}</p>
       )}
     </div>
   )

@@ -1,3 +1,11 @@
+import { navigation } from './ns/zh-CN/navigation'
+import { repo } from './ns/zh-CN/repo'
+import { session } from './ns/zh-CN/session'
+import { message } from './ns/zh-CN/message'
+import { schedules } from './ns/zh-CN/schedules'
+import { ui } from './ns/zh-CN/ui'
+import { misc } from './ns/zh-CN/misc'
+import { settingsPanels } from './ns/zh-CN/settingsPanels'
 import type { DeepString } from './types'
 import type { en } from './en'
 
@@ -184,4 +192,12 @@ export const zhCN: DeepString<typeof en> = {
       total_other: '{{count}} 条记录',
     },
   },
+  navigation,
+  repo,
+  session,
+  message,
+  schedules,
+  ui,
+  misc,
+  settingsPanels,
 }

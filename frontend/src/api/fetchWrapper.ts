@@ -6,6 +6,7 @@ export { FetchError }
 interface FetchWrapperOptions extends RequestInit {
   timeout?: number
   params?: Record<string, string | number | boolean | undefined>
+  retry?: number
 }
 
 function formatDetails(details: unknown): string | undefined {
@@ -67,37 +68,92 @@ function buildUrl(url: string, params?: Record<string, string | number | boolean
   return urlObj
 }
 
+const RETRYABLE_STATUS = new Set([502, 503, 504])
+const DEFAULT_GET_RETRIES = 1
+
+function isIdempotentMethod(method: string | undefined): boolean {
+  const normalized = (method ?? 'GET').toUpperCase()
+  return normalized === 'GET' || normalized === 'HEAD'
+}
+
+function delay(ms: number, signal: AbortSignal | null | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'))
+      return
+    }
+    const timer = setTimeout(resolve, ms)
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer)
+        reject(new DOMException('Aborted', 'AbortError'))
+      },
+      { once: true },
+    )
+  })
+}
+
 async function fetchWithTimeout(
   url: string,
   options: FetchWrapperOptions = {}
 ): Promise<Response> {
-  const { timeout = 30000, params, ...fetchOptions } = options
+  const { timeout = 45000, params, retry, ...fetchOptions } = options
+  const maxRetries = typeof retry === 'number'
+    ? retry
+    : isIdempotentMethod(fetchOptions.method) ? DEFAULT_GET_RETRIES : 0
   const urlObj = buildUrl(url, params)
+  const externalSignal = fetchOptions.signal
+  let lastError: unknown
 
-  const controller = new AbortController()
-  const timeoutId = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const controller = new AbortController()
+    const timeoutId = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null
+    const abortFromExternal = () => controller.abort()
+    if (externalSignal) {
+      if (externalSignal.aborted) controller.abort()
+      else externalSignal.addEventListener('abort', abortFromExternal, { once: true })
+    }
 
-  try {
-    const response = await fetch(urlObj.toString(), {
-      credentials: 'include',
-      ...fetchOptions,
-      signal: controller.signal,
-    })
+    let response: Response
+    try {
+      response = await fetch(urlObj.toString(), {
+        credentials: 'include',
+        ...fetchOptions,
+        signal: controller.signal,
+      })
+    } catch (error) {
+      if (timeoutId) clearTimeout(timeoutId)
+      if (externalSignal) externalSignal.removeEventListener('abort', abortFromExternal)
+      lastError = error
+
+      const aborted = error instanceof Error && error.name === 'AbortError'
+      const timedOut = aborted && !(externalSignal?.aborted ?? false)
+      if (attempt < maxRetries && (timedOut || !aborted)) {
+        await delay(500 * 2 ** attempt, externalSignal)
+        continue
+      }
+      if (timedOut) {
+        throw new FetchError('Request timeout', 408, 'TIMEOUT')
+      }
+      throw error
+    }
 
     if (timeoutId) clearTimeout(timeoutId)
+    if (externalSignal) externalSignal.removeEventListener('abort', abortFromExternal)
 
     if (!response.ok) {
+      if (attempt < maxRetries && RETRYABLE_STATUS.has(response.status)) {
+        await delay(500 * 2 ** attempt, externalSignal)
+        continue
+      }
       await handleResponse(response)
     }
 
     return response
-  } catch (error) {
-    if (timeoutId) clearTimeout(timeoutId)
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new FetchError('Request timeout', 408, 'TIMEOUT')
-    }
-    throw error
   }
+
+  throw lastError
 }
 
 async function fetchWrapper<T = unknown>(

@@ -18,7 +18,6 @@ import {
   filterReposBySearch,
   filterReposByMode,
   sortRepos,
-  groupReposIntoSections,
   countAttentionItems,
   type RepoFilterMode,
   type RepoSortMode,
@@ -26,26 +25,7 @@ import {
 import { RepoListControls } from "./RepoListControls"
 import { invalidateRepoListCaches } from "@/lib/queryInvalidation"
 import { ASSISTANT_REPO_ID } from "@opencode-manager/shared/utils"
-
-function formatActivityLabel(timestamp: number): string {
-  const now = Date.now()
-  const diff = now - timestamp
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) {
-    return days === 1 ? '1d ago' : `${days}d ago`
-  }
-  if (hours > 0) {
-    return hours === 1 ? '1h ago' : `${hours}h ago`
-  }
-  if (minutes > 0) {
-    return minutes === 1 ? '1m ago' : `${minutes}m ago`
-  }
-  return 'just now'
-}
+import { useI18n } from '@/lib/i18n'
 
 interface RepoCardWrapperProps {
   repo: Repo
@@ -147,6 +127,26 @@ function StaticRepoCard({
 }
 
 export function RepoList() {
+  const { t } = useI18n()
+  const formatActivityLabel = (timestamp: number): string => {
+    const now = Date.now()
+    const diff = now - timestamp
+    const seconds = Math.floor(diff / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+
+    if (days > 0) {
+      return t('repo.list.activity.daysAgo', { n: days })
+    }
+    if (hours > 0) {
+      return t('repo.list.activity.hoursAgo', { n: hours })
+    }
+    if (minutes > 0) {
+      return t('repo.list.activity.minutesAgo', { n: minutes })
+    }
+    return t('repo.list.activity.justNow')
+  }
   const queryClient = useQueryClient()
   const isMobile = useMobile()
   const { preferences, updateSettings } = useSettings()
@@ -219,9 +219,18 @@ export function RepoList() {
     return sortRepos(filteredViewModels, sortMode, repoOrder)
   }, [filteredViewModels, sortMode, repoOrder])
 
-  const sections = useMemo(() => {
-    return groupReposIntoSections(sortedViewModels, filterMode, sortMode)
-  }, [sortedViewModels, filterMode, sortMode])
+  const emptyMessage = useMemo(() => {
+    if (searchQuery) {
+      return t('repo.list.emptyFilteredQuery', { query: searchQuery })
+    }
+    if (filterMode === 'attention') {
+      return t('repo.list.emptyAttention')
+    }
+    if (filterMode === 'recent') {
+      return t('repo.list.emptyRecent')
+    }
+    return t('repo.list.emptyFiltered')
+  }, [searchQuery, filterMode, t])
 
   const attentionCount = useMemo(() => {
     return countAttentionItems(viewModels)
@@ -332,8 +341,8 @@ export function RepoList() {
       case !!error:
         return (
           <div className="text-center p-8 text-destructive">
-            Failed to load repositories:{" "}
-            {error instanceof Error ? error.message : "Unknown error"}
+            {t('repo.list.failedToLoad')}{" "}
+            {error instanceof Error ? error.message : t('repo.list.unknownError')}
           </div>
         )
 
@@ -342,7 +351,7 @@ export function RepoList() {
           <div className="text-center p-12">
             <GitBranch className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
             <p className="text-zinc-500">
-              No repositories yet. Add one to get started.
+              {t('repo.list.empty')}
             </p>
           </div>
         )
@@ -427,7 +436,7 @@ export function RepoList() {
                     <div className="text-center p-12">
                       <Search className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
                       <p className="text-zinc-500">
-                        {sections[0]?.emptyMessage || `No repositories found${searchQuery ? ` matching "${searchQuery}"` : ''}`}
+                        {emptyMessage}
                       </p>
                     </div>
                   )
@@ -521,35 +530,35 @@ export function RepoList() {
         title={
           selectedRepos.size > 0
             ? hasLocalRepos && !hasClonedRepos
-              ? "Unlink Multiple Repositories"
-              : "Delete Multiple Repositories"
+              ? t("repo.deleteDialog.unlinkMultiple")
+              : t("repo.deleteDialog.deleteMultiple")
             : repoForDelete
               ? repoForDelete.isLocal
-                ? "Unlink Repository"
-                : "Delete Repository"
-              : "Delete Repository"
+                ? t("repo.actions.unlinkRepository")
+                : t("repo.actions.deleteRepository")
+              : t("repo.actions.deleteRepository")
         }
         description={
           selectedRepos.size > 0
             ? hasClonedRepos && !hasLocalRepos
-              ? `Are you sure you want to delete ${selectedRepos.size} repositor${selectedRepos.size === 1 ? "y" : "ies"}? This will remove all local files. This action cannot be undone.`
+              ? t("repo.deleteDialog.deleteMultipleDescription", { count: selectedRepos.size })
               : hasLocalRepos && !hasClonedRepos
-                ? `Are you sure you want to unlink ${selectedRepos.size} repositor${selectedRepos.size === 1 ? "y" : "ies"}? Only workspace references will be removed. Your original files will not be affected.`
-                : `Are you sure you want to delete ${selectedRepos.size} repositor${selectedRepos.size === 1 ? "y" : "ies"}? Cloned repositories will have their local files removed. Locally discovered repositories will only have their workspace references removed — original files will not be affected.`
+                ? t("repo.deleteDialog.unlinkMultipleDescription", { count: selectedRepos.size })
+                : t("repo.deleteDialog.deleteMixedDescription", { count: selectedRepos.size })
             : repoForDelete?.isLocal
               ? (
                 <>
-                  Are you sure you want to unlink this repository? Only the workspace reference will be removed.
+                  {t("repo.deleteDialog.unlinkDescription")}
                   {repoForDelete.sourcePath && (
                     <>
-                      {" "}Your original files at{" "}
+                      {" "}{t("repo.deleteDialog.unlinkDescriptionPathPrefix")}{" "}
                       <span className="font-mono text-xs">{repoForDelete.sourcePath}</span>{" "}
-                      will not be affected.
+                      {t("repo.deleteDialog.unlinkDescriptionPathSuffix")}
                     </>
                   )}
                 </>
               )
-              : "Are you sure you want to delete this repository? This will remove all local files. This action cannot be undone."
+              : t("repo.deleteDialog.deleteDescription")
         }
         isDeleting={deleteMutation.isPending || batchDeleteMutation.isPending}
       />

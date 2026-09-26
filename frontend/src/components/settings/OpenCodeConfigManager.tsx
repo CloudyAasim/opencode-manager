@@ -24,6 +24,7 @@ import { invalidateConfigCaches } from '@/lib/queryInvalidation'
 import { getOpenCodeApiErrorMessage } from '@/lib/opencode-errors'
 import { FetchError } from '@/api/fetchWrapper'
 import { getPreferredOpenCodeConfigSource, downloadOpenCodeConfigSource } from '@/api/types/settings'
+import { useI18n } from '@/lib/i18n'
 import type { OpenCodeConfigFile, OpenCodeConfigSaveResponse, OpenCodeImportStatus } from '@/api/types/settings'
 
 interface Command {
@@ -65,6 +66,7 @@ const SECTION_META_CLASS = 'text-xs text-muted-foreground'
 const getConfigFileName = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path
 
 export function OpenCodeConfigManager() {
+  const { t } = useI18n()
   const sectionIdPrefix = useId()
   const agentsMdContentId = `${sectionIdPrefix}-agents-md`
   const commandsContentId = `${sectionIdPrefix}-commands`
@@ -153,15 +155,15 @@ export function OpenCodeConfigManager() {
       return error.detail || error.message
     }
 
-    return getApiErrorMessage(error, 'Failed to import existing OpenCode host data')
+    return getApiErrorMessage(error, t('settingsPanels.configManager.importFailed'))
   }
 
   const applyOpenCodeConfigSave = (result: OpenCodeConfigSaveResponse) => {
     queryClient.setQueryData<OpenCodeConfigFile>(OPEN_CODE_CONFIG_QUERY_KEY, result)
     if (result.restartRequired) {
-      showToast.success('Configuration saved. Restart the server to apply changes.')
+      showToast.success(t('settingsPanels.configManager.configurationSaved'))
     } else {
-      showToast.success('Configuration updated')
+      showToast.success(t('settingsPanels.configManager.configurationUpdated'))
     }
     invalidateConfigCaches(queryClient, { skipOpenCodeConfig: true })
   }
@@ -179,7 +181,7 @@ export function OpenCodeConfigManager() {
 
   const updateConfigContentSafely = (newContent: Record<string, unknown>) => {
     void updateConfigContent(newContent).catch((error) => {
-      showToast.error(getApiErrorMessage(error, 'Failed to update config'))
+      showToast.error(getApiErrorMessage(error, t('settingsPanels.configManager.updateConfigFailed')))
     })
   }
 
@@ -209,7 +211,7 @@ export function OpenCodeConfigManager() {
            <div className="flex items-center gap-2">
              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
              <p className="text-sm">
-               Configuration changes are saved but require a server restart to take effect.
+               {t('settingsPanels.configManager.restartPending')}
              </p>
            </div>
            <Button
@@ -223,7 +225,7 @@ export function OpenCodeConfigManager() {
              ) : (
                <RotateCcw className="h-3 w-3 mr-1" />
              )}
-             Restart Now
+             {t('settingsPanels.configManager.restartNow')}
            </Button>
          </div>
        )}
@@ -235,7 +237,7 @@ export function OpenCodeConfigManager() {
 
       {!config ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          No OpenCode configuration file found. Restart the Manager to seed one.
+          {t('settingsPanels.configManager.noConfig')}
         </p>
       ) : (
         <>
@@ -245,16 +247,16 @@ export function OpenCodeConfigManager() {
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{getConfigFileName(config.path)}</p>
                 <details className="text-xs text-muted-foreground">
-                  <summary className="cursor-pointer select-none">File location and updated time</summary>
+                  <summary className="cursor-pointer select-none">{t('settingsPanels.configManager.fileLocation')}</summary>
                   <p className="mt-1 break-all">{config.path}</p>
-                  <p className="mt-1">Updated: {new Date(config.updatedAt).toLocaleString()}</p>
+                  <p className="mt-1">{t('settingsPanels.configManager.updatedAt', { time: new Date(config.updatedAt).toLocaleString() })}</p>
                 </details>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               {!config.isValid && (
-                <Badge variant="destructive">Invalid Config</Badge>
+                <Badge variant="destructive">{t('settingsPanels.configManager.invalidConfig')}</Badge>
               )}
               <Button
                 variant="ghost"
@@ -263,7 +265,7 @@ export function OpenCodeConfigManager() {
                 onClick={() => setIsEditDialogOpen(true)}
               >
                 <Edit className="h-3.5 w-3.5 mr-1" />
-                Edit
+                {t('settingsPanels.configManager.edit')}
               </Button>
               <Button
                 variant="ghost"
@@ -272,22 +274,22 @@ export function OpenCodeConfigManager() {
                 onClick={() => downloadConfig(config)}
               >
                 <Download className="h-3.5 w-3.5 mr-1" />
-                Download
+                {t('settingsPanels.configManager.download')}
               </Button>
             </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Merged persisted settings. Saves write to the preferred config file; removing a value deletes its override so an inherited value can reappear. Restart the server to apply changes.
+            {t('settingsPanels.configManager.mergedSettings')}
           </p>
 
           <OpenCodeConfigSourcesNotice config={config} />
 
           {!config.isValid && config.validationIssues && config.validationIssues.length > 0 && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-              <p className="font-medium text-destructive">This configuration has validation issues</p>
+              <p className="font-medium text-destructive">{t('settingsPanels.configManager.validationIssuesTitle')}</p>
               <p className="mt-1 text-sm text-destructive/90">
-                OpenCode may fail to start until these fields are corrected. Open the config editor to fix the file directly.
+                {t('settingsPanels.configManager.validationIssuesBody')}
               </p>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-destructive/90">
                 {config.validationIssues.slice(0, 8).map((issue) => (
@@ -298,7 +300,7 @@ export function OpenCodeConfigManager() {
               </ul>
               {config.validationIssues.length > 8 && (
                 <p className="mt-2 text-xs text-destructive/80">
-                  Showing 8 of {config.validationIssues.length} issues. Open the config editor to review and fix the file.
+                  {t('settingsPanels.configManager.validationIssuesMore', { count: config.validationIssues.length })}
                 </p>
               )}
             </div>
@@ -333,12 +335,12 @@ export function OpenCodeConfigManager() {
             <div className="flex min-w-0 items-center gap-3">
               <FileText className="h-4 w-4 shrink-0 text-blue-500" />
               <div className="min-w-0 text-left">
-                <h4 className="text-sm font-medium">Global Agent Instructions (AGENTS.md)</h4>
-                <p className={SECTION_META_CLASS}>Applies across OpenCode</p>
+                <h4 className="text-sm font-medium">{t('settingsPanels.configManager.agentsMdTitle')}</h4>
+                <p className={SECTION_META_CLASS}>{t('settingsPanels.configManager.agentsMdMeta')}</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="text-xs font-medium text-blue-500">Edit AGENTS.md</span>
+              <span className="text-xs font-medium text-blue-500">{t('settingsPanels.configManager.editAgentsMd')}</span>
               <ChevronDown className={cn(SECTION_CHEVRON_CLASS, expandedSections.agentsMd && 'rotate-180')} />
             </div>
           </button>
@@ -362,9 +364,9 @@ export function OpenCodeConfigManager() {
                 onClick={() => toggleSection('commands', commandsRef)}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <h4 className={SECTION_TITLE_CLASS}>Commands</h4>
+                  <h4 className={SECTION_TITLE_CLASS}>{t('settingsPanels.configManager.commands')}</h4>
                   <span className={SECTION_META_CLASS}>
-                    {Object.keys((config.content.command as Record<string, Command> | undefined) ?? {}).length + directoryCommands.length} configured
+                    {t('settingsPanels.configManager.configured', { count: Object.keys((config.content.command as Record<string, Command> | undefined) ?? {}).length + directoryCommands.length })}
                   </span>
                 </div>
                 <ChevronDown className={cn(SECTION_CHEVRON_CLASS, expandedSections.commands && 'rotate-180')} />
@@ -396,9 +398,9 @@ export function OpenCodeConfigManager() {
                 onClick={() => toggleSection('agents', agentsRef)}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <h4 className={SECTION_TITLE_CLASS}>Agents</h4>
+                  <h4 className={SECTION_TITLE_CLASS}>{t('settingsPanels.configManager.agents')}</h4>
                   <span className={SECTION_META_CLASS}>
-                    {Object.keys((config.content.agent as Record<string, Agent> | undefined) ?? {}).length + directoryAgents.length} configured
+                    {t('settingsPanels.configManager.configured', { count: Object.keys((config.content.agent as Record<string, Agent> | undefined) ?? {}).length + directoryAgents.length })}
                   </span>
                 </div>
                 <ChevronDown className={cn(SECTION_CHEVRON_CLASS, expandedSections.agents && 'rotate-180')} />
@@ -430,9 +432,9 @@ export function OpenCodeConfigManager() {
                 onClick={() => toggleSection('skills', skillsRef)}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <h4 className={SECTION_TITLE_CLASS}>Skills</h4>
+                  <h4 className={SECTION_TITLE_CLASS}>{t('settingsPanels.configManager.skills')}</h4>
                   <span className={SECTION_META_CLASS}>
-                    {managedSkills.length} configured
+                    {t('settingsPanels.configManager.configured', { count: managedSkills.length })}
                   </span>
                 </div>
                 <ChevronDown className={cn(SECTION_CHEVRON_CLASS, expandedSections.skills && 'rotate-180')} />
@@ -457,9 +459,9 @@ export function OpenCodeConfigManager() {
                 onClick={() => toggleSection('mcp', mcpRef)}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <h4 className={SECTION_TITLE_CLASS}>MCP Servers</h4>
+                  <h4 className={SECTION_TITLE_CLASS}>{t('settingsPanels.configManager.mcpServers')}</h4>
                   <span className={SECTION_META_CLASS}>
-                    {Object.keys((config.content.mcp as Record<string, unknown> | undefined) ?? {}).length} configured
+                    {t('settingsPanels.configManager.configured', { count: Object.keys((config.content.mcp as Record<string, unknown> | undefined) ?? {}).length })}
                   </span>
                 </div>
                 <ChevronDown className={cn(SECTION_CHEVRON_CLASS, expandedSections.mcp && 'rotate-180')} />
@@ -485,16 +487,18 @@ export function OpenCodeConfigManager() {
                 onClick={() => toggleSection('models', modelsRef)}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <h4 className={SECTION_TITLE_CLASS}>Models</h4>
+                  <h4 className={SECTION_TITLE_CLASS}>{t('settingsPanels.configManager.models')}</h4>
                   <span className={SECTION_META_CLASS}>
-                    {(() => {
-                      const provider = config.content.provider as Record<string, unknown> | undefined
-                      if (!provider) return 0
-                      return Object.values(provider).reduce<number>((acc, p) => {
-                        const models = (p as { models?: Record<string, unknown> })?.models
-                        return acc + (models ? Object.keys(models).length : 0)
-                      }, 0)
-                    })()} configured
+                    {t('settingsPanels.configManager.configured', {
+                      count: (() => {
+                        const provider = config.content.provider as Record<string, unknown> | undefined
+                        if (!provider) return 0
+                        return Object.values(provider).reduce<number>((acc, p) => {
+                          const models = (p as { models?: Record<string, unknown> })?.models
+                          return acc + (models ? Object.keys(models).length : 0)
+                        }, 0)
+                      })(),
+                    })}
                   </span>
                 </div>
                 <ChevronDown className={cn(SECTION_CHEVRON_CLASS, expandedSections.models && 'rotate-180')} />
@@ -528,7 +532,7 @@ export function OpenCodeConfigManager() {
           >
             <div className="flex min-w-0 items-center gap-3">
               <Download className="h-4 w-4 shrink-0 text-blue-500" />
-              <h4 className={SECTION_TITLE_CLASS}>Existing OpenCode Host Import</h4>
+              <h4 className={SECTION_TITLE_CLASS}>{t('settingsPanels.configManager.hostImportTitle')}</h4>
             </div>
             <ChevronDown className={cn(SECTION_CHEVRON_CLASS, expandedSections.hostImport && 'rotate-180')} />
           </button>
@@ -537,23 +541,28 @@ export function OpenCodeConfigManager() {
             className={cn(SECTION_CONTENT_CLASS, 'space-y-3 text-sm', expandedSections.hostImport ? 'block' : 'hidden')}
           >
             <p className="text-muted-foreground">
-              Import your standalone OpenCode config and session state into this workspace, then restart the server so existing chats can reconnect.
+              {t('settingsPanels.configManager.hostImportDescription')}
             </p>
             <Button
               variant="outline"
               size="sm"
               disabled={!canImportFromHost || syncOpenCodeImportMutation.isPending || isImportStatusLoading}
               onClick={async () => {
-                showToast.loading('Importing existing OpenCode host data...', { id: 'opencode-import' })
+                showToast.loading(t('settingsPanels.configManager.importLoading'), { id: 'opencode-import' })
                 try {
                   const result = await syncOpenCodeImportMutation.mutateAsync()
-                  const importedParts = [result.configImported && 'config', result.stateImported && 'state']
+                  const importedParts = [result.configImported && t('settingsPanels.configManager.importPartConfig'), result.stateImported && t('settingsPanels.configManager.importPartState')]
                     .filter(Boolean)
-                    .join(' and ')
+                    .join(t('settingsPanels.configManager.importPartAnd'))
                   const relinkSummary = result.relinkedRepos
-                    ? ` Linked ${result.relinkedRepos.relinkedCount} repos, matched ${result.relinkedRepos.existingCount} existing repos, skipped ${result.relinkedRepos.nonRepoPathCount} non-repo paths, and ignored ${result.relinkedRepos.duplicatePathCount} duplicate session paths.`
+                    ? t('settingsPanels.configManager.importRelinkSummary', {
+                        relinked: result.relinkedRepos.relinkedCount,
+                        existing: result.relinkedRepos.existingCount,
+                        nonRepo: result.relinkedRepos.nonRepoPathCount,
+                        duplicate: result.relinkedRepos.duplicatePathCount,
+                      })
                     : ''
-                  showToast.success(`Imported existing OpenCode ${importedParts || 'data'} and restarted the server.${relinkSummary}`, { id: 'opencode-import' })
+                  showToast.success(t('settingsPanels.configManager.importSuccess', { parts: importedParts || t('settingsPanels.configManager.importPartData'), relink: relinkSummary }), { id: 'opencode-import' })
                 } catch (error) {
                   showToast.error(getOpenCodeImportErrorMessage(error), { id: 'opencode-import' })
                 }
@@ -564,19 +573,19 @@ export function OpenCodeConfigManager() {
               ) : (
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               )}
-              <span className="text-xs sm:text-sm">Import From Host</span>
+              <span className="text-xs sm:text-sm">{t('settingsPanels.configManager.importFromHost')}</span>
             </Button>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-border p-3">
-                <p className="font-medium">Config Source</p>
+                <p className="font-medium">{t('settingsPanels.configManager.configSource')}</p>
                 <p className="mt-1 break-all text-muted-foreground">
-                  {isImportStatusLoading ? 'Checking...' : importStatus?.configSourcePath || 'No importable OpenCode config found'}
+                  {isImportStatusLoading ? t('settingsPanels.configManager.checking') : importStatus?.configSourcePath || t('settingsPanels.configManager.noConfigFound')}
                 </p>
               </div>
               <div className="rounded-lg border border-border p-3">
-                <p className="font-medium">State Source</p>
+                <p className="font-medium">{t('settingsPanels.configManager.stateSource')}</p>
                 <p className="mt-1 break-all text-muted-foreground">
-                  {isImportStatusLoading ? 'Checking...' : importStatus?.stateSourcePath || 'No importable OpenCode state found'}
+                  {isImportStatusLoading ? t('settingsPanels.configManager.checking') : importStatus?.stateSourcePath || t('settingsPanels.configManager.noStateFound')}
                 </p>
               </div>
             </div>
@@ -584,52 +593,56 @@ export function OpenCodeConfigManager() {
               <p className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-500">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
-                  Importing replaces the workspace configuration files. These files will be removed:{' '}
-                  {workspaceConfigPathsToRemove.map(getConfigFileName).join(', ')}.
+                  {t('settingsPanels.configManager.importingRemoves', { files: workspaceConfigPathsToRemove.map(getConfigFileName).join(', ') })}{' '}
                   {hostConfigSourcePaths.length > 1 && (
-                    <> Host files imported: {hostConfigSourcePaths.map(getConfigFileName).join(', ')}.</>
+                    <>{t('settingsPanels.configManager.hostFilesImported', { files: hostConfigSourcePaths.map(getConfigFileName).join(', ') })}</>
                   )}
                 </span>
               </p>
             )}
             <div className="rounded-lg border border-border p-3">
-              <p className="font-medium">Workspace State</p>
+              <p className="font-medium">{t('settingsPanels.configManager.workspaceState')}</p>
               <p className="mt-1 break-all text-muted-foreground">
-                {importStatus?.workspaceStatePath || 'Unavailable'}
+                {importStatus?.workspaceStatePath || t('settingsPanels.configManager.unavailable')}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 {importStatus?.workspaceStateExists
-                  ? 'A workspace session database already exists. Import is blocked to protect it from being replaced by detected host state.'
-                  : 'No workspace session database exists yet. Import will seed it from the detected host state.'}
+                  ? t('settingsPanels.configManager.workspaceStateExists')
+                  : t('settingsPanels.configManager.workspaceStateAbsent')}
               </p>
             </div>
             {syncOpenCodeImportMutation.error && (
               <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
-                <p className="font-medium text-destructive">Import blocked</p>
+                <p className="font-medium text-destructive">{t('settingsPanels.configManager.importBlocked')}</p>
                 <p className="mt-1 text-sm text-destructive/90">
                   {getOpenCodeImportErrorMessage(syncOpenCodeImportMutation.error)}
                 </p>
                 <p className="mt-2 text-xs text-destructive/80">
-                  This workspace already has OpenCode session state, so host state import was stopped to prevent accidental replacement of existing chats and history. If you want to use host state instead, clear the workspace state first and then run the import again.
+                  {t('settingsPanels.configManager.importBlockedDetail')}
                 </p>
               </div>
             )}
             {syncOpenCodeImportMutation.data?.relinkedRepos && (
               <div className="rounded-lg border border-border p-3">
-                <p className="font-medium">Last Relink Result</p>
+                <p className="font-medium">{t('settingsPanels.configManager.lastRelinkResult')}</p>
                 <p className="mt-1 text-muted-foreground">
-                  Linked {syncOpenCodeImportMutation.data.relinkedRepos.relinkedCount} repos, matched {syncOpenCodeImportMutation.data.relinkedRepos.existingCount} existing repos, skipped {syncOpenCodeImportMutation.data.relinkedRepos.nonRepoPathCount} non-repo session paths, and ignored {syncOpenCodeImportMutation.data.relinkedRepos.duplicatePathCount} duplicate session paths.
+                  {t('settingsPanels.configManager.relinkResult', {
+                    relinked: syncOpenCodeImportMutation.data.relinkedRepos.relinkedCount,
+                    existing: syncOpenCodeImportMutation.data.relinkedRepos.existingCount,
+                    nonRepo: syncOpenCodeImportMutation.data.relinkedRepos.nonRepoPathCount,
+                    duplicate: syncOpenCodeImportMutation.data.relinkedRepos.duplicatePathCount,
+                  })}
                 </p>
                 {syncOpenCodeImportMutation.data.relinkedRepos.errors.length > 0 && (
                   <p className="mt-2 text-xs text-destructive">
-                    {syncOpenCodeImportMutation.data.relinkedRepos.errors.length} repo paths could not be linked.
+                    {t('settingsPanels.configManager.relinkErrors', { count: syncOpenCodeImportMutation.data.relinkedRepos.errors.length })}
                   </p>
                 )}
               </div>
             )}
             {!canImportFromHost && !isImportStatusLoading && (
               <p className="text-xs text-muted-foreground">
-                No host OpenCode config or state was detected. For Docker installs, bind your host OpenCode config and state into the container before using this action.
+                {t('settingsPanels.configManager.noHostData')}
               </p>
             )}
           </div>

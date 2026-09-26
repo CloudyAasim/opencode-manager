@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
 import { useCreatePromptTemplate, useUpdatePromptTemplate } from '@/hooks/usePromptTemplates'
+import { useI18n } from '@/lib/i18n'
 
 type FormData = Pick<CreatePromptTemplateRequest, 'title' | 'category' | 'cadenceHint' | 'suggestedName' | 'suggestedDescription' | 'description' | 'prompt'>
 
@@ -40,6 +41,7 @@ function pickFormData(template?: PromptTemplate, initialValues?: Partial<CreateP
 }
 
 export function PromptTemplateDialog({ open, onOpenChange, template, initialValues }: PromptTemplateDialogProps) {
+  const { t } = useI18n()
   const [form, setForm] = useState<FormData>(INITIAL_FORM)
 
   const createMutation = useCreatePromptTemplate()
@@ -78,47 +80,47 @@ export function PromptTemplateDialog({ open, onOpenChange, template, initialValu
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className=" flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden sm:h-auto sm:max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>{template ? 'Edit template' : 'New template'}</DialogTitle>
+          <DialogTitle>{template ? t('schedules.promptTemplates.dialog.editTitle') : t('schedules.promptTemplates.dialog.newTitle')}</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-4 py-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="template-title">Title</Label>
-              <Input id="template-title" value={form.title} onChange={handleChange('title')} placeholder="Repo Health Report" />
+              <Label htmlFor="template-title">{t('schedules.promptTemplates.dialog.titleLabel')}</Label>
+              <Input id="template-title" value={form.title} onChange={handleChange('title')} placeholder={t('schedules.promptTemplates.dialog.titlePlaceholder')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="template-category">Category</Label>
-              <Input id="template-category" value={form.category} onChange={handleChange('category')} placeholder="Health" />
+              <Label htmlFor="template-category">{t('schedules.promptTemplates.dialog.category')}</Label>
+              <Input id="template-category" value={form.category} onChange={handleChange('category')} placeholder={t('schedules.promptTemplates.dialog.categoryPlaceholder')} />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="template-cadence">Cadence hint</Label>
-              <Input id="template-cadence" value={form.cadenceHint} onChange={handleChange('cadenceHint')} placeholder="Weekly" />
+              <Label htmlFor="template-cadence">{t('schedules.promptTemplates.dialog.cadenceHint')}</Label>
+              <Input id="template-cadence" value={form.cadenceHint} onChange={handleChange('cadenceHint')} placeholder={t('schedules.promptTemplates.dialog.cadenceHintPlaceholder')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="template-suggested-name">Suggested job name</Label>
-              <Input id="template-suggested-name" value={form.suggestedName} onChange={handleChange('suggestedName')} placeholder="Weekly repo health report" />
+              <Label htmlFor="template-suggested-name">{t('schedules.promptTemplates.dialog.suggestedJobName')}</Label>
+              <Input id="template-suggested-name" value={form.suggestedName} onChange={handleChange('suggestedName')} placeholder={t('schedules.promptTemplates.dialog.suggestedJobNamePlaceholder')} />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="template-description">Description</Label>
-            <Input id="template-description" value={form.description} onChange={handleChange('description')} placeholder="Short summary shown on the template card" />
+            <Label htmlFor="template-description">{t('schedules.common.description')}</Label>
+            <Input id="template-description" value={form.description} onChange={handleChange('description')} placeholder={t('schedules.promptTemplates.dialog.descriptionPlaceholder')} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="template-suggested-description">Suggested job description</Label>
-            <Input id="template-suggested-description" value={form.suggestedDescription} onChange={handleChange('suggestedDescription')} placeholder="Pre-fills the schedule job description field" />
+            <Label htmlFor="template-suggested-description">{t('schedules.promptTemplates.dialog.suggestedJobDescription')}</Label>
+            <Input id="template-suggested-description" value={form.suggestedDescription} onChange={handleChange('suggestedDescription')} placeholder={t('schedules.promptTemplates.dialog.suggestedJobDescriptionPlaceholder')} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="template-prompt">Prompt</Label>
-            <Textarea id="template-prompt" value={form.prompt} onChange={handleChange('prompt')} className="min-h-[200px]" placeholder="The full prompt sent to the agent when the schedule runs." />
+            <Label htmlFor="template-prompt">{t('schedules.common.prompt')}</Label>
+            <Textarea id="template-prompt" value={form.prompt} onChange={handleChange('prompt')} className="min-h-[200px]" placeholder={t('schedules.promptTemplates.dialog.promptPlaceholder')} />
           </div>
         </div>
         <div className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="flex-1 sm:flex-none">Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={isSaving || !isValid} className="flex-1 sm:flex-none">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isSaving ? 'Saving...' : template ? 'Save changes' : 'Create template'}
+            {isSaving ? t('schedules.common.saving') : template ? t('schedules.common.saveChanges') : t('schedules.promptTemplates.dialog.create')}
           </Button>
         </div>
       </DialogContent>

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { ChevronDown, X } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 export interface ComboboxOption {
   value: string
@@ -24,12 +25,14 @@ export function Combobox({
   value,
   onChange,
   options,
-  placeholder = 'Select or type...',
+  placeholder,
   disabled = false,
   className,
   allowCustomValue = true,
   showClear = false,
 }: ComboboxProps) {
+  const { t } = useI18n()
+  const resolvedPlaceholder = placeholder ?? t('ui.combobox.placeholder')
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState(() => {
     const selectedOption = options.find(o => o.value === value)
@@ -172,7 +175,7 @@ export function Combobox({
           onChange={handleInputChange}
           onFocus={handleFocus}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           disabled={disabled}
           className={cn(
             'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-[16px] md:text-sm shadow-sm transition-colors',
@@ -186,7 +189,7 @@ export function Combobox({
         {showClear && value && (
           <button
             type="button"
-            aria-label="Clear"
+            aria-label={t('ui.combobox.clear')}
             onClick={() => {
               if (!disabled) {
                 onChange('')
@@ -202,7 +205,7 @@ export function Combobox({
         )}
         <button
           type="button"
-          aria-label="Toggle options"
+          aria-label={t('ui.combobox.toggleOptions')}
           onClick={() => {
             if (!disabled) {
               setIsOpen(!isOpen)
@@ -262,7 +265,7 @@ export function Combobox({
       {isOpen && flatFilteredOptions.length === 0 && inputValue && allowCustomValue && (
         <div className="absolute z-[150] mt-1 w-full bg-popover border border-border rounded-md shadow-lg p-3">
           <div className="text-sm text-muted-foreground">
-            Press Enter to use "<span className="font-medium text-foreground">{inputValue}</span>"
+            {t('ui.combobox.pressEnterToUse', { value: inputValue })}
           </div>
         </div>
       )}

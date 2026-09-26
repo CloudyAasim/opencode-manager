@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useMobile } from "@/hooks/useMobile";
+import { useI18n } from "@/lib/i18n";
 
 interface EditSessionTitleDialogProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface EditSessionTitleDialogProps {
 }
 
 export function EditSessionTitleDialog({ isOpen, currentTitle, onClose, onSave }: EditSessionTitleDialogProps) {
+  const { t } = useI18n();
   const [editTitle, setEditTitle] = useState(currentTitle);
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useMobile();
@@ -57,7 +59,7 @@ export function EditSessionTitleDialog({ isOpen, currentTitle, onClose, onSave }
         }
       >
         <form onSubmit={handleSubmit} className="min-w-0">
-          <p className="text-sm text-muted-foreground mb-2">Change session title</p>
+          <p className="text-sm text-muted-foreground mb-2">{t('session.editTitle.label')}</p>
           <div className="relative">
             <input
               ref={inputRef}
@@ -88,14 +90,14 @@ export function EditSessionTitleDialog({ isOpen, currentTitle, onClose, onSave }
               onClick={handleCancel}
               className="flex-1 h-10"
             >
-              Cancel
+              {t('session.editTitle.cancel')}
             </Button>
             <Button
               type="submit"
               className="flex-1 h-10"
             >
               <Check className="w-4 h-4 mr-2" />
-              Save
+              {t('session.editTitle.save')}
             </Button>
           </div>
         </form>

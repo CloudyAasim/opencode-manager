@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select'
 import { showToast } from '@/lib/toast'
 import { getRepoDisplayName } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 import type { GitCredential } from '@/api/types/settings'
 import type { Repo } from '@/api/types'
 
@@ -30,6 +31,7 @@ interface GitCredentialDialogProps {
 }
 
 export function GitCredentialDialog({ open, onOpenChange, onSave, credential, repos, assignedRepoIds, isDefault, isSaving }: GitCredentialDialogProps) {
+  const { t } = useI18n()
   const [formData, setFormData] = useState<GitCredential>({
     name: '',
     host: '',
@@ -93,18 +95,18 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
     event?.stopPropagation()
 
     if (!formData.name.trim() || !formData.host.trim()) {
-      showToast.error('Name and host are required')
+      showToast.error(t('settingsPanels.gitCredential.nameHostRequired'))
       return
     }
 
     if (formData.type === 'pat') {
       if (!formData.token?.trim() && !(credential?.token && !tokenEdited)) {
-        showToast.error('Token is required for PAT type')
+        showToast.error(t('settingsPanels.gitCredential.tokenRequired'))
         return
       }
     } else if (formData.type === 'ssh') {
       if (!formData.sshPrivateKey?.trim()) {
-        showToast.error('SSH key is required for SSH type')
+        showToast.error(t('settingsPanels.gitCredential.sshRequired'))
         return
       }
     }
@@ -124,13 +126,13 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
       setFormData({ name: '', host: '', type: 'pat', token: '', username: '', sshPrivateKey: '', passphrase: '' })
       onOpenChange(false)
     } catch {
-      showToast.error('Failed to save credential')
+      showToast.error(t('settingsPanels.gitCredential.saveFailed'))
     }
   }
 
   const handleTestConnection = async () => {
     if (!formData.sshPrivateKey?.trim()) {
-      showToast.error('Please enter an SSH key first')
+      showToast.error(t('settingsPanels.gitCredential.enterSshKey'))
       return
     }
 
@@ -151,7 +153,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
         showToast.error(result.message)
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to test SSH connection'
+      const message = error instanceof Error ? error.message : t('settingsPanels.gitCredential.testFailed')
       showToast.error(message)
     } finally {
       setIsTesting(false)
@@ -162,17 +164,17 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent mobileFullscreen className="max-w-lg h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col">
         <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-2 sm:pb-3">
-          <DialogTitle>{credential ? 'Edit Git Credential' : 'Add Git Credential'}</DialogTitle>
+          <DialogTitle>{credential ? t('settingsPanels.gitCredential.editTitle') : t('settingsPanels.gitCredential.addTitle')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
               className="flex-1 min-h-0 flex flex-col px-4 sm:px-6 py-2 sm:py-3 overflow-y-auto">
           <div className="space-y-4 sm:space-y-4 flex-shrink-0">
             <div className="space-y-2">
-              <Label htmlFor="cred-name">Name *</Label>
+              <Label htmlFor="cred-name">{t('settingsPanels.gitCredential.name')}</Label>
               <Input
                 id="cred-name"
-                placeholder="GitHub Personal, Work GitLab"
+                placeholder={t('settingsPanels.gitCredential.namePlaceholder')}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={isSaving}
@@ -181,7 +183,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cred-type">Authentication Type</Label>
+              <Label htmlFor="cred-type">{t('settingsPanels.gitCredential.authType')}</Label>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -197,7 +199,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                   className="flex-1"
                 >
                   <Key className="h-4 w-4 mr-2" />
-                  PAT
+                  {t('settingsPanels.gitCredential.pat')}
                 </Button>
                 <Button
                   type="button"
@@ -212,16 +214,16 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                   className="flex-1"
                 >
                   <Lock className="h-4 w-4 mr-2" />
-                  SSH Key
+                  {t('settingsPanels.gitCredential.sshKey')}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cred-host">Host *</Label>
+              <Label htmlFor="cred-host">{t('settingsPanels.gitCredential.host')}</Label>
               <Input
                 id="cred-host"
-                placeholder="github.com"
+                placeholder={t('settingsPanels.gitCredential.hostPlaceholder')}
                 value={formData.host}
                 onChange={(e) => setFormData({ ...formData, host: e.target.value })}
                 disabled={isSaving}
@@ -233,12 +235,12 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
               <>
                 <div className="space-y-2">
                   <Label htmlFor="cred-token">
-                    Access Token {credential?.token && !tokenEdited ? '(unchanged)' : '*'}
+                    {credential?.token && !tokenEdited ? t('settingsPanels.gitCredential.accessTokenUnchanged') : t('settingsPanels.gitCredential.accessTokenRequired')}
                   </Label>
                   <Input
                     id="cred-token"
                     type="password"
-                    placeholder={credential?.token ? maskToken(credential.token) : 'Personal access token'}
+                    placeholder={credential?.token ? maskToken(credential.token) : t('settingsPanels.gitCredential.personalAccessToken')}
                     value={formData.token || ''}
                     onChange={(e) => {
                       setTokenEdited(true)
@@ -249,16 +251,16 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                   />
                   {credential?.token && !tokenEdited && (
                     <p className="text-xs text-muted-foreground">
-                      Leave empty to keep existing token
+                      {t('settingsPanels.gitCredential.leaveEmptyKeep')}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cred-pat-username">Username (optional)</Label>
+                  <Label htmlFor="cred-pat-username">{t('settingsPanels.gitCredential.usernameOptional')}</Label>
                   <Input
                     id="cred-pat-username"
-                    placeholder="Auto-detected if empty"
+                    placeholder={t('settingsPanels.gitCredential.usernamePlaceholder')}
                     value={formData.username || ''}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     disabled={isSaving}
@@ -276,25 +278,25 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                         disabled={isSaving}
                       />
                       <div className="space-y-1">
-                        <Label htmlFor="cred-default-github-token">Use as default GitHub token</Label>
+                        <Label htmlFor="cred-default-github-token">{t('settingsPanels.gitCredential.useAsDefault')}</Label>
                         <p className="text-xs text-muted-foreground">
-                          Used for GH_TOKEN/GITHUB_TOKEN unless a repository below overrides it.
+                          {t('settingsPanels.gitCredential.useAsDefaultDescription')}
                         </p>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Use for specific repositories</Label>
+                      <Label>{t('settingsPanels.gitCredential.useForRepos')}</Label>
                       {repos.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">No repositories available.</p>
+                        <p className="text-xs text-muted-foreground">{t('settingsPanels.gitCredential.noRepos')}</p>
                       ) : (
                         <MultiSelect
                           value={selectedRepoIds.map(String)}
                           onChange={(values) => setSelectedRepoIds(values.map(Number))}
                           options={repoOptions}
-                          placeholder="Select repositories..."
-                          searchPlaceholder="Search repositories..."
-                          emptyMessage="No repositories found"
+                          placeholder={t('settingsPanels.gitCredential.selectRepositories')}
+                          searchPlaceholder={t('settingsPanels.gitCredential.searchRepositories')}
+                          emptyMessage={t('settingsPanels.gitCredential.noRepositoriesFound')}
                           disabled={isSaving}
                         />
                       )}
@@ -305,10 +307,10 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="cred-ssh-key">SSH Private Key *</Label>
+                  <Label htmlFor="cred-ssh-key">{t('settingsPanels.gitCredential.sshPrivateKey')}</Label>
                   <Textarea
                     id="cred-ssh-key"
-                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                    placeholder={t('settingsPanels.gitCredential.sshPrivateKeyPlaceholder')}
                     value={formData.sshPrivateKey || ''}
                     onChange={(e) => setFormData({ ...formData, sshPrivateKey: e.target.value })}
                     disabled={isSaving}
@@ -316,7 +318,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                     className="font-mono text-xs sm:text-sm"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Paste your private key content here
+                    {t('settingsPanels.gitCredential.pastePrivateKey')}
                   </p>
                 </div>
 
@@ -328,34 +330,34 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                     disabled={isSaving}
                     className="w-full"
                   >
-                    {showPassphraseInput ? 'Remove' : 'Add'} Passphrase
+                    {showPassphraseInput ? t('settingsPanels.gitCredential.removePassphrase') : t('settingsPanels.gitCredential.addPassphrase')}
                   </Button>
                 </div>
 
                 {showPassphraseInput && (
                   <div className="space-y-2">
-                    <Label htmlFor="cred-passphrase">Passphrase</Label>
+                    <Label htmlFor="cred-passphrase">{t('settingsPanels.gitCredential.passphrase')}</Label>
                     <Input
                       id="cred-passphrase"
                       type="password"
-                      placeholder="Enter passphrase for SSH key"
+                      placeholder={t('settingsPanels.gitCredential.passphrasePlaceholder')}
                       value={formData.passphrase || ''}
                       onChange={(e) => setFormData({ ...formData, passphrase: e.target.value })}
                       disabled={isSaving}
                       autoComplete="new-password"
                     />
                     <p className="text-xs text-muted-foreground">
-                      This passphrase will be required for each git operation
+                      {t('settingsPanels.gitCredential.passphraseDescription')}
                     </p>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="test-passphrase">Passphrase for Test (if protected)</Label>
+                  <Label htmlFor="test-passphrase">{t('settingsPanels.gitCredential.passphraseForTest')}</Label>
                   <Input
                     id="test-passphrase"
                     type="password"
-                    placeholder="Enter passphrase to test connection"
+                    placeholder={t('settingsPanels.gitCredential.passphraseForTestPlaceholder')}
                     value={testPassphrase}
                     onChange={(e) => setTestPassphrase(e.target.value)}
                     disabled={isTesting || isSaving}
@@ -371,14 +373,14 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                   className="w-full"
                 >
                   {isTesting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Test Connection
+                  {t('settingsPanels.gitCredential.testConnection')}
                 </Button>
 
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
-                  <p className="text-sm font-medium">Security Notice</p>
+                  <p className="text-sm font-medium">{t('settingsPanels.gitCredential.securityNotice')}</p>
                   <p className="text-xs mt-1">
-                    Your private key will be encrypted at rest. Never share it with anyone.
+                    {t('settingsPanels.gitCredential.securityNoticeDescription')}
                   </p>
                 </Alert>
               </>
@@ -394,7 +396,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
             disabled={isSaving}
             className="flex-1 sm:flex-none"
           >
-            Cancel
+            {t('settingsPanels.gitCredential.cancel')}
           </Button>
           <Button
             type="button"
@@ -405,7 +407,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
             className="flex-1 sm:flex-none"
           >
             {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {credential ? 'Update' : 'Add'}
+            {credential ? t('settingsPanels.gitCredential.update') : t('settingsPanels.gitCredential.add')}
           </Button>
         </DialogFooter>
       </DialogContent>

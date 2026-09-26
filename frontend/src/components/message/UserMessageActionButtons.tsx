@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { useUndoMessage } from '@/hooks/useUndoMessage'
 import { useMobile } from '@/hooks/useMobile'
+import { useI18n } from '@/lib/i18n'
 
 interface UserMessageActionButtonsProps {
   opcodeUrl: string
@@ -21,6 +22,7 @@ export const UserMessageActionButtons = memo(function UserMessageActionButtons({
   onUndo
 }: UserMessageActionButtonsProps) {
   const isMobile = useMobile()
+  const { t } = useI18n()
   const undoMessage = useUndoMessage({ 
     opcodeUrl, 
     sessionId, 
@@ -42,7 +44,7 @@ export const UserMessageActionButtons = memo(function UserMessageActionButtons({
         onClick={handleUndo}
         disabled={undoMessage.isPending}
         className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
-        title="Undo this message"
+        title={t('message.actions.undoThisMessage')}
       >
         {undoMessage.isPending ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />

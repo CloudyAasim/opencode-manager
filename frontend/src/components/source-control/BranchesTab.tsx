@@ -11,6 +11,7 @@ import { useGit } from '@/hooks/useGit'
 import { GIT_UI_COLORS } from '@/lib/git-status-styles'
 import { CreateWorktreeDialog } from '@/components/repo/CreateWorktreeDialog'
 import { invalidateRepoGitCaches, setRepoGitStatusCaches } from '@/lib/queryInvalidation'
+import { useI18n } from '@/lib/i18n'
 
 interface BranchesTabProps {
   repoId: number
@@ -18,6 +19,7 @@ interface BranchesTabProps {
 }
 
 export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [newBranchName, setNewBranchName] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -58,13 +60,13 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
       setRepoGitStatusCaches(queryClient, repoId, status)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false })
       refetch()
-      showToast.success(`Switched to branch: ${updatedRepo.currentBranch}`)
+      showToast.success(t('misc.branches.switched', { branch: updatedRepo.currentBranch }))
     },
     onError: (error) => {
       if (error instanceof GitAuthError) {
-        showToast.error('Authentication failed. Please update your Git token in Settings.')
+        showToast.error(t('misc.branches.authFailed'))
       } else {
-        showToast.error(error.message || 'Failed to switch branch')
+        showToast.error(error.message || t('misc.branches.switchFailed'))
       }
     },
   })
@@ -94,7 +96,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">Failed to load branches</p>
+        <p className="text-sm">{t('misc.branches.loadFailed')}</p>
         <p className="text-xs mt-1">{error.message}</p>
       </div>
     )
@@ -109,7 +111,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
         {isCreating ? (
           <div className="flex items-center gap-2">
             <Input
-              placeholder="New branch name..."
+              placeholder={t('misc.branches.newBranchPlaceholder')}
               value={newBranchName}
               onChange={(e) => setNewBranchName(e.target.value)}
               className="h-10 md:h-8 md:text-sm"
@@ -131,7 +133,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               {git.createBranch.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                'Create'
+                t('misc.common.create')
               )}
             </Button>
             <Button
@@ -143,14 +145,14 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                 setNewBranchName('')
               }}
             >
-              Cancel
+              {t('misc.common.cancel')}
             </Button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
             {hasBranches && (
               <Input
-                placeholder="Search branches..."
+                placeholder={t('misc.branches.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-10 md:h-8 md:text-sm flex-1 min-w-0"
@@ -161,10 +163,10 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               variant="outline"
               className="h-10 md:h-8 flex-shrink-0"
               onClick={() => setIsCreating(true)}
-              title="Create branch"
+              title={t('misc.branches.createBranch')}
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline ml-1">Branch</span>
+              <span className="hidden sm:inline ml-1">{t('misc.branches.branch')}</span>
             </Button>
             {repoUrl && (
               <Button
@@ -172,10 +174,10 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                 variant="outline"
                 className="h-10 md:h-8 flex-shrink-0"
                 onClick={() => setWorktreeDialogOpen(true)}
-                title="Create as a separate worktree workspace"
+                title={t('misc.branches.createWorktreeTitle')}
               >
                 <GitBranchPlus className="w-4 h-4" />
-                <span className="hidden sm:inline ml-1">Worktree</span>
+                <span className="hidden sm:inline ml-1">{t('misc.branches.worktree')}</span>
               </Button>
             )}
           </div>
@@ -212,7 +214,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                   )}
                   onClick={handleClick}
                   disabled={isCurrent || isCheckedOutElsewhere || switchBranchMutation.isPending}
-                  title={isCheckedOutElsewhere ? 'Branch is checked out in another worktree' : undefined}
+                  title={isCheckedOutElsewhere ? t('misc.branches.checkedOutElsewhere') : undefined}
                 >
                   {isRemote ? (
                     <Globe className="w-4 h-4 text-blue-500" />
@@ -221,10 +223,10 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                   )}
                   <span className="flex-1 text-sm truncate">{branch.name}</span>
                   {(isCheckedOutElsewhere || (isCurrent && isRepoWorktree)) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">worktree</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">{t('misc.branches.worktreeBadge')}</span>
                   )}
                   {branch.type === 'local' && !branch.upstream && !branch.isWorktree && !(isCurrent && isRepoWorktree) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">local</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t('misc.branches.localBadge')}</span>
                   )}
                   {isCurrent && <Check className={`w-4 h-4 ${GIT_UI_COLORS.current}`} />}
                 </button>
@@ -235,9 +237,9 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
           <div className="text-center py-12 text-muted-foreground">
             <GitBranch className="w-8 h-8 mx-auto mb-2 opacity-50" />
             {searchQuery.trim() ? (
-              <p className="text-sm">No branches match "{searchQuery.trim()}"</p>
+              <p className="text-sm">{t('misc.branches.noMatch', { query: searchQuery.trim() })}</p>
             ) : (
-              <p className="text-sm">No branches found</p>
+              <p className="text-sm">{t('misc.branches.noBranches')}</p>
             )}
           </div>
         )}

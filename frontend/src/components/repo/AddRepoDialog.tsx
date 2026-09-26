@@ -12,6 +12,7 @@ import { invalidateRepoListCaches } from '@/lib/queryInvalidation'
 import { getRepoBaseDirectoryName, getRepoDirectoryNameError, getRepoNameFromUrl, isSSHUrl, normalizeRepoUrlForCompare, sanitizeRepoDirectoryName } from '@opencode-manager/shared/utils'
 import type { DiscoverReposResponse } from '@opencode-manager/shared/types'
 import type { Repo } from '@/api/types'
+import { useI18n } from '@/lib/i18n'
 
 interface AddRepoDialogProps {
   open: boolean
@@ -19,6 +20,7 @@ interface AddRepoDialogProps {
 }
 
 export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
+  const { t } = useI18n()
   const [repoType, setRepoType] = useState<'remote' | 'local' | 'folder'>('remote')
   const [repoUrl, setRepoUrl] = useState('')
   const [localPath, setLocalPath] = useState('')
@@ -93,23 +95,23 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
 
       if (result.mode === 'discover') {
         const summary = [
-          result.discoveredCount > 0 ? `${result.discoveredCount} new` : null,
-          result.existingCount > 0 ? `${result.existingCount} existing` : null,
+          result.discoveredCount > 0 ? t('repo.addDialog.discovery.newCount', { n: result.discoveredCount }) : null,
+          result.existingCount > 0 ? t('repo.addDialog.discovery.existingCount', { n: result.existingCount }) : null,
         ].filter(Boolean).join(', ')
 
         if (result.errors.length > 0) {
-          showToast.warning('Repository discovery completed with issues', {
-            description: `${summary || 'No repos imported'}. ${result.errors[0]?.error || 'Some folders could not be imported.'}`,
+          showToast.warning(t('repo.addDialog.discovery.completedWithIssues'), {
+            description: `${summary || t('repo.addDialog.discovery.noReposImported')}. ${result.errors[0]?.error || t('repo.addDialog.discovery.someFoldersFailed')}`,
           })
         } else if (result.discoveredCount === 0 && result.existingCount === 0) {
-          showToast.info('No Git repositories found in that folder')
+          showToast.info(t('repo.addDialog.discovery.noneFound'))
         } else {
-          showToast.success('Repository discovery complete', {
+          showToast.success(t('repo.addDialog.discovery.complete'), {
             description: summary,
           })
         }
       } else {
-        showToast.success('Repository added')
+        showToast.success(t('repo.addDialog.added'))
       }
 
       onOpenChange(false)
@@ -144,41 +146,41 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
       <DialogContent mobileFullscreen mobileSwipeToClose className="content-start gap-0 sm:max-w-[500px] sm:max-h-[80vh] sm:h-auto sm:top-[50%] sm:translate-y-[-50%] bg-card border-border">
         <DialogHeader className="px-4 sm:px-6 pt-2 sm:pt-6 pb-2 sm:pb-3 h-fit">
           <DialogTitle className="text-xl text-foreground">
-            Add Repository
+            {t('repo.addRepository')}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 px-4 sm:px-6">
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Repository Type</label>
+            <label className="text-sm text-muted-foreground">{t('repo.addDialog.type')}</label>
             <Tabs value={repoType} onValueChange={(value) => setRepoType(value as 'remote' | 'local' | 'folder')}>
               <TabsList className="grid w-full grid-cols-3 bg-muted">
-                <TabsTrigger value="remote">Remote</TabsTrigger>
-                <TabsTrigger value="local">Local</TabsTrigger>
-                <TabsTrigger value="folder">Folder</TabsTrigger>
+                <TabsTrigger value="remote">{t('repo.addDialog.remote')}</TabsTrigger>
+                <TabsTrigger value="local">{t('repo.addDialog.local')}</TabsTrigger>
+                <TabsTrigger value="folder">{t('repo.addDialog.folder')}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
 
           {repoType === 'remote' ? (
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">Repository URL</label>
+              <label className="text-sm text-muted-foreground">{t('repo.addDialog.repositoryUrl')}</label>
               <Input
-                placeholder="owner/repo or https://github.com/user/repo.git"
+                placeholder={t('repo.addDialog.repositoryUrlPlaceholder')}
                 value={repoUrl}
                 onChange={(e) => handleRepoUrlChange(e.target.value)}
                 disabled={mutation.isPending}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[44px] text-base"
               />
               <p className="text-xs text-muted-foreground">
-                Full URL or shorthand format (owner/repo for GitHub)
+                {t('repo.addDialog.repositoryUrlHint')}
               </p>
             </div>
           ) : repoType === 'local' ? (
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">Local Path</label>
+              <label className="text-sm text-muted-foreground">{t('repo.addDialog.localPath')}</label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="my-local-project OR /absolute/path/to/git-repo"
+                  placeholder={t('repo.addDialog.localPathPlaceholder')}
                   value={localPath}
                   onChange={(e) => setLocalPath(e.target.value)}
                   disabled={mutation.isPending}
@@ -190,21 +192,21 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                   onClick={() => setPickerOpen(true)}
                   disabled={mutation.isPending}
                   className="min-h-[44px] shrink-0 border-border bg-muted px-3 text-muted-foreground hover:bg-accent"
-                  aria-label="Browse for folder"
+                  aria-label={t('repo.addDialog.browseForFolder')}
                 >
                   <FolderSearch className="h-4 w-4" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Directory name for a new repo, or an absolute path to link an existing Git repo
+                {t('repo.addDialog.localPathHint')}
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">Folder Path</label>
+              <label className="text-sm text-muted-foreground">{t('repo.addDialog.folderPath')}</label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="/absolute/path/to/projects"
+                  placeholder={t('repo.addDialog.folderPathPlaceholder')}
                   value={folderPath}
                   onChange={(e) => setFolderPath(e.target.value)}
                   disabled={mutation.isPending}
@@ -216,22 +218,22 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                   onClick={() => setPickerOpen(true)}
                   disabled={mutation.isPending}
                   className="min-h-[44px] shrink-0 border-border bg-muted px-3 text-muted-foreground hover:bg-accent"
-                  aria-label="Browse for folder"
+                  aria-label={t('repo.addDialog.browseForFolder')}
                 >
                   <FolderSearch className="h-4 w-4" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Scans the folder for nested Git repositories and links each one
+                {t('repo.addDialog.folderPathHint')}
               </p>
             </div>
           )}
 
           {showDirectoryName && (
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">Directory Name</label>
+              <label className="text-sm text-muted-foreground">{t('repo.addDialog.directoryName')}</label>
               <Input
-                placeholder="Auto-detected from URL"
+                placeholder={t('repo.addDialog.directoryNamePlaceholder')}
                 value={directoryName}
                 onChange={(e) => handleDirectoryNameChange(e.target.value)}
                 disabled={mutation.isPending}
@@ -243,25 +245,25 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                 </p>
               ) : directoryCollision ? (
                 <p className="text-xs text-amber-400">
-                  A repository named '{directoryName}' already exists.
+                  {t('repo.addDialog.directoryCollision', { name: directoryName })}
                   {directoryCollision.repoUrl && directoryCollision.repoUrl !== repoUrl
                     ? ` (${directoryCollision.repoUrl})`
                     : ''
                   }
-                  {' '}Choose a different directory name to clone this fork.
+                  {' '}{t('repo.addDialog.directoryCollisionChoose')}
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Custom directory name for the cloned repository
+                  {t('repo.addDialog.directoryNameHint')}
                 </p>
               )}
             </div>
           )}
           
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Branch (optional)</label>
+            <label className="text-sm text-muted-foreground">{t('repo.addDialog.branchOptional')}</label>
             <Input
-              placeholder="Uses default if empty"
+              placeholder={t('repo.addDialog.branchPlaceholder')}
               value={branch}
               onChange={(e) => setBranch(e.target.value)}
               disabled={mutation.isPending || repoType === 'folder'}
@@ -269,10 +271,10 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
             />
             <p className="text-xs text-muted-foreground">
               {repoType === 'folder' 
-                ? 'Links each repository on its current branch'
+                ? t('repo.addDialog.branchHintFolder')
                 : branch 
-                  ? `Uses '${branch}' branch`
-                  : 'Uses default branch'
+                  ? t('repo.addDialog.branchHintSelected', { branch })
+                  : t('repo.addDialog.branchHintDefault')
               }
             </p>
           </div>
@@ -289,10 +291,10 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
               />
               <div className="flex-1">
                 <label htmlFor="skip-ssh-verification" className="cursor-pointer text-sm text-foreground">
-                  Skip SSH host key verification
+                  {t('repo.addDialog.skipSshVerification')}
                 </label>
                 <p className="text-xs text-muted-foreground">
-                  Auto-accept the SSH host key for self-hosted or internal servers
+                  {t('repo.addDialog.skipSshVerificationHint')}
                 </p>
               </div>
             </div>
@@ -306,10 +308,10 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
             {mutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {repoType === 'local' ? 'Linking...' : repoType === 'folder' ? 'Discovering...' : 'Cloning...'}
+                {repoType === 'local' ? t('repo.addDialog.linking') : repoType === 'folder' ? t('repo.addDialog.discovering') : t('repo.cloning')}
               </>
             ) : (
-              repoType === 'folder' ? 'Discover Repositories' : 'Add Repository'
+              repoType === 'folder' ? t('repo.addDialog.discoverRepositories') : t('repo.addRepository')
             )}
           </Button>
           {mutation.isError && (
@@ -322,7 +324,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
       <DirectoryPickerDialog
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        title={repoType === 'folder' ? 'Select Folder to Scan' : 'Select Local Repository'}
+        title={repoType === 'folder' ? t('repo.addDialog.selectFolderToScan') : t('repo.addDialog.selectLocalRepository')}
         onSelect={(path) => {
           if (repoType === 'folder') {
             setFolderPath(path)

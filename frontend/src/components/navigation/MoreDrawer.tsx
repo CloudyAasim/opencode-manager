@@ -16,6 +16,7 @@ import { buildMoreItems } from './moreDrawerItems'
 import { useSwipeBack } from '@/hooks/useMobile'
 import { getRepoDisplayName } from '@/lib/utils'
 import { getPathWithReturnTo, isAssistantPath } from '@/lib/navigation'
+import { useI18n } from '@/lib/i18n'
 import type { components } from '@/api/opencode-types'
 
 type CommandType = components['schemas']['Command']
@@ -36,6 +37,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
   const { bind } = useSwipeBack(onClose, { enabled: isOpen, suspendsRouteSwipe: true })
   const { searchParams, updateParams } = useUrlParams()
   const { logout, user } = useAuth()
+  const { t } = useI18n()
   const { data: health } = useServerHealth()
   const isSessionDetail = /^\/repos\/\d+\/sessions\/[^/]+$/.test(location.pathname)
   const isAssistantRoute = isAssistantPath(location.pathname)
@@ -62,7 +64,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
 
   const currentBranch = repo?.currentBranch || repo?.branch
   const repoDisplayName = isAssistantRoute || isAssistantSession
-    ? 'Assistant'
+    ? t('navigation.assistant')
     : repo ? getRepoDisplayName(repo) : null
 
   const handleSettingsClick = () => {
@@ -125,11 +127,11 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
   const managerVersion = health?.opencodeManagerVersion
   const versionLabel = [
     opencodeVersion ? `v${opencodeVersion}` : null,
-    managerVersion ? `Manager v${managerVersion}` : null,
+    managerVersion ? t('navigation.managerVersion', { version: managerVersion }) : null,
   ].filter(Boolean).join(' · ')
 
   return (
-    <SideDrawer isOpen={isOpen} onClose={onClose} side="right" ariaLabel="More" widthClass="w-screen sm:w-[min(90vw,420px)]">
+    <SideDrawer isOpen={isOpen} onClose={onClose} side="right" ariaLabel={t('navigation.more')} widthClass="w-screen sm:w-[min(90vw,420px)]">
       <div ref={swipeRef} className="flex flex-col flex-1 min-h-0">
         <div className="flex flex-col flex-shrink-0 border-b border-border bg-background px-4 py-1.5">
           <div className="flex items-center justify-between gap-3 mb-2">
@@ -140,7 +142,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
               type="button"
               onClick={onClose}
               className="shrink-0 rounded-sm p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Close"
+              aria-label={t('navigation.close')}
             >
               <X className="h-5 w-5" />
             </button>
@@ -170,7 +172,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
                 aria-expanded={commandsOpen}
               >
                 <CommandIcon className="w-5 h-5 text-muted-foreground" />
-                <span className="font-medium text-foreground flex-1">Commands</span>
+                <span className="font-medium text-foreground flex-1">{t('navigation.commands')}</span>
                 {commandsOpen ? (
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 ) : (
@@ -200,7 +202,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left w-full"
               >
                 <FileText className="w-5 h-5 text-muted-foreground" />
-                <span className="font-medium text-foreground flex-1">Mention File</span>
+                <span className="font-medium text-foreground flex-1">{t('navigation.mentionFile')}</span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
@@ -221,7 +223,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left w-full"
             >
               <item.icon className="w-5 h-5 text-muted-foreground" />
-              <span className="font-medium text-foreground">{item.label}</span>
+              <span className="font-medium text-foreground">{item.labelKey ? t(item.labelKey) : item.label}</span>
             </button>
           ))}
         </SideDrawerContent>

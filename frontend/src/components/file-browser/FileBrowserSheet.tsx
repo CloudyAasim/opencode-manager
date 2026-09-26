@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useI18n } from '@/lib/i18n'
 
 interface FileBrowserSheetProps {
   isOpen: boolean
@@ -30,6 +31,7 @@ interface FileBrowserSheetProps {
 }
 
 export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose, basePath = '', repoName, repoId, initialSelectedFile, allowNavigateAboveBase = false, onFileSelect }: FileBrowserSheetProps) {
+  const { t } = useI18n()
   const normalizedBasePath = basePath || '.'
   const [isEditing, setIsEditing] = useState(false)
   const [displayPath, setDisplayPath] = useState<string>('/')
@@ -152,11 +154,11 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handleOpenDownloadDialog('directory')}>
                       <Download className="w-4 h-4 mr-2" />
-                      Current Directory
+                      {t('repo.download.currentDirectory')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleOpenDownloadDialog('repository')}>
                       <Download className="w-4 h-4 mr-2" />
-                      Entire Repository
+                      {t('repo.download.entireRepository')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -193,11 +195,11 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
         open={downloadDialog !== null}
         onOpenChange={(open) => !open && setDownloadDialog(null)}
         onDownload={downloadDialog?.type === 'directory' ? handleDownloadDirectory : handleDownloadRepo}
-        title={downloadDialog?.type === 'directory' ? 'Download Current Directory' : 'Download Repository'}
+        title={downloadDialog?.type === 'directory' ? t('repo.download.currentDirectoryTitle') : t('repo.download.repositoryTitle')}
         description={downloadDialog?.type === 'directory'
-          ? 'This will create a ZIP archive of the current directory and all its contents.'
-          : 'This will create a ZIP archive of the entire repository.'}
-        itemName={downloadDialog?.type === 'directory' ? currentPath.split('/').pop() || 'Directory' : repoName || 'Repository'}
+          ? t('repo.download.currentDirectoryDescription')
+          : t('repo.download.repositoryDescription')}
+        itemName={downloadDialog?.type === 'directory' ? currentPath.split('/').pop() || t('repo.download.directoryFallback') : repoName || t('repo.download.repositoryFallback')}
         targetPath={downloadDialog?.type === 'directory' ? currentPath : basePath}
       />
     </div>

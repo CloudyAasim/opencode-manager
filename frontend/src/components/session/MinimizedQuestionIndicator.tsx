@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import type { QuestionRequest } from '@/api/types'
+import { useI18n } from '@/lib/i18n'
 
 interface MinimizedQuestionIndicatorProps {
   question: QuestionRequest
@@ -12,6 +13,7 @@ export function MinimizedQuestionIndicator({
   onRestore, 
   onDismiss 
 }: MinimizedQuestionIndicatorProps) {
+  const { t } = useI18n()
   const questionCount = question.questions.length
   const firstQuestionHeader = question.questions[0]?.header
   
@@ -23,8 +25,8 @@ export function MinimizedQuestionIndicator({
           className="flex-1 text-left text-xs font-semibold text-orange-600 dark:text-white"
         >
           {questionCount === 1 
-            ? `Question: ${firstQuestionHeader || 'Question pending'}`
-            : `${questionCount} questions pending`
+            ? t('session.question.minimizedQuestion', { header: firstQuestionHeader || t('session.question.minimizedPending') })
+            : t('session.question.minimizedCount', { count: questionCount })
           }
         </button>
         <button

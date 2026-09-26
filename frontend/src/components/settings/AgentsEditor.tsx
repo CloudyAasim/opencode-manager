@@ -7,6 +7,7 @@ import { SettingsList, SettingsListRow } from '@/components/ui/settings-list'
 import { AgentDialog } from './AgentDialog'
 import { UploadFolderButton } from './UploadFolderButton'
 import { DirectoryFilesList } from './DirectoryFilesList'
+import { useI18n } from '@/lib/i18n'
 import type { OpenCodeDirectoryFileInfo } from '@/api/types/settings'
 
 interface Agent {
@@ -34,6 +35,7 @@ interface AgentsEditorProps {
 }
 
 export function AgentsEditor({ agents, directoryAgents = [], onChange }: AgentsEditorProps) {
+  const { t } = useI18n()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingAgent, setEditingAgent] = useState<{ name: string; agent: Agent } | null>(null)
   const hasAgents = Object.keys(agents).length > 0 || directoryAgents.length > 0
@@ -73,7 +75,7 @@ export function AgentsEditor({ agents, directoryAgents = [], onChange }: AgentsE
           <DialogTrigger asChild>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-1" />
-              Add Agent
+              {t('settingsPanels.agentsEditor.addAgent')}
             </Button>
           </DialogTrigger>
           <AgentDialog
@@ -86,8 +88,8 @@ export function AgentsEditor({ agents, directoryAgents = [], onChange }: AgentsE
 
       <SettingsList
         isEmpty={!hasAgents}
-        emptyTitle="No agents configured"
-        emptyHint="Add your first agent to get started."
+        emptyTitle={t('settingsPanels.agentsEditor.emptyTitle')}
+        emptyHint={t('settingsPanels.agentsEditor.emptyHint')}
         maxHeightClassName="max-h-[calc(100dvh-300px)] sm:max-h-[420px]"
       >
         {Object.entries(agents).map(([name, agent]) => (
@@ -98,13 +100,13 @@ export function AgentsEditor({ agents, directoryAgents = [], onChange }: AgentsE
             badges={
               <>
                 {agent.mode && <Badge variant="outline" className="shrink-0">{agent.mode}</Badge>}
-                {agent.disable && <Badge variant="secondary" className="shrink-0">Disabled</Badge>}
+                {agent.disable && <Badge variant="secondary" className="shrink-0">{t('settingsPanels.agentsEditor.disabled')}</Badge>}
               </>
             }
             onClick={() => startEdit(name, agent)}
-            primaryAction={{ label: 'Edit', onClick: () => startEdit(name, agent) }}
-            actions={[{ label: 'Delete', destructive: true, onClick: () => deleteAgent(name) }]}
-            actionsLabel={`Actions for ${name}`}
+            primaryAction={{ label: t('settingsPanels.agentsEditor.edit'), onClick: () => startEdit(name, agent) }}
+            actions={[{ label: t('settingsPanels.agentsEditor.delete'), destructive: true, onClick: () => deleteAgent(name) }]}
+            actionsLabel={t('settingsPanels.agentsEditor.actionsFor', { name })}
           />
         ))}
         <DirectoryFilesList kind="agents" files={directoryAgents} />

@@ -1,4 +1,5 @@
 import { useContextUsage } from '@/hooks/useContextUsage'
+import { useI18n } from '@/lib/i18n'
 
 interface ContextUsageIndicatorProps {
   opcodeUrl: string | null
@@ -15,22 +16,23 @@ const getUsageTextColor = (percentage: number) => {
 }
 
 export function ContextUsageIndicator({ opcodeUrl, sessionID, directory, isConnected, isReconnecting }: ContextUsageIndicatorProps) {
+  const { t } = useI18n()
   const { totalTokens, contextLimit, usagePercentage, isLoading } = useContextUsage(opcodeUrl, sessionID, directory)
 
   if (isLoading) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Loading...</span>
+        <span className="text-xs text-muted-foreground">{t('session.contextUsage.loading')}</span>
       </div>
     )
   }
 
   if (isReconnecting) {
-    return <span className="text-xs text-yellow-700 dark:text-yellow-400 font-medium">Reconnecting...</span>
+    return <span className="text-xs text-yellow-700 dark:text-yellow-400 font-medium">{t('session.contextUsage.reconnecting')}</span>
   }
 
   if (!isConnected) {
-    return <span className="text-xs text-muted-foreground font-medium">Disconnected</span>
+    return <span className="text-xs text-muted-foreground font-medium">{t('session.contextUsage.disconnected')}</span>
   }
 
   const tokenText = contextLimit

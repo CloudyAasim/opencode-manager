@@ -17,6 +17,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils";
 import type { GitFileStatusType } from "@/types/git";
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from "@/lib/git-status-styles";
+import { useI18n } from '@/lib/i18n';
 
 interface FileDiffViewProps {
   repoId: number;
@@ -224,6 +225,7 @@ export function FileDiffView({
   onOpenFile,
   isMobile = false,
 }: FileDiffViewProps) {
+  const { t } = useI18n();
   const workingDiff = useFileDiff(repoId, filePath, includeStaged);
   const commitDiff = useCommitFileDiff(repoId, commitHash, filePath);
   const { data: diffData, isLoading, error } = commitHash ? commitDiff : workingDiff;
@@ -245,12 +247,12 @@ export function FileDiffView({
     return (
       <div className="flex flex-col items-center justify-center h-full py-8 text-muted-foreground">
         <FileText className="w-8 h-8 mb-2 opacity-50" />
-        <p className="text-sm">Failed to load diff</p>
+        <p className="text-sm">{t('repo.fileBrowser.diff.loadFailed')}</p>
         <p className="text-xs mt-1">{error.message}</p>
         {onBack && (
           <Button variant="ghost" size="sm" onClick={onBack} className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {t('repo.back')}
           </Button>
         )}
       </div>
@@ -332,7 +334,7 @@ export function FileDiffView({
           {diffData.diff && (
             <CopyButton
               content={diffData.diff || ""}
-              title="Copy diff"
+              title={t('repo.fileBrowser.diff.copy')}
               iconSize="sm"
               variant="ghost"
               className="flex-shrink-0"
@@ -354,11 +356,11 @@ export function FileDiffView({
       <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         {diffData.isBinary ? (
           <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20">
-            <p className="text-sm">Binary file - cannot display diff</p>
+            <p className="text-sm">{t('repo.fileBrowser.diff.binary')}</p>
           </div>
         ) : !diffData.diff ? (
           <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20">
-            <p className="text-sm">No changes to display</p>
+            <p className="text-sm">{t('repo.fileBrowser.diff.noChanges')}</p>
           </div>
         ) : (
           <div className="border-t border-border/30">

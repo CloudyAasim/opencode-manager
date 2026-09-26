@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { showToast } from "@/lib/toast";
+import { useI18n } from '@/lib/i18n'
 
 interface ResetPermissionsDialogProps {
   open: boolean;
@@ -23,14 +24,15 @@ export function ResetPermissionsDialog({
   onOpenChange,
   repoId,
 }: ResetPermissionsDialogProps) {
+  const { t } = useI18n();
   const resetPermissionsMutation = useMutation({
     mutationFn: () => resetRepoPermissions(repoId),
     onSuccess: () => {
-      showToast.success("Permissions reset successfully");
+      showToast.success(t('repo.permissions.resetSuccess'));
       onOpenChange(false);
     },
     onError: () => {
-      showToast.error("Failed to reset permissions");
+      showToast.error(t('repo.permissions.resetFailed'));
     },
   });
 
@@ -38,11 +40,9 @@ export function ResetPermissionsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Reset Permissions</DialogTitle>
+          <DialogTitle>{t('repo.permissions.resetTitle')}</DialogTitle>
           <DialogDescription>
-            This will clear all "Allow Always" permissions for this repository.
-            You will be prompted again for permission when opencode needs to perform
-            actions like running commands or editing files.
+            {t('repo.permissions.resetDescription')}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -51,7 +51,7 @@ export function ResetPermissionsDialog({
             onClick={() => onOpenChange(false)}
             disabled={resetPermissionsMutation.isPending}
           >
-            Cancel
+            {t('repo.cancel')}
           </Button>
           <Button
             variant="destructive"
@@ -61,10 +61,10 @@ export function ResetPermissionsDialog({
             {resetPermissionsMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Resetting...
+                {t('repo.permissions.resetting')}
               </>
             ) : (
-              "Reset Permissions"
+              t('repo.permissions.resetConfirm')
             )}
           </Button>
         </DialogFooter>

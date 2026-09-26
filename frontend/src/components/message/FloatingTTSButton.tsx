@@ -4,6 +4,7 @@ import { useTTS } from '@/hooks/useTTS'
 import { useSettings } from '@/hooks/useSettings'
 import { showToast } from '@/lib/toast'
 import { DEFAULT_TTS_CONFIG } from '@opencode-manager/shared'
+import { useI18n } from '@/lib/i18n'
 
 interface FloatingTTSButtonProps {
   messageId: string
@@ -15,6 +16,7 @@ const LONG_PRESS_DURATION = 500
 export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps) {
   const { speakMessage, stop, isPlaying, isLoading } = useTTS()
   const { preferences, updateSettings } = useSettings()
+  const { t } = useI18n()
 
   const autoPlay = preferences?.tts?.autoPlay ?? false
   const [isLongPressVisual, setIsLongPressVisual] = useState(false)
@@ -40,12 +42,12 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
       didLongPressFireRef.current = true
       setIsLongPressVisual(true)
       updateSettings({ tts: { ...(preferences?.tts ?? DEFAULT_TTS_CONFIG), autoPlay: nextAutoPlay } })
-      showToast.info(nextAutoPlay ? 'Auto-play enabled' : 'Auto-play disabled', {
+      showToast.info(nextAutoPlay ? t('message.tts.autoPlayEnabled') : t('message.tts.autoPlayDisabled'), {
         id: 'tts-autoplay-toggle',
         duration: 1800,
       })
     }, LONG_PRESS_DURATION)
-  }, [autoPlay, updateSettings, preferences?.tts, clearLongPressTimer])
+  }, [autoPlay, updateSettings, preferences?.tts, clearLongPressTimer, t])
 
   const handlePointerUp = useCallback(() => {
     clearLongPressTimer()
@@ -76,11 +78,14 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
 
   const showStop = isAnyPlaybackActive
   const pillTitle = showStop
-    ? 'Stop playback'
+    ? t('message.actions.stopPlayback')
     : hasContent
-      ? 'Play latest reply'
-      : 'TTS controls'
-  const pillAriaLabel = `${pillTitle}. ${autoPlay ? 'Auto-play enabled.' : 'Auto-play disabled.'} hold to toggle auto-play`
+      ? t('message.tts.playLatestReply')
+      : t('message.tts.controls')
+  const pillAriaLabel = t('message.tts.ariaLabel', {
+    title: pillTitle,
+    autoPlay: autoPlay ? t('message.tts.autoPlayEnabledState') : t('message.tts.autoPlayDisabledState'),
+  })
   const buttonToneClasses = showStop
     ? 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-red-600 to-red-700 border border-red-500/60 shadow-red-500/30 ring-red-500/20 hover:ring-red-500/40 text-white'
     : autoPlay

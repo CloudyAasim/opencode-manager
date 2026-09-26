@@ -3,12 +3,14 @@ import { Loader2, ArrowUpCircle, RotateCcw, History } from 'lucide-react'
 import { useServerHealth } from '@/hooks/useServerHealth'
 import { useOpenCodeServerActions } from '@/hooks/useOpenCodeServerActions'
 import { RestartServerDialog } from './RestartServerDialog'
+import { useI18n } from '@/lib/i18n'
 
 interface ServerHealthStatusProps {
   onOpenVersionDialog?: () => void
 }
 
 export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusProps) {
+  const { t } = useI18n()
   const { data: health } = useServerHealth()
   const {
     restartServerMutation,
@@ -25,7 +27,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
     return (
       <div className="flex items-center gap-2">
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Loading server status...</span>
+        <span className="text-sm text-muted-foreground">{t('settingsPanels.serverHealth.loading')}</span>
       </div>
     )
   }
@@ -38,7 +40,9 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className={`h-3 w-3 rounded-full ${isUnhealthy ? 'bg-destructive animate-pulse' : 'bg-green-500'}`} />
           <p className="font-medium text-sm">
-            Server Status: {isUnhealthy ? 'Unhealthy' : 'Healthy'}
+            {t('settingsPanels.serverHealth.label', {
+              status: isUnhealthy ? t('settingsPanels.serverHealth.unhealthy') : t('settingsPanels.serverHealth.healthy'),
+            })}
           </p>
           {health.error && (
             <p className="text-xs text-destructive">
@@ -69,7 +73,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             ) : (
               <ArrowUpCircle className="h-3 w-3 sm:h-4 sm:w-4" />
             )}
-            <span className="text-xs sm:text-sm">Update</span>
+            <span className="text-xs sm:text-sm">{t('settingsPanels.serverHealth.update')}</span>
           </Button>
           <Button
             variant="secondary"
@@ -83,7 +87,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             ) : (
               <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
             )}
-            <span className="text-xs sm:text-sm">Restart</span>
+            <span className="text-xs sm:text-sm">{t('settingsPanels.serverHealth.restart')}</span>
           </Button>
           <Button
             variant="secondary"
@@ -92,7 +96,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             onClick={onOpenVersionDialog}
           >
             <History className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm">Versions</span>
+            <span className="text-xs sm:text-sm">{t('settingsPanels.serverHealth.versions')}</span>
           </Button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from 'react'
 import type { components } from '@/api/opencode-types'
 import { RefreshCw, AlertTriangle } from 'lucide-react'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
+import { useI18n } from '@/lib/i18n'
 
 type RetryPartType = components['schemas']['RetryPart']
 
@@ -10,6 +11,7 @@ interface RetryPartProps {
 }
 
 export const RetryPart = memo(function RetryPart({ part }: RetryPartProps) {
+  const { t } = useI18n()
   const sessionStatus = useSessionStatusForSession(part.sessionID)
   const nextTimestamp = sessionStatus.type === 'retry' ? sessionStatus.next : 0
   const initialCountdown = sessionStatus.type === 'retry' && nextTimestamp > 0
@@ -34,7 +36,7 @@ export const RetryPart = memo(function RetryPart({ part }: RetryPartProps) {
     return () => clearInterval(timer)
   }, [sessionStatus.type, nextTimestamp])
   
-  const errorMessage = part.error?.data?.message || 'An error occurred'
+  const errorMessage = part.error?.data?.message || t('message.retry.errorFallback')
   
   return (
     <div className="flex items-center gap-3 p-3 my-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
@@ -47,15 +49,15 @@ export const RetryPart = memo(function RetryPart({ part }: RetryPartProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-            Retry attempt {part.attempt}
+            {t('message.retry.attempt', { attempt: part.attempt })}
           </span>
           {countdown > 0 ? (
             <span className="text-xs text-amber-500/80">
-              (retrying in {countdown}s)
+              {t('message.retry.retryingIn', { countdown })}
             </span>
           ) : (
             <span className="text-xs text-amber-500/80">
-              (retrying...)
+              {t('message.retry.retrying')}
             </span>
           )}
         </div>

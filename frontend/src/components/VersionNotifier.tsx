@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { showToast } from '@/lib/toast'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
+import { useI18n } from '@/lib/i18n'
 
 export function VersionNotifier() {
   const { data, isSuccess } = useVersionCheck()
+  const { t } = useI18n()
   const hasNotifiedRef = useRef(false)
 
   useEffect(() => {
@@ -11,16 +13,16 @@ export function VersionNotifier() {
 
     if (data.updateAvailable && data.latestVersion && data.releaseUrl) {
       hasNotifiedRef.current = true
-      showToast.info(`OpenCode Manager v${data.latestVersion} is available`, {
-        description: 'A new version is ready to install.',
+      showToast.info(t('misc.version.updateAvailable', { version: data.latestVersion }), {
+        description: t('misc.version.newVersionReady'),
         action: {
-          label: 'View Release',
+          label: t('misc.version.viewRelease'),
           onClick: () => window.open(data.releaseUrl ?? '', '_blank'),
         },
         duration: 10000,
       })
     }
-  }, [isSuccess, data])
+  }, [isSuccess, data, t])
 
   return null
 }

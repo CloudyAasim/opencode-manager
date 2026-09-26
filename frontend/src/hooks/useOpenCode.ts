@@ -159,7 +159,7 @@ export const useMessages = (opcodeUrl: string | null | undefined, sessionID: str
     refetchOnReconnect: true,
     staleTime: 30000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: opts?.fallbackPoll ? 5000 : undefined,
+    refetchInterval: opts?.fallbackPoll ? 15000 : undefined,
     retry: (failureCount, error) => !(error instanceof FetchError && error.statusCode === 404) && failureCount < 3,
   });
 };

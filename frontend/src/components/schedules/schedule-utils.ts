@@ -1,40 +1,41 @@
 import cronstrue from 'cronstrue'
 import { formatDistanceToNow } from 'date-fns'
+import type { TFunction } from 'i18next'
 import type { CreateScheduleJobRequest, ScheduleJob, ScheduleRun, UpdateScheduleJobRequest } from '@opencode-manager/shared/types'
 
 export const intervalOptions = [
-  { label: '15m', value: 15 },
-  { label: '30m', value: 30 },
-  { label: '1h', value: 60 },
-  { label: '4h', value: 240 },
-  { label: '1d', value: 1440 },
+  { labelKey: 'schedules.timing.intervalOptions.15', value: 15 },
+  { labelKey: 'schedules.timing.intervalOptions.30', value: 30 },
+  { labelKey: 'schedules.timing.intervalOptions.60', value: 60 },
+  { labelKey: 'schedules.timing.intervalOptions.240', value: 240 },
+  { labelKey: 'schedules.timing.intervalOptions.1440', value: 1440 },
 ]
 
 export const cronPresetOptions = [
-  { label: 'Weekdays 9 AM', value: '0 9 * * 1-5' },
-  { label: 'Daily 9 AM', value: '0 9 * * *' },
-  { label: 'Twice daily', value: '0 9,17 * * *' },
-  { label: 'Mondays 8 AM', value: '0 8 * * 1' },
+  { labelKey: 'schedules.timing.cronPresets.weekdays9am', value: '0 9 * * 1-5' },
+  { labelKey: 'schedules.timing.cronPresets.daily9am', value: '0 9 * * *' },
+  { labelKey: 'schedules.timing.cronPresets.twiceDaily', value: '0 9,17 * * *' },
+  { labelKey: 'schedules.timing.cronPresets.mondays8am', value: '0 8 * * 1' },
 ]
 
 export const schedulePresetOptions = [
-  { label: 'Interval', value: 'interval' },
-  { label: 'Hourly', value: 'hourly' },
-  { label: 'Daily', value: 'daily' },
-  { label: 'Weekdays', value: 'weekdays' },
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Monthly', value: 'monthly' },
-  { label: 'Advanced', value: 'advanced' },
+  { labelKey: 'schedules.timing.presets.interval', value: 'interval' },
+  { labelKey: 'schedules.timing.presets.hourly', value: 'hourly' },
+  { labelKey: 'schedules.timing.presets.daily', value: 'daily' },
+  { labelKey: 'schedules.timing.presets.weekdays', value: 'weekdays' },
+  { labelKey: 'schedules.timing.presets.weekly', value: 'weekly' },
+  { labelKey: 'schedules.timing.presets.monthly', value: 'monthly' },
+  { labelKey: 'schedules.timing.presets.advanced', value: 'advanced' },
 ] as const
 
 export const weekdayOptions = [
-  { label: 'Mon', value: '1' },
-  { label: 'Tue', value: '2' },
-  { label: 'Wed', value: '3' },
-  { label: 'Thu', value: '4' },
-  { label: 'Fri', value: '5' },
-  { label: 'Sat', value: '6' },
-  { label: 'Sun', value: '0' },
+  { labelKey: 'schedules.timing.weekdays.1', value: '1' },
+  { labelKey: 'schedules.timing.weekdays.2', value: '2' },
+  { labelKey: 'schedules.timing.weekdays.3', value: '3' },
+  { labelKey: 'schedules.timing.weekdays.4', value: '4' },
+  { labelKey: 'schedules.timing.weekdays.5', value: '5' },
+  { labelKey: 'schedules.timing.weekdays.6', value: '6' },
+  { labelKey: 'schedules.timing.weekdays.0', value: '0' },
 ] as const
 
 export type SchedulePreset = typeof schedulePresetOptions[number]['value']
@@ -220,22 +221,22 @@ export function buildCronExpressionFromPreset(input: {
   }
 }
 
-export function formatIntervalLabel(intervalMinutes: number | null): string {
+export function formatIntervalLabel(t: TFunction, intervalMinutes: number | null): string {
   if (!intervalMinutes) {
-    return 'Custom interval'
+    return t('schedules.interval.custom')
   }
 
   if (intervalMinutes % 1440 === 0) {
     const days = intervalMinutes / 1440
-    return `Every ${days} day${days === 1 ? '' : 's'}`
+    return t('schedules.interval.everyDay', { count: days })
   }
 
   if (intervalMinutes % 60 === 0) {
     const hours = intervalMinutes / 60
-    return `Every ${hours} hour${hours === 1 ? '' : 's'}`
+    return t('schedules.interval.everyHour', { count: hours })
   }
 
-  return `Every ${intervalMinutes} minute${intervalMinutes === 1 ? '' : 's'}`
+  return t('schedules.interval.everyMinute', { count: intervalMinutes })
 }
 
 export function formatCronHumanText(cronExpression: string | null): string | null {
@@ -253,23 +254,23 @@ export function formatCronHumanText(cronExpression: string | null): string | nul
   }
 }
 
-export function formatScheduleSummary(job: ScheduleJob): string {
+export function formatScheduleSummary(t: TFunction, job: ScheduleJob): string {
   if (job.scheduleMode === 'cron') {
-    return `${formatCronHumanText(job.cronExpression) ?? (job.cronExpression ?? 'Custom cron')}${job.timezone ? ` - ${job.timezone}` : ''}`
+    return `${formatCronHumanText(job.cronExpression) ?? (job.cronExpression ?? t('schedules.schedule.customCron'))}${job.timezone ? ` - ${job.timezone}` : ''}`
   }
 
-  return formatIntervalLabel(job.intervalMinutes)
+  return formatIntervalLabel(t, job.intervalMinutes)
 }
 
-export function formatScheduleShortLabel(job: ScheduleJob): string {
+export function formatScheduleShortLabel(t: TFunction, job: ScheduleJob): string {
   if (job.scheduleMode === 'cron') {
-    return 'Cron schedule'
+    return t('schedules.schedule.cronSchedule')
   }
 
-  return formatIntervalLabel(job.intervalMinutes)
+  return formatIntervalLabel(t, job.intervalMinutes)
 }
 
-export function formatDraftScheduleSummary(input: {
+export function formatDraftScheduleSummary(t: TFunction, input: {
   preset: SchedulePreset
   intervalMinutes: string
   timeOfDay: string
@@ -281,7 +282,7 @@ export function formatDraftScheduleSummary(input: {
 }): string {
   if (input.preset === 'interval') {
     const parsedInterval = Number.parseInt(input.intervalMinutes, 10)
-    return formatIntervalLabel(Number.isNaN(parsedInterval) ? null : parsedInterval)
+    return formatIntervalLabel(t, Number.isNaN(parsedInterval) ? null : parsedInterval)
   }
 
   const builtCronExpression = buildCronExpressionFromPreset(input)
@@ -289,7 +290,7 @@ export function formatDraftScheduleSummary(input: {
 
   return builtCronExpression
     ? `${humanText ?? builtCronExpression} - ${input.timezone.trim() || 'UTC'}`
-    : 'Choose a schedule'
+    : t('schedules.schedule.chooseSchedule')
 }
 
 export function toUpdateScheduleRequest(data: CreateScheduleJobRequest): UpdateScheduleJobRequest {
@@ -313,9 +314,9 @@ export function toUpdateScheduleRequest(data: CreateScheduleJobRequest): UpdateS
   }
 }
 
-export function formatTimestamp(value: number | null): string {
+export function formatTimestamp(t: TFunction, value: number | null): string {
   if (!value) {
-    return 'Never'
+    return t('schedules.time.never')
   }
 
   return `${new Date(value).toLocaleString()} (${formatDistanceToNow(value, { addSuffix: true })})`

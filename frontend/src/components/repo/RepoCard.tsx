@@ -4,6 +4,7 @@ import { Loader2, GitBranch, FolderOpen, AlertCircle } from "lucide-react";
 import { getRepoDisplayName } from "@/lib/utils";
 import type { GitStatusResponse } from "@/types/git"
 import { RepoRowActions } from "./RepoRowActions"
+import { useI18n } from '@/lib/i18n'
 
 interface RepoCardProps {
   repo: {
@@ -45,6 +46,7 @@ export function RepoCard({
   hasSelectedRepos = false,
   selectionMode = false,
 }: RepoCardProps) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [actionsOpen, setActionsOpen] = useState(false);
 
@@ -109,7 +111,7 @@ export function RepoCard({
               {isCloning ? (
                 <span className="flex items-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
-                  Cloning...
+                  {t('repo.cloning')}
                 </span>
               ) : (
                 <>
@@ -123,7 +125,7 @@ export function RepoCard({
                       <span className="text-xs whitespace-nowrap">
                         {unstagedCount > 0 && unstagedCount}
                         {unstagedCount > 0 && stagedCount > 0 && "/"}
-                        {stagedCount > 0 && `${stagedCount}s`}
+                        {stagedCount > 0 && t('repo.card.stagedSuffix', { count: stagedCount })}
                       </span>
                     </span>
                   )}

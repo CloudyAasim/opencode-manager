@@ -53,6 +53,7 @@ import { SessionTodoDisplay } from "@/components/message/SessionTodoDisplay";
 import { useDialogParam } from "@/hooks/useDialogParam";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/components/navigation/SessionMoreButton";
+import { useI18n } from "@/lib/i18n";
 
 const compareMessageIds = (id1: string, id2: string): number => {
   const num1 = parseInt(id1, 10)
@@ -77,6 +78,7 @@ function SessionRouteFallback({ message, backTo, backLabel }: { message: string;
 }
 
 export function SessionDetail() {
+  const { t } = useI18n();
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -269,9 +271,9 @@ export function SessionDetail() {
         navigate(`/repos/${repoId}/sessions/${newSession.id}${sessionRouteSuffix}`);
       }
     } catch {
-      showToast.error('Failed to create new session');
+      showToast.error(t('session.actions.createFailed'));
     }
-  }, [createSession, navigate, repoId, sessionRouteSuffix]);
+  }, [createSession, navigate, repoId, sessionRouteSuffix, t]);
 
   useSidebarAction('new-session', () => {
     handleNewSession();
@@ -280,19 +282,20 @@ export function SessionDetail() {
   const handleCompact = useCallback(async () => {
     if (!opcodeUrl || !sessionId) return;
     if (!model?.providerID || !model?.modelID) {
-      showToast.error('No model selected. Please select a provider and model first.');
+      showToast.error(t('session.actions.noModel'));
       return;
     }
 
-    showToast.loading('Compacting session...', { id: `compact-${sessionId}` });
+    showToast.loading(t('session.actions.compacting'), { id: `compact-${sessionId}` });
 
     try {
       const client = createOpenCodeClient(opcodeUrl, sessionDirectory);
       await client.summarizeSession(sessionId, model.providerID, model.modelID);
     } catch (error) {
-      showToast.error(`Compact failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : t('session.actions.unknownError');
+      showToast.error(t('session.actions.compactFailed', { error: message }));
     }
-  }, [opcodeUrl, sessionId, model, sessionDirectory]);
+  }, [opcodeUrl, sessionId, model, sessionDirectory, t]);
 
   const handleUndo = useCallback(async () => {
     if (!opcodeUrl || !sessionId) return;
@@ -300,9 +303,10 @@ export function SessionDetail() {
       const client = createOpenCodeClient(opcodeUrl, sessionDirectory);
       await client.sendCommand(sessionId, { command: 'undo', arguments: '' });
     } catch (error) {
-      showToast.error(`Undo failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : t('session.actions.unknownError');
+      showToast.error(t('session.actions.undoFailed', { error: message }));
     }
-  }, [opcodeUrl, sessionId, sessionDirectory]);
+  }, [opcodeUrl, sessionId, sessionDirectory, t]);
 
   const handleRedo = useCallback(async () => {
     if (!opcodeUrl || !sessionId) return;
@@ -310,9 +314,10 @@ export function SessionDetail() {
       const client = createOpenCodeClient(opcodeUrl, sessionDirectory);
       await client.sendCommand(sessionId, { command: 'redo', arguments: '' });
     } catch (error) {
-      showToast.error(`Redo failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : t('session.actions.unknownError');
+      showToast.error(t('session.actions.redoFailed', { error: message }));
     }
-  }, [opcodeUrl, sessionId, sessionDirectory]);
+  }, [opcodeUrl, sessionId, sessionDirectory, t]);
 
   const handleFork = useCallback(async () => {
     if (!opcodeUrl || !sessionId) return;
@@ -321,12 +326,13 @@ export function SessionDetail() {
       const forkedSession = await client.forkSession(sessionId);
       if (forkedSession?.id) {
         navigate(`/repos/${repoId}/sessions/${forkedSession.id}${sessionRouteSuffix}`);
-        showToast.success('Session forked');
+        showToast.success(t('session.actions.forked'));
       }
     } catch (error) {
-      showToast.error(`Fork failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : t('session.actions.unknownError');
+      showToast.error(t('session.actions.forkFailed', { error: message }));
     }
-  }, [opcodeUrl, sessionId, sessionDirectory, navigate, repoId, sessionRouteSuffix]);
+  }, [opcodeUrl, sessionId, sessionDirectory, navigate, repoId, sessionRouteSuffix, t]);
 
   const handleCloseSession = useCallback(() => {
     const tab = new URLSearchParams(location.search).get('repoTab') ?? undefined;
@@ -415,15 +421,15 @@ export function SessionDetail() {
   const handleExportSession = useCallback(async () => {
     const data = getMessagesWithParts()
     if (!data || !session) {
-      showToast.error('No session data to export')
+      showToast.error(t('session.actions.noDataToExport'))
       return
     }
     
     const { filename, content } = exportSession(data, session)
     if (await downloadMarkdown(content, filename)) {
-      showToast.success(`Exported to ${filename}`)
+      showToast.success(t('session.actions.exportedTo', { filename }))
     }
-  }, [getMessagesWithParts, session]);
+  }, [getMessagesWithParts, session, t]);
 
   const handleUndoMessage = useCallback((restoredPrompt: string) => {
     promptInputRef.current?.setPromptValue(restoredPrompt)
@@ -446,29 +452,29 @@ export function SessionDetail() {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-background">
         <div className="flex flex-col items-center gap-2">
           <div className="w-8 h-8 animate-spin rounded-full border-2 border-muted border-t-foreground" />
-          <span className="text-muted-foreground">Loading repository...</span>
+          <span className="text-muted-foreground">{t('session.route.loadingRepository')}</span>
         </div>
       </div>
     );
   }
 
   if (!isAssistantSession && !repo) {
-    return <SessionRouteFallback message="Repository not found" backTo="/" backLabel="Back to repositories" />;
+    return <SessionRouteFallback message={t('session.route.repositoryNotFound')} backTo="/" backLabel={t('session.route.backToRepositories')} />;
   }
 
   if (sessionQueryError instanceof FetchError && sessionQueryError.statusCode === 404) {
     const listTab = new URLSearchParams(location.search).get('repoTab') ?? undefined;
     return (
       <SessionRouteFallback
-        message="Session not found"
+        message={t('session.route.sessionNotFound')}
         backTo={getSessionListPath(repoId, isAssistantSession, listTab)}
-        backLabel="Back to sessions"
+        backLabel={t('session.route.backToSessions')}
       />
     );
   }
 
   const workspaceDisplayName = isAssistantSession || !repo
-    ? 'Assistant'
+    ? t('session.header.assistant')
     : getRepoDisplayName(repo);
   const tabFromUrl = new URLSearchParams(location.search).get('repoTab') ?? undefined;
   const sessionBackPath = getSessionListPath(repoId, isAssistantSession, tabFromUrl);
@@ -490,10 +496,10 @@ export function SessionDetail() {
                   size="sm"
                   onClick={handleParentSessionClick}
                   className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/20 h-7 px-2 gap-1"
-                  title="Back to parent session"
+                  title={t('session.header.backToParent')}
                 >
                   <CornerUpLeft className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-xs">Parent</span>
+                  <span className="hidden sm:inline text-xs">{t('session.header.parent')}</span>
                 </Button>
                 <div className="hidden sm:block">
                   <Header.BackButton to={sessionBackPath} className="text-xs sm:text-sm" />
@@ -503,7 +509,7 @@ export function SessionDetail() {
               <Header.BackButton to={sessionBackPath} className="text-xs sm:text-sm" />
             )}
             <Header.EditableTitle
-              value={session?.title || "Untitled Session"}
+              value={session?.title || t('session.card.untitled')}
               onChange={handleSessionTitleUpdate}
               subtitle={<span className="text-orange-600 dark:text-orange-400">{workspaceDisplayName}</span>}
             />
@@ -568,16 +574,16 @@ export function SessionDetail() {
                     }}
                     onClick={handleClearPrompt}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 hover:border-red-400 shadow-md shadow-red-500/30 hover:shadow-red-500/50 backdrop-blur-md transition-all duration-200 active:scale-95 hover:scale-105 ring-1 ring-red-500/20 hover:ring-red-500/40"
-                    aria-label="Clear"
+                    aria-label={t('session.header.clear')}
                   >
                     <X className="w-5 h-5" />
-                    <span className="text-sm font-medium hidden sm:inline">Clear</span>
+                    <span className="text-sm font-medium hidden sm:inline">{t('session.header.clear')}</span>
                   </button>
                 )}
               </div>
               {leaderActive && (
                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-primary/90 text-primary-foreground border border-primary shadow-lg backdrop-blur-md animate-pulse">
-                  <span className="text-sm font-medium">Waiting for shortcut key...</span>
+                  <span className="text-sm font-medium">{t('session.header.waitingShortcut')}</span>
                 </div>
               )}
               {minimizedQuestion && minimizedQuestion.sessionID === sessionId && (
@@ -620,7 +626,7 @@ export function SessionDetail() {
       {/* Sessions Dialog */}
       <Dialog open={sessionsDialogOpen} onOpenChange={setSessionsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogTitle>Sessions</DialogTitle>
+          <DialogTitle>{t('session.header.sessionsDialogTitle')}</DialogTitle>
           <div className="overflow-y-auto max-h-[60vh] mt-4">
             {opcodeUrl && (
               <SessionList
@@ -661,7 +667,7 @@ export function SessionDetail() {
           sessionId={sessionId}
           opcodeUrl={opcodeUrl}
           directory={repoDirectory}
-          onSkillLoaded={(skill) => showToast.success(`Loaded skill: ${skill.name}`)}
+          onSkillLoaded={(skill) => showToast.success(t('session.actions.loadedSkill', { name: skill.name }))}
         />
       )}
 

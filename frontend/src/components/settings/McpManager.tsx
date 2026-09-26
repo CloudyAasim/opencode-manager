@@ -14,6 +14,7 @@ import type { McpServerConfig } from '@/api/mcp'
 import { mcpApi } from '@/api/mcp'
 import type { McpAuthStartResponse } from '@/api/mcp'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 
 interface McpManagerProps {
   config: {
@@ -25,6 +26,7 @@ interface McpManagerProps {
 
 
 export function McpManager({ config, onUpdate }: McpManagerProps) {
+  const { t } = useI18n()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [deleteConfirmServer, setDeleteConfirmServer] = useState<{ id: string; name: string } | null>(null)
   const [togglingServerId, setTogglingServerId] = useState<string | null>(null)
@@ -68,7 +70,7 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
       setDeleteConfirmServer(null)
     },
     onError: () => {
-      showToast.error('Failed to delete MCP server')
+      showToast.error(t('settingsPanels.mcpManager.deleteFailed'))
     },
   })
 
@@ -111,9 +113,9 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
   }
 
   const handleOAuthStartAuth = async (): Promise<McpAuthStartResponse> => {
-    if (!authDialogServerId) throw new Error('No server ID')
+    if (!authDialogServerId) throw new Error(t('settingsPanels.mcpManager.noServerId'))
     const serverConfig = mcpServers[authDialogServerId]
-    if (!serverConfig?.url) throw new Error('Server URL not found')
+    if (!serverConfig?.url) throw new Error(t('settingsPanels.mcpManager.serverUrlNotFound'))
     const oauthConfig = typeof serverConfig.oauth === 'object' ? serverConfig.oauth : undefined
     return await mcpApi.startAuth(
       authDialogServerId,
@@ -177,7 +179,7 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
   if (!config) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">No OpenCode configuration file found.</p>
+        <p className="text-muted-foreground">{t('settingsPanels.mcpManager.noConfig')}</p>
       </div>
     )
   }
@@ -189,10 +191,10 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
           <div className="flex flex-col items-center gap-3 bg-card border border-border rounded-lg p-6 shadow-lg">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="text-sm font-medium text-foreground">
-              {togglingServerId ? 'Updating MCP server...' : 'Processing...'}
+              {togglingServerId ? t('settingsPanels.mcpManager.updating') : t('settingsPanels.mcpManager.processing')}
             </span>
             <span className="text-xs text-muted-foreground">
-              Please wait while we update your configuration
+              {t('settingsPanels.mcpManager.pleaseWait')}
             </span>
           </div>
         </div>
@@ -205,13 +207,13 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
           disabled={isLoadingStatus}
         >
           <RefreshCw className={`h-3 w-3 mr-1 ${isLoadingStatus ? 'animate-spin' : ''}`} />
-          Refresh
+          {t('settingsPanels.mcpManager.refresh')}
         </Button>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-1" />
-              Add Server
+              {t('settingsPanels.mcpManager.addServer')}
             </Button>
           </DialogTrigger>
           <AddMcpServerDialog 
@@ -226,8 +228,8 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
         isLoading={false}
         error={null}
         isEmpty={Object.keys(mcpServers).length === 0}
-        emptyTitle="No MCP servers configured"
-        emptyHint="Add your first server to get started."
+        emptyTitle={t('settingsPanels.mcpManager.emptyTitle')}
+        emptyHint={t('settingsPanels.mcpManager.emptyHint')}
       >
         {Object.entries(mcpServers).map(([serverId, serverConfig]) => {
           const status = mcpStatus?.[serverId]
@@ -259,8 +261,8 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
         onOpenChange={() => setDeleteConfirmServer(null)}
         onConfirm={handleDeleteServer}
         onCancel={() => setDeleteConfirmServer(null)}
-        title="Delete MCP Server"
-        description="This will remove the MCP server configuration. This action cannot be undone."
+        title={t('settingsPanels.mcpManager.deleteTitle')}
+        description={t('settingsPanels.mcpManager.deleteDescription')}
         itemName={deleteConfirmServer?.name}
         isDeleting={deleteServerMutation.isPending}
       />
@@ -280,8 +282,8 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
         onOpenChange={() => setRemoveAuthConfirmServer(null)}
         onConfirm={handleConfirmRemoveAuth}
         onCancel={() => setRemoveAuthConfirmServer(null)}
-        title="Remove Authentication"
-        description="This will remove the OAuth credentials for this MCP server. You will need to re-authenticate to use this server again."
+        title={t('settingsPanels.mcpManager.removeAuthTitle')}
+        description={t('settingsPanels.mcpManager.removeAuthDescription')}
         itemName={mcpServers[removeAuthConfirmServer || ''] ? getDisplayName(removeAuthConfirmServer || '') : ''}
         isDeleting={isRemovingAuth}
       />

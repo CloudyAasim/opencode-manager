@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle, CheckCircle2, Eye, EyeOff, XCircle } from 'lucide-react'
 import { SettingsDisclosure } from './SettingsDisclosure'
+import { useI18n } from '@/lib/i18n'
 
 interface OpenCodeServerAuthSettingsProps {
   isOpen?: boolean
@@ -12,6 +13,7 @@ interface OpenCodeServerAuthSettingsProps {
 }
 
 export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }: OpenCodeServerAuthSettingsProps = {}) {
+  const { t } = useI18n()
   const { status, setPassword, clearPassword } = useOpenCodeServerAuth()
   const [password, setPasswordValue] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -28,10 +30,10 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
   }
 
   const getStatusText = () => {
-    if (!status) return 'Loading...'
-    if (status.source === 'db') return 'Set (configured via UI)'
-    if (status.source === 'env') return 'Set (configured via env var)'
-    return 'Not set'
+    if (!status) return t('settingsPanels.serverAuth.loading')
+    if (status.source === 'db') return t('settingsPanels.serverAuth.setViaUi')
+    if (status.source === 'env') return t('settingsPanels.serverAuth.setViaEnv')
+    return t('settingsPanels.serverAuth.notSet')
   }
 
   const getStatusIcon = () => {
@@ -43,7 +45,7 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
 
   return (
     <SettingsDisclosure
-      title="OpenCode Server Authentication"
+      title={t('settingsPanels.serverAuth.title')}
       isOpen={isOpen}
       onToggle={handleToggle}
       contentClassName="space-y-3"
@@ -58,7 +60,7 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            If you set OPENCODE_HOST=0.0.0.0 in Docker without a password, the server will refuse to start.
+            {t('settingsPanels.serverAuth.dockerWarning')}
           </AlertDescription>
         </Alert>
       )}
@@ -70,7 +72,7 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPasswordValue(e.target.value)}
-            placeholder="Enter new password"
+            placeholder={t('settingsPanels.serverAuth.placeholder')}
             className="pr-9"
             autoComplete="new-password"
             name="opencode-server-password"
@@ -87,11 +89,11 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
           onClick={handleSave}
           disabled={password.length < 8 || setPassword.isPending}
         >
-          {setPassword.isPending ? 'Saving...' : 'Save'}
+          {setPassword.isPending ? t('settingsPanels.serverAuth.saving') : t('settingsPanels.serverAuth.save')}
         </Button>
       </div>
       {password.length > 0 && password.length < 8 && (
-        <p className="text-xs text-destructive">Password must be at least 8 characters</p>
+        <p className="text-xs text-destructive">{t('settingsPanels.serverAuth.passwordMin')}</p>
       )}
       {status?.source === 'db' && (
         <Button
@@ -99,7 +101,7 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
           onClick={() => clearPassword.mutate()}
           disabled={clearPassword.isPending}
         >
-          {clearPassword.isPending ? 'Clearing...' : 'Clear stored password'}
+          {clearPassword.isPending ? t('settingsPanels.serverAuth.clearing') : t('settingsPanels.serverAuth.clearStored')}
         </Button>
       )}
     </SettingsDisclosure>

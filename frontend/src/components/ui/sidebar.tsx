@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useI18n } from '@/lib/i18n'
 
 export interface SidebarProps {
   collapsed: boolean
@@ -20,8 +21,10 @@ export function Sidebar({
   collapsedWidthClass = 'w-14',
   className,
   children,
-  ariaLabel = 'Sidebar',
+  ariaLabel,
 }: SidebarProps) {
+  const { t } = useI18n()
+  const resolvedAriaLabel = ariaLabel ?? t('ui.sidebar.ariaLabel')
   return (
     <aside
       className={cn(
@@ -29,7 +32,7 @@ export function Sidebar({
         collapsed ? collapsedWidthClass : widthClass,
         className
       )}
-      aria-label={ariaLabel}
+      aria-label={resolvedAriaLabel}
     >
       {onToggle && <SidebarCollapseToggle collapsed={collapsed} onToggle={onToggle} />}
       {children}
@@ -122,6 +125,7 @@ export interface SidebarCollapseToggleProps {
 }
 
 export function SidebarCollapseToggle({ collapsed, onToggle }: SidebarCollapseToggleProps) {
+  const { t } = useI18n()
   return (
     <button
       type="button"
@@ -131,8 +135,8 @@ export function SidebarCollapseToggle({ collapsed, onToggle }: SidebarCollapseTo
         'flex items-center justify-center bg-transparent',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
       )}
-      title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      title={collapsed ? t('ui.sidebar.expand') : t('ui.sidebar.collapse')}
+      aria-label={collapsed ? t('ui.sidebar.expand') : t('ui.sidebar.collapse')}
       aria-expanded={!collapsed}
     >
       <span aria-hidden="true" className="relative flex items-center justify-center">

@@ -4,6 +4,7 @@ import { Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react'
 import { diffLines } from 'diff'
 import type { Change } from 'diff'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 interface ContentDiffViewerProps {
   before: string
@@ -29,6 +30,7 @@ function truncateLine(line: string): string {
 
 export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
   const isMobile = useMobile()
+  const { t } = useI18n()
   const [showMore, setShowMore] = useState(false)
 
   const computeDiffLines = (): DiffLineEntry[] => {
@@ -100,7 +102,7 @@ export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
   if (compressedLines.length === 0) {
     return (
       <div className="px-3 py-2 text-xs text-muted-foreground">
-        No changes
+        {t('message.files.noChanges')}
       </div>
     )
   }
@@ -155,7 +157,7 @@ export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
           className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
           <ChevronDown className="w-3 h-3" />
-          +{hiddenCount} more lines
+          {t('message.files.moreLines', { lines: hiddenCount })}
         </button>
       )}
 
@@ -165,7 +167,7 @@ export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
           className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
           <ChevronUp className="w-3 h-3" />
-          Show less
+          {t('message.actions.showLess')}
         </button>
       )}
     </div>

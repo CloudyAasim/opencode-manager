@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils'
 import { useMobile } from '@/hooks/useMobile'
 import { invalidateRepoGitCaches } from '@/lib/queryInvalidation'
 import { useRefreshOnOpen } from '@/hooks/useRefreshOnOpen'
+import { useI18n } from '@/lib/i18n'
 
 interface SourceControlPanelProps {
   repoId: number
@@ -49,6 +50,7 @@ export function SourceControlPanel({
   currentBranch,
   repoName,
 }: SourceControlPanelProps) {
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<Tab>('changes')
   const [selectedFile, setSelectedFile] = useState<{path: string, staged: boolean} | undefined>()
   const [currentView, setCurrentView] = useState<View>('default')
@@ -99,9 +101,9 @@ export function SourceControlPanel({
   }
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: 'changes', label: 'Changes', icon: FileCode },
-    { id: 'commits', label: 'Commits', icon: History },
-    { id: 'branches', label: 'Branches', icon: GitBranch },
+    { id: 'changes', label: t('misc.sourceControl.changes'), icon: FileCode },
+    { id: 'commits', label: t('misc.sourceControl.commits'), icon: History },
+    { id: 'branches', label: t('misc.sourceControl.branches'), icon: GitBranch },
   ]
 
   const changesCount = status?.files.length || 0
@@ -137,7 +139,7 @@ export function SourceControlPanel({
             onClick={() => handleGitAction(() => git.fetch.mutateAsync())}
             disabled={git.fetch.isPending}
             className="h-7 w-7 p-0"
-            title="Fetch from remote"
+            title={t('misc.sourceControl.fetchFromRemote')}
           >
             {git.fetch.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -151,7 +153,7 @@ export function SourceControlPanel({
             onClick={() => handleGitAction(() => git.pull.mutateAsync())}
             disabled={git.pull.isPending}
             className="h-7 w-7 p-0"
-            title="Pull"
+            title={t('misc.sourceControl.pull')}
           >
             {git.pull.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -165,7 +167,7 @@ export function SourceControlPanel({
             onClick={() => handleGitAction(() => git.push.mutateAsync(undefined))}
             disabled={git.push.isPending}
             className="h-7 w-7 p-0"
-            title="Push"
+            title={t('misc.sourceControl.push')}
           >
             {git.push.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -276,7 +278,7 @@ export function SourceControlPanel({
         )}>
           <DialogTitle className="flex items-center gap-2">
             <GitBranch className="w-5 h-5" />
-            {isMobile && repoName ? repoName : 'Source Control'}
+            {isMobile && repoName ? repoName : t('misc.sourceControl.title')}
           </DialogTitle>
           {isMobile && (
             <Button

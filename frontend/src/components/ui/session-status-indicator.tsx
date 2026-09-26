@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import { useSessionStatusForSession, type SessionStatusType } from '@/stores/sessionStatusStore'
+import { useI18n } from '@/lib/i18n'
 
 interface SessionStatusIndicatorProps {
   sessionID: string
@@ -17,6 +18,7 @@ export const SessionStatusIndicator = memo(function SessionStatusIndicator({
   size = 'md',
   showLabel = false
 }: SessionStatusIndicatorProps) {
+  const { t } = useI18n()
   const status = useSessionStatusForSession(sessionID)
   const [position, setPosition] = useState(0)
   const [direction, setDirection] = useState(1)
@@ -111,8 +113,8 @@ export const SessionStatusIndicator = memo(function SessionStatusIndicator({
       </div>
       {showLabel && status.type === 'retry' && (
         <span className="text-xs text-muted-foreground">
-          Retry #{status.attempt}
-          {retryCountdown > 0 && <span className="text-amber-500 ml-1">({retryCountdown}s)</span>}
+          {t('ui.sessionStatusIndicator.retry', { attempt: status.attempt })}
+          {retryCountdown > 0 && <span className="text-amber-500 ml-1">{t('ui.sessionStatusIndicator.countdown', { seconds: retryCountdown })}</span>}
         </span>
       )}
     </div>

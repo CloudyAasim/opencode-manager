@@ -8,6 +8,7 @@ import type { Session } from "@/api/types";
 import { useSwipe } from "@/hooks/useSwipe";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useI18n } from '@/lib/i18n';
 
 interface SessionCardProps {
   session: Session;
@@ -34,6 +35,7 @@ export const SessionCard = ({
   onToggleSelection,
   onDelete,
 }: SessionCardProps) => {
+  const { t } = useI18n();
   const cardRef = useRef<HTMLDivElement>(null);
   const { bind, swipeOffset, isOpen, isSwipingBack, close, swipeStyles } = useSwipe();
 
@@ -57,7 +59,7 @@ export const SessionCard = ({
         }`}
       >
         <button
-          aria-label="Delete session"
+          aria-label={t('session.card.deleteAria')}
           className="h-full w-full flex items-center justify-center text-white hover:bg-red-700"
           onClick={handleDeleteClick}
         >
@@ -107,7 +109,7 @@ export const SessionCard = ({
                   <div className="flex items-center gap-1">
                     {isPinned && <Pin className="w-3 h-3 text-orange-500 shrink-0" />}
                     <h3 className="text-base font-semibold text-orange-600 dark:text-orange-400 truncate">
-                      {session.title || "Untitled Session"}
+                      {session.title || t('session.card.untitled')}
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
@@ -129,7 +131,7 @@ export const SessionCard = ({
                   <div className="flex items-center gap-1">
                     {isPinned && <Pin className="w-3 h-3 text-orange-500 shrink-0" />}
                     <h3 className="text-sm font-semibold text-orange-600 dark:text-orange-400 truncate">
-                      {session.title || "Untitled Session"}
+                      {session.title || t('session.card.untitled')}
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
@@ -149,7 +151,7 @@ export const SessionCard = ({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
-                        aria-label="Session actions"
+                        aria-label={t('session.card.actionsAria')}
                         size="sm"
                         variant="ghost"
                         className="h-7 w-7 p-0 shrink-0"
@@ -166,7 +168,7 @@ export const SessionCard = ({
                     >
                       <DropdownMenuItem onClick={() => onTogglePin()}>
                         {isPinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
-                        {isPinned ? "Unpin" : "Pin to top"}
+                        {isPinned ? t('session.card.unpin') : t('session.card.pinToTop')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -175,7 +177,7 @@ export const SessionCard = ({
             )}
             {manageMode && (
               <button
-                aria-label="Delete session"
+                aria-label={t('session.card.deleteAria')}
                 className="h-6 w-6 p-0 text-foreground hover:text-red-600 dark:hover:text-red-400 bg-transparent border-none cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();

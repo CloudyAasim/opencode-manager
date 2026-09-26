@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { useMcpServers } from '@/hooks/useMcpServers'
 import { settingsApi } from '@/api/settings'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useI18n } from '@/lib/i18n'
 
 interface AddMcpServerDialogProps {
   open: boolean
@@ -22,6 +23,7 @@ interface EnvironmentVariable {
 }
 
 export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServerDialogProps) {
+  const { t } = useI18n()
   const [serverId, setServerId] = useState('')
   const [serverType, setServerType] = useState<'local' | 'remote'>('local')
   const [command, setCommand] = useState('')
@@ -50,7 +52,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
       if (serverType === 'local') {
         const commandArray = command.split(' ').filter(arg => arg.trim())
         if (commandArray.length === 0) {
-          throw new Error('Command is required for local MCP servers')
+          throw new Error(t('settingsPanels.addMcpServer.commandRequired'))
         }
         mcpConfig.command = commandArray
         
@@ -65,7 +67,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
         }
       } else {
         if (!url.trim()) {
-          throw new Error('URL is required for remote MCP servers')
+          throw new Error(t('settingsPanels.addMcpServer.urlRequired'))
         }
         mcpConfig.url = url.trim()
         
@@ -170,64 +172,64 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6">
         <DialogHeader className="p-4 sm:p-6 border-b flex flex-row items-center justify-between space-y-0">
-          <DialogTitle>Add MCP Server</DialogTitle>
+          <DialogTitle>{t('settingsPanels.addMcpServer.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-2 sm:p-4">
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="serverId">Server ID</Label>
+              <Label htmlFor="serverId">{t('settingsPanels.addMcpServer.serverId')}</Label>
               <Input
                 id="serverId"
                 value={serverId}
                 onChange={(e) => setServerId(e.target.value)}
-                placeholder="e.g., filesystem, git, my-server"
+                placeholder={t('settingsPanels.addMcpServer.serverIdPlaceholder')}
                 className="bg-background border-border"
               />
               <p className="text-xs text-muted-foreground">
-                Unique identifier for this MCP server (lowercase, no spaces)
+                {t('settingsPanels.addMcpServer.serverIdHint')}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="serverType">Server Type</Label>
+              <Label htmlFor="serverType">{t('settingsPanels.addMcpServer.serverType')}</Label>
               <Select value={serverType} onValueChange={(value: 'local' | 'remote') => setServerType(value)}>
                 <SelectTrigger className="bg-background border-border">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="local">Local (Command)</SelectItem>
-                  <SelectItem value="remote">Remote (HTTP)</SelectItem>
+                  <SelectItem value="local">{t('settingsPanels.addMcpServer.local')}</SelectItem>
+                  <SelectItem value="remote">{t('settingsPanels.addMcpServer.remote')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {serverType === 'local' ? (
               <div className="space-y-1.5">
-                <Label htmlFor="command">Command</Label>
+                <Label htmlFor="command">{t('settingsPanels.addMcpServer.command')}</Label>
                 <Input
                   id="command"
                   value={command}
                   onChange={(e) => setCommand(e.target.value)}
-                  placeholder="npx @modelcontextprotocol/server-filesystem /tmp"
+                  placeholder={t('settingsPanels.addMcpServer.commandPlaceholder')}
                   className="bg-background border-border font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Command and arguments to run the MCP server
+                  {t('settingsPanels.addMcpServer.commandHint')}
                 </p>
               </div>
             ) : (
               <div className="space-y-1.5">
-                <Label htmlFor="url">Server URL</Label>
+                <Label htmlFor="url">{t('settingsPanels.addMcpServer.serverUrl')}</Label>
                 <Input
                   id="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="http://localhost:3000/mcp"
+                  placeholder={t('settingsPanels.addMcpServer.serverUrlPlaceholder')}
                   className="bg-background border-border font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  URL of the remote MCP server
+                  {t('settingsPanels.addMcpServer.serverUrlHint')}
                 </p>
               </div>
             )}
@@ -240,41 +242,41 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                     checked={oauthEnabled}
                     onCheckedChange={setOauthEnabled}
                   />
-                  <Label htmlFor="oauth">Enable OAuth</Label>
+                  <Label htmlFor="oauth">{t('settingsPanels.addMcpServer.enableOauth')}</Label>
                 </div>
                 {oauthEnabled && (
                   <div className="space-y-3 pl-4 border-l-2 border-border">
                     <p className="text-xs text-muted-foreground">
-                      Leave fields blank to use the server's default OAuth discovery
+                      {t('settingsPanels.addMcpServer.oauthHint')}
                     </p>
                     <div className="space-y-1.5">
-                      <Label htmlFor="oauthClientId">Client ID</Label>
+                      <Label htmlFor="oauthClientId">{t('settingsPanels.addMcpServer.clientId')}</Label>
                       <Input
                         id="oauthClientId"
                         value={oauthClientId}
                         onChange={(e) => setOauthClientId(e.target.value)}
-                        placeholder="Optional"
+                        placeholder={t('settingsPanels.addMcpServer.optional')}
                         className="bg-background border-border font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="oauthClientSecret">Client Secret</Label>
+                      <Label htmlFor="oauthClientSecret">{t('settingsPanels.addMcpServer.clientSecret')}</Label>
                       <Input
                         id="oauthClientSecret"
                         type="password"
                         value={oauthClientSecret}
                         onChange={(e) => setOauthClientSecret(e.target.value)}
-                        placeholder="Optional"
+                        placeholder={t('settingsPanels.addMcpServer.optional')}
                         className="bg-background border-border font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="oauthScope">Scope</Label>
+                      <Label htmlFor="oauthScope">{t('settingsPanels.addMcpServer.scope')}</Label>
                       <Input
                         id="oauthScope"
                         value={oauthScope}
                         onChange={(e) => setOauthScope(e.target.value)}
-                        placeholder="e.g., read write"
+                        placeholder={t('settingsPanels.addMcpServer.scopePlaceholder')}
                         className="bg-background border-border font-mono"
                       />
                     </div>
@@ -286,7 +288,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
             {serverType === 'local' && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label>Environment Variables</Label>
+                  <Label>{t('settingsPanels.addMcpServer.envVars')}</Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -302,13 +304,13 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                     <Input
                       value={env.key}
                       onChange={(e) => handleUpdateEnvironmentVar(index, 'key', e.target.value)}
-                      placeholder="API_KEY"
+                      placeholder={t('settingsPanels.addMcpServer.apiKeyPlaceholder')}
                       className="bg-background border-border font-mono"
                     />
                     <Input
                       value={env.value}
                       onChange={(e) => handleUpdateEnvironmentVar(index, 'value', e.target.value)}
-                      placeholder="your-api-key-here"
+                      placeholder={t('settingsPanels.addMcpServer.valuePlaceholder')}
                       className="bg-background border-border font-mono"
                     />
                     {environment.length > 1 && (
@@ -324,22 +326,22 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                   </div>
                 ))}
                 <p className="text-xs text-muted-foreground">
-                  Environment variables to set when running the MCP server
+                  {t('settingsPanels.addMcpServer.envHint')}
                 </p>
               </div>
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="timeout">Timeout (ms)</Label>
+              <Label htmlFor="timeout">{t('settingsPanels.addMcpServer.timeout')}</Label>
               <Input
                 id="timeout"
                 value={timeout}
                 onChange={(e) => setTimeout(e.target.value)}
-                placeholder="5000"
+                placeholder={t('settingsPanels.addMcpServer.timeoutPlaceholder')}
                 className="bg-background border-border"
               />
               <p className="text-xs text-muted-foreground">
-                Timeout in milliseconds for fetching tools (default: 5000)
+                {t('settingsPanels.addMcpServer.timeoutHint')}
               </p>
             </div>
 
@@ -349,14 +351,14 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                 checked={enabled}
                 onCheckedChange={setEnabled}
               />
-              <Label htmlFor="enabled">Connect immediately after adding</Label>
+              <Label htmlFor="enabled">{t('settingsPanels.addMcpServer.connectImmediately')}</Label>
             </div>
           </div>
         </div>
 
         <DialogFooter className="p-3 sm:p-4 border-t gap-2 pb-4">
           <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
-            Cancel
+            {t('settingsPanels.addMcpServer.cancel')}
           </Button>
           <Button
             onClick={handleAdd}
@@ -364,7 +366,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
             className="flex-1 sm:flex-none"
           >
             {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Add MCP Server
+            {t('settingsPanels.addMcpServer.add')}
           </Button>
         </DialogFooter>
       </DialogContent>

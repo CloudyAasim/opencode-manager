@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { settingsApi } from '@/api/settings'
 import { showToast } from '@/lib/toast'
 import { refreshOpenCodeServerCaches } from '@/lib/queryInvalidation'
+import { useI18n } from '@/lib/i18n'
 
 interface VersionSelectDialogProps {
   open: boolean
@@ -13,6 +14,7 @@ interface VersionSelectDialogProps {
 }
 
 export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogProps) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
 
@@ -37,21 +39,21 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
         
         if (data?.recovered && data.newVersion) {
           refreshOpenCodeServerCaches(queryClient, data.newVersion)
-          showToast.success(`Install failed but server recovered at v${data.newVersion}`)
+          showToast.success(t('settingsPanels.versionSelect.installFailedRecovered', { version: data.newVersion }))
         } else {
           refreshOpenCodeServerCaches(queryClient)
-          showToast.error(data?.recoveryMessage || 'Failed to install version')
+          showToast.error(data?.recoveryMessage || t('settingsPanels.versionSelect.installFailed'))
         }
       } else {
         refreshOpenCodeServerCaches(queryClient)
-        showToast.error('Failed to install version')
+        showToast.error(t('settingsPanels.versionSelect.installFailed'))
       }
     },
   })
 
   const handleInstall = () => {
     if (!selectedVersion) return
-    showToast.loading(`Installing OpenCode v${selectedVersion}...`, { id: 'install-version' })
+    showToast.loading(t('settingsPanels.versionSelect.installing', { version: selectedVersion }), { id: 'install-version' })
     installMutation.mutate(selectedVersion, {
       onSettled: () => {
         showToast.dismiss('install-version')
@@ -71,9 +73,11 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Select OpenCode Version</DialogTitle>
+          <DialogTitle>{t('settingsPanels.versionSelect.title')}</DialogTitle>
           <DialogDescription>
-            Choose a version to install. Current version: {data?.currentVersion ? `v${data.currentVersion}` : 'Unknown'}
+            {t('settingsPanels.versionSelect.description', {
+              version: data?.currentVersion ? `v${data.currentVersion}` : t('settingsPanels.versionSelect.unknown'),
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -85,7 +89,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
 
         {error && (
           <div className="text-center py-8 text-red-500">
-            Failed to fetch versions
+            {t('settingsPanels.versionSelect.loadFailed')}
           </div>
         )}
 
@@ -116,7 +120,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                             v{release.version}
                             {isCurrent && (
                               <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-600 dark:text-green-400">
-                                Current
+                                {t('settingsPanels.versionSelect.current')}
                               </span>
                             )}
                           </div>
@@ -138,7 +142,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                 onClick={() => onOpenChange(false)}
                 disabled={installMutation.isPending}
               >
-                Cancel
+                {t('settingsPanels.versionSelect.cancel')}
               </Button>
               <Button
                 onClick={handleInstall}
@@ -150,7 +154,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
                 )}
-                {selectedVersion ? `Install` : 'Select version'}
+                {selectedVersion ? t('settingsPanels.versionSelect.install') : t('settingsPanels.versionSelect.selectVersion')}
               </Button>
             </div>
           </>

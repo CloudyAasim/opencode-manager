@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Upload, Plus, FolderPlus, FilePlus, File, Folder } from 'lucide-react'
 import { useMobile } from '@/hooks/useMobile'
+import { useI18n } from '@/lib/i18n'
 
 interface FileOperationsProps {
   onUpload: (files: FileList) => void
@@ -13,6 +14,7 @@ interface FileOperationsProps {
 }
 
 export const FileOperations = memo(function FileOperations({ onUpload, onCreate }: FileOperationsProps) {
+  const { t } = useI18n()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createType, setCreateType] = useState<'file' | 'folder'>('file')
   const [createName, setCreateName] = useState('')
@@ -64,18 +66,18 @@ export const FileOperations = memo(function FileOperations({ onUpload, onCreate 
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
               <File className="w-4 h-4 mr-2" />
-              Files
+              {t('repo.fileBrowser.create.files')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => folderInputRef.current?.click()}>
               <Folder className="w-4 h-4 mr-2" />
-              Folder
+              {t('repo.fileBrowser.create.folder')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
         <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
           <Upload className="w-4 h-4" />
-          <span className="hidden sm:inline ml-1">Upload</span>
+          <span className="hidden sm:inline ml-1">{t('repo.fileBrowser.create.upload')}</span>
         </Button>
       )}
 
@@ -87,7 +89,7 @@ export const FileOperations = memo(function FileOperations({ onUpload, onCreate 
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New</DialogTitle>
+            <DialogTitle>{t('repo.fileBrowser.create.title')}</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -99,20 +101,20 @@ export const FileOperations = memo(function FileOperations({ onUpload, onCreate 
                 <SelectItem value="file">
                   <div className="flex items-center gap-2">
                     <FilePlus className="w-4 h-4" />
-                    File
+                    {t('repo.fileBrowser.create.file')}
                   </div>
                 </SelectItem>
                 <SelectItem value="folder">
                   <div className="flex items-center gap-2">
                     <FolderPlus className="w-4 h-4" />
-                    Folder
+                    {t('repo.fileBrowser.create.folder')}
                   </div>
                 </SelectItem>
               </SelectContent>
             </Select>
             
             <Input
-              placeholder={`${createType === 'file' ? 'File' : 'Folder'} name`}
+              placeholder={createType === 'file' ? t('repo.fileBrowser.create.fileNamePlaceholder') : t('repo.fileBrowser.create.folderNamePlaceholder')}
               value={createName}
               onChange={(e) => setCreateName(e.target.value)}
               onKeyDown={(e) => {
@@ -122,10 +124,10 @@ export const FileOperations = memo(function FileOperations({ onUpload, onCreate 
             
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancel
+                {t('repo.cancel')}
               </Button>
               <Button onClick={handleCreate} disabled={!createName.trim()}>
-                Create
+                {t('repo.create')}
               </Button>
             </div>
           </div>

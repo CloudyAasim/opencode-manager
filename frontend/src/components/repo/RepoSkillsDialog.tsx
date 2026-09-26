@@ -11,6 +11,7 @@ import { useLoadSkill } from '@/hooks/useOpenCode'
 import { useDeleteSkill } from '@/hooks/useDeleteSkill'
 import { invalidateSkillCaches } from '@/lib/queryInvalidation'
 import type { SkillFileInfo } from '@opencode-manager/shared'
+import { useI18n } from '@/lib/i18n'
 
 type RepoSkillsDialogBaseProps = {
   open: boolean
@@ -32,6 +33,7 @@ export function RepoSkillsDialog({
   directory,
   onSkillLoaded,
 }: RepoSkillsDialogProps) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [installDialogOpen, setInstallDialogOpen] = useState(false)
   const { deleteSkill, setDeleteSkill, confirmDelete, isDeleting } = useDeleteSkill()
@@ -68,14 +70,14 @@ export function RepoSkillsDialog({
           <DialogHeader className="p-4 sm:p-6 border-b shrink-0">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <DialogTitle>Skills</DialogTitle>
+                <DialogTitle>{t('repo.skills.title')}</DialogTitle>
                 <DialogDescription>
-                  {canLoad ? 'Search and load a skill into the current session' : 'Skills available for this repository'}
+                  {canLoad ? t('repo.skills.descriptionLoad') : t('repo.skills.descriptionAvailable')}
                 </DialogDescription>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => setInstallDialogOpen(true)}>
                 <Download className="h-4 w-4 mr-1" />
-                Install Skill
+                {t('repo.skills.install')}
               </Button>
             </div>
           </DialogHeader>
@@ -84,10 +86,10 @@ export function RepoSkillsDialog({
               isLoading={isLoading}
               data={data}
               error={error as Error | null}
-              primaryAction={canLoad ? { label: 'Load', onClick: handleLoad } : undefined}
-              rowActions={[{ label: 'Delete', onClick: setDeleteSkill, destructive: true }]}
-              emptyTitle="No skills found"
-              emptyHint="Install a skill or add one to .opencode/skills/<name>/SKILL.md."
+              primaryAction={canLoad ? { label: t('repo.skills.load'), onClick: handleLoad } : undefined}
+              rowActions={[{ label: t('repo.delete'), onClick: setDeleteSkill, destructive: true }]}
+              emptyTitle={t('repo.skills.emptyTitle')}
+              emptyHint={t('repo.skills.emptyHint')}
               maxHeightClassName="max-h-[55vh]"
             />
           </div>
@@ -105,8 +107,8 @@ export function RepoSkillsDialog({
         onOpenChange={(isOpen) => !isOpen && setDeleteSkill(null)}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteSkill(null)}
-        title="Delete Skill"
-        description="Delete this managed skill directory and bundled files? This action cannot be undone."
+        title={t('repo.skills.deleteTitle')}
+        description={t('repo.skills.deleteDescription')}
         itemName={deleteSkill?.name}
         isDeleting={isDeleting}
       />

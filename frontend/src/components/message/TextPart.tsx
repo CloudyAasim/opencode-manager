@@ -8,6 +8,7 @@ import { Maximize2, X, AlertCircle } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
 import type { components } from '@/api/opencode-types'
 import { useTheme } from '@/hooks/useTheme'
+import { useI18n } from '@/lib/i18n'
 import 'highlight.js/styles/github-dark.css'
 
 type TextPart = components['schemas']['TextPart']
@@ -25,6 +26,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
   const [error, setError] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
   const theme = useTheme()
+  const { t } = useI18n()
   const uniqueId = useId().replace(/:/g, '-')
   const renderAttempt = React.useRef(0)
 
@@ -53,7 +55,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
       }
     } catch (err: unknown) {
       if (currentAttempt === renderAttempt.current) {
-        let message = 'Failed to render diagram'
+        let message = t('message.mermaid.renderFailed')
         if (err instanceof Error) {
           message = err.message
         } else if (typeof err === 'string') {
@@ -65,7 +67,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
         setSvg(null)
       }
     }
-  }, [code, uniqueId])
+  }, [code, uniqueId, t])
 
   useEffect(() => {
     renderDiagram()
@@ -77,14 +79,14 @@ function MermaidBlock({ code }: MermaidBlockProps) {
         <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
           <div className="flex items-center gap-2 text-red-500 mb-2">
             <AlertCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">Mermaid Error</span>
+            <span className="text-sm font-medium">{t('message.mermaid.errorTitle')}</span>
           </div>
           <pre className="text-xs text-red-400 mb-3 whitespace-pre-wrap">{error}</pre>
           <pre className="bg-accent p-3 rounded-lg overflow-x-auto text-sm border border-border">
             <code>{code}</code>
           </pre>
         </div>
-        <CopyButton content={code} title="Copy code" className="absolute top-2 right-2" />
+        <CopyButton content={code} title={t('message.actions.copyCode')} className="absolute top-2 right-2" />
       </div>
     )
   }
@@ -108,11 +110,11 @@ function MermaidBlock({ code }: MermaidBlockProps) {
           <button
             onClick={() => setIsExpanded(true)}
             className="p-1.5 rounded bg-card hover:bg-card-hover text-muted-foreground hover:text-foreground"
-            title="Expand diagram"
+            title={t('message.actions.expandDiagram')}
           >
             <Maximize2 className="w-4 h-4" />
           </button>
-          <CopyButton content={code} title="Copy code" />
+          <CopyButton content={code} title={t('message.actions.copyCode')} />
         </div>
       </div>
 
@@ -128,7 +130,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
             <button
               onClick={() => setIsExpanded(false)}
               className="absolute top-3 right-3 p-2 rounded-lg bg-accent hover:bg-accent/80 text-muted-foreground hover:text-foreground"
-              title="Close"
+              title={t('message.actions.close')}
             >
               <X className="w-5 h-5" />
             </button>
@@ -150,6 +152,7 @@ interface CodeBlockProps {
 }
 
 function CodeBlock({ children, className, ...props }: CodeBlockProps) {
+  const { t } = useI18n()
   const extractTextContent = (node: React.ReactNode): string => {
     if (typeof node === 'string') return node
     if (typeof node === 'number') return node.toString()
@@ -170,7 +173,7 @@ function CodeBlock({ children, className, ...props }: CodeBlockProps) {
       <pre className={`bg-accent p-1 rounded-lg overflow-x-auto whitespace-pre-wrap break-words border border-border my-4 ${className || ''}`} {...props}>
         {children}
       </pre>
-      <CopyButton content={codeContent} title="Copy code" className="absolute top-2 right-2" />
+      <CopyButton content={codeContent} title={t('message.actions.copyCode')} className="absolute top-2 right-2" />
     </div>
   )
 }

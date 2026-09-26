@@ -15,6 +15,7 @@ import { useSessionAgentStore } from '@/stores/sessionAgentStore'
 import { useUIState } from '@/stores/uiStateStore'
 import { useSendErrorStore } from '@/stores/sendErrorStore'
 import { useMobile } from '@/hooks/useMobile'
+import { useI18n } from '@/lib/i18n'
 
 import { usePermissions } from '@/contexts/EventContext'
 import { ArrowDown, Upload, X, Mic, MicOff } from 'lucide-react'
@@ -92,6 +93,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
   onExportSession,
   onPromptChange
 }, ref) {
+  const { t } = useI18n()
   const [prompt, setPrompt] = useState('')
   const [isBashMode, setIsBashMode] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -820,7 +822,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
     if (ACCEPTED_FILE_TYPES.includes(file.type)) {
       addImageAttachment(file)
     } else {
-      showToast.error(`Only images and PDFs can be attached (${file.name})`)
+      showToast.error(t('message.prompt.onlyImagesAndPdfs', { name: file.name }))
     }
   }
 
@@ -1128,27 +1130,27 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
           : null
   const showVoiceFeedback = voiceFeedbackState !== null
   const voiceFeedbackLabel = voiceFeedbackState === 'starting'
-    ? 'Starting microphone...'
+    ? t('message.voice.startingMicrophone')
     : voiceFeedbackState === 'sending'
-      ? 'Transcribing and sending...'
+      ? t('message.voice.transcribingAndSending')
       : voiceFeedbackState === 'processing'
-        ? 'Transcribing...'
+        ? t('message.voice.transcribing')
         : voiceFeedbackState === 'readyToSend'
-          ? 'Release to send'
+          ? t('message.voice.releaseToSend')
           : voiceFeedbackState === 'recording'
-            ? 'Recording... swipe up to send'
+            ? t('message.voice.recordingSwipe')
             : null
   const voiceButtonTitle = voiceFeedbackState === 'starting'
-    ? 'Starting microphone'
+    ? t('message.voice.startingMicrophoneTitle')
     : voiceFeedbackState === 'sending'
-      ? 'Transcribing and sending speech'
+      ? t('message.voice.transcribingAndSendingTitle')
       : voiceFeedbackState === 'processing'
-        ? 'Transcribing speech'
+        ? t('message.voice.transcribingTitle')
         : voiceFeedbackState === 'readyToSend'
-          ? 'Release to send'
+          ? t('message.voice.releaseToSend')
           : voiceFeedbackState === 'recording'
-            ? 'Tap to transcribe'
-            : 'Tap to speak'
+            ? t('message.voice.tapToTranscribe')
+            : t('message.voice.tapToSpeak')
 
 
 
@@ -1239,7 +1241,7 @@ return (
         <button
           onClick={handleStop}
           className="absolute bottom-full right-0 mb-2 md:hidden z-50 p-3 rounded-xl transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 shadow-lg shadow-red-500/30"
-          title="Stop"
+          title={t('message.actions.stop')}
         >
           <SquareFill className="w-5 h-5" />
         </button>
@@ -1256,8 +1258,8 @@ return (
         onDrop={handleDrop}
         placeholder={
           isBashMode
-            ? "Enter bash command..."
-            : "Send a message..."
+            ? t('message.prompt.enterBashCommand')
+            : t('message.prompt.sendMessage')
         }
         className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 text-[16px] text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed md:text-sm rounded-lg [field-sizing:content] ${
           isBashMode
@@ -1295,11 +1297,11 @@ return (
                 type="button"
                 onClick={onScrollToBottom}
                 className="flex items-center gap-1.5 px-3 min-h-[36px] rounded-lg text-xs font-medium border bg-zinc-950/80 hover:bg-zinc-900/90 text-blue-300 hover:text-blue-200 border-blue-400/20 shadow-md backdrop-blur-md transition-all duration-200 active:scale-95 ring-1 ring-blue-400/15"
-                title="Scroll to bottom"
-                aria-label="Scroll to bottom"
+                title={t('message.actions.scrollToBottom')}
+                aria-label={t('message.actions.scrollToBottom')}
               >
                 <ArrowDown className="w-4 h-4" />
-                <span>Latest</span>
+                <span>{t('message.actions.latest')}</span>
               </button>
               {isSessionActive && (
                 <div className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground max-w-[120px]">
@@ -1329,7 +1331,7 @@ return (
 <button
                       className="px-2.5 py-0.5 md:px-3 min-h-[36px] min-w-0 rounded-lg text-xs md:text-sm font-medium border bg-muted border-border text-muted-foreground hover:bg-muted-foreground/10 hover:border-foreground/30 transition-colors cursor-pointer flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center overflow-hidden"
                     >
-                      <span className="truncate w-full text-left">{displayModelName || 'Select model'}</span>
+                      <span className="truncate w-full text-left">{displayModelName || t('message.actions.selectModel')}</span>
 {hasVariants && currentVariant && (
                         <span className="text-[10px] text-orange-500 truncate w-full text-center capitalize">{currentVariant}</span>
                       )}
@@ -1345,7 +1347,7 @@ return (
               <button
                 onClick={onScrollToBottom}
                 className={`p-2 rounded-lg bg-zinc-950/80 hover:bg-zinc-900/90 text-blue-300 hover:text-blue-200 transition-all duration-200 active:scale-95 hover:scale-105 shadow-md border border-blue-400/20 backdrop-blur-md ring-1 ring-blue-400/15 ${showScrollButton ? 'visible' : 'invisible'}`}
-                title="Scroll to bottom"
+                title={t('message.actions.scrollToBottom')}
               >
                 <ArrowDown className="w-6 h-6" />
               </button>
@@ -1354,7 +1356,7 @@ return (
             <button
               onClick={handleStop}
               className="hidden md:block p-1.5 px-5 md:p-2 md:px-6 rounded-lg transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 hover:border-red-400 shadow-md shadow-red-500/30 hover:shadow-red-500/40 ring-1 ring-red-500/20 hover:ring-red-500/30"
-              title="Stop"
+              title={t('message.actions.stop')}
             >
               <SquareFill className="w-4 h-4 md:w-5 md:h-5" />
             </button>
@@ -1370,7 +1372,7 @@ return (
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="hidden md:block p-2 rounded-lg bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95 hover:scale-105 shadow-md border border-border"
-            title="Upload image or PDF"
+            title={t('message.actions.uploadImageOrPdf')}
           >
             <Upload className="w-5 h-5" />
           </button>
@@ -1389,9 +1391,9 @@ return (
                   ? 'bg-orange-500 hover:bg-orange-600 border-orange-400 text-primary-foreground ring-orange-500/20'
                   : 'bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground border-white/30'
               }`}
-              title={hasPendingPermissionForSession ? 'View pending permission' : (isStreamingResponse ? 'Queue message' : 'Send')}
+              title={hasPendingPermissionForSession ? t('message.actions.viewPendingPermission') : (isStreamingResponse ? t('message.actions.queueMessage') : t('message.actions.send'))}
             >
-              <span className="whitespace-nowrap">{hasPendingPermissionForSession ? 'View' : (isStreamingResponse ? 'Queue' : 'Send')}</span>
+              <span className="whitespace-nowrap">{hasPendingPermissionForSession ? t('message.actions.view') : (isStreamingResponse ? t('message.actions.queue') : t('message.actions.send'))}</span>
             </button>
         </div>
       </div>

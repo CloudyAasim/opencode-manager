@@ -7,10 +7,12 @@ import { useMobileTabBar } from '@/hooks/useMobileTabBar'
 import { useUrlParams } from '@/hooks/useUrlParams'
 import { useScheduleUrlState, type ScheduleTab } from '@/hooks/useScheduleUrlState'
 import { getAssistantPath, isAssistantPath } from '@/lib/navigation'
+import { useI18n } from '@/lib/i18n'
 
 interface TabDef {
   key: string
   label: string
+  labelKey?: string
   icon: React.ElementType
   onClick: () => void
   active: boolean
@@ -81,6 +83,7 @@ function buildGlobalTabs({ pathname, openSheet, open, close, navigate, isInsideR
     {
       key: 'repos',
       label: 'Repos',
+      labelKey: 'navigation.repos',
       icon: FolderGit2,
       onClick: () => open('repos'),
       active: openSheet === 'repos' || (pathname === '/' && !openSheet),
@@ -88,6 +91,7 @@ function buildGlobalTabs({ pathname, openSheet, open, close, navigate, isInsideR
     {
       key: 'files',
       label: 'Files',
+      labelKey: 'navigation.files',
       icon: FolderOpen,
       onClick: handleFilesClick,
       active: openSheet === 'files',
@@ -95,6 +99,7 @@ function buildGlobalTabs({ pathname, openSheet, open, close, navigate, isInsideR
     {
       key: 'assistant',
       label: 'Assistant',
+      labelKey: 'navigation.assistant',
       icon: Bot,
       onClick: handleAssistantClick,
       active: isAssistantPath(pathname) && !openSheet,
@@ -102,6 +107,7 @@ function buildGlobalTabs({ pathname, openSheet, open, close, navigate, isInsideR
     {
       key: 'schedules',
       label: 'Schedules',
+      labelKey: 'navigation.schedules',
       icon: CalendarClock,
       onClick: () => navigate('/schedules'),
       active: pathname === '/schedules' && !openSheet,
@@ -109,6 +115,7 @@ function buildGlobalTabs({ pathname, openSheet, open, close, navigate, isInsideR
     {
       key: 'more',
       label: 'More',
+      labelKey: 'navigation.more',
       icon: Menu,
       onClick: () => open('more'),
       active: openSheet === 'more',
@@ -121,6 +128,7 @@ function buildScheduleTabs(scheduleTab: ScheduleTab, setScheduleTab: (tab: Sched
     {
       key: 'jobs',
       label: 'Jobs',
+      labelKey: 'navigation.jobs',
       icon: CalendarClock,
       onClick: () => setScheduleTab('jobs'),
       active: scheduleTab === 'jobs',
@@ -128,6 +136,7 @@ function buildScheduleTabs(scheduleTab: ScheduleTab, setScheduleTab: (tab: Sched
     {
       key: 'detail',
       label: 'Detail',
+      labelKey: 'navigation.detail',
       icon: Info,
       onClick: () => setScheduleTab('detail'),
       active: scheduleTab === 'detail',
@@ -135,6 +144,7 @@ function buildScheduleTabs(scheduleTab: ScheduleTab, setScheduleTab: (tab: Sched
     {
       key: 'runs',
       label: 'Runs',
+      labelKey: 'navigation.runs',
       icon: History,
       onClick: () => setScheduleTab('runs'),
       active: scheduleTab === 'runs',
@@ -147,6 +157,8 @@ interface TabBarRowProps {
 }
 
 const TabBarRow = memo(function TabBarRow({ tabs }: TabBarRowProps) {
+  const { t } = useI18n()
+
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 flex border-t border-border bg-card/90 backdrop-blur-sm pb-safe">
       {tabs.map((tab) => {
@@ -169,7 +181,7 @@ const TabBarRow = memo(function TabBarRow({ tabs }: TabBarRowProps) {
                 <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-orange-500 ring-2 ring-card animate-pulse" />
               )}
             </div>
-            <span className="leading-none">{tab.label}</span>
+            <span className="leading-none">{tab.labelKey ? t(tab.labelKey) : tab.label}</span>
           </button>
         )
       })}

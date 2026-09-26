@@ -30,7 +30,7 @@ describe('useMessages fallback poll', () => {
     </QueryClientProvider>
   )
 
-  it('should poll every 5s when fallbackPoll is enabled', async () => {
+  it('should poll every 15s when fallbackPoll is enabled', async () => {
     vi.useFakeTimers()
     
     mocks.listMessages.mockResolvedValue([])
@@ -42,7 +42,7 @@ describe('useMessages fallback poll', () => {
 
     expect(mocks.listMessages).toHaveBeenCalledTimes(1)
 
-    await vi.advanceTimersByTimeAsync(5000)
+    await vi.advanceTimersByTimeAsync(15000)
 
     expect(mocks.listMessages).toHaveBeenCalledTimes(2)
 

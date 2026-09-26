@@ -2,6 +2,7 @@ import { useGitLog } from '@/api/git'
 import { Loader2, GitCommit, AlertCircle, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GIT_UI_COLORS } from '@/lib/git-status-styles'
+import { useI18n } from '@/lib/i18n'
 
 interface CommitsTabProps {
   repoId: number
@@ -9,28 +10,29 @@ interface CommitsTabProps {
   onSelectCommit?: (hash: string) => void
 }
 
-function formatRelativeTime(timestamp: string): string {
-  const date = new Date(parseInt(timestamp, 10) * 1000)
-
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-  const diffWeeks = Math.floor(diffDays / 7)
-  const diffMonths = Math.floor(diffDays / 30)
-
-  if (diffSeconds < 60) return 'just now'
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  if (diffWeeks < 4) return `${diffWeeks}w ago`
-  return `${diffMonths}mo ago`
-}
-
 export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) {
+  const { t } = useI18n()
   const { data, isLoading, error } = useGitLog(repoId, 50, branch)
+
+  const formatRelativeTime = (timestamp: string): string => {
+    const date = new Date(parseInt(timestamp, 10) * 1000)
+
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffSeconds = Math.floor(diffMs / 1000)
+    const diffMinutes = Math.floor(diffSeconds / 60)
+    const diffHours = Math.floor(diffMinutes / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    const diffWeeks = Math.floor(diffDays / 7)
+    const diffMonths = Math.floor(diffDays / 30)
+
+    if (diffSeconds < 60) return t('misc.commitsTab.justNow')
+    if (diffMinutes < 60) return t('misc.commitsTab.minutesAgo', { n: diffMinutes })
+    if (diffHours < 24) return t('misc.commitsTab.hoursAgo', { n: diffHours })
+    if (diffDays < 7) return t('misc.commitsTab.daysAgo', { n: diffDays })
+    if (diffWeeks < 4) return t('misc.commitsTab.weeksAgo', { n: diffWeeks })
+    return t('misc.commitsTab.monthsAgo', { n: diffMonths })
+  }
 
   if (isLoading) {
     return (
@@ -44,7 +46,7 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
     return (
       <div className="text-center py-12 text-muted-foreground">
         <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">Failed to load commits</p>
+        <p className="text-sm">{t('misc.commitsTab.loadFailed')}</p>
         <p className="text-xs mt-1">{error.message}</p>
       </div>
     )
@@ -54,7 +56,7 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
     return (
       <div className="text-center py-12 text-muted-foreground">
         <GitCommit className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">No commits found</p>
+        <p className="text-sm">{t('misc.commitsTab.noCommits')}</p>
       </div>
     )
   }
@@ -82,12 +84,12 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
                 {commit.unpushed && (
                   <span className={cn('flex items-center gap-0.5 px-1 rounded', GIT_UI_COLORS.unpushed)}>
                     <ArrowUp className="w-3 h-3" />
-                    Local
+                    {t('misc.commitsTab.local')}
                   </span>
                 )}
                 {!commit.unpushed && (
                   <span className={cn('flex items-center gap-0.5 px-1 rounded', GIT_UI_COLORS.pushed)}>
-                    Remote
+                    {t('misc.commitsTab.remote')}
                   </span>
                 )}
               </div>

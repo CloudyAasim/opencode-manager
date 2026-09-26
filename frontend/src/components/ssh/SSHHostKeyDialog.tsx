@@ -14,6 +14,7 @@ import { Shield, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SSHHostKeyRequest } from '@/api/types'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 
 type SSHHostKeyResponse = 'accept' | 'reject'
 
@@ -32,6 +33,7 @@ export function SSHHostKeyDialog({
   onOpenChange,
   timeoutMs = 120_000
 }: SSHHostKeyDialogProps) {
+  const { t } = useI18n()
   const [isLoading, setIsLoading] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
 
@@ -66,10 +68,10 @@ export function SSHHostKeyDialog({
     try {
       await onRespond(request.id, response)
       if (response === 'accept') {
-        showToast.success('Host key accepted')
+        showToast.success(t('misc.ssh.hostKeyAccepted'))
       }
     } catch {
-      showToast.error('Failed to respond to host key request. Please try again.')
+      showToast.error(t('misc.ssh.respondFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -93,12 +95,12 @@ export function SSHHostKeyDialog({
               "h-5 w-5",
               request.isKeyChanged ? "text-red-500" : "text-amber-500"
             )} />
-            <span>{request.isKeyChanged ? 'Host Key Changed' : 'Verify SSH Host Key'}</span>
+            <span>{request.isKeyChanged ? t('misc.ssh.hostKeyChanged') : t('misc.ssh.verifyTitle')}</span>
           </DialogTitle>
           <DialogDescription>
             {request.isKeyChanged
-              ? 'WARNING: The host key for this server has changed!'
-              : 'Verify the authenticity of this SSH server before connecting.'}
+              ? t('misc.ssh.changedDescription')
+              : t('misc.ssh.verifyDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -106,27 +108,27 @@ export function SSHHostKeyDialog({
           {request.isKeyChanged && (
             <Alert variant="destructive">
               <AlertDescription className="text-sm">
-                <strong>Security Warning:</strong> This could indicate a man-in-the-middle attack.
-                Only proceed if you are certain the server is legitimate.
+                <strong>{t('misc.ssh.securityWarningLabel')}</strong>{' '}
+                {t('misc.ssh.securityWarningText')}
               </AlertDescription>
             </Alert>
           )}
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between items-start">
-              <span className="text-muted-foreground">Host:</span>
+              <span className="text-muted-foreground">{t('misc.ssh.host')}</span>
               <span className="font-mono font-medium">{request.host}</span>
             </div>
             <div className="flex justify-between items-start">
-              <span className="text-muted-foreground">IP Address:</span>
+              <span className="text-muted-foreground">{t('misc.ssh.ipAddress')}</span>
               <span className="font-mono font-medium">{request.ip}</span>
             </div>
             <div className="flex justify-between items-start">
-              <span className="text-muted-foreground">Key Type:</span>
+              <span className="text-muted-foreground">{t('misc.ssh.keyType')}</span>
               <span className="font-mono font-medium">{request.keyType}</span>
             </div>
             <div className="flex justify-between items-start gap-4">
-              <span className="text-muted-foreground">Fingerprint:</span>
+              <span className="text-muted-foreground">{t('misc.ssh.fingerprint')}</span>
               <div className="flex items-center gap-2 flex-1 justify-end">
                 <span className="font-mono text-xs break-all">{request.fingerprint}</span>
                 <CopyButton content={request.fingerprint} variant="ghost" iconSize="sm" />
@@ -136,9 +138,9 @@ export function SSHHostKeyDialog({
 
           <div className="text-xs text-muted-foreground">
             <div className="flex justify-between">
-              <span>Auto-reject in:</span>
+              <span>{t('misc.ssh.autoRejectIn')}</span>
               <span className={cn("font-mono", isExpired && "text-red-500")}>
-                {isExpired ? 'Expired' : formatTime(timeRemaining)}
+                {isExpired ? t('misc.ssh.expired') : formatTime(timeRemaining)}
               </span>
             </div>
           </div>
@@ -151,7 +153,7 @@ export function SSHHostKeyDialog({
             disabled={isLoading || isExpired}
             className="w-full sm:flex-1 text-sm h-9 sm:h-10"
           >
-            {isLoading ? 'Processing...' : 'Reject'}
+            {isLoading ? t('misc.ssh.processing') : t('misc.ssh.reject')}
           </Button>
           <Button
             variant={request.isKeyChanged ? 'destructive' : 'default'}
@@ -159,7 +161,7 @@ export function SSHHostKeyDialog({
             disabled={isLoading || isExpired}
             className="w-full sm:flex-1 text-sm h-9 sm:h-10"
           >
-            {isLoading ? 'Processing...' : 'Accept'}
+            {isLoading ? t('misc.ssh.processing') : t('misc.ssh.accept')}
           </Button>
         </DialogFooter>
       </DialogContent>

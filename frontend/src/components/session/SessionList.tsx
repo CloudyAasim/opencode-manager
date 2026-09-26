@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Trash2, Pencil, X } from "lucide-react";
+import { useI18n } from '@/lib/i18n';
 
 interface SessionListProps {
   opcodeUrl: string;
@@ -30,6 +31,7 @@ export const SessionList = ({
   activeSessionID,
   onSelectSession,
 }: SessionListProps) => {
+  const { t } = useI18n();
   const directoriesList = useMemo(() => {
     const source = directories && directories.length > 0 ? directories : directory ? [directory] : [];
     return Array.from(new Set(source.filter(Boolean)));
@@ -117,22 +119,22 @@ export const SessionList = ({
   }, [isLoading, filteredSessions, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
   if (isLoading) {
-    return <div className="p-4 text-sm text-muted-foreground">Loading sessions...</div>;
+    return <div className="p-4 text-sm text-muted-foreground">{t('session.list.loading')}</div>;
   }
 
   if (!sessions || sessions.length === 0) {
     if (isFetchNextPageError) {
       return (
         <div className="flex flex-col items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
-          <p>Failed to load sessions.</p>
+          <p>{t('session.list.loadFailed')}</p>
           <Button variant="outline" size="sm" onClick={handleRetryNextPage} disabled={isFetchingNextPage}>
-            Retry
+            {t('session.list.retry')}
           </Button>
         </div>
       );
     }
     if (hasNextPage || isFetchingNextPage) {
-      return <div className="p-4 text-sm text-muted-foreground">Loading sessions...</div>;
+      return <div className="p-4 text-sm text-muted-foreground">{t('session.list.loading')}</div>;
     }
     if (!searchQuery.trim()) {
       return (
@@ -142,9 +144,9 @@ export const SessionList = ({
             onClick={() => createSession.mutate({ agent: undefined })}
           >
             <div className="flex flex-col items-center justify-center gap-2 text-center">
-              <p className="font-medium">No sessions yet</p>
+              <p className="font-medium">{t('session.list.emptyTitle')}</p>
               <p className="text-sm text-muted-foreground">
-                Click here to start a new session
+                {t('session.list.emptyHint')}
               </p>
             </div>
           </Card>
@@ -246,10 +248,10 @@ export const SessionList = ({
         {manageMode ? (
           <div className="flex items-center gap-2 bg-accent/50 rounded-md p-2">
             <span className="text-sm font-medium text-foreground shrink-0">
-              {selectedSessions.size} selected
+              {t('session.list.selected', { count: selectedSessions.size })}
             </span>
             <Button variant="ghost" onClick={toggleSelectAll} className="shrink-0 h-9 text-xs" size="sm">
-              {allVisibleSelected ? "Unselect All" : "Select All"}
+              {allVisibleSelected ? t('session.list.unselectAll') : t('session.list.selectAll')}
             </Button>
             <Button
               variant="ghost"
@@ -259,7 +261,7 @@ export const SessionList = ({
               size="sm"
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              Delete
+              {t('session.list.delete')}
             </Button>
             <Button
               variant="ghost"
@@ -276,7 +278,7 @@ export const SessionList = ({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search sessions..."
+                placeholder={t('session.list.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-9"
@@ -287,7 +289,7 @@ export const SessionList = ({
             <Button
               variant="outline"
               size="icon"
-              aria-label="Manage sessions"
+              aria-label={t('session.list.manageAria')}
               className="shrink-0 size-9"
               onClick={() => {
                 setManageMode(true);
@@ -303,19 +305,19 @@ export const SessionList = ({
         ref={sessionListRef}
         className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-4 min-h-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]"
         role="region"
-        aria-label="Sessions"
+        aria-label={t('session.list.regionAria')}
         onScroll={handleSessionsScroll}
       >
         <div className="flex flex-col gap-4">
           {filteredSessions.length === 0 && !isFetchingNextPage ? (
             <div className="text-sm text-muted-foreground text-center py-4">
-              No sessions found
+              {t('session.list.noResults')}
             </div>
           ) : (
             <>
               {pinnedSessions.length > 0 && (
                 <>
-                  <div className="text-xs font-semibold text-muted-foreground px-1 py-2">Pinned</div>
+                  <div className="text-xs font-semibold text-muted-foreground px-1 py-2">{t('session.list.pinned')}</div>
                   {pinnedSessions.map((session) => renderSessionCard(session, true))}
                   {(todaySessions.length > 0 || olderSessions.length > 0) && (
                     <div className="my-2 h-px bg-border/80" />
@@ -326,7 +328,7 @@ export const SessionList = ({
               {todaySessions.length > 0 && (
                 <>
                   <div className="text-xs font-semibold text-muted-foreground px-1 py-2">
-                    Today
+                    {t('session.list.today')}
                   </div>
                   {todaySessions.map((session) => renderSessionCard(session, false))}
                 </>
@@ -340,15 +342,15 @@ export const SessionList = ({
           )}
           {isFetchNextPageError && (
             <div className="flex flex-col items-center gap-2 py-4">
-              <p className="text-sm text-muted-foreground">Failed to load more sessions.</p>
+              <p className="text-sm text-muted-foreground">{t('session.list.loadMoreFailed')}</p>
               <Button variant="outline" size="sm" onClick={handleRetryNextPage} disabled={isFetchingNextPage}>
-                Retry
+                {t('session.list.retry')}
               </Button>
             </div>
           )}
           {isFetchingNextPage && (
             <div className="text-sm text-muted-foreground text-center py-4">
-              Loading more sessions...
+              {t('session.list.loadingMore')}
             </div>
           )}
         </div>

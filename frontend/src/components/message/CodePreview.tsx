@@ -2,6 +2,7 @@ import React from 'react'
 import { CopyButton } from '@/components/ui/copy-button'
 import { useMobile } from '@/hooks/useMobile'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 interface CodePreviewProps {
   fileName: string
@@ -59,6 +60,7 @@ function detectLanguage(fileName: string): string {
 
 export function CodePreview({ fileName, content }: CodePreviewProps) {
   const isMobile = useMobile()
+  const { t } = useI18n()
   const [showMore, setShowMore] = React.useState(false)
 
   const language = detectLanguage(fileName)
@@ -76,7 +78,7 @@ export function CodePreview({ fileName, content }: CodePreviewProps) {
     <div className="flex flex-col bg-background">
       <div className="px-3 py-2 bg-muted/30 border-b border-border/50 flex items-center justify-between text-xs">
         <span className="font-medium truncate flex-1">{extractFileFromPath(fileName)}</span>
-        <CopyButton content={content} title="Copy" iconSize="sm" variant="ghost" className="flex-shrink-0" />
+        <CopyButton content={content} title={t('message.actions.copy')} iconSize="sm" variant="ghost" className="flex-shrink-0" />
       </div>
 
       <div className={cn('overflow-y-auto', isMobile ? 'max-h-64' : 'max-h-96')}>
@@ -94,7 +96,7 @@ export function CodePreview({ fileName, content }: CodePreviewProps) {
           onClick={() => setShowMore(true)}
           className="mx-3 my-2 px-3 py-1.5 bg-muted hover:bg-muted/70 border border-border/50 rounded text-xs text-muted-foreground"
         >
-          Show more ({totalLines - INITIAL_CODE_LINES} more lines)
+          {t('message.files.showMoreLines', { lines: totalLines - INITIAL_CODE_LINES })}
         </button>
       )}
 
@@ -103,7 +105,7 @@ export function CodePreview({ fileName, content }: CodePreviewProps) {
           onClick={() => setShowMore(false)}
           className="mx-3 my-2 px-3 py-1.5 bg-muted hover:bg-muted/70 border border-border/50 rounded text-xs text-muted-foreground"
         >
-          Show less
+          {t('message.actions.showLess')}
         </button>
       )}
     </div>

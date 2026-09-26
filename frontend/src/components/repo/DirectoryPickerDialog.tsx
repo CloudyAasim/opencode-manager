@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { FetchError } from '@/api/fetchWrapper'
 import { Folder, FolderGit2, ChevronUp, Loader2, FolderX } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 interface DirectoryPickerDialogProps {
   open: boolean
@@ -13,7 +14,9 @@ interface DirectoryPickerDialogProps {
   title?: string
 }
 
-export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title = 'Select Folder' }: DirectoryPickerDialogProps) {
+export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: DirectoryPickerDialogProps) {
+  const { t } = useI18n()
+  const dialogTitle = title ?? t('repo.directoryPicker.selectFolder')
   const [currentPath, setCurrentPath] = useState<string | undefined>(undefined)
 
   useEffect(() => {
@@ -46,12 +49,12 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title = 'S
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent mobileFullscreen className="grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 sm:max-w-[560px] sm:max-h-[80vh]">
         <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 h-fit">
-          <DialogTitle className="text-lg">{title}</DialogTitle>
+          <DialogTitle className="text-lg">{dialogTitle}</DialogTitle>
         </DialogHeader>
 
         <div className="px-4 sm:px-6 pb-2">
           <p className="truncate rounded bg-muted px-3 py-2 text-xs text-muted-foreground" title={data?.path}>
-            {data?.path ?? 'Loading...'}
+            {data?.path ?? t('repo.loading')}
           </p>
         </div>
 
@@ -63,15 +66,14 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title = 'S
           ) : isDisabled ? (
             <div className="flex h-[240px] flex-col items-center justify-center gap-3 px-6 text-center">
               <FolderX className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-foreground">Folder browsing is not enabled</p>
+              <p className="text-sm text-foreground">{t('repo.directoryPicker.browseDisabled')}</p>
               <p className="text-xs text-muted-foreground">
-                Ask your administrator to set <code className="rounded bg-accent px-1 py-0.5 text-foreground">REPO_BROWSE_ROOT</code> in the
-                server environment, then enter the path manually for now.
+                {t('repo.directoryPicker.browseDisabledHintPrefix')} <code className="rounded bg-accent px-1 py-0.5 text-foreground">REPO_BROWSE_ROOT</code>{t('repo.directoryPicker.browseDisabledHintSuffix')}
               </p>
             </div>
           ) : isError ? (
             <div className="flex h-[240px] items-center justify-center px-4 text-center text-sm text-destructive">
-              {error instanceof Error ? error.message : 'Failed to load directory'}
+              {error instanceof Error ? error.message : t('repo.directoryPicker.loadFailed')}
             </div>
           ) : (
             <ul className="divide-y divide-border">
@@ -88,7 +90,7 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title = 'S
                 </li>
               )}
               {data?.entries.length === 0 && (
-                <li className="px-3 py-4 text-center text-sm text-muted-foreground">No subfolders</li>
+                <li className="px-3 py-4 text-center text-sm text-muted-foreground">{t('repo.directoryPicker.noSubfolders')}</li>
               )}
               {data?.entries.map((entry) => (
                 <li key={entry.path}>
@@ -103,7 +105,7 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title = 'S
                       <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
                     )}
                     <span className="truncate">{entry.name}</span>
-                    {entry.isGitRepo && <span className="ml-auto text-xs text-primary">git</span>}
+                    {entry.isGitRepo && <span className="ml-auto text-xs text-primary">{t('repo.directoryPicker.git')}</span>}
                   </button>
                 </li>
               ))}
@@ -113,10 +115,10 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title = 'S
 
         <DialogFooter className="px-4 sm:px-6 pb-4 sm:pb-6 gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('repo.cancel')}
           </Button>
           <Button type="button" onClick={handleSelect} disabled={!data?.path}>
-            Select This Folder
+            {t('repo.directoryPicker.selectThisFolder')}
           </Button>
         </DialogFooter>
       </DialogContent>

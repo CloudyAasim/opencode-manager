@@ -12,6 +12,7 @@ import { FolderOpen, Upload, RefreshCw, X } from 'lucide-react'
 import type { FileInfo } from '@/types/files'
 import { useMobile } from '@/hooks/useMobile'
 import { getFileApiUrl, useFile } from '@/api/files'
+import { useI18n } from '@/lib/i18n'
 
 export interface FileBrowserHandle {
   goBack: () => void
@@ -132,6 +133,7 @@ function getUploadItemsFromFileList(fileList: FileList): UploadItem[] {
 }
 
 export const FileBrowser = forwardRef<FileBrowserHandle, FileBrowserProps>(function FileBrowser({ basePath = '', onFileSelect, embedded = false, initialSelectedFile, onDirectoryLoad, onPreviewStateChange, allowNavigateAboveBase = false }, ref) {
+  const { t } = useI18n()
   const [currentPath, setCurrentPath] = useState(basePath)
   const [files, setFiles] = useState<FileInfo | null>(null)
   const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null)
@@ -171,7 +173,7 @@ useEffect(() => {
     try {
       const response = await fetch(getFileApiUrl(path))
       if (!response.ok) {
-        throw new Error(`Failed to load files: ${response.statusText}`)
+        throw new Error(t('repo.fileBrowser.errors.loadFiles', { status: response.statusText }))
       }
       
       const data = await response.json()
@@ -179,11 +181,11 @@ useEffect(() => {
       setCurrentPath(path)
       onDirectoryLoad?.({ workspaceRoot: data.workspaceRoot, currentPath: path })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load files')
+      setError(err instanceof Error ? err.message : t('repo.fileBrowser.errors.loadFilesGeneric'))
     } finally {
       setLoading(false)
     }
-  }, [onDirectoryLoad])
+  }, [onDirectoryLoad, t])
 
   const normalizePath = useCallback((path: string) => {
     const normalized = path
@@ -253,7 +255,7 @@ useEffect(() => {
     try {
       const response = await fetch(getFileApiUrl(file.path))
       if (!response.ok) {
-        throw new Error(`Failed to load file: ${response.statusText}`)
+        throw new Error(t('repo.fileBrowser.errors.loadFile', { status: response.statusText }))
       }
       
       const fullFileData = await response.json()
@@ -266,12 +268,12 @@ useEffect(() => {
         onPreviewStateChange?.(true)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load file')
+      setError(err instanceof Error ? err.message : t('repo.fileBrowser.errors.loadFileGeneric'))
       setSelectedFile(null)
     } finally {
       setLoading(false)
     }
-  }, [onFileSelect, isMobile, onPreviewStateChange])
+  }, [onFileSelect, isMobile, onPreviewStateChange, t])
 
   const handleCloseModal = useCallback(() => {
     setIsPreviewModalOpen(false)
@@ -300,14 +302,14 @@ useEffect(() => {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        return errorData.error || `Upload failed: ${response.statusText}`
+        return errorData.error || t('repo.fileBrowser.errors.upload', { status: response.statusText })
       }
       
       return null
     } catch (err) {
-      return err instanceof Error ? err.message : 'Upload failed'
+      return err instanceof Error ? err.message : t('repo.fileBrowser.errors.uploadGeneric')
     }
-  }, [currentPath])
+  }, [currentPath, t])
 
   const handleUploadItems = useCallback(async (items: UploadItem[]) => {
     if (items.length === 0) return
@@ -370,14 +372,14 @@ useEffect(() => {
       })
       
       if (!response.ok) {
-        throw new Error(`Create failed: ${response.statusText}`)
+        throw new Error(t('repo.fileBrowser.errors.create', { status: response.statusText }))
       }
       
       await loadFiles(currentPath)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Create failed')
+      setError(err instanceof Error ? err.message : t('repo.fileBrowser.errors.createGeneric'))
     }
-  }, [currentPath, loadFiles])
+  }, [currentPath, loadFiles, t])
 
   const handleDelete = useCallback(async (path: string) => {
     try {
@@ -386,15 +388,15 @@ useEffect(() => {
       })
       
       if (!response.ok) {
-        throw new Error(`Delete failed: ${response.statusText}`)
+        throw new Error(t('repo.fileBrowser.errors.delete', { status: response.statusText }))
       }
       
       await loadFiles(currentPath)
       setSelectedFile(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed')
+      setError(err instanceof Error ? err.message : t('repo.fileBrowser.errors.deleteGeneric'))
     }
-  }, [currentPath, loadFiles])
+  }, [currentPath, loadFiles, t])
 
   const handleRename = useCallback(async (oldPath: string, newPath: string) => {
     try {
@@ -405,14 +407,14 @@ useEffect(() => {
       })
       
       if (!response.ok) {
-        throw new Error(`Rename failed: ${response.statusText}`)
+        throw new Error(t('repo.fileBrowser.errors.rename', { status: response.statusText }))
       }
       
       await loadFiles(currentPath)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Rename failed')
+      setError(err instanceof Error ? err.message : t('repo.fileBrowser.errors.renameGeneric'))
     }
-  }, [currentPath, loadFiles])
+  }, [currentPath, loadFiles, t])
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
@@ -501,8 +503,8 @@ useEffect(() => {
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>
-              {uploadProgress?.cancelled ? 'Upload Cancelled' : 
-               isUploadComplete ? 'Upload Complete' : 'Uploading...'}
+              {uploadProgress?.cancelled ? t('repo.fileBrowser.upload.cancelled') : 
+               isUploadComplete ? t('repo.fileBrowser.upload.complete') : t('repo.fileBrowser.upload.uploading')}
             </span>
             {uploadProgress && uploadProgress.current < uploadProgress.total && !uploadProgress.cancelled && (
               <Button variant="ghost" size="sm" onClick={cancelUpload}>
@@ -518,7 +520,7 @@ useEffect(() => {
               max={uploadProgress.total} 
             />
             <p className="text-sm text-muted-foreground">
-              {uploadProgress.current} / {uploadProgress.total} files
+              {t('repo.fileBrowser.upload.filesCount', { current: uploadProgress.current, total: uploadProgress.total })}
             </p>
             {!isUploadComplete && (
               <p className="text-xs text-muted-foreground truncate">
@@ -528,7 +530,7 @@ useEffect(() => {
             {uploadProgress.errors.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-destructive">
-                  {uploadProgress.errors.length} file(s) failed:
+                  {t('repo.fileBrowser.upload.failedCount', { n: uploadProgress.errors.length })}
                 </p>
                 <div className="max-h-32 overflow-y-auto rounded border border-destructive/20 bg-destructive/5 p-2">
                   {uploadProgress.errors.map((error, index) => (
@@ -546,7 +548,7 @@ useEffect(() => {
                 className="w-full mt-2"
                 onClick={() => setUploadProgress(null)}
               >
-                Close
+                {t('repo.close')}
               </Button>
             )}
           </div>
@@ -569,7 +571,7 @@ useEffect(() => {
           <div className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
             <div className="text-center">
               <Upload className="w-12 h-12 mx-auto mb-2 text-primary" />
-              <p className="text-lg font-semibold text-primary">Drop files or folders here to upload</p>
+              <p className="text-lg font-semibold text-primary">{t('repo.fileBrowser.dropFiles')}</p>
             </div>
           </div>
         )}
@@ -581,7 +583,7 @@ useEffect(() => {
           <div className={`${isMobile ? 'w-full' : 'w-[30%]'} border-r border-border px-1 md:px-4 flex flex-col min-h-0 h-full`}>
             <div className="flex items-center gap-2 mb-4 mt-4 flex-shrink-0">
               <Input
-                placeholder="Search"
+                placeholder={t('repo.fileBrowser.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1"
@@ -631,7 +633,7 @@ useEffect(() => {
                 <FilePreview key={selectedFile.path} file={selectedFile} />
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                  Select a file to preview
+                  {t('repo.fileBrowser.selectFileToPreview')}
                 </div>
               )}
             </div>
@@ -663,7 +665,7 @@ useEffect(() => {
           <div className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
             <div className="text-center">
               <Upload className="w-12 h-12 mx-auto mb-2 text-primary" />
-              <p className="text-lg font-semibold text-primary">Drop files or folders here to upload</p>
+              <p className="text-lg font-semibold text-primary">{t('repo.fileBrowser.dropFiles')}</p>
             </div>
           </div>
         )}
@@ -672,7 +674,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <FolderOpen className="w-5 h-5" />
-              File Browser
+              {t('repo.fileBrowser.title')}
             </CardTitle>
             <Button variant="outline" size="sm" onClick={handleRefresh}>
               <RefreshCw className="w-4 h-4" />
@@ -691,7 +693,7 @@ useEffect(() => {
           <div className={`${isMobile ? 'w-full' : 'w-1/3'} border-r pr-4 flex flex-col min-h-0`}>
             <div className="flex items-center gap-2 mb-4 flex-shrink-0">
               <Input
-                placeholder="Search"
+                placeholder={t('repo.fileBrowser.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1"
@@ -732,7 +734,7 @@ useEffect(() => {
                 <FilePreview key={selectedFile.path} file={selectedFile} />
               ) : (
                 <div className="flex items-center justify-center h-64 text-muted-foreground">
-                  Select a file to preview
+                  {t('repo.fileBrowser.selectFileToPreview')}
                 </div>
               )}
             </div>

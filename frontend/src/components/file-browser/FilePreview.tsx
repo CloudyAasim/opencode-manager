@@ -6,6 +6,7 @@ import { getFileApiUrl } from '@/api/files'
 import { saveFileFromUrl } from '@/lib/download'
 import { VirtualizedTextView, type VirtualizedTextViewHandle } from '@/components/ui/virtualized-text-view'
 import { MarkdownRenderer } from './MarkdownRenderer'
+import { useI18n } from '@/lib/i18n'
 
 
 const VIRTUALIZATION_THRESHOLD_BYTES = 50_000
@@ -21,6 +22,7 @@ interface FilePreviewProps {
 }
 
 export const FilePreview = memo(function FilePreview({ file, hideHeader = false, isMobileModal = false, onCloseModal, onFileSaved, initialLineNumber }: FilePreviewProps) {
+  const { t } = useI18n()
   const isMarkdownFile = file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.mdx') || file.mimeType === 'text/markdown'
   
   const [viewMode, setViewMode] = useState<'preview' | 'edit'>('preview')
@@ -83,9 +85,9 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
   }, [initialLineNumber, shouldVirtualize, file.content])
   
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
+    if (bytes === 0) return `0 ${t('repo.fileBrowser.units.bytes')}`
     const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const sizes = [t('repo.fileBrowser.units.bytes'), 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
@@ -245,9 +247,9 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
             <>
               {isMarkdownTooLarge ? (
                 <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
-                  <span>File too large for markdown preview (max 1MB)</span>
+                  <span>{t('repo.fileBrowser.fileTooLargeForMarkdown')}</span>
                   <Button variant="outline" size="sm" onClick={() => setMarkdownPreview(false)}>
-                    View raw
+                    {t('repo.fileBrowser.viewRaw')}
                   </Button>
                 </div>
               ) : isLoadingAllContent || !fullContentLoaded ? (
@@ -275,7 +277,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               lineWrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre overflow-x-auto'
             }`}
             style={{ minHeight: '95vh' }}
-            placeholder="Edit file content..."
+            placeholder={t('repo.fileBrowser.editPlaceholder')}
             autoFocus
             data-file-editor="true"
           />
@@ -288,7 +290,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
         if (!displayContent) {
           return (
             <div className="text-center text-muted-foreground py-8">
-              Empty file - click Edit to add content
+              {t('repo.fileBrowser.emptyFile')}
             </div>
           )
         }
@@ -327,7 +329,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       } catch {
         return (
           <div className="text-center text-muted-foreground py-8">
-            Cannot preview this file - content may be corrupted
+            {t('repo.fileBrowser.cannotPreview')}
           </div>
         )
       }
@@ -335,7 +337,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
 
     return (
       <div className="text-center text-muted-foreground py-8">
-        Binary file - download to view content
+        {t('repo.fileBrowser.binaryFile')}
       </div>
     )
   }
@@ -364,14 +366,14 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
                 {file.name}
               </h3>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
-                <span className="bg-muted px-1.5 py-0.5 rounded text-xs truncate max-w-[80px] flex-shrink-0">{file.mimeType || 'Unknown'}</span>
+                <span className="bg-muted px-1.5 py-0.5 rounded text-xs truncate max-w-[80px] flex-shrink-0">{file.mimeType || t('repo.unknown')}</span>
                 <span className="truncate flex-shrink-0">{formatFileSize(file.size)}</span>
                 <span className="hidden sm:inline truncate flex-shrink-0">{formatDate(file.lastModified)}</span>
                 {shouldVirtualize && (
-                  <span className="text-xs text-blue-500 flex-shrink-0">Virtualized</span>
+                  <span className="text-xs text-blue-500 flex-shrink-0">{t('repo.fileBrowser.virtualized')}</span>
                 )}
                 {hasVirtualizedChanges && (
-                  <span className="text-xs text-yellow-500 flex-shrink-0">Unsaved changes</span>
+                  <span className="text-xs text-yellow-500 flex-shrink-0">{t('repo.fileBrowser.unsavedChanges')}</span>
                 )}
               </div>
             </div>
@@ -383,7 +385,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
                   size="sm" 
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMarkdownPreview(!markdownPreview) }} 
                   className={`h-7 w-7 p-0 ${markdownPreview ? 'bg-primary text-primary-foreground' : ''}`}
-                  title={markdownPreview ? "Show raw markdown" : "Preview rendered markdown"}
+                  title={markdownPreview ? t('repo.fileBrowser.showRawMarkdown') : t('repo.fileBrowser.previewRenderedMarkdown')}
                 >
                   {markdownPreview ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                 </Button>
@@ -395,7 +397,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
                   size="sm" 
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLineWrap(!lineWrap) }} 
                   className={`h-7 w-7 p-0 ${lineWrap ? 'bg-primary text-primary-foreground' : ''}`}
-                  title={lineWrap ? "Disable line wrap" : "Enable line wrap"}
+                  title={lineWrap ? t('repo.fileBrowser.disableLineWrap') : t('repo.fileBrowser.enableLineWrap')}
                 >
                   <WrapText className="w-3 h-3" />
                 </Button>

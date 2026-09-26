@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Bot, FileText } from 'lucide-react'
 import { useTouchTapSelect } from '@/hooks/useTouchTapSelect'
+import { useI18n } from '@/lib/i18n'
 
 export interface MentionItem {
   type: 'file' | 'agent'
@@ -24,6 +25,7 @@ export function MentionSuggestions({
   onClose,
   selectedIndex = 0
 }: MentionSuggestionsProps) {
+  const { t } = useI18n()
   const listRef = useRef<HTMLDivElement>(null)
   const touchTapSelect = useTouchTapSelect(onSelect)
 
@@ -86,7 +88,7 @@ export function MentionSuggestions({
               {item.type === 'file' ? getFilename(item.value) : item.label}
             </div>
             <div className="text-xs opacity-70 mt-0.5 truncate">
-              {item.type === 'file' ? getDirectory(item.value) : item.description || 'Agent'}
+              {item.type === 'file' ? getDirectory(item.value) : item.description || t('message.roles.agent')}
             </div>
           </div>
         </button>

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { FileDiffView } from '@/components/file-browser/FileDiffView'
 import { DiscardDialog } from '@/components/ui/discard-dialog'
 import { Loader2, GitCommit, FileText, AlertCircle } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 interface ChangesTabProps {
   repoId: number
@@ -18,6 +19,7 @@ interface ChangesTabProps {
 }
 
 export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selectedFile, isMobile, onError }: ChangesTabProps) {
+  const { t } = useI18n()
   const { data: status, isLoading, error } = useGitStatus(repoId)
   const git = useGit(repoId, onError)
   const [commitMessage, setCommitMessage] = useState('')
@@ -72,7 +74,7 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
     return (
       <div className="text-center py-12 text-muted-foreground">
         <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">Failed to load git status</p>
+        <p className="text-sm">{t('misc.changesTab.loadFailed')}</p>
         <p className="text-xs mt-1">{error.message}</p>
       </div>
     )
@@ -122,7 +124,7 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No uncommitted changes</p>
+              <p className="text-sm">{t('misc.changesTab.noChanges')}</p>
             </div>
           )}
         </div>
@@ -130,7 +132,7 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
         {status.hasChanges && (
           <div className="p-3 border-t border-border space-y-2 flex-shrink-0">
             <Textarea
-              placeholder="Commit message..."
+              placeholder={t('misc.changesTab.commitPlaceholder')}
               value={commitMessage}
               onChange={(e) => setCommitMessage(e.target.value)}
               className="min-h-[80px] md:text-sm resize-none"
@@ -150,10 +152,10 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
               ) : (
                 <GitCommit className="w-4 h-4 mr-2" />
               )}
-              Commit {stagedFiles.length > 0 && `(${stagedFiles.length} staged)`}
+              {t('misc.changesTab.commit')} {stagedFiles.length > 0 && t('misc.changesTab.stagedCount', { n: stagedFiles.length })}
             </Button>
             <p className="text-[10px] text-muted-foreground text-center">
-              {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Enter to commit
+              {t('misc.changesTab.commitShortcut', { modifier: navigator.platform.includes('Mac') ? '⌘' : 'Ctrl' })}
             </p>
           </div>
         )}

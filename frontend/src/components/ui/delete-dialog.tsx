@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { ConfirmDestructiveDialog } from '@/components/ui/confirm-destructive-dialog'
+import { useI18n } from '@/lib/i18n'
 
 interface DeleteDialogProps {
   open: boolean
@@ -22,6 +23,8 @@ export function DeleteDialog({
   itemName,
   isDeleting = false
 }: DeleteDialogProps) {
+  const { t } = useI18n()
+
   return (
     <ConfirmDestructiveDialog
       open={open}
@@ -30,11 +33,9 @@ export function DeleteDialog({
       onCancel={onCancel}
       title={title}
       description={description}
-      warning={itemName ? (
-        <>This will permanently delete "<span className="font-medium">{itemName}</span>". This action cannot be undone.</>
-      ) : undefined}
-      confirmLabel={title.includes('Configuration') ? 'Delete Configuration' : 'Delete'}
-      pendingLabel="Deleting..."
+      warning={itemName ? t('ui.deleteDialog.warning', { itemName }) : undefined}
+      confirmLabel={title.includes('Configuration') ? t('ui.deleteDialog.deleteConfiguration') : t('ui.deleteDialog.delete')}
+      pendingLabel={t('ui.deleteDialog.deleting')}
       isPending={isDeleting}
     />
   )

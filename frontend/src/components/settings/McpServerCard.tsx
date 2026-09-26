@@ -3,7 +3,10 @@ import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { SettingsListRow, type SettingsListRowAction } from '@/components/ui/settings-list'
 import { XCircle, AlertCircle, Key, Shield, Trash2, RefreshCw } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 import type { McpStatus, McpServerConfig } from '@/api/mcp'
+
+type Translate = ReturnType<typeof useI18n>['t']
 
 interface McpServerCardProps {
   serverId: string
@@ -20,35 +23,35 @@ interface McpServerCardProps {
   onDeleteServer: (serverId: string, serverName: string) => void
 }
 
-function getStatusBadge(status: McpStatus) {
+function getStatusBadge(status: McpStatus, t: Translate) {
   switch (status.status) {
     case 'connected':
-      return <Badge variant="default" className="text-xs bg-green-600">Connected</Badge>
+      return <Badge variant="default" className="text-xs bg-green-600">{t('settingsPanels.mcpServerCard.connected')}</Badge>
     case 'disabled':
-      return <Badge variant="secondary" className="text-xs">Disabled</Badge>
+      return <Badge variant="secondary" className="text-xs">{t('settingsPanels.mcpServerCard.disabled')}</Badge>
     case 'failed':
       return (
         <Badge variant="destructive" className="text-xs flex items-center gap-1">
           <AlertCircle className="h-3 w-3" />
-          Failed
+          {t('settingsPanels.mcpServerCard.failed')}
         </Badge>
       )
     case 'needs_auth':
       return (
         <Badge variant="outline" className="text-xs flex items-center gap-1 border-yellow-500 text-yellow-600">
           <Key className="h-3 w-3" />
-          Auth Required
+          {t('settingsPanels.mcpServerCard.authRequired')}
         </Badge>
       )
     case 'needs_client_registration':
       return (
         <Badge variant="outline" className="text-xs flex items-center gap-1 border-orange-500 text-orange-600">
           <AlertCircle className="h-3 w-3" />
-          Registration Required
+          {t('settingsPanels.mcpServerCard.registrationRequired')}
         </Badge>
       )
     default:
-      return <Badge variant="outline" className="text-xs">Unknown</Badge>
+      return <Badge variant="outline" className="text-xs">{t('settingsPanels.mcpServerCard.unknown')}</Badge>
   }
 }
 
@@ -57,24 +60,24 @@ function getServerDisplayName(serverId: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1)
 }
 
-function getServerDescription(serverConfig: McpServerConfig): string {
+function getServerDescription(serverConfig: McpServerConfig, t: Translate): string {
   if (serverConfig.type === 'local' && serverConfig.command) {
     const command = serverConfig.command.join(' ')
-    if (command.includes('filesystem')) return 'File system access'
-    if (command.includes('git')) return 'Git repository operations'
-    if (command.includes('sqlite')) return 'SQLite database access'
-    if (command.includes('postgres')) return 'PostgreSQL database access'
-    if (command.includes('brave-search')) return 'Web search via Brave'
-    if (command.includes('github')) return 'GitHub repository access'
-    if (command.includes('slack')) return 'Slack integration'
-    if (command.includes('puppeteer')) return 'Web automation'
-    if (command.includes('fetch')) return 'HTTP requests'
-    if (command.includes('memory')) return 'Persistent memory'
-    return `Local command: ${command}`
+    if (command.includes('filesystem')) return t('settingsPanels.mcpServerCard.fsAccess')
+    if (command.includes('git')) return t('settingsPanels.mcpServerCard.gitOps')
+    if (command.includes('sqlite')) return t('settingsPanels.mcpServerCard.sqliteAccess')
+    if (command.includes('postgres')) return t('settingsPanels.mcpServerCard.postgresAccess')
+    if (command.includes('brave-search')) return t('settingsPanels.mcpServerCard.webSearchBrave')
+    if (command.includes('github')) return t('settingsPanels.mcpServerCard.githubAccess')
+    if (command.includes('slack')) return t('settingsPanels.mcpServerCard.slackIntegration')
+    if (command.includes('puppeteer')) return t('settingsPanels.mcpServerCard.webAutomation')
+    if (command.includes('fetch')) return t('settingsPanels.mcpServerCard.httpRequests')
+    if (command.includes('memory')) return t('settingsPanels.mcpServerCard.persistentMemory')
+    return t('settingsPanels.mcpServerCard.localCommand', { command })
   } else if (serverConfig.type === 'remote' && serverConfig.url) {
-    return `Remote server: ${serverConfig.url}`
+    return t('settingsPanels.mcpServerCard.remoteServer', { url: serverConfig.url })
   }
-  return 'MCP server'
+  return t('settingsPanels.mcpServerCard.mcpServer')
 }
 
 export function McpServerCard({
@@ -91,6 +94,7 @@ export function McpServerCard({
   onRemoveAuth,
   onDeleteServer
 }: McpServerCardProps) {
+  const { t } = useI18n()
   const needsAuth = status?.status === 'needs_auth'
   const isRemote = serverConfig.type === 'remote'
   const hasOAuthConfig = isRemote && !!serverConfig.oauth
@@ -102,15 +106,15 @@ export function McpServerCard({
 
   const actions: SettingsListRowAction[] = []
   if (showAuthButton && onAuthenticate) {
-    actions.push({ label: 'Authenticate', onClick: () => onAuthenticate(serverId), icon: <Key className="h-4 w-4 mr-2" /> })
+    actions.push({ label: t('settingsPanels.mcpServerCard.authenticate'), onClick: () => onAuthenticate(serverId), icon: <Key className="h-4 w-4 mr-2" /> })
   }
   if (connectedWithOAuth && onAuthenticate) {
-    actions.push({ label: 'Re-authenticate', onClick: () => onAuthenticate(serverId), icon: <RefreshCw className="h-4 w-4 mr-2" /> })
+    actions.push({ label: t('settingsPanels.mcpServerCard.reauthenticate'), onClick: () => onAuthenticate(serverId), icon: <RefreshCw className="h-4 w-4 mr-2" /> })
   }
   if (connectedWithOAuth && onRemoveAuth) {
-    actions.push({ label: isRemovingAuth ? 'Removing...' : 'Remove Auth', onClick: () => onRemoveAuth(serverId), icon: <Shield className="h-4 w-4 mr-2" />, disabled: isRemovingAuth })
+    actions.push({ label: isRemovingAuth ? t('settingsPanels.mcpServerCard.removing') : t('settingsPanels.mcpServerCard.removeAuth'), onClick: () => onRemoveAuth(serverId), icon: <Shield className="h-4 w-4 mr-2" />, disabled: isRemovingAuth })
   }
-  actions.push({ label: 'Delete Server', onClick: () => onDeleteServer(serverId, displayName), icon: <Trash2 className="h-4 w-4 mr-2" />, destructive: true, separatorBefore: showAuthButton || connectedWithOAuth })
+  actions.push({ label: t('settingsPanels.mcpServerCard.deleteServer'), onClick: () => onDeleteServer(serverId, displayName), icon: <Trash2 className="h-4 w-4 mr-2" />, destructive: true, separatorBefore: showAuthButton || connectedWithOAuth })
 
   return (
     <SettingsListRow
@@ -118,16 +122,16 @@ export function McpServerCard({
       badges={
         <>
           {connectedWithOAuth && (
-            <span title="OAuth authenticated">
+            <span title={t('settingsPanels.mcpServerCard.oauthAuthenticated')}>
               <Shield className="h-3 w-3 text-muted-foreground" />
             </span>
           )}
-          {status ? getStatusBadge(status) : (
-            <Badge variant="outline" className="text-xs">Loading...</Badge>
+          {status ? getStatusBadge(status, t) : (
+            <Badge variant="outline" className="text-xs">{t('settingsPanels.mcpServerCard.loading')}</Badge>
           )}
         </>
       }
-      description={getServerDescription(serverConfig)}
+      description={getServerDescription(serverConfig, t)}
       belowDescription={errorMessage ? (
         <div className="flex items-start gap-1.5 mt-1.5 text-xs text-red-500">
           <XCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
@@ -143,7 +147,7 @@ export function McpServerCard({
             size="sm"
           >
             <Key className="h-3 w-3 mr-1" />
-            Auth
+            {t('settingsPanels.mcpServerCard.auth')}
           </Button>
         ) : (
           <Switch
@@ -154,7 +158,7 @@ export function McpServerCard({
         )
       }
       actions={actions}
-      actionsLabel={`Actions for ${displayName}`}
+      actionsLabel={t('settingsPanels.mcpServerCard.actionsFor', { name: displayName })}
     />
   )
 }

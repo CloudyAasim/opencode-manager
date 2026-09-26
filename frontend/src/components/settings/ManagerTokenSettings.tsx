@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle, Check, Copy, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { SettingsDisclosure } from './SettingsDisclosure'
+import { useI18n } from '@/lib/i18n'
 
 interface ManagerTokenSettingsProps {
   isOpen?: boolean
@@ -12,6 +13,7 @@ interface ManagerTokenSettingsProps {
 }
 
 export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: ManagerTokenSettingsProps = {}) {
+  const { t } = useI18n()
   const { token, isLoading, rotate } = useManagerToken()
   const [showToken, setShowToken] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -43,13 +45,13 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
 
   return (
     <SettingsDisclosure
-      title="Manager Internal Token"
+      title={t('settingsPanels.managerToken.title')}
       isOpen={isOpen}
       onToggle={handleToggle}
       contentClassName="space-y-3"
       meta={
         <span className="text-xs text-muted-foreground truncate hidden sm:inline">
-          Bearer token for workspace plugin and API clients
+          {t('settingsPanels.managerToken.meta')}
         </span>
       }
     >
@@ -58,7 +60,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
           <Input
             id="manager-token"
             type={showToken ? 'text' : 'password'}
-            value={isLoading ? 'Loading...' : token ?? ''}
+            value={isLoading ? t('settingsPanels.managerToken.loading') : token ?? ''}
             readOnly
             className="flex-1 font-mono text-xs pr-9"
             autoComplete="new-password"
@@ -97,7 +99,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Rotating will invalidate the existing token. Any plugin or client using it must be updated. Click Rotate again to confirm.
+            {t('settingsPanels.managerToken.rotateWarning')}
           </AlertDescription>
         </Alert>
       )}

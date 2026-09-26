@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { RepoLspServerList } from './RepoLspServerList'
 import { useLSPStatus } from '@/hooks/useLSPStatus'
+import { useI18n } from '@/lib/i18n'
 
 interface RepoLspDialogProps {
   open: boolean
@@ -10,13 +11,14 @@ interface RepoLspDialogProps {
 }
 
 export function RepoLspDialog({ open, onOpenChange, opcodeUrl, directory }: RepoLspDialogProps) {
+  const { t } = useI18n()
   const { isLoading, data } = useLSPStatus(opcodeUrl, directory)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] w-full">
         <DialogHeader>
-          <DialogTitle>LSP Servers</DialogTitle>
+          <DialogTitle>{t('repo.lsp.title')}</DialogTitle>
         </DialogHeader>
         <RepoLspServerList isLoading={isLoading} data={data} />
       </DialogContent>

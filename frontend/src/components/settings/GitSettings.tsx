@@ -12,12 +12,14 @@ import { randomId } from '@/lib/utils'
 import type { GitCredential, GitIdentity, UserPreferences } from '@/api/types/settings'
 import { listRepos, updateRepoGitCredential } from '@/api/repos'
 import { useOpenCodeServerActions } from '@/hooks/useOpenCodeServerActions'
+import { useI18n } from '@/lib/i18n'
 
 function ensureCredentialId(credential: GitCredential): GitCredential {
   return credential.id ? credential : { ...credential, id: randomId() }
 }
 
 export function GitSettings() {
+  const { t } = useI18n()
   const { preferences, isLoading, updateSettingsAsync, isUpdating } = useSettings()
   const queryClient = useQueryClient()
   const [gitCredentials, setGitCredentials] = useState<GitCredential[]>([])
@@ -124,12 +126,12 @@ export function GitSettings() {
       await saveGitSettings(
         { gitCredentials: newCredentials, defaultGitCredentialId: nextDefaultGitCredentialId, gitIdentity },
         {
-          successMessage: 'Credential saved',
+          successMessage: t('settingsPanels.git.credentialSaved'),
           afterSave: () => syncRepoAssignments(nextCredential.id!, options.repoIds),
         }
       )
     } catch {
-      showToast.error('Failed to save credential')
+      showToast.error(t('settingsPanels.git.credentialSaveFailed'))
     }
   }
 
@@ -146,12 +148,12 @@ export function GitSettings() {
       await saveGitSettings(
         { gitCredentials: newCredentials, defaultGitCredentialId: nextDefaultGitCredentialId, gitIdentity },
         {
-          successMessage: 'Credential deleted',
+          successMessage: t('settingsPanels.git.credentialDeleted'),
           afterSave: removedCredentialId ? () => syncRepoAssignments(removedCredentialId, []) : undefined,
         }
       )
     } catch {
-      showToast.error('Failed to delete credential')
+      showToast.error(t('settingsPanels.git.credentialDeleteFailed'))
     }
   }
 
@@ -164,14 +166,14 @@ export function GitSettings() {
   const saveAll = async () => {
     setIsSaving(true)
     try {
-      showToast.loading('Saving git configuration...', { id: 'git-config' })
+      showToast.loading(t('settingsPanels.git.savingConfig'), { id: 'git-config' })
       await saveGitSettings(
         { gitCredentials, defaultGitCredentialId, gitIdentity },
-        { successMessage: 'Git configuration saved', toastId: 'git-config' }
+        { successMessage: t('settingsPanels.git.configSaved'), toastId: 'git-config' }
       )
       setHasChanges(false)
     } catch {
-      showToast.error('Failed to save git configuration', { id: 'git-config' })
+      showToast.error(t('settingsPanels.git.configSaveFailed'), { id: 'git-config' })
     } finally {
       setIsSaving(false)
     }
@@ -189,9 +191,9 @@ export function GitSettings() {
     <div className="bg-card border border-border rounded-lg">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Git Configuration</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t('settingsPanels.git.title')}</h2>
           <p className="text-sm text-muted-foreground">
-            Manage your git identity and credentials for repository operations
+            {t('settingsPanels.git.description')}
           </p>
         </div>
         {hasChanges && (
@@ -203,7 +205,7 @@ export function GitSettings() {
             disabled={isSaving || isUpdating}
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Save Changes
+            {t('settingsPanels.git.saveChanges')}
           </Button>
         )}
       </div>
@@ -212,22 +214,22 @@ export function GitSettings() {
           <div className="min-w-0 space-y-4">
             <div className="flex items-center gap-3">
               <User className="w-4 h-4 shrink-0 text-muted-foreground" />
-              <span className="font-medium">Identity</span>
+              <span className="font-medium">{t('settingsPanels.git.identity')}</span>
               <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
-                {gitIdentity.name || gitIdentity.email ? `${gitIdentity.name || 'No name'} <${gitIdentity.email || 'No email'}>` : 'Not configured'}
+                {gitIdentity.name || gitIdentity.email ? `${gitIdentity.name || t('settingsPanels.git.noName')} <${gitIdentity.email || t('settingsPanels.git.noEmail')}>` : t('settingsPanels.git.notConfigured')}
               </span>
             </div>
 
             <div className="space-y-4 sm:ml-7">
               <p className="text-sm text-muted-foreground">
-                Author identity used for git commits. Leave empty to use system defaults.
+                {t('settingsPanels.git.identityDescription')}
               </p>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="git-name">Name</Label>
+                  <Label htmlFor="git-name">{t('settingsPanels.git.name')}</Label>
                   <Input
                     id="git-name"
-                    placeholder="Your Name"
+                    placeholder={t('settingsPanels.git.namePlaceholder')}
                     value={gitIdentity.name}
                     onChange={(e) => updateIdentity('name', e.target.value)}
                     disabled={isSaving}
@@ -235,11 +237,11 @@ export function GitSettings() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="git-email">Email</Label>
+                  <Label htmlFor="git-email">{t('settingsPanels.git.email')}</Label>
                   <Input
                     id="git-email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={t('settingsPanels.git.emailPlaceholder')}
                     value={gitIdentity.email}
                     onChange={(e) => updateIdentity('email', e.target.value)}
                     disabled={isSaving}
@@ -253,16 +255,16 @@ export function GitSettings() {
           <div className="min-w-0 space-y-4 @min-[1000px]:col-span-2">
             <div className="flex items-center gap-3">
               <Key className="w-4 h-4 shrink-0 text-muted-foreground" />
-              <span className="font-medium">Credentials</span>
+              <span className="font-medium">{t('settingsPanels.git.credentials')}</span>
               <span className="ml-auto text-xs text-muted-foreground">
-                {gitCredentials.length} configured
+                {t('settingsPanels.git.configuredCount', { count: gitCredentials.length })}
               </span>
             </div>
 
             <div className="space-y-4 sm:ml-7">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Credentials for cloning private repositories
+                  {t('settingsPanels.git.credentialsDescription')}
                 </p>
                <Button
                  type="button"
@@ -272,14 +274,14 @@ export function GitSettings() {
                  disabled={isSaving}
                >
                  <Plus className="h-4 w-4 mr-2" />
-                 Add
+                 {t('settingsPanels.git.add')}
                 </Button>
               </div>
 
               {gitCredentials.length === 0 ? (
                <div className="rounded-lg border border-dashed border-border p-4 text-center">
                  <p className="text-sm text-muted-foreground">
-                   No credentials configured. Click "Add" to add credentials.
+                   {t('settingsPanels.git.noCredentials')}
                  </p>
                </div>
              ) : (
@@ -287,10 +289,10 @@ export function GitSettings() {
                  <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                      <tr>
-                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">Name</th>
-                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Host</th>
-                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Type</th>
-                       <th className="px-3 py-2 text-right font-medium text-muted-foreground">Actions</th>
+                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t('settingsPanels.git.tableName')}</th>
+                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden sm:table-cell">{t('settingsPanels.git.tableHost')}</th>
+                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden sm:table-cell">{t('settingsPanels.git.tableType')}</th>
+                       <th className="px-3 py-2 text-right font-medium text-muted-foreground">{t('settingsPanels.git.tableActions')}</th>
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-border">
@@ -298,7 +300,7 @@ export function GitSettings() {
                        <tr key={index} className="hover:bg-accent/30 transition-colors">
                          <td className="px-3 py-2">
                            <div>
-                             <span className="font-medium">{cred.name || 'Unnamed'}</span>
+                             <span className="font-medium">{cred.name || t('settingsPanels.git.unnamed')}</span>
                              <div className="text-xs text-muted-foreground sm:hidden">{cred.host}</div>
                            </div>
                          </td>
@@ -319,7 +321,7 @@ export function GitSettings() {
                                 className="h-7 w-7 p-0"
                                 onClick={(e) => handleEditClick(e, index)}
                                 disabled={isSaving}
-                                title="Edit"
+                                title={t('settingsPanels.git.edit')}
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
@@ -330,7 +332,7 @@ export function GitSettings() {
                                 className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                                 onClick={(e) => handleDeleteClick(e, index)}
                                 disabled={isSaving}
-                                title="Delete"
+                                title={t('settingsPanels.git.delete')}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>

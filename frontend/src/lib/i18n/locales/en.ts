@@ -1,3 +1,12 @@
+import { navigation } from './ns/en/navigation'
+import { repo } from './ns/en/repo'
+import { session } from './ns/en/session'
+import { message } from './ns/en/message'
+import { schedules } from './ns/en/schedules'
+import { ui } from './ns/en/ui'
+import { misc } from './ns/en/misc'
+import { settingsPanels } from './ns/en/settingsPanels'
+
 export const en = {
   common: {
     save: 'Save',
@@ -184,4 +193,12 @@ export const en = {
       total_other: '{{count}} entries',
     },
   },
+  navigation,
+  repo,
+  session,
+  message,
+  schedules,
+  ui,
+  misc,
+  settingsPanels,
 } as const

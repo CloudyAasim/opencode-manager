@@ -3,6 +3,7 @@ import { Loader2, GitCommit, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GitFlatFileList } from './GitFlatFileList'
 import { FileDiffView } from '@/components/file-browser/FileDiffView'
+import { useI18n } from '@/lib/i18n'
 
 interface CommitDetailViewProps {
   repoId: number
@@ -13,6 +14,7 @@ interface CommitDetailViewProps {
 }
 
 export function CommitDetailView({ repoId, commitHash, onBack, onFileSelect, selectedFile }: CommitDetailViewProps) {
+  const { t } = useI18n()
   const { data: commit, isLoading, error } = useCommitDetails(repoId, commitHash)
 
   if (isLoading) {
@@ -27,11 +29,11 @@ export function CommitDetailView({ repoId, commitHash, onBack, onFileSelect, sel
     return (
       <div className="text-center py-12 text-muted-foreground">
         <GitCommit className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">Failed to load commit details</p>
+        <p className="text-sm">{t('misc.commitDetail.loadFailed')}</p>
         <p className="text-xs mt-1">{error?.message}</p>
         <Button variant="outline" size="sm" onClick={onBack} className="mt-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to commits
+          {t('misc.commitDetail.backToCommits')}
         </Button>
       </div>
     )

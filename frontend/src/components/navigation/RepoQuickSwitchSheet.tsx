@@ -12,6 +12,7 @@ import { FolderGit2, Check, Plus, GitBranch } from 'lucide-react'
 import { useUrlParams } from '@/hooks/useUrlParams'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
 import { getAssistantPath, isAssistantPath } from '@/lib/navigation'
+import { useI18n } from '@/lib/i18n'
 
 interface RepoQuickSwitchSheetProps {
   isOpen: boolean
@@ -22,6 +23,7 @@ export function RepoQuickSwitchSheet({ isOpen, onClose }: RepoQuickSwitchSheetPr
   const navigate = useNavigate()
   const location = useLocation()
   const { searchParams } = useUrlParams()
+  const { t } = useI18n()
   const [searchQuery, setSearchQuery] = useState('')
   const [addRepoOpen, setAddRepoOpen] = useState(false)
 
@@ -79,12 +81,12 @@ export function RepoQuickSwitchSheet({ isOpen, onClose }: RepoQuickSwitchSheetPr
 
   return (
     <>
-      <BottomSheet isOpen={isOpen} onClose={onClose} heightClass="h-[70dvh]" ariaLabel="Switch repo">
+      <BottomSheet isOpen={isOpen} onClose={onClose} heightClass="h-[70dvh]" ariaLabel={t('navigation.switchRepo')}>
         <BottomSheetHeader>
           <div className="flex items-center gap-2">
             <Input
               type="text"
-              placeholder="Search projects..."
+              placeholder={t('navigation.searchProjects')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
@@ -102,8 +104,8 @@ export function RepoQuickSwitchSheet({ isOpen, onClose }: RepoQuickSwitchSheetPr
               className="flex-shrink-0"
             >
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Repo</span>
-              <span className="sr-only">Add repository</span>
+              <span className="hidden sm:inline">{t('navigation.repo')}</span>
+              <span className="sr-only">{t('navigation.addRepository')}</span>
             </Button>
           </div>
         </BottomSheetHeader>
@@ -117,7 +119,7 @@ export function RepoQuickSwitchSheet({ isOpen, onClose }: RepoQuickSwitchSheetPr
         ) : filteredRepos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <FolderGit2 className="h-12 w-12 mb-3 opacity-50" />
-            <p className="text-sm">No repos found</p>
+            <p className="text-sm">{t('navigation.noReposFound')}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-2">

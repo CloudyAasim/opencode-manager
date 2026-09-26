@@ -13,7 +13,7 @@ import type { EventStreamSubscription } from '@/lib/opencode-event-stream'
 import { parseOpenCodeError } from '@/lib/opencode-errors'
 import { createPartsBatcher } from '@/lib/partsBatcher'
 
-const STATUS_POLL_INTERVAL_MS = 5000
+const STATUS_POLL_INTERVAL_MS = 15000
 
 const getEventDirectory = (event: SSEEvent): string | undefined => {
   const directory = (event as { directory?: unknown }).directory

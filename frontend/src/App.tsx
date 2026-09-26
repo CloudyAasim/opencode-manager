@@ -38,8 +38,15 @@ import { useServerHealth } from '@/hooks/useServerHealth'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 10,
-      refetchOnWindowFocus: true,
+      staleTime: 1000 * 60,
+      gcTime: 1000 * 60 * 30,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: 1,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    },
+    mutations: {
+      retry: 0,
     },
   },
 })

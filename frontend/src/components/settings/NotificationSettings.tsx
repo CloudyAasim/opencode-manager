@@ -5,8 +5,10 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { showToast } from "@/lib/toast";
 import { formatDistanceToNow } from "date-fns";
+import { useI18n } from "@/lib/i18n";
 
 export function NotificationSettings() {
+  const { t } = useI18n();
   const {
     isSupported,
     isAvailable,
@@ -28,12 +30,12 @@ export function NotificationSettings() {
     return (
       <div className="bg-card border border-border rounded-lg p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
-          Push Notifications
+          {t("settingsPanels.notifications.title")}
         </h2>
         <div className="flex items-center gap-3 text-muted-foreground">
           <BellOff className="h-5 w-5" />
           <p className="text-sm">
-            Push notifications are not supported in this browser.
+            {t("settingsPanels.notifications.unsupported")}
           </p>
         </div>
       </div>
@@ -44,13 +46,12 @@ export function NotificationSettings() {
     return (
       <div className="bg-card border border-border rounded-lg p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
-          Push Notifications
+          {t("settingsPanels.notifications.title")}
         </h2>
         <div className="flex items-center gap-3 text-muted-foreground">
           <BellOff className="h-5 w-5" />
           <p className="text-sm">
-            Push notifications are not configured on the server. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment
-            variables to enable.
+            {t("settingsPanels.notifications.unavailable")}
           </p>
         </div>
       </div>
@@ -61,13 +62,12 @@ export function NotificationSettings() {
     return (
       <div className="bg-card border border-border rounded-lg p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
-          Push Notifications
+          {t("settingsPanels.notifications.title")}
         </h2>
         <div className="flex items-center gap-3 text-yellow-500">
           <BellOff className="h-5 w-5" />
           <p className="text-sm">
-            Notification permission was denied. Please enable notifications in
-            your browser settings for this site.
+            {t("settingsPanels.notifications.denied")}
           </p>
         </div>
       </div>
@@ -77,18 +77,18 @@ export function NotificationSettings() {
   const handleEnable = async () => {
     try {
       await enable();
-      showToast.success("Push notifications enabled");
+      showToast.success(t("settingsPanels.notifications.enabledToast"));
     } catch {
-      showToast.error("Failed to enable push notifications");
+      showToast.error(t("settingsPanels.notifications.enableFailed"));
     }
   };
 
   const handleDisable = async () => {
     try {
       await disable();
-      showToast.success("Push notifications disabled");
+      showToast.success(t("settingsPanels.notifications.disabledToast"));
     } catch {
-      showToast.error("Failed to disable push notifications");
+      showToast.error(t("settingsPanels.notifications.disableFailed"));
     }
   };
 
@@ -96,11 +96,11 @@ export function NotificationSettings() {
     sendTest(undefined, {
       onSuccess: (data) => {
         showToast.success(
-          `Test notification sent to ${data.devicesNotified} device(s)`
+          t("settingsPanels.notifications.testSent", { count: data.devicesNotified })
         );
       },
       onError: () => {
-        showToast.error("Failed to send test notification");
+        showToast.error(t("settingsPanels.notifications.testFailed"));
       },
     });
   };
@@ -110,7 +110,7 @@ export function NotificationSettings() {
       <div className="grid gap-6 @min-[1000px]:grid-cols-[2fr_1fr] @min-[1000px]:items-start">
         <div className="min-w-0 bg-card border border-border rounded-lg p-6">
           <h2 className="text-lg font-semibold text-foreground mb-6">
-            Push Notifications
+            {t("settingsPanels.notifications.title")}
           </h2>
 
           <div className="space-y-6">
@@ -118,10 +118,10 @@ export function NotificationSettings() {
               <div className="flex items-start justify-between gap-4 py-3">
                 <div className="min-w-0 space-y-0.5">
                   <Label htmlFor="notificationsEnabled" className="text-base">
-                    Enable push notifications
+                    {t("settingsPanels.notifications.enableLabel")}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Receive notifications when the app is in the background
+                    {t("settingsPanels.notifications.enableDescription")}
                   </p>
                 </div>
                 <Switch
@@ -138,17 +138,17 @@ export function NotificationSettings() {
                 <>
                   <div className="py-3">
                     <h3 className="text-sm font-medium text-foreground">
-                      Notification Events
+                      {t("settingsPanels.notifications.eventsTitle")}
                     </h3>
                   </div>
 
                   <div className="flex items-start justify-between gap-4 py-3">
                     <div className="min-w-0 space-y-0.5">
                       <Label htmlFor="notifPermission" className="text-base">
-                        Permission requests
+                        {t("settingsPanels.notifications.permissionRequests")}
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        When the agent needs approval to proceed
+                        {t("settingsPanels.notifications.permissionRequestsDescription")}
                       </p>
                     </div>
                     <Switch
@@ -163,10 +163,10 @@ export function NotificationSettings() {
                   <div className="flex items-start justify-between gap-4 py-3">
                     <div className="min-w-0 space-y-0.5">
                       <Label htmlFor="notifQuestion" className="text-base">
-                        Agent questions
+                        {t("settingsPanels.notifications.agentQuestions")}
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        When the agent has a question for you
+                        {t("settingsPanels.notifications.agentQuestionsDescription")}
                       </p>
                     </div>
                     <Switch
@@ -181,10 +181,10 @@ export function NotificationSettings() {
                   <div className="flex items-start justify-between gap-4 py-3">
                     <div className="min-w-0 space-y-0.5">
                       <Label htmlFor="notifError" className="text-base">
-                        Session errors
+                        {t("settingsPanels.notifications.sessionErrors")}
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        When a session encounters an error
+                        {t("settingsPanels.notifications.sessionErrorsDescription")}
                       </p>
                     </div>
                     <Switch
@@ -199,10 +199,10 @@ export function NotificationSettings() {
                   <div className="flex items-start justify-between gap-4 py-3">
                     <div className="min-w-0 space-y-0.5">
                       <Label htmlFor="notifIdle" className="text-base">
-                        Session completion
+                        {t("settingsPanels.notifications.sessionCompletion")}
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        When a session finishes processing
+                        {t("settingsPanels.notifications.sessionCompletionDescription")}
                       </p>
                     </div>
                     <Switch
@@ -230,7 +230,7 @@ export function NotificationSettings() {
                   ) : (
                     <Send className="h-4 w-4 mr-2" />
                   )}
-                  Send test notification
+                  {t("settingsPanels.notifications.sendTest")}
                 </Button>
               </div>
             )}
@@ -240,7 +240,7 @@ export function NotificationSettings() {
         {isEnabled && (
           <div className="min-w-0 bg-card border border-border rounded-lg p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">
-              Registered Devices
+              {t("settingsPanels.notifications.registeredDevices")}
             </h2>
 
             {isLoadingSubscriptions ? (
@@ -249,7 +249,7 @@ export function NotificationSettings() {
               </div>
             ) : subscriptions.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No devices registered for push notifications.
+                {t("settingsPanels.notifications.noDevices")}
               </p>
             ) : (
               <div className="space-y-3">
@@ -266,8 +266,8 @@ export function NotificationSettings() {
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {sub.lastUsedAt
-                            ? `Last used ${formatDistanceToNow(sub.lastUsedAt, { addSuffix: true })}`
-                            : `Added ${formatDistanceToNow(sub.createdAt, { addSuffix: true })}`}
+                            ? t("settingsPanels.notifications.lastUsed", { time: formatDistanceToNow(sub.lastUsedAt, { addSuffix: true }) })
+                            : t("settingsPanels.notifications.added", { time: formatDistanceToNow(sub.createdAt, { addSuffix: true }) })}
                         </p>
                       </div>
                     </div>

@@ -7,6 +7,7 @@ import { SettingsList, SettingsListRow } from '@/components/ui/settings-list'
 import { CommandDialog } from './CommandDialog'
 import { UploadFolderButton } from './UploadFolderButton'
 import { DirectoryFilesList } from './DirectoryFilesList'
+import { useI18n } from '@/lib/i18n'
 import type { OpenCodeDirectoryFileInfo } from '@/api/types/settings'
 
 interface Command {
@@ -25,6 +26,7 @@ interface CommandsEditorProps {
 }
 
 export function CommandsEditor({ commands, directoryCommands = [], onChange }: CommandsEditorProps) {
+  const { t } = useI18n()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingCommand, setEditingCommand] = useState<{ name: string; command: Command } | null>(null)
   const hasCommands = Object.keys(commands).length > 0 || directoryCommands.length > 0
@@ -64,7 +66,7 @@ export function CommandsEditor({ commands, directoryCommands = [], onChange }: C
           <DialogTrigger asChild>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-1" />
-              Add Command
+              {t('settingsPanels.commandsEditor.addCommand')}
             </Button>
           </DialogTrigger>
           <CommandDialog
@@ -77,8 +79,8 @@ export function CommandsEditor({ commands, directoryCommands = [], onChange }: C
 
       <SettingsList
         isEmpty={!hasCommands}
-        emptyTitle="No commands configured"
-        emptyHint="Add your first command to get started."
+        emptyTitle={t('settingsPanels.commandsEditor.emptyTitle')}
+        emptyHint={t('settingsPanels.commandsEditor.emptyHint')}
         maxHeightClassName="max-h-[calc(100dvh-300px)] sm:max-h-[420px]"
       >
         {Object.entries(commands).map(([name, command]) => (
@@ -90,9 +92,9 @@ export function CommandsEditor({ commands, directoryCommands = [], onChange }: C
               command.agent && <Badge variant="outline" className="shrink-0">{command.agent}</Badge>
             }
             onClick={() => startEdit(name, command)}
-            primaryAction={{ label: 'Edit', onClick: () => startEdit(name, command) }}
-            actions={[{ label: 'Delete', destructive: true, onClick: () => deleteCommand(name) }]}
-            actionsLabel={`Actions for ${name}`}
+            primaryAction={{ label: t('settingsPanels.commandsEditor.edit'), onClick: () => startEdit(name, command) }}
+            actions={[{ label: t('settingsPanels.commandsEditor.delete'), destructive: true, onClick: () => deleteCommand(name) }]}
+            actionsLabel={t('settingsPanels.commandsEditor.actionsFor', { name })}
           />
         ))}
         <DirectoryFilesList kind="commands" files={directoryCommands} />

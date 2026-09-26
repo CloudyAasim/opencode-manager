@@ -1,6 +1,7 @@
 import { type LucideIcon } from 'lucide-react'
 import { Button } from './button'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 type BadgeColor = 'orange' | 'blue'
 
@@ -34,6 +35,8 @@ export function PendingActionBadge({
   label,
   className,
 }: PendingActionBadgeProps) {
+  const { t } = useI18n()
+
   if (count === 0) return null
 
   const styles = colorStyles[color]
@@ -50,7 +53,7 @@ export function PendingActionBadge({
         styles.text,
         className
       )}
-      title={`${count} pending ${label}${count > 1 ? 's' : ''}`}
+      title={t('ui.pendingActionBadge.title', { count, label })}
     >
       <Icon className="w-4 h-4" />
       <span

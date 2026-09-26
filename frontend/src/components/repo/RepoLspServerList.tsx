@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle2, AlertCircle, Code, Loader2 } from 'lucide-react'
 import type { LspStatus } from '@/api/opencode'
+import { useI18n } from '@/lib/i18n'
 
 interface RepoLspServerListProps {
   isLoading: boolean
@@ -8,6 +9,7 @@ interface RepoLspServerListProps {
 }
 
 export function RepoLspServerList({ isLoading, data }: RepoLspServerListProps) {
+  const { t } = useI18n()
   const formatServerName = (name: string): string => {
     const formatted = name.replace(/[-_]/g, ' ')
     return formatted.charAt(0).toUpperCase() + formatted.slice(1)
@@ -18,7 +20,7 @@ export function RepoLspServerList({ isLoading, data }: RepoLspServerListProps) {
       return (
         <Badge variant="default" className="text-xs bg-green-600">
           <CheckCircle2 className="h-3 w-3 mr-1" />
-          Active
+          {t('repo.lsp.active')}
         </Badge>
       )
     }
@@ -26,7 +28,7 @@ export function RepoLspServerList({ isLoading, data }: RepoLspServerListProps) {
     return (
       <Badge variant="destructive" className="text-xs">
         <AlertCircle className="h-3 w-3 mr-1" />
-        Error
+        {t('repo.lsp.error')}
       </Badge>
     )
   }
@@ -35,7 +37,7 @@ export function RepoLspServerList({ isLoading, data }: RepoLspServerListProps) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
-        <span className="ml-2 text-sm text-muted-foreground">Loading...</span>
+        <span className="ml-2 text-sm text-muted-foreground">{t('repo.loading')}</span>
       </div>
     )
   }
@@ -44,8 +46,8 @@ export function RepoLspServerList({ isLoading, data }: RepoLspServerListProps) {
     return (
       <div className="text-center py-6 text-muted-foreground">
         <Code className="w-10 h-10 mx-auto mb-3 opacity-50" />
-        <p className="text-sm">No LSP servers active</p>
-        <p className="text-xs mt-1">LSP servers will activate automatically when you open files</p>
+        <p className="text-sm">{t('repo.lsp.empty')}</p>
+        <p className="text-xs mt-1">{t('repo.lsp.emptyHint')}</p>
       </div>
     )
   }

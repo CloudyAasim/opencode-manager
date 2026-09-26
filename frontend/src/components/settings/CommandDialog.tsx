@@ -21,16 +21,17 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { useI18n, i18n } from "@/lib/i18n";
 
 const commandFormSchema = z.object({
   name: z
     .string()
-    .min(1, "Command name is required")
+    .min(1, i18n.t("settingsPanels.commandDialog.errors.nameRequired"))
     .regex(
       /^[a-z0-9-]+$/,
-      "Must be lowercase letters, numbers, and hyphens only",
+      i18n.t("settingsPanels.commandDialog.errors.nameFormat"),
     ),
-  template: z.string().min(1, "Template is required"),
+  template: z.string().min(1, i18n.t("settingsPanels.commandDialog.errors.templateRequired")),
   description: z.string().optional(),
   agent: z.string().optional(),
   model: z.string().optional(),
@@ -62,6 +63,7 @@ export function CommandDialog({
   onSubmit,
   editingCommand,
 }: CommandDialogProps) {
+  const { t } = useI18n();
   const form = useForm<CommandFormValues>({
     resolver: zodResolver(commandFormSchema),
     defaultValues: {
@@ -102,7 +104,7 @@ export function CommandDialog({
       <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6">
         <DialogHeader className="p-4 sm:p-6 border-b flex flex-row items-center justify-between space-y-0">
           <DialogTitle>
-            {editingCommand ? "Edit Command" : "Create Command"}
+            {editingCommand ? t("settingsPanels.commandDialog.editTitle") : t("settingsPanels.commandDialog.createTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -114,17 +116,17 @@ export function CommandDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Command Name</FormLabel>
+                    <FormLabel>{t("settingsPanels.commandDialog.name")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="my-command"
+                        placeholder={t("settingsPanels.commandDialog.namePlaceholder")}
                         disabled={!!editingCommand}
                         className={editingCommand ? "bg-muted" : ""}
                       />
                     </FormControl>
                     <FormDescription>
-                      Use lowercase letters, numbers, and hyphens only
+                      {t("settingsPanels.commandDialog.nameHint")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -136,11 +138,11 @@ export function CommandDialog({
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("settingsPanels.commandDialog.description")}</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="Brief description of what the command does"
+                        placeholder={t("settingsPanels.commandDialog.descriptionPlaceholder")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -153,18 +155,17 @@ export function CommandDialog({
                 name="template"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Template</FormLabel>
+                    <FormLabel>{t("settingsPanels.commandDialog.template")}</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="The prompt template that will be sent to the LLM. Use $ARGUMENTS or $1, $2, etc. for parameters."
+                        placeholder={t("settingsPanels.commandDialog.templatePlaceholder")}
                         rows={8}
                         className="font-mono md:text-sm"
                       />
                     </FormControl>
                     <FormDescription>
-                      Use $ARGUMENTS for all arguments or $1, $2, etc. for
-                      specific parameters
+                      {t("settingsPanels.commandDialog.templateHint")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -177,7 +178,7 @@ export function CommandDialog({
                   name="agent"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Agent (optional)</FormLabel>
+                      <FormLabel>{t("settingsPanels.commandDialog.agentOptional")}</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="build" />
                       </FormControl>
@@ -190,7 +191,7 @@ export function CommandDialog({
                   name="topP"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Top P (optional)</FormLabel>
+                      <FormLabel>{t("settingsPanels.commandDialog.topPOptional")}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -213,7 +214,7 @@ export function CommandDialog({
                   name="model"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Model (optional)</FormLabel>
+                      <FormLabel>{t("settingsPanels.commandDialog.modelOptional")}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -232,9 +233,9 @@ export function CommandDialog({
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Run as subtask</FormLabel>
+                      <FormLabel className="text-base">{t("settingsPanels.commandDialog.runAsSubtask")}</FormLabel>
                       <FormDescription>
-                        Execute this command as a separate subtask
+                        {t("settingsPanels.commandDialog.runAsSubtaskDescription")}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -252,10 +253,10 @@ export function CommandDialog({
 
         <DialogFooter className="p-3 sm:p-4 border-t gap-2 pb-4">
           <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
-            Cancel
+            {t("settingsPanels.commandDialog.cancel")}
           </Button>
           <Button onClick={() => form.handleSubmit(handleSubmit)()} disabled={!form.formState.isValid} className="flex-1 sm:flex-none">
-            {editingCommand ? "Update" : "Create"}
+            {editingCommand ? t("settingsPanels.commandDialog.update") : t("settingsPanels.commandDialog.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useI18n } from '@/lib/i18n'
 
 interface ConfirmDestructiveDialogProps {
   open: boolean
@@ -28,9 +29,11 @@ export function ConfirmDestructiveDialog({
   warning,
   confirmLabel,
   pendingLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel,
   isPending = false,
 }: ConfirmDestructiveDialogProps) {
+  const { t } = useI18n()
+  const resolvedCancelLabel = cancelLabel ?? t('ui.confirmDestructiveDialog.cancel')
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[90%] sm:max-w-sm">
@@ -53,7 +56,7 @@ export function ConfirmDestructiveDialog({
             disabled={isPending}
             className="flex-1 sm:flex-none"
           >
-            {cancelLabel}
+            {resolvedCancelLabel}
           </Button>
           <Button
             variant="destructive"

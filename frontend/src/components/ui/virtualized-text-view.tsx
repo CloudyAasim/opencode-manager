@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState, useMemo, forwardRef, useImper
 import { useVirtualizedContent } from '@/hooks/useVirtualizedContent'
 import { useMobile } from '@/hooks/useMobile'
 import { GPU_ACCELERATED_STYLE } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 interface VirtualizedTextViewProps {
   filePath: string
@@ -144,6 +145,7 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
   lineWrap = false,
   onContentLoaded,
 }, ref) {
+  const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(600)
@@ -413,7 +415,7 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
   if (error) {
     return (
       <div className="p-4 text-destructive">
-        Error loading file: {error.message}
+        {t('ui.virtualizedTextView.errorLoadingFile', { message: error.message })}
       </div>
     )
   }
@@ -448,13 +450,13 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
         
         {visibleLines.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background">
-            {isLoading ? 'Loading...' : 'No content'}
+            {isLoading ? t('ui.virtualizedTextView.loading') : t('ui.virtualizedTextView.noContent')}
           </div>
         )}
         
         {isLoading && visibleLines.length > 0 && (
           <div className="absolute top-2 right-2 px-2 py-1 bg-muted/80 rounded text-xs text-muted-foreground">
-            Loading...
+            {t('ui.virtualizedTextView.loading')}
           </div>
         )}
       </div>
@@ -466,7 +468,7 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
             disabled={isSaving}
             className="pointer-events-auto px-3 py-1 bg-primary text-primary-foreground rounded text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
           >
-            {isSaving ? 'Saving...' : 'Save Changes (Ctrl+S)'}
+            {isSaving ? t('ui.virtualizedTextView.saving') : t('ui.virtualizedTextView.saveChanges')}
           </button>
         </div>
       )}

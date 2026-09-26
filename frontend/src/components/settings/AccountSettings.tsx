@@ -10,6 +10,7 @@ import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Loader2, User, KeyRound, LogOut, Plus, Trash2, AlertCircle, CheckCircle, Lock } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { passkey, changePassword } from '@/lib/auth-client'
+import { useI18n } from '@/lib/i18n'
 
 interface Passkey {
   id: string
@@ -20,6 +21,7 @@ interface Passkey {
 }
 
 export function AccountSettings() {
+  const { t } = useI18n()
   const { user, addPasskey, logout } = useAuth()
   const queryClient = useQueryClient()
   const [passkeyName, setPasskeyName] = useState('')
@@ -51,13 +53,13 @@ export function AccountSettings() {
       if (result.error) {
         setError(result.error)
       } else {
-        setSuccess('Passkey added successfully')
+        setSuccess(t('settingsPanels.account.passkeyAdded'))
         setPasskeyName('')
         queryClient.invalidateQueries({ queryKey: ['passkeys'] })
       }
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Failed to add passkey')
+      setError(err instanceof Error ? err.message : t('settingsPanels.account.passkeyAddFailed'))
     },
   })
 
@@ -65,16 +67,16 @@ export function AccountSettings() {
     mutationFn: async (id: string) => {
       const response = await passkey.deletePasskey({ id })
       if (response.error) {
-        throw new Error(response.error.message || 'Failed to delete passkey')
+        throw new Error(response.error.message || t('settingsPanels.account.passkeyDeleteFailed'))
       }
       return response.data
     },
     onSuccess: () => {
-      setSuccess('Passkey deleted successfully')
+      setSuccess(t('settingsPanels.account.passkeyDeleted'))
       queryClient.invalidateQueries({ queryKey: ['passkeys'] })
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Failed to delete passkey')
+      setError(err instanceof Error ? err.message : t('settingsPanels.account.passkeyDeleteFailed'))
     },
   })
 
@@ -82,18 +84,18 @@ export function AccountSettings() {
     mutationFn: async ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) => {
       const response = await changePassword({ currentPassword, newPassword, revokeOtherSessions: true })
       if (response.error) {
-        throw new Error(response.error.message || 'Failed to change password')
+        throw new Error(response.error.message || t('settingsPanels.account.passwordChangeFailed'))
       }
       return response.data
     },
     onSuccess: () => {
-      setSuccess('Password changed successfully')
+      setSuccess(t('settingsPanels.account.passwordChanged'))
       setCurrentPassword('')
       setNewPassword('')
       setShowChangePassword(false)
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Failed to change password')
+      setError(err instanceof Error ? err.message : t('settingsPanels.account.passwordChangeFailed'))
     },
   })
 
@@ -124,7 +126,7 @@ export function AccountSettings() {
     setError(null)
     setSuccess(null)
     if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters')
+      setError(t('settingsPanels.account.newPasswordMin'))
       return
     }
     changePasswordMutation.mutate({ currentPassword, newPassword })
@@ -161,7 +163,7 @@ export function AccountSettings() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <CardTitle className="text-base sm:text-lg">Profile</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">{t('settingsPanels.account.profile')}</CardTitle>
                 </div>
                 {!editingProfile && (
                   <Button variant="ghost" size="sm" onClick={() => setEditingProfile(true)} className="h-8">
@@ -174,25 +176,25 @@ export function AccountSettings() {
               {editingProfile ? (
                 <div className="space-y-3 sm:space-y-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm">Name</Label>
+                    <Label className="text-xs sm:text-sm">{t('settingsPanels.account.name')}</Label>
                     <Input value={user.name} disabled className="h-9 sm:h-10 md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm">Email</Label>
+                    <Label className="text-xs sm:text-sm">{t('settingsPanels.account.email')}</Label>
                     <Input value={user.email} disabled className="h-9 sm:h-10 md:text-sm" />
                   </div>
                   <Button variant="outline" onClick={() => setEditingProfile(false)} className="h-9 sm:h-10">
-                    Done
+                    {t('settingsPanels.account.done')}
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4">
-                    <span className="text-xs sm:text-sm text-muted-foreground sm:w-20">Name</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground sm:w-20">{t('settingsPanels.account.name')}</span>
                     <span className="text-sm font-medium truncate">{user.name}</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4">
-                    <span className="text-xs sm:text-sm text-muted-foreground sm:w-20">Email</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground sm:w-20">{t('settingsPanels.account.email')}</span>
                     <span className="text-sm truncate">{user.email}</span>
                   </div>
                 </div>
@@ -204,9 +206,9 @@ export function AccountSettings() {
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
-                Change Password
+                {t('settingsPanels.account.changePassword')}
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Update your account password</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">{t('settingsPanels.account.changePasswordDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               {!showChangePassword ? (
@@ -216,29 +218,29 @@ export function AccountSettings() {
                   className="h-9 sm:h-10"
                 >
                   <Lock className="mr-2 h-4 w-4" />
-                  Change Password
+                  {t('settingsPanels.account.changePassword')}
                 </Button>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="current-password" className="text-xs sm:text-sm">Current Password</Label>
+                    <Label htmlFor="current-password" className="text-xs sm:text-sm">{t('settingsPanels.account.currentPassword')}</Label>
                     <Input
                       id="current-password"
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
+                      placeholder={t('settingsPanels.account.currentPasswordPlaceholder')}
                       className="h-9 sm:h-10 md:text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="new-password" className="text-xs sm:text-sm">New Password</Label>
+                    <Label htmlFor="new-password" className="text-xs sm:text-sm">{t('settingsPanels.account.newPassword')}</Label>
                     <Input
                       id="new-password"
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="At least 8 characters"
+                      placeholder={t('settingsPanels.account.newPasswordPlaceholder')}
                       className="h-9 sm:h-10 md:text-sm"
                     />
                   </div>
@@ -253,14 +255,14 @@ export function AccountSettings() {
                       ) : (
                         <Lock className="mr-2 h-4 w-4" />
                       )}
-                      Change Password
+                      {t('settingsPanels.account.changePassword')}
                     </Button>
                     <Button
                       variant="ghost"
                       onClick={() => setShowChangePassword(false)}
                       className="h-9 sm:h-10"
                     >
-                      Cancel
+                      {t('settingsPanels.account.cancel')}
                     </Button>
                   </div>
                 </div>
@@ -274,14 +276,14 @@ export function AccountSettings() {
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <KeyRound className="h-4 w-4 sm:h-5 sm:w-5" />
-                Passkeys
+                {t('settingsPanels.account.passkeys')}
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Manage passkeys for passwordless sign-in</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">{t('settingsPanels.account.passkeysDescription')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <Input
-                  placeholder="Passkey name (optional)"
+                  placeholder={t('settingsPanels.account.passkeyNamePlaceholder')}
                   value={passkeyName}
                   onChange={(e) => setPasskeyName(e.target.value)}
                   className="h-9 sm:h-10 md:text-sm"
@@ -296,7 +298,7 @@ export function AccountSettings() {
                   ) : (
                     <Plus className="mr-2 h-4 w-4" />
                   )}
-                  Add Passkey
+                  {t('settingsPanels.account.addPasskey')}
                 </Button>
               </div>
 
@@ -312,7 +314,7 @@ export function AccountSettings() {
                       className="flex items-center justify-between p-2.5 sm:p-3 bg-muted rounded-lg"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{pk.name || 'Unnamed Passkey'}</p>
+                        <p className="font-medium text-sm truncate">{pk.name || t('settingsPanels.account.unnamedPasskey')}</p>
                         <p className="text-xs text-muted-foreground truncate">
                           {pk.deviceType} - {new Date(pk.createdAt).toLocaleDateString()}
                         </p>
@@ -335,7 +337,7 @@ export function AccountSettings() {
                 </div>
               ) : (
                 <p className="text-xs sm:text-sm text-muted-foreground text-center py-3">
-                  No passkeys registered. Add one for passwordless sign-in.
+                  {t('settingsPanels.account.noPasskeys')}
                 </p>
               )}
             </CardContent>
@@ -347,13 +349,13 @@ export function AccountSettings() {
         <div className="flex items-center gap-2">
           <LogOut className="h-4 w-4 shrink-0 text-destructive" />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-destructive">Sign Out</p>
-            <p className="text-xs text-muted-foreground">Sign out of your account</p>
+            <p className="text-sm font-medium text-destructive">{t('settingsPanels.account.signOut')}</p>
+            <p className="text-xs text-muted-foreground">{t('settingsPanels.account.signOutDescription')}</p>
           </div>
         </div>
         <Button variant="destructive" onClick={logout} className="h-9 shrink-0 sm:h-10">
           <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
+          {t('settingsPanels.account.signOut')}
         </Button>
       </div>
 
@@ -362,8 +364,8 @@ export function AccountSettings() {
         onOpenChange={(open) => !open && setDeletePasskeyId(null)}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        title="Delete Passkey"
-        description="Are you sure you want to delete this passkey? This action cannot be undone."
+        title={t('settingsPanels.account.deletePasskeyTitle')}
+        description={t('settingsPanels.account.deletePasskeyDescription')}
         isDeleting={deletePasskeyMutation.isPending}
       />
     </div>

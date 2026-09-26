@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Download, Loader2, Archive, Folder } from 'lucide-react'
 import { getIgnoredPaths } from '@/api/files'
+import { useI18n } from '@/lib/i18n'
 
 interface DownloadDialogProps {
   open: boolean
@@ -31,6 +32,7 @@ export function DownloadDialog({
   itemName,
   targetPath,
 }: DownloadDialogProps) {
+  const { t } = useI18n()
   const [isDownloading, setIsDownloading] = useState(false)
   const [isConfirmed, setIsConfirmed] = useState(false)
   const [isLoadingIgnored, setIsLoadingIgnored] = useState(false)
@@ -49,11 +51,11 @@ export function DownloadDialog({
           setIsLoadingIgnored(false)
         })
         .catch((error) => {
-          setIgnoredPathsError(error.message || 'Failed to load ignored paths')
+          setIgnoredPathsError(error.message || t('ui.downloadDialog.ignoredPathsLoadFailed'))
           setIsLoadingIgnored(false)
         })
     }
-  }, [open, targetPath])
+  }, [open, targetPath, t])
 
   useEffect(() => {
     if (includeAll) {
@@ -147,7 +149,7 @@ export function DownloadDialog({
                   onCheckedChange={() => {}}
                 />
                 <span className="text-sm font-medium">
-                  Download All
+                  {t('ui.downloadDialog.downloadAll')}
                 </span>
               </div>
 
@@ -191,10 +193,10 @@ export function DownloadDialog({
           <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
             <Archive className="w-8 h-8 text-muted-foreground" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{isConfirmed ? 'Processing...' : itemName}</p>
+              <p className="text-sm font-medium">{isConfirmed ? t('ui.downloadDialog.processing') : itemName}</p>
               {isDownloading && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Creating ZIP archive, please wait...
+                  {t('ui.downloadDialog.creatingArchive')}
                 </p>
               )}
             </div>
@@ -206,7 +208,7 @@ export function DownloadDialog({
                 <div className="h-full bg-primary animate-progress w-full" />
               </div>
               <p className="text-xs text-center text-muted-foreground">
-                Download starting...
+                {t('ui.downloadDialog.downloadStarting')}
               </p>
             </div>
           )}
@@ -215,11 +217,11 @@ export function DownloadDialog({
           {!isDownloading && !isConfirmed && (
             <div className='flex gap-2 w-full'>
               <Button type="button" variant="outline" onClick={handleCancel} className="flex-1">
-                Cancel
+                {t('ui.downloadDialog.cancel')}
               </Button>
               <Button type="button" onClick={handleConfirm} className="gap-2 flex-1">
                 <Download className="w-4 h-4" />
-                Download
+                {t('ui.downloadDialog.download')}
               </Button>
             </div>
           )}

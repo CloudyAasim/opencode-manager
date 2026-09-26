@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatScheduleShortLabel, getJobStatusTone } from '@/components/schedules/schedule-utils'
 import { Bot, Clock3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 interface JobsTabProps {
   jobs: ScheduleJob[]
@@ -11,6 +12,8 @@ interface JobsTabProps {
 }
 
 export function JobsTab({ jobs, selectedJobId, onSelectJob }: JobsTabProps) {
+  const { t } = useI18n()
+
   return (
     <div className="h-full overflow-y-auto space-y-2 pt-2">
       {jobs.map((job) => (
@@ -28,13 +31,13 @@ export function JobsTab({ jobs, selectedJobId, onSelectJob }: JobsTabProps) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="font-medium truncate">{job.name}</p>
-              <p className="mt-1 truncate text-xs text-muted-foreground">{job.description || 'No description yet'}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">{job.description || t('schedules.common.noDescriptionYet')}</p>
             </div>
-            <Badge className={getJobStatusTone(job)}>{job.enabled ? 'Enabled' : 'Paused'}</Badge>
+            <Badge className={getJobStatusTone(job)}>{job.enabled ? t('schedules.common.enabled') : t('schedules.common.paused')}</Badge>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> {formatScheduleShortLabel(job)}</span>
-            <span className="inline-flex items-center gap-1"><Bot className="h-3.5 w-3.5" /> {job.agentSlug ?? 'default agent'}</span>
+            <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> {formatScheduleShortLabel(t, job)}</span>
+            <span className="inline-flex items-center gap-1"><Bot className="h-3.5 w-3.5" /> {job.agentSlug ?? t('schedules.common.defaultAgent')}</span>
           </div>
         </button>
       ))}

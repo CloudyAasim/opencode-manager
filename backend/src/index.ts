@@ -312,26 +312,46 @@ app.route('/api/opencode', createAuthenticatedOpenCodeProxyRoutes(openCodeClient
 const isProduction = ENV.SERVER.NODE_ENV === 'production'
 
 if (isProduction) {
+  const immutableExtensions = new Set([
+    '.js', '.mjs', '.css', '.map', '.woff', '.woff2', '.ttf', '.otf',
+    '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.ico',
+  ])
+  let cachedIndexHtml: string | null = null
+
   app.use('/*', async (c, next) => {
     await next()
-    if (c.req.path === '/sw.js') {
+    const requestPath = c.req.path
+    if (requestPath.startsWith('/assets/')) {
+      c.res.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+      return
+    }
+    if (requestPath === '/sw.js' || requestPath === '/' || requestPath.endsWith('.html')) {
       c.res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
       c.res.headers.set('Pragma', 'no-cache')
       c.res.headers.set('Expires', '0')
+      return
+    }
+    const dot = requestPath.lastIndexOf('.')
+    const ext = dot >= 0 ? requestPath.slice(dot).toLowerCase() : ''
+    if (immutableExtensions.has(ext)) {
+      c.res.headers.set('Cache-Control', 'public, max-age=86400')
     }
   })
 
   app.use('/*', serveStatic({ root: './frontend/dist' }))
-  
+
   app.get('*', async (c) => {
     if (c.req.path.startsWith('/api/')) {
       return c.notFound()
     }
-    const fs = await import('fs/promises')
-    const path = await import('path')
-    const indexPath = path.join(process.cwd(), 'frontend/dist/index.html')
-    const html = await fs.readFile(indexPath, 'utf-8')
-    return c.html(html)
+    if (cachedIndexHtml === null) {
+      const fs = await import('fs/promises')
+      const path = await import('path')
+      const indexPath = path.join(process.cwd(), 'frontend/dist/index.html')
+      cachedIndexHtml = await fs.readFile(indexPath, 'utf-8')
+    }
+    c.header('Cache-Control', 'no-cache, no-store, must-revalidate')
+    return c.html(cachedIndexHtml)
   })
 } else {
   app.get('/', async (c) => {

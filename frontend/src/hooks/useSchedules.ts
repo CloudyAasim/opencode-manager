@@ -36,7 +36,7 @@ export function useAllScheduleRuns(params: ListAllRunsParams, enabled: boolean =
       return response.runs as ScheduleRunWithContext[]
     },
     enabled,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   })
 }
 
@@ -48,7 +48,7 @@ export function useRepoSchedules(repoId: number | undefined) {
       return response.jobs
     },
     enabled: repoId !== undefined,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   })
 }
 
@@ -60,7 +60,7 @@ export function useRepoSchedule(repoId: number | undefined, jobId: number | null
       return response.job
     },
     enabled: repoId !== undefined && jobId !== null,
-    refetchInterval: jobId !== null ? 5000 : false,
+    refetchInterval: jobId !== null ? 15000 : false,
   })
 }
 
@@ -72,7 +72,7 @@ export function useRepoScheduleRuns(repoId: number | undefined, jobId: number | 
       return response.runs
     },
     enabled: repoId !== undefined && jobId !== null,
-    refetchInterval: jobId !== null ? 5000 : false,
+    refetchInterval: jobId !== null ? 15000 : false,
   })
 }
 
@@ -84,7 +84,7 @@ export function useRepoScheduleRun(repoId: number | undefined, jobId: number | n
       return response.run
     },
     enabled: repoId !== undefined && jobId !== null && runId !== null,
-    refetchInterval: runId !== null ? 5000 : false,
+    refetchInterval: runId !== null ? 15000 : false,
   })
 }
 

@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUrlParams } from '@/hooks/useUrlParams'
 import { buildNavModel, type MoreDrawerItem, type NavPrimaryCta } from '@/components/navigation/moreDrawerItems'
 import { getPathWithReturnTo } from '@/lib/navigation'
+import { useI18n } from '@/lib/i18n'
 import { RepoQuickSwitchSheet } from '@/components/navigation/RepoQuickSwitchSheet'
 import {
   Sidebar,
@@ -19,6 +20,7 @@ export function DesktopSidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { updateParams } = useUrlParams()
+  const { t } = useI18n()
   const [collapsed, toggle] = useSidebarCollapsed()
   const [repoSwitcherOpen, setRepoSwitcherOpen] = useState(false)
   const { isAuthenticated, isLoading, logout, user } = useAuth()
@@ -70,7 +72,7 @@ export function DesktopSidebar() {
   const [homeItem, ...routeItems] = items
   const navItems: MoreDrawerItem[] = [
     homeItem,
-    { key: 'repos', label: 'Repos', icon: FolderGit2 },
+    { key: 'repos', label: 'Repos', labelKey: 'navigation.repos', icon: FolderGit2 },
     ...routeItems,
   ]
 
@@ -83,7 +85,7 @@ export function DesktopSidebar() {
               <SidebarItem
                 key={item.key}
                 icon={item.icon}
-                label={item.label}
+                label={item.labelKey ? t(item.labelKey) : item.label}
                 collapsed={collapsed}
                 onClick={() => handlePrimaryClick(item)}
                 asPrimary
@@ -98,7 +100,7 @@ export function DesktopSidebar() {
             <SidebarItem
               key={item.key}
               icon={item.icon}
-              label={item.label}
+              label={item.labelKey ? t(item.labelKey) : item.label}
               collapsed={collapsed}
               onClick={() => handleItemClick(item)}
               danger={item.danger}

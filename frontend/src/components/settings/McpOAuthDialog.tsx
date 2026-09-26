@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Loader2, ExternalLink, Key, XCircle, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react'
 import type { McpAuthStartResponse } from '@/api/mcp'
 import { mcpApi } from '@/api/mcp'
+import { useI18n } from '@/lib/i18n'
 
 interface McpOAuthDialogProps {
   open: boolean
@@ -31,6 +32,7 @@ export function McpOAuthDialog({
   onSuccess,
   directory
 }: McpOAuthDialogProps) {
+  const { t } = useI18n()
   const [step, setStep] = useState<Step>('loading')
   const [loading, setLoading] = useState(false)
   const [authUrl, setAuthUrl] = useState<string | null>(null)
@@ -44,7 +46,7 @@ export function McpOAuthDialog({
   const popupRef = useRef<Window | null>(null)
   const doneRef = useRef(false)
 
-  const scopes = directory ? 'this location' : 'globally'
+  const scopes = directory ? t('settingsPanels.mcpOAuth.scopesLocation') : t('settingsPanels.mcpOAuth.scopesGlobal')
 
   const stopAllPolling = useCallback(() => {
     if (flowPollingRef.current) {
@@ -102,14 +104,14 @@ export function McpOAuthDialog({
           handleSuccess()
         } else if (result.status === 'failed') {
           stopAllPolling()
-          setError('error' in result ? result.error : 'Authentication failed')
+          setError('error' in result ? result.error : t('settingsPanels.mcpOAuth.authFailed'))
           setStep('error')
         }
       } catch {
         // ignore
       }
     }, 1500)
-  }, [handleSuccess, stopAllPolling])
+  }, [handleSuccess, stopAllPolling, t])
 
   const startStatusPolling = useCallback(() => {
     if (!onCheckStatus || statusPollingRef.current) return
@@ -160,7 +162,7 @@ export function McpOAuthDialog({
         flowIdRef.current = result.flowId
         setStep('ready')
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to start authentication')
+        setError(err instanceof Error ? err.message : t('settingsPanels.mcpOAuth.startFailed'))
         setStep('error')
       }
     }
@@ -201,7 +203,7 @@ export function McpOAuthDialog({
       await onCompleteAuth(authCode.trim())
       handleSuccess()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete authentication')
+      setError(err instanceof Error ? err.message : t('settingsPanels.mcpOAuth.completeFailed'))
     } finally {
       setLoading(false)
     }
@@ -225,7 +227,7 @@ export function McpOAuthDialog({
       flowIdRef.current = result.flowId
       setStep('ready')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start authentication')
+      setError(err instanceof Error ? err.message : t('settingsPanels.mcpOAuth.startFailed'))
       setStep('error')
     }
   }
@@ -236,10 +238,10 @@ export function McpOAuthDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="h-5 w-5 shrink-0" />
-            <span className="truncate">Connect {serverName}</span>
+            <span className="truncate">{t('settingsPanels.mcpOAuth.connectTitle', { name: serverName })}</span>
           </DialogTitle>
           <DialogDescription>
-            Authenticate to use this MCP server {scopes}
+            {t('settingsPanels.mcpOAuth.description', { scopes })}
           </DialogDescription>
         </DialogHeader>
 
@@ -254,21 +256,21 @@ export function McpOAuthDialog({
           {step === 'loading' && (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">Preparing authentication...</span>
+              <span className="ml-2 text-sm text-muted-foreground">{t('settingsPanels.mcpOAuth.preparing')}</span>
             </div>
           )}
 
           {step === 'ready' && authUrl && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Click below to open the authorization page. After you approve access, this dialog will update automatically.
+                {t('settingsPanels.mcpOAuth.readyDescription')}
               </p>
               <Button
                 onClick={handleOpenAuthPage}
                 className="w-full"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                Open Authorization Page
+                {t('settingsPanels.mcpOAuth.openAuthPage')}
               </Button>
               <a
                 href={authUrl}
@@ -289,10 +291,10 @@ export function McpOAuthDialog({
             <div className="space-y-4">
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                <span className="ml-2 text-sm text-muted-foreground">Waiting for authorization...</span>
+                <span className="ml-2 text-sm text-muted-foreground">{t('settingsPanels.mcpOAuth.waiting')}</span>
               </div>
               <p className="text-xs text-center text-muted-foreground">
-                Complete the authorization in the popup window. This dialog will update automatically.
+                {t('settingsPanels.mcpOAuth.waitingDescription')}
               </p>
 
               {authUrl && (
@@ -303,7 +305,7 @@ export function McpOAuthDialog({
                   onClick={handleOpenAuthPage}
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />
-                  Re-open authorization popup
+                  {t('settingsPanels.mcpOAuth.reopenPopup')}
                 </Button>
               )}
 
@@ -322,19 +324,19 @@ export function McpOAuthDialog({
             <div className="space-y-4">
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                <span className="ml-2 text-sm text-muted-foreground">Checking authentication status...</span>
+                <span className="ml-2 text-sm text-muted-foreground">{t('settingsPanels.mcpOAuth.checkingStatus')}</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                If authorization was completed, this will update shortly. Otherwise, paste the <code className="text-xs bg-muted px-1 py-0.5 rounded">code</code> parameter from the redirect URL below.
+                {t('settingsPanels.mcpOAuth.popupClosedDescription', { code: t('settingsPanels.mcpOAuth.codeParam') })}
               </p>
               <div className="space-y-2">
-                <Label htmlFor="auth-code">Authorization Code</Label>
+                <Label htmlFor="auth-code">{t('settingsPanels.mcpOAuth.authCode')}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="auth-code"
                     value={authCode}
                     onChange={(e) => setAuthCode(e.target.value)}
-                    placeholder="Paste code here..."
+                    placeholder={t('settingsPanels.mcpOAuth.pasteCodePlaceholder')}
                     disabled={loading}
                     className="text-sm"
                   />
@@ -343,7 +345,7 @@ export function McpOAuthDialog({
                     disabled={loading || !authCode.trim()}
                     size="sm"
                   >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('settingsPanels.mcpOAuth.submit')}
                   </Button>
                 </div>
               </div>
@@ -355,7 +357,7 @@ export function McpOAuthDialog({
                   onClick={handleOpenAuthPage}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Try Again
+                  {t('settingsPanels.mcpOAuth.tryAgain')}
                 </Button>
               )}
             </div>
@@ -364,14 +366,14 @@ export function McpOAuthDialog({
           {step === 'success' && (
             <div className="flex flex-col items-center justify-center py-6 gap-2">
               <CheckCircle className="h-8 w-8 text-green-500" />
-              <p className="text-sm font-medium">Authentication successful</p>
+              <p className="text-sm font-medium">{t('settingsPanels.mcpOAuth.success')}</p>
             </div>
           )}
 
           {step === 'error' && !error && (
             <div className="flex flex-col items-center justify-center py-6 gap-2">
               <XCircle className="h-8 w-8 text-destructive" />
-              <p className="text-sm text-muted-foreground">Something went wrong</p>
+              <p className="text-sm text-muted-foreground">{t('settingsPanels.mcpOAuth.somethingWrong')}</p>
             </div>
           )}
         </div>
@@ -379,7 +381,7 @@ export function McpOAuthDialog({
         <DialogFooter className="gap-2 sm:gap-0">
           {step === 'error' && (
             <Button variant="outline" onClick={handleRetry}>
-              Try Again
+              {t('settingsPanels.mcpOAuth.tryAgain')}
             </Button>
           )}
           {step !== 'success' && (
@@ -388,7 +390,7 @@ export function McpOAuthDialog({
               onClick={() => handleOpenChange(false)}
               disabled={loading}
             >
-              Cancel
+              {t('settingsPanels.mcpOAuth.cancel')}
             </Button>
           )}
         </DialogFooter>
@@ -412,6 +414,7 @@ function ManualCodeEntry({
   loading: boolean
   onSubmit: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="border-t border-border pt-3">
       <button
@@ -420,21 +423,21 @@ function ManualCodeEntry({
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
       >
         {showManualEntry ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-        Paste authorization code manually
+        {t('settingsPanels.mcpOAuth.pasteManually')}
       </button>
 
       {showManualEntry && (
         <div className="space-y-2 mt-3">
           <p className="text-xs text-muted-foreground">
-            After authorizing, copy the <code className="bg-muted px-1 py-0.5 rounded">code</code> parameter from the redirect URL in your browser.
+            {t('settingsPanels.mcpOAuth.manualDescription', { code: t('settingsPanels.mcpOAuth.codeParam') })}
           </p>
-          <Label htmlFor="auth-code" className="text-xs">Authorization Code</Label>
+          <Label htmlFor="auth-code" className="text-xs">{t('settingsPanels.mcpOAuth.authCode')}</Label>
           <div className="flex gap-2">
             <Input
               id="auth-code"
               value={authCode}
               onChange={(e) => setAuthCode(e.target.value)}
-              placeholder="Paste code here..."
+              placeholder={t('settingsPanels.mcpOAuth.pasteCodePlaceholder')}
               disabled={loading}
               className="text-sm"
             />
@@ -443,7 +446,7 @@ function ManualCodeEntry({
               disabled={loading || !authCode.trim()}
               size="sm"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('settingsPanels.mcpOAuth.submit')}
             </Button>
           </div>
         </div>

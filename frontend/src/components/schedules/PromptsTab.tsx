@@ -9,6 +9,7 @@ import { parseMarkdownTemplate } from '@/lib/schedules/markdownTemplate'
 import { PromptTemplateDialog } from './PromptTemplateDialog'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { PromptTemplateCard } from './PromptTab'
+import { useI18n } from '@/lib/i18n'
 
 interface PromptsTabProps {
   promptDialog: PromptDialog
@@ -21,13 +22,14 @@ interface PromptsTabProps {
 }
 
 export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, onImport, onCloseDialog }: PromptsTabProps) {
+  const { t } = useI18n()
   const [importValues, setImportValues] = useState<Partial<CreatePromptTemplateRequest> | undefined>()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: templates = [], isLoading } = usePromptTemplates()
   const deleteMutation = useDeletePromptTemplate()
 
-  const editingTemplate = templates.find((t) => t.id === templateId)
+  const editingTemplate = templates.find((template) => template.id === templateId)
   const dialogOpen = promptDialog === 'new' || promptDialog === 'edit' || promptDialog === 'import'
   const deleteDialogOpen = promptDialog === 'delete'
 
@@ -73,7 +75,7 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold">Prompt templates</h2>
+        <h2 className="text-sm font-semibold">{t('schedules.promptTemplates.title')}</h2>
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -83,7 +85,7 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
             onClick={onNew}
           >
             <Plus className="h-3 w-3" />
-            New
+            {t('schedules.promptTemplates.new')}
           </Button>
           <Button
             type="button"
@@ -93,7 +95,7 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="h-3 w-3" />
-            Import .md
+            {t('schedules.promptTemplates.importMd')}
           </Button>
         </div>
       </div>
@@ -119,9 +121,9 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
                   <FileText className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-lg font-semibold">No templates yet</p>
+                  <p className="text-lg font-semibold">{t('schedules.promptTemplates.emptyTitle')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Create prompt templates to reuse across your schedules.
+                    {t('schedules.promptTemplates.emptyDescription')}
                   </p>
                 </div>
               </CardContent>
@@ -153,8 +155,8 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
         onOpenChange={handleDeleteDialogOpenChange}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        title="Delete template"
-        description="Are you sure you want to delete this template?"
+        title={t('schedules.common.removeTemplateTitle')}
+        description={t('schedules.common.removeTemplateDescription')}
         isDeleting={deleteMutation.isPending}
       />
     </div>

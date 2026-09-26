@@ -1,4 +1,5 @@
 import { ConfirmDestructiveDialog } from '@/components/ui/confirm-destructive-dialog'
+import { useI18n } from '@/lib/i18n'
 
 interface UnsavedChangesDialogProps {
   open: boolean
@@ -15,17 +16,18 @@ export function UnsavedChangesDialog({
   onKeepEditing,
   itemName,
 }: UnsavedChangesDialogProps) {
+  const { t } = useI18n()
   return (
     <ConfirmDestructiveDialog
       open={open}
       onOpenChange={onOpenChange}
       onConfirm={onDiscard}
       onCancel={onKeepEditing}
-      title="Unsaved Changes"
-      description={itemName ? `You have unsaved edits to ${itemName}.` : 'You have unsaved edits.'}
-      warning="Discarding will permanently lose these edits."
-      confirmLabel="Discard"
-      cancelLabel="Keep Editing"
+      title={t('ui.unsavedChangesDialog.title')}
+      description={itemName ? t('ui.unsavedChangesDialog.descriptionWithItem', { itemName }) : t('ui.unsavedChangesDialog.description')}
+      warning={t('ui.unsavedChangesDialog.warning')}
+      confirmLabel={t('ui.unsavedChangesDialog.discard')}
+      cancelLabel={t('ui.unsavedChangesDialog.keepEditing')}
     />
   )
 }

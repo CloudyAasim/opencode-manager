@@ -5,6 +5,7 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSwipeBack } from '@/hooks/useMobile'
 import { useVisualViewport } from '@/hooks/useVisualViewport'
+import { useI18n } from '@/lib/i18n'
 
 const DialogOpenContext = React.createContext<boolean>(true)
 
@@ -54,6 +55,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
 >(({ className, children, hideCloseButton, fullscreen, mobileFullscreen, mobileSwipeToClose, keyboardAware, canSwipeBack, onSwipeBack, overlayClassName, style, ...props }, ref) => {
+  const { t } = useI18n()
   const isMobileFullscreenMode = fullscreen || mobileFullscreen
   const isDialogOpen = React.useContext(DialogOpenContext)
   const [isMobile, setIsMobile] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false)
@@ -131,7 +133,7 @@ const DialogContent = React.forwardRef<
             } : { top: '1rem' }}
           >
             <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t('ui.dialog.close')}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>

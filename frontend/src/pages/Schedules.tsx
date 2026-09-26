@@ -25,9 +25,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { getReturnToPath } from '@/lib/navigation'
+import { useI18n } from '@/lib/i18n'
 import { CalendarClock, Loader2, Plus } from 'lucide-react'
 
 export function Schedules() {
+  const { t } = useI18n()
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const repoId = id ? Number(id) : undefined
@@ -146,7 +148,7 @@ export function Schedules() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <p className="text-muted-foreground">
-          {repoId === 0 ? 'Assistant not found' : 'Repository not found'}
+          {repoId === 0 ? t('schedules.page.assistantNotFound') : t('schedules.page.repositoryNotFound')}
         </p>
       </div>
     )
@@ -267,7 +269,7 @@ export function Schedules() {
           <Header.Actions>
             <Button onClick={openNewJob} size="sm" className="hidden sm:flex">
               <Plus className="w-4 h-4 mr-2" />
-              New Schedule
+              {t('schedules.page.newSchedule')}
             </Button>
             <Button onClick={openNewJob} size="sm" className="sm:hidden h-10 w-10 p-0">
               <Plus className="w-5 h-5" />
@@ -285,12 +287,12 @@ export function Schedules() {
                   <CalendarClock className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xl font-semibold tracking-tight">No schedules yet</p>
-                  <p className="text-sm text-muted-foreground">Create a schedule for this repo to automate recurring agent work, then inspect runs, logs, and sessions here.</p>
+                  <p className="text-xl font-semibold tracking-tight">{t('schedules.page.noSchedulesYet')}</p>
+                  <p className="text-sm text-muted-foreground">{t('schedules.page.noSchedulesHint')}</p>
                 </div>
                 <Button onClick={openNewJob}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create First Schedule
+                  {t('schedules.page.createFirstSchedule')}
                 </Button>
               </CardContent>
             </Card>
@@ -363,8 +365,8 @@ export function Schedules() {
         onOpenChange={(open) => !open && closeDialog()}
         onConfirm={handleDelete}
         onCancel={() => closeDialog()}
-        title="Delete Schedule"
-        description="This removes the job definition and all recorded run history for it."
+        title={t('schedules.global.deleteScheduleTitle')}
+        description={t('schedules.global.deleteScheduleDescription')}
         isDeleting={deleteMutation.isPending}
       />
 
@@ -373,22 +375,22 @@ export function Schedules() {
         onOpenChange={(open) => !open && setClearRunsOpen(false)}
         onConfirm={handleClearHistory}
         onCancel={() => setClearRunsOpen(false)}
-        title="Clear run history"
+        title={t('schedules.page.clearRunsTitle')}
         description={
           <>
-            <p className="mb-2">This permanently deletes all <strong>{clearableRuns.length}</strong> finished run{clearableRuns.length === 1 ? '' : 's'} for this schedule.</p>
+            <p className="mb-2">{t('schedules.page.clearRunsDeleteAll')}<strong>{clearableRuns.length}</strong>{t('schedules.page.clearRunsFinishedRun', { count: clearableRuns.length })}</p>
             {clearableBranches > 0 && (
-              <p className="mb-1">Git artifacts that will be pruned:</p>
+              <p className="mb-1">{t('schedules.page.clearRunsArtifactsIntro')}</p>
             )}
             <ul className="list-disc pl-5 space-y-0.5 text-sm text-muted-foreground">
               {clearableWorktrees > 0 && (
-                <li><strong>{clearableWorktrees}</strong> worktree{clearableWorktrees === 1 ? '' : 's'}</li>
+                <li><strong>{clearableWorktrees}</strong>{t('schedules.page.clearRunsWorktree', { count: clearableWorktrees })}</li>
               )}
               {clearableBranches > 0 && (
-                <li><strong>{clearableBranches}</strong> run branch{clearableBranches === 1 ? '' : 'es'}</li>
+                <li><strong>{clearableBranches}</strong>{t('schedules.page.clearRunsBranch', { count: clearableBranches })}</li>
               )}
             </ul>
-            <p className="mt-2">A run in progress is kept. This cannot be undone.</p>
+            <p className="mt-2">{t('schedules.page.clearRunsKeepRunning')}</p>
           </>
         }
         isDeleting={clearRunsMutation.isPending}
@@ -399,8 +401,8 @@ export function Schedules() {
         onOpenChange={(open) => !open && setRunToDelete(null)}
         onConfirm={handleConfirmDeleteRun}
         onCancel={() => setRunToDelete(null)}
-        title="Delete run"
-        description="This permanently deletes this run along with its git run branch and worktree. This cannot be undone."
+        title={t('schedules.runs.deleteRun')}
+        description={t('schedules.page.deleteRunDescription')}
         isDeleting={deleteRunMutation.isPending}
       />
     </div>

@@ -8,7 +8,7 @@ export function useLSPStatus(opcodeUrl: string | null | undefined, directory?: s
     queryKey: ['opencode', 'lsp', opcodeUrl, directory],
     queryFn: () => client!.getLSPStatus(),
     enabled: !!client,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
     staleTime: 10000,
     refetchOnWindowFocus: true,
   })

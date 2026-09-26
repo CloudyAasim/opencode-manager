@@ -3,31 +3,34 @@ import { AlertTriangle, RefreshCw, LogIn, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { parseNetworkError, parseOpenCodeError } from '@/lib/opencode-errors'
 import type { OpenCodeError } from '@/lib/opencode-errors'
+import { useI18n } from '@/lib/i18n'
+
+type Translate = ReturnType<typeof useI18n>['t']
 
 function isOpenCodeError(error: unknown): error is OpenCodeError {
   return typeof error === 'object' && error !== null && 'name' in error && 'data' in error
 }
 
-function getErrorDetails(error: unknown) {
+function getErrorDetails(error: unknown, t: Translate) {
   if (isRouteErrorResponse(error)) {
     if (error.status === 401 || error.status === 403) {
       return {
-        title: 'Authentication Required',
-        message: 'Please log in to access this page.',
+        title: t('ui.routeErrorBoundary.authenticationRequiredTitle'),
+        message: t('ui.routeErrorBoundary.authenticationRequiredMessage'),
         isRetryable: false,
         statusCode: error.status,
       }
     }
     if (error.status === 404) {
       return {
-        title: 'Page Not Found',
-        message: 'The page you are looking for does not exist.',
+        title: t('ui.routeErrorBoundary.pageNotFoundTitle'),
+        message: t('ui.routeErrorBoundary.pageNotFoundMessage'),
         isRetryable: false,
         statusCode: error.status,
       }
     }
     return {
-      title: error.statusText || 'Error',
+      title: error.statusText || t('ui.routeErrorBoundary.error'),
       message: error.data?.message || error.status.toString(),
       isRetryable: true,
       statusCode: error.status,
@@ -44,7 +47,7 @@ function getErrorDetails(error: unknown) {
     if (networkParsed.title === 'Connection Failed') {
       return {
         ...networkParsed,
-        title: "You're offline",
+        title: t('ui.routeErrorBoundary.offlineTitle'),
         message: '',
         isRetryable: false,
         variant: 'offline' as const,
@@ -54,15 +57,16 @@ function getErrorDetails(error: unknown) {
   }
 
   return {
-    title: 'Unexpected Error',
-    message: 'An unexpected error occurred. Please try refreshing the page.',
+    title: t('ui.routeErrorBoundary.unexpectedTitle'),
+    message: t('ui.routeErrorBoundary.unexpectedMessage'),
     isRetryable: true,
   }
 }
 
 export function RouteErrorBoundary() {
   const error = useRouteError()
-  const details = getErrorDetails(error)
+  const { t } = useI18n()
+  const details = getErrorDetails(error, t)
   const { title, message, isRetryable, statusCode } = details
 
   const isAuthError = statusCode === 401 || statusCode === 403
@@ -77,7 +81,7 @@ export function RouteErrorBoundary() {
         </div>
         <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
           <RefreshCw className="h-4 w-4" />
-          Reload
+          {t('ui.routeErrorBoundary.reload')}
         </Button>
       </div>
     )
@@ -94,13 +98,13 @@ export function RouteErrorBoundary() {
         {isAuthError && (
           <Button variant="default" onClick={() => (window.location.href = '/login')}>
             <LogIn className="w-4 h-4 mr-2" />
-            Log in
+            {t('ui.routeErrorBoundary.login')}
           </Button>
         )}
         {isRetryable && (
           <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
             <RefreshCw className="w-4 h-4" />
-            Try again
+            {t('ui.routeErrorBoundary.tryAgain')}
           </Button>
         )}
       </div>

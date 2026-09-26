@@ -6,6 +6,7 @@ import type { SidebarActionKey } from '@/hooks/useSidebarAction'
 export interface MoreDrawerItem {
   key: string
   label: string
+  labelKey?: string
   icon: LucideIcon
   to?: string
   dialog?: string
@@ -15,6 +16,7 @@ export interface MoreDrawerItem {
 export interface NavPrimaryCta {
   key: string
   label: string
+  labelKey?: string
   icon: LucideIcon
   to?: string
   onSelect?: SidebarActionKey
@@ -34,6 +36,7 @@ function getAssistantNavItem(_pathname: string, variant: NavPrimaryCta['variant'
   return {
     key: 'assistant',
     label: 'Assistant',
+    labelKey: 'navigation.assistant',
     icon: Bot,
     to: getAssistantPath(),
     variant,
@@ -41,16 +44,16 @@ function getAssistantNavItem(_pathname: string, variant: NavPrimaryCta['variant'
 }
 
 function getHomeItem(): MoreDrawerItem {
-  return { key: 'home', label: 'Home', icon: Home, to: '/' }
+  return { key: 'home', label: 'Home', labelKey: 'navigation.home', icon: Home, to: '/' }
 }
 
 function getBaseItems(options: NavModelOptions): MoreDrawerItem[] {
   return [
     ...(options.isAdmin
-      ? [{ key: 'terminal', label: 'Terminal', icon: TerminalSquare, to: '/terminal' }]
+      ? [{ key: 'terminal', label: 'Terminal', labelKey: 'navigation.terminal', icon: TerminalSquare, to: '/terminal' }]
       : []),
-    { key: 'settings', label: 'Settings', icon: Settings },
-    { key: 'logout', label: 'Logout', icon: LogOut },
+    { key: 'settings', label: 'Settings', labelKey: 'navigation.settings', icon: Settings },
+    { key: 'logout', label: 'Logout', labelKey: 'navigation.logout', icon: LogOut },
   ]
 }
 
@@ -61,18 +64,18 @@ function buildRouteNavModel(pathname: string, options: NavModelOptions): NavMode
   if (repoDetailMatch) {
     const id = repoDetailMatch[1]
     const items: MoreDrawerItem[] = [
-      { key: 'files', label: 'Files', icon: Folder, dialog: 'files' },
-      { key: 'mcp', label: 'MCP', icon: Plug, dialog: 'mcp' },
-      { key: 'skills', label: 'Skills', icon: Sparkles, dialog: 'skills' },
-      { key: 'reset-permissions', label: 'Reset Permissions', icon: ShieldOff, dialog: 'resetPermissions', danger: true },
-      { key: 'schedules', label: 'Schedules', icon: CalendarClock, to: `/repos/${id}/schedules` },
-      { key: 'source-control', label: 'Source Control', icon: GitCommitHorizontal, dialog: 'sourceControl' },
+      { key: 'files', label: 'Files', labelKey: 'navigation.files', icon: Folder, dialog: 'files' },
+      { key: 'mcp', label: 'MCP', labelKey: 'navigation.mcp', icon: Plug, dialog: 'mcp' },
+      { key: 'skills', label: 'Skills', labelKey: 'navigation.skills', icon: Sparkles, dialog: 'skills' },
+      { key: 'reset-permissions', label: 'Reset Permissions', labelKey: 'navigation.resetPermissions', icon: ShieldOff, dialog: 'resetPermissions', danger: true },
+      { key: 'schedules', label: 'Schedules', labelKey: 'navigation.schedules', icon: CalendarClock, to: `/repos/${id}/schedules` },
+      { key: 'source-control', label: 'Source Control', labelKey: 'navigation.sourceControl', icon: GitCommitHorizontal, dialog: 'sourceControl' },
       ...baseItems,
     ]
 
     return {
       primary: [
-        { key: 'new-session', label: 'New Session', icon: SquarePlus, onSelect: 'new-session', variant: 'primary' },
+        { key: 'new-session', label: 'New Session', labelKey: 'navigation.newSession', icon: SquarePlus, onSelect: 'new-session', variant: 'primary' },
         getAssistantNavItem(pathname),
       ],
       items,
@@ -82,19 +85,19 @@ function buildRouteNavModel(pathname: string, options: NavModelOptions): NavMode
   const sessionDetailMatch = /^\/repos\/(\d+)\/sessions\/[^/]+$/.exec(pathname)
   if (sessionDetailMatch) {
     const items: MoreDrawerItem[] = [
-      { key: 'files', label: 'Files', icon: Folder, dialog: 'files' },
-      { key: 'mcp', label: 'MCP', icon: Plug, dialog: 'mcp' },
-      { key: 'skills', label: 'Skills', icon: Sparkles, dialog: 'skills' },
-      { key: 'lsp', label: 'LSP', icon: Code2, dialog: 'lsp' },
-      { key: 'reset-permissions', label: 'Reset Permissions', icon: ShieldOff, dialog: 'resetPermissions', danger: true },
-      { key: 'schedules', label: 'Schedules', icon: CalendarClock, to: `/repos/${sessionDetailMatch[1]}/schedules` },
-      { key: 'source-control', label: 'Source Control', icon: GitCommitHorizontal, dialog: 'sourceControl' },
+      { key: 'files', label: 'Files', labelKey: 'navigation.files', icon: Folder, dialog: 'files' },
+      { key: 'mcp', label: 'MCP', labelKey: 'navigation.mcp', icon: Plug, dialog: 'mcp' },
+      { key: 'skills', label: 'Skills', labelKey: 'navigation.skills', icon: Sparkles, dialog: 'skills' },
+      { key: 'lsp', label: 'LSP', labelKey: 'navigation.lsp', icon: Code2, dialog: 'lsp' },
+      { key: 'reset-permissions', label: 'Reset Permissions', labelKey: 'navigation.resetPermissions', icon: ShieldOff, dialog: 'resetPermissions', danger: true },
+      { key: 'schedules', label: 'Schedules', labelKey: 'navigation.schedules', icon: CalendarClock, to: `/repos/${sessionDetailMatch[1]}/schedules` },
+      { key: 'source-control', label: 'Source Control', labelKey: 'navigation.sourceControl', icon: GitCommitHorizontal, dialog: 'sourceControl' },
       ...baseItems,
     ]
 
     return {
       primary: [
-        { key: 'new-session', label: 'New Session', icon: SquarePlus, onSelect: 'new-session', variant: 'primary' },
+        { key: 'new-session', label: 'New Session', labelKey: 'navigation.newSession', icon: SquarePlus, onSelect: 'new-session', variant: 'primary' },
         getAssistantNavItem(pathname),
       ],
       items,
@@ -103,18 +106,18 @@ function buildRouteNavModel(pathname: string, options: NavModelOptions): NavMode
 
   if (isAssistantPath(pathname)) {
     const items: MoreDrawerItem[] = [
-      { key: 'files', label: 'Files', icon: Folder, dialog: 'files' },
-      { key: 'mcp', label: 'MCP', icon: Plug, dialog: 'mcp' },
-      { key: 'skills', label: 'Skills', icon: Sparkles, dialog: 'skills' },
-      { key: 'reset-permissions', label: 'Reset Permissions', icon: ShieldOff, dialog: 'resetPermissions', danger: true },
-      { key: 'schedules', label: 'Schedules', icon: CalendarClock, to: '/repos/0/schedules' },
-      { key: 'source-control', label: 'Source Control', icon: GitCommitHorizontal, dialog: 'sourceControl' },
+      { key: 'files', label: 'Files', labelKey: 'navigation.files', icon: Folder, dialog: 'files' },
+      { key: 'mcp', label: 'MCP', labelKey: 'navigation.mcp', icon: Plug, dialog: 'mcp' },
+      { key: 'skills', label: 'Skills', labelKey: 'navigation.skills', icon: Sparkles, dialog: 'skills' },
+      { key: 'reset-permissions', label: 'Reset Permissions', labelKey: 'navigation.resetPermissions', icon: ShieldOff, dialog: 'resetPermissions', danger: true },
+      { key: 'schedules', label: 'Schedules', labelKey: 'navigation.schedules', icon: CalendarClock, to: '/repos/0/schedules' },
+      { key: 'source-control', label: 'Source Control', labelKey: 'navigation.sourceControl', icon: GitCommitHorizontal, dialog: 'sourceControl' },
       ...baseItems,
     ]
 
     return {
       primary: [
-        { key: 'new-session', label: 'New Session', icon: SquarePlus, onSelect: 'new-session', variant: 'primary' },
+        { key: 'new-session', label: 'New Session', labelKey: 'navigation.newSession', icon: SquarePlus, onSelect: 'new-session', variant: 'primary' },
         getAssistantNavItem(pathname, 'secondary'),
       ],
       items,
@@ -124,7 +127,7 @@ function buildRouteNavModel(pathname: string, options: NavModelOptions): NavMode
   if (pathname === '/schedules' || /^\/repos\/\d+\/schedules$/.test(pathname)) {
     return {
       primary: [
-        { key: 'new-schedule', label: 'New Schedule', icon: Clock, onSelect: 'new-schedule', variant: 'primary' },
+        { key: 'new-schedule', label: 'New Schedule', labelKey: 'navigation.newSchedule', icon: Clock, onSelect: 'new-schedule', variant: 'primary' },
         getAssistantNavItem(pathname),
       ],
       items: baseItems,
@@ -134,12 +137,12 @@ function buildRouteNavModel(pathname: string, options: NavModelOptions): NavMode
   if (pathname === '/') {
     return {
       primary: [
-        { key: 'new-repo', label: 'New Repo', icon: Plus, onSelect: 'new-repo', variant: 'primary' },
+        { key: 'new-repo', label: 'New Repo', labelKey: 'navigation.newRepo', icon: Plus, onSelect: 'new-repo', variant: 'primary' },
         getAssistantNavItem(pathname),
       ],
       items: [
-        { key: 'all-schedules', label: 'All Schedules', icon: CalendarClock, to: '/schedules' },
-        { key: 'files', label: 'Files', icon: Folder, dialog: 'files' },
+        { key: 'all-schedules', label: 'All Schedules', labelKey: 'navigation.allSchedules', icon: CalendarClock, to: '/schedules' },
+        { key: 'files', label: 'Files', labelKey: 'navigation.files', icon: Folder, dialog: 'files' },
         ...baseItems,
       ],
     }

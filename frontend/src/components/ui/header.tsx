@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { useMobile } from "@/hooks/useMobile";
 import { X } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface HeaderProps {
   children: ReactNode;
@@ -38,13 +39,14 @@ interface HeaderTitleProps {
 
 function HeaderTitle({ children, logo, className }: HeaderTitleProps) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {logo && typeof children === "string" && children === "OpenCode" ? (
         <img 
           src={theme === 'light' ? "/opencode-wordmark-light.svg" : "/opencode-wordmark-dark.svg"} 
-          alt="OpenCode" 
+          alt={t('ui.header.openCodeLogoAlt')} 
           className="h-6 w-auto sm:h-8"
         />
       ) : (
@@ -163,13 +165,14 @@ function HeaderActions({ children, className }: { children: ReactNode; className
 
 function HeaderSettingsButton() {
   const { open } = useSettingsDialog();
+  const { t } = useI18n();
 
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={open}
-      aria-label="Settings"
+      aria-label={t('ui.header.settings')}
       className="text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 h-8 w-8"
     >
       <Settings className="w-4 h-4" />

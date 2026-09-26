@@ -1,4 +1,5 @@
 import { ConfirmDestructiveDialog } from '@/components/ui/confirm-destructive-dialog'
+import { useI18n } from '@/lib/i18n'
 
 interface DiscardDialogProps {
   open: boolean
@@ -17,7 +18,8 @@ export function DiscardDialog({
   fileCount,
   isDiscarding = false
 }: DiscardDialogProps) {
-  const itemText = fileCount === 1 ? '1 file' : `${fileCount} files`
+  const { t } = useI18n()
+  const itemText = t('ui.discardDialog.fileCount', { count: fileCount })
 
   return (
     <ConfirmDestructiveDialog
@@ -25,11 +27,11 @@ export function DiscardDialog({
       onOpenChange={onOpenChange}
       onConfirm={onConfirm}
       onCancel={onCancel}
-      title="Discard Changes"
-      description={`Are you sure you want to discard changes to ${itemText}? This action cannot be undone.`}
-      warning={`This will permanently delete your uncommitted changes to ${itemText}. If these changes exist in the staging area, they will also be removed.`}
-      confirmLabel="Discard"
-      pendingLabel="Discarding..."
+      title={t('ui.discardDialog.title')}
+      description={t('ui.discardDialog.description', { itemText })}
+      warning={t('ui.discardDialog.warning', { itemText })}
+      confirmLabel={t('ui.discardDialog.confirm')}
+      pendingLabel={t('ui.discardDialog.pending')}
       isPending={isDiscarding}
     />
   )

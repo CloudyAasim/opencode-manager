@@ -8,6 +8,7 @@ import { AlertCircle, GitBranch, Loader2 } from 'lucide-react'
 import { createRepo, listBranches } from '@/api/repos'
 import { showToast } from '@/lib/toast'
 import { invalidateRepoGitCaches } from '@/lib/queryInvalidation'
+import { useI18n } from '@/lib/i18n'
 
 interface CreateWorktreeDialogProps {
   open: boolean
@@ -26,6 +27,7 @@ export function CreateWorktreeDialog({
   defaultBaseBranch,
   onCreated,
 }: CreateWorktreeDialogProps) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [branchName, setBranchName] = useState('')
   const [baseBranch, setBaseBranch] = useState<string>('')
@@ -68,23 +70,23 @@ export function CreateWorktreeDialog({
       }),
     onSuccess: () => {
       invalidateRepoGitCaches(queryClient, repoId)
-      showToast.success('Worktree created')
+      showToast.success(t('repo.worktreeCreation.created'))
       onCreated?.()
       onOpenChange(false)
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Failed to create worktree')
+      setError(err instanceof Error ? err.message : t('repo.worktreeCreation.createFailed'))
     },
   })
 
   const handleCreate = () => {
     const trimmed = branchName.trim()
     if (!trimmed) {
-      setError('Branch name is required')
+      setError(t('repo.worktreeCreation.branchRequired'))
       return
     }
     if (!baseBranch) {
-      setError('Base branch is required')
+      setError(t('repo.worktreeCreation.baseRequired'))
       return
     }
     setError(null)
@@ -97,10 +99,10 @@ export function CreateWorktreeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GitBranch className="w-4 h-4" />
-            Create Worktree
+            {t('repo.worktreeCreation.title')}
           </DialogTitle>
           <DialogDescription>
-            Create a separate workspace for a new branch. The worktree is managed as its own repo entry.
+            {t('repo.worktreeCreation.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -109,15 +111,15 @@ export function CreateWorktreeDialog({
             <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded p-3">
               <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                Worktrees can only be created for repositories with a remote URL.
+                {t('repo.worktreeCreation.needsRemote')}
               </p>
             </div>
           ) : (
             <>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">New branch name</label>
+                <label className="text-sm font-medium">{t('repo.worktreeCreation.newBranchName')}</label>
                 <Input
-                  placeholder="feature/my-branch"
+                  placeholder={t('repo.worktreeCreation.newBranchPlaceholder')}
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
                   autoFocus
@@ -128,10 +130,10 @@ export function CreateWorktreeDialog({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Base branch</label>
+                <label className="text-sm font-medium">{t('repo.worktreeCreation.baseBranch')}</label>
                 <Select value={baseBranch} onValueChange={setBaseBranch} disabled={branchesLoading}>
                   <SelectTrigger className="bg-background border-border text-foreground">
-                    <SelectValue placeholder={branchesLoading ? 'Loading branches...' : 'Select a base branch'} />
+                    <SelectValue placeholder={branchesLoading ? t('repo.worktreeCreation.loadingBranches') : t('repo.worktreeCreation.selectBaseBranch')} />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border">
                     {localBranches.length > 0 && (
@@ -142,7 +144,7 @@ export function CreateWorktreeDialog({
                               <GitBranch className="w-3.5 h-3.5" />
                               <span>{branch.name}</span>
                               {branch.current && (
-                                <span className="text-xs text-muted-foreground">(current)</span>
+                                <span className="text-xs text-muted-foreground">{t('repo.worktreeCreation.current')}</span>
                               )}
                             </div>
                           </SelectItem>
@@ -154,14 +156,14 @@ export function CreateWorktreeDialog({
                         <div className="flex items-center gap-2">
                           <GitBranch className="w-3.5 h-3.5 text-blue-500" />
                           <span>{branch.shortName}</span>
-                          <span className="text-xs text-muted-foreground">(remote)</span>
+                          <span className="text-xs text-muted-foreground">{t('repo.worktreeCreation.remote')}</span>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  The new branch will be created from this branch. Ignored if the branch name already exists locally or on the remote.
+                  {t('repo.worktreeCreation.baseBranchHint')}
                 </p>
               </div>
             </>
@@ -180,7 +182,7 @@ export function CreateWorktreeDialog({
               onClick={() => onOpenChange(false)}
               className="border-border hover:bg-accent"
             >
-              Cancel
+              {t('repo.cancel')}
             </Button>
             <Button
               onClick={handleCreate}
@@ -190,10 +192,10 @@ export function CreateWorktreeDialog({
               {worktreeMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
+                  {t('repo.creating')}
                 </>
               ) : (
-                'Create Worktree'
+                t('repo.worktreeCreation.title')
               )}
             </Button>
           </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { MODAL_TRANSITION_MS } from '@/lib/utils'
 import { X } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 export interface SideDrawerProps {
   isOpen: boolean
@@ -91,6 +92,7 @@ export interface SideDrawerHeaderProps {
 }
 
 export function SideDrawerHeader({ title, onClose, meta }: SideDrawerHeaderProps) {
+  const { t } = useI18n()
   return (
     <div className="flex-shrink-0 border-b border-border bg-background px-4 py-2 flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
@@ -101,7 +103,7 @@ export function SideDrawerHeader({ title, onClose, meta }: SideDrawerHeaderProps
         type="button"
         onClick={onClose}
         className="text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-sm p-1 shrink-0"
-        aria-label="Close"
+        aria-label={t('ui.sideDrawer.close')}
       >
         <X className="w-5 h-5" />
       </button>

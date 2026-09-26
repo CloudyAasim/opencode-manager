@@ -16,6 +16,7 @@ import {
 } from "@/api/providers";
 import { useProvidersWithModels } from "@/hooks/useProvidersWithModels";
 import { useModelSelection } from "@/hooks/useModelSelection";
+import { useI18n } from "@/lib/i18n";
 import type { Model, ProviderWithModels } from "@/api/providers";
 
 interface ModelSelectDialogProps {
@@ -37,6 +38,7 @@ interface SearchInputProps {
 }
 
 function SearchInput({ onSearch, initialValue = "" }: SearchInputProps) {
+  const { t } = useI18n();
   const [value, setValue] = useState(initialValue);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ function SearchInput({ onSearch, initialValue = "" }: SearchInputProps) {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search models..."
+          placeholder={t('misc.modelSelect.searchModels')}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className="pl-10 md:text-sm"
@@ -83,20 +85,21 @@ const ModelCard = memo(function ModelCard({
   onSelect,
   onToggleFavorite,
 }: ModelCardProps) {
+  const { t } = useI18n();
   const capabilities = useMemo(() => {
     const caps = [];
-    if (model.reasoning) caps.push("Reasoning");
-    if (model.tool_call) caps.push("Tools");
-    if (model.attachment) caps.push("Files");
+    if (model.reasoning) caps.push(t('misc.modelSelect.reasoning'));
+    if (model.tool_call) caps.push(t('misc.modelSelect.tools'));
+    if (model.attachment) caps.push(t('misc.modelSelect.files'));
     return caps;
-  }, [model.reasoning, model.tool_call, model.attachment]);
+  }, [model.reasoning, model.tool_call, model.attachment, t]);
 
   const statusBadge = useMemo(() => {
-    if (model.experimental) return <Badge variant="secondary">Experimental</Badge>;
-    if (model.status === "alpha") return <Badge variant="destructive">Alpha</Badge>;
-    if (model.status === "beta") return <Badge variant="secondary">Beta</Badge>;
+    if (model.experimental) return <Badge variant="secondary">{t('misc.modelSelect.experimental')}</Badge>;
+    if (model.status === "alpha") return <Badge variant="destructive">{t('misc.modelSelect.alpha')}</Badge>;
+    if (model.status === "beta") return <Badge variant="secondary">{t('misc.modelSelect.beta')}</Badge>;
     return null;
-  }, [model.experimental, model.status]);
+  }, [model.experimental, model.status, t]);
 
   return (
     <div
@@ -127,7 +130,7 @@ const ModelCard = memo(function ModelCard({
               event.stopPropagation();
               onToggleFavorite(provider.id, model.key || model.id);
             }}
-            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            aria-label={isFavorite ? t('misc.modelSelect.removeFromFavorites') : t('misc.modelSelect.addToFavorites')}
           >
             <Star className={`h-4 w-4 ${isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
           </Button>
@@ -159,18 +162,18 @@ const ModelCard = memo(function ModelCard({
       <div className="text-xs text-muted-foreground space-y-1">
         {model.limit?.context && (
           <div className="flex justify-between">
-            <span>Context:</span>
+            <span>{t('misc.modelSelect.context')}</span>
             <span className="ml-1">
               {model.limit.context >= 1000000
                 ? `${(model.limit.context / 1000000).toFixed(1)}M`
                 : model.limit.context.toLocaleString()
-              } tokens
+              } {t('misc.modelSelect.tokens')}
             </span>
           </div>
         )}
         {model.cost && (
           <div className="flex justify-between">
-            <span>Cost:</span>
+            <span>{t('misc.modelSelect.cost')}</span>
             <span className="ml-1">${model.cost.input.toFixed(4)}/1K</span>
           </div>
         )}
@@ -202,6 +205,7 @@ const ModelGrid = memo(function ModelGrid({
   recentModels = [],
   showRecent = false,
 }: ModelGridProps) {
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -213,7 +217,7 @@ const ModelGrid = memo(function ModelGrid({
   if (models.length === 0 && (!showRecent || (favoriteModels.length === 0 && recentModels.length === 0))) {
     return (
       <div className="text-center py-12 text-zinc-500">
-        No models found
+        {t('misc.modelSelect.noModelsFound')}
       </div>
     );
   }
@@ -224,7 +228,7 @@ const ModelGrid = memo(function ModelGrid({
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
             <Star className="h-3.5 w-3.5" />
-            Favorite Models
+            {t('misc.modelSelect.favoriteModels')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {favoriteModels.map(({ model, provider, modelKey }) => (
@@ -247,7 +251,7 @@ const ModelGrid = memo(function ModelGrid({
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            Recent Models
+            {t('misc.modelSelect.recentModels')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {recentModels.map(({ model, provider, modelKey }) => (
@@ -270,7 +274,7 @@ const ModelGrid = memo(function ModelGrid({
         <div>
           {showRecent && (favoriteModels.length > 0 || recentModels.length > 0) && (
             <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-              All Models
+              {t('misc.modelSelect.allModels')}
             </h3>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
@@ -304,6 +308,7 @@ const ProviderSidebar = memo(function ProviderSidebar({
   selectedProvider,
   onSelect,
 }: ProviderSidebarProps) {
+  const { t } = useI18n();
   return (
     <div className="hidden sm:block w-48 lg:w-64 border-r border-border bg-muted/20 p-4 overflow-y-auto flex-shrink-0">
       <div className="space-y-4">
@@ -313,7 +318,7 @@ const ProviderSidebar = memo(function ProviderSidebar({
           onClick={() => onSelect("")}
           className="w-full justify-start text-sm"
         >
-          All Providers
+          {t('misc.modelSelect.allProviders')}
         </Button>
 
         {providers.length > 0 && (
@@ -342,6 +347,7 @@ export function ModelSelectDialog({
   opcodeUrl,
   directory,
 }: ModelSelectDialogProps) {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
 
@@ -451,7 +457,7 @@ export function ModelSelectDialog({
       <DialogContent mobileFullscreen className="sm:w-[95vw] sm:max-w-7xl sm:h-[90vh] sm:max-h-[90vh] bg-background border-border text-foreground flex flex-col gap-0">
         <DialogHeader className="p-4 sm:p-6 pb-2 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl font-semibold">
-            {selectedProvider && selectedProviderData ? `Select Model - ${selectedProviderData.name}` : 'Select Model'}
+            {selectedProvider && selectedProviderData ? t('misc.modelSelect.titleWithProvider', { provider: selectedProviderData.name }) : t('misc.modelSelect.title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -466,7 +472,7 @@ export function ModelSelectDialog({
             <div className="sm:hidden p-3 border-b border-border flex-shrink-0">
               <Select onValueChange={handleProviderSelect} value={selectedProvider || undefined}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a provider..." />
+                  <SelectValue placeholder={t('misc.modelSelect.selectProvider')} />
                 </SelectTrigger>
                 <SelectContent>
                   {selectableProviders.map((provider) => (
@@ -501,7 +507,7 @@ export function ModelSelectDialog({
             {currentModel && (
               <div className="p-3 sm:p-4 border-t border-border bg-muted/20 flex-shrink-0">
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  Current:{' '}
+                  {t('misc.modelSelect.current')}{' '}
                   <span className="inline-flex items-center gap-1.5 font-medium text-foreground break-all">
                     <span className="h-2 w-2 rounded-full bg-orange-500" />
                     {currentModel}

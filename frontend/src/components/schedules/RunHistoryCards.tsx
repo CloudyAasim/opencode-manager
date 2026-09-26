@@ -5,6 +5,7 @@ import type { ScheduleRun } from '@opencode-manager/shared/types'
 import { getRunTone } from '@/components/schedules/schedule-utils'
 import { RunDetailPanel } from '@/components/schedules/RunDetailPanel'
 import { useRepoScheduleRun } from '@/hooks/useSchedules'
+import { useI18n } from '@/lib/i18n'
 
 interface RunHistoryCardsProps {
   runs: ScheduleRun[] | undefined
@@ -25,6 +26,7 @@ export function RunHistoryCards({
   onDeleteRun,
   deleteRunPending,
 }: RunHistoryCardsProps) {
+  const { t } = useI18n()
   const [expandedRunId, setExpandedRunId] = useState<number | null>(null)
   const [expandedRunRepoId, setExpandedRunRepoId] = useState<number | null>(null)
   const [expandedRunJobId, setExpandedRunJobId] = useState<number | null>(null)
@@ -68,8 +70,8 @@ export function RunHistoryCards({
       <div className="flex items-center justify-center p-6">
         <div className="text-center">
           <History className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-          <p className="text-sm font-medium">No runs yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Use Run now to generate the first execution record and log bundle.</p>
+          <p className="text-sm font-medium">{t('schedules.runs.noRunsYet')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('schedules.runs.noRunsHint')}</p>
         </div>
       </div>
     )
@@ -99,12 +101,12 @@ export function RunHistoryCards({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       {getRunStatusIcon(run.status)}
-                      <Badge className={getRunTone(run)}>{run.status}</Badge>
+                      <Badge className={getRunTone(run)}>{t(`schedules.runs.status.${run.status}`)}</Badge>
                     </div>
-                    <span className="text-xs text-muted-foreground">{run.triggerSource}</span>
+                    <span className="text-xs text-muted-foreground">{t(`schedules.runs.trigger.${run.triggerSource}`)}</span>
                   </div>
                   <p className="mt-2 truncate text-sm font-medium leading-tight">
-                    {run.sessionTitle ?? 'No session recorded'}
+                    {run.sessionTitle ?? t('schedules.runs.noSessionRecorded')}
                   </p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                     <span>{new Date(run.startedAt).toLocaleString()}</span>
@@ -117,7 +119,7 @@ export function RunHistoryCards({
                     {run.runBranch && !run.commitHash && run.status !== 'running' && (
                       <>
                         <span aria-hidden="true">•</span>
-                        <span className="italic">No changes committed</span>
+                        <span className="italic">{t('schedules.runs.noChangesCommitted')}</span>
                       </>
                     )}
                   </div>
@@ -132,8 +134,8 @@ export function RunHistoryCards({
                   type="button"
                   onClick={() => onDeleteRun(run.id)}
                   disabled={deleteRunPending}
-                  title="Delete run"
-                  aria-label="Delete run"
+                  title={t('schedules.runs.deleteRun')}
+                  aria-label={t('schedules.runs.deleteRun')}
                   className="flex items-center px-2.5 text-muted-foreground transition-colors hover:text-red-400 disabled:opacity-50"
                 >
                   <Trash2 className="h-4 w-4" />

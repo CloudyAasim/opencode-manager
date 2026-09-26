@@ -13,8 +13,10 @@ import { OAuthAuthorizeDialog } from './OAuthAuthorizeDialog'
 import { OAuthCallbackDialog } from './OAuthCallbackDialog'
 import { ApiKeyDialog } from '@/components/model/ApiKeyDialog'
 import { invalidateProviderCaches } from '@/lib/queryInvalidation'
+import { useI18n } from '@/lib/i18n'
 
 export function ProviderSettings() {
+  const { t } = useI18n()
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false)
   const [oauthCallbackDialogOpen, setOauthCallbackDialogOpen] = useState(false)
@@ -169,9 +171,9 @@ export function ProviderSettings() {
       <div className="grid gap-8 @min-[1000px]:grid-cols-2 @min-[1000px]:items-start">
         <div className="min-w-0 space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">OAuth Providers</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-2">{t('settingsPanels.provider.oauthProviders')}</h2>
             <p className="text-sm text-muted-foreground">
-              Connect to AI providers using OAuth authentication.
+              {t('settingsPanels.provider.oauthProvidersDescription')}
             </p>
           </div>
 
@@ -179,7 +181,7 @@ export function ProviderSettings() {
           <Card className="bg-card border-border">
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground text-center">
-                No OAuth-capable providers available.
+                {t('settingsPanels.provider.noOauthProviders')}
               </p>
             </CardContent>
           </Card>
@@ -197,7 +199,7 @@ export function ProviderSettings() {
                     </p>
                     {modelCount > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {modelCount} model{modelCount !== 1 ? 's' : ''}
+                        {t('settingsPanels.provider.models', { count: modelCount })}
                       </p>
                     )}
                   </div>
@@ -205,12 +207,12 @@ export function ProviderSettings() {
                     {hasKey ? (
                       <Badge variant="default" className="bg-green-600 hover:bg-green-700 shrink-0">
                         <Check className="h-3 w-3 mr-1" />
-                        Connected
+                        {t('settingsPanels.provider.connected')}
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="shrink-0">
                         <X className="h-3 w-3 mr-1" />
-                        Not Connected
+                        {t('settingsPanels.provider.notConnected')}
                       </Badge>
                     )}
                     <Button
@@ -222,7 +224,7 @@ export function ProviderSettings() {
                       }}
                     >
                       <Shield className="h-4 w-4 mr-1" />
-                      {hasKey ? 'Reconnect' : 'Connect'}
+                      {hasKey ? t('settingsPanels.provider.reconnect') : t('settingsPanels.provider.connect')}
                     </Button>
                     {hasKey && (
                       <Button
@@ -231,7 +233,7 @@ export function ProviderSettings() {
                         onClick={() => handleDeleteCredential(provider.id)}
                         disabled={deleteCredentialMutation.isPending}
                       >
-                        Disconnect
+                        {t('settingsPanels.provider.disconnect')}
                       </Button>
                     )}
                   </div>
@@ -267,9 +269,9 @@ export function ProviderSettings() {
 
         <div className="min-w-0 space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">API Keys</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-2">{t('settingsPanels.provider.apiKeys')}</h2>
             <p className="text-sm text-muted-foreground">
-              Manage API keys for AI providers.
+              {t('settingsPanels.provider.apiKeysDescription')}
             </p>
           </div>
 
@@ -284,7 +286,7 @@ export function ProviderSettings() {
             ) : (
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
-            <span className="font-medium text-sm">Connected</span>
+            <span className="font-medium text-sm">{t('settingsPanels.provider.connected')}</span>
             <Badge variant="secondary" className="ml-auto">
               {apiKeyProviders.connected.length}
             </Badge>
@@ -294,7 +296,7 @@ export function ProviderSettings() {
             <div className="pl-6 space-y-2">
               {apiKeyProviders.connected.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">
-                  No providers configured. Add an API key below to get started.
+                  {t('settingsPanels.provider.noProvidersConfigured')}
                 </p>
               ) : (
                 apiKeyProviders.connected.map((provider) => {
@@ -309,20 +311,20 @@ export function ProviderSettings() {
                             </CardTitle>
                             {modelCount > 0 && (
                               <CardDescription className="text-xs">
-                                {modelCount} model{modelCount !== 1 ? 's' : ''}
+                                {t('settingsPanels.provider.models', { count: modelCount })}
                               </CardDescription>
                             )}
                           </div>
                           <div className="flex items-center gap-1">
                             <Badge variant="default" className="bg-green-600 hover:bg-green-700 shrink-0 text-xs">
                               <Check className="h-3 w-3 mr-1" />
-                              Connected
+                              {t('settingsPanels.provider.connected')}
                             </Badge>
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => handleEditApiKey(provider)}
-                              aria-label={`Edit API key for ${provider.name || provider.id}`}
+                              aria-label={t('settingsPanels.provider.editApiKeyFor', { name: provider.name || provider.id })}
                               className="h-8 w-8 p-0"
                             >
                               <Pencil className="h-3.5 w-3.5" />
@@ -332,7 +334,7 @@ export function ProviderSettings() {
                               variant="ghost"
                               onClick={() => handleDeleteCredential(provider.id)}
                               disabled={deleteCredentialMutation.isPending}
-                              aria-label={`Remove credentials for ${provider.name || provider.id}`}
+                              aria-label={t('settingsPanels.provider.removeCredentialsFor', { name: provider.name || provider.id })}
                               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -359,7 +361,7 @@ export function ProviderSettings() {
             ) : (
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
-            <span className="font-medium text-sm">Available Providers</span>
+            <span className="font-medium text-sm">{t('settingsPanels.provider.availableProviders')}</span>
             <Badge variant="secondary" className="ml-auto">
               {apiKeyProviders.available.length}
             </Badge>
@@ -370,7 +372,7 @@ export function ProviderSettings() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search providers..."
+                  placeholder={t('settingsPanels.provider.searchPlaceholder')}
                   value={availableSearch}
                   onChange={(e) => setAvailableSearch(e.target.value)}
                   className="pl-9 md:text-sm"
@@ -381,7 +383,7 @@ export function ProviderSettings() {
               <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pt-4 pb-1 pr-1 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
                 {filteredAvailableProviders.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-2">
-                    {availableSearch ? 'No providers match your search.' : 'No available providers.'}
+                    {availableSearch ? t('settingsPanels.provider.noProvidersMatch') : t('settingsPanels.provider.noAvailableProviders')}
                   </p>
                 ) : (
                   filteredAvailableProviders.map((provider, index) => {
@@ -394,7 +396,7 @@ export function ProviderSettings() {
                           </span>
                           {modelCount > 0 && (
                             <span className="text-xs text-muted-foreground">
-                              {modelCount} model{modelCount !== 1 ? 's' : ''}
+                              {t('settingsPanels.provider.models', { count: modelCount })}
                             </span>
                           )}
                         </div>
@@ -405,7 +407,7 @@ export function ProviderSettings() {
                           className="h-7 px-2"
                         >
                           <Key className="h-3.5 w-3.5 mr-1" />
-                          Add Key
+                          {t('settingsPanels.provider.addKey')}
                         </Button>
                       </div>
                     )
@@ -445,8 +447,8 @@ export function ProviderSettings() {
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        title="Remove Credentials"
-        description={`Are you sure you want to remove credentials for ${deleteTarget || 'this provider'}?`}
+        title={t('settingsPanels.provider.removeCredentialsTitle')}
+        description={t('settingsPanels.provider.removeCredentialsDescription', { name: deleteTarget || t('settingsPanels.provider.thisProvider') })}
         isDeleting={deleteCredentialMutation.isPending}
       />
     </div>

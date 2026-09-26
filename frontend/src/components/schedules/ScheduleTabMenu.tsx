@@ -1,5 +1,6 @@
 import { CalendarClock, History, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 type TabType = 'jobs' | 'detail' | 'runs'
 
@@ -10,6 +11,8 @@ interface ScheduleTabMenuProps {
 }
 
 export function ScheduleTabMenu({ activeTab, onTabChange, className }: ScheduleTabMenuProps) {
+  const { t } = useI18n()
+
   return (
     <div className={cn('flex border-t border-border bg-card/80 backdrop-blur-sm pb-1', className)}>
       <button
@@ -23,7 +26,7 @@ export function ScheduleTabMenu({ activeTab, onTabChange, className }: ScheduleT
         onClick={() => onTabChange('jobs')}
       >
         <CalendarClock className="h-5 w-5" />
-        <span>Jobs</span>
+        <span>{t('schedules.tabs.jobs')}</span>
       </button>
       <button
         type="button"
@@ -36,7 +39,7 @@ export function ScheduleTabMenu({ activeTab, onTabChange, className }: ScheduleT
         onClick={() => onTabChange('detail')}
       >
         <Info className="h-5 w-5" />
-        <span>Detail</span>
+        <span>{t('schedules.tabs.detail')}</span>
       </button>
       <button
         type="button"
@@ -49,7 +52,7 @@ export function ScheduleTabMenu({ activeTab, onTabChange, className }: ScheduleT
         onClick={() => onTabChange('runs')}
       >
         <History className="h-5 w-5" />
-        <span>Runs</span>
+        <span>{t('schedules.tabs.runs')}</span>
       </button>
     </div>
   )

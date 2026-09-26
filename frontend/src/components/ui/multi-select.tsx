@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { Check, ChevronDown, X } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 export interface MultiSelectOption {
   value: string
@@ -23,12 +24,16 @@ export function MultiSelect({
   value,
   onChange,
   options,
-  placeholder = 'Select...',
-  searchPlaceholder = 'Search...',
-  emptyMessage = 'No options found',
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
   disabled = false,
   className,
 }: MultiSelectProps) {
+  const { t } = useI18n()
+  const resolvedPlaceholder = placeholder ?? t('ui.multiSelect.placeholder')
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('ui.multiSelect.searchPlaceholder')
+  const resolvedEmptyMessage = emptyMessage ?? t('ui.multiSelect.noOptionsFound')
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [highlightedIndex, setHighlightedIndex] = useState(0)
@@ -134,7 +139,7 @@ export function MultiSelect({
         )}
       >
         {value.length === 0 && (
-          <span className="text-muted-foreground text-sm">{placeholder}</span>
+          <span className="text-muted-foreground text-sm">{resolvedPlaceholder}</span>
         )}
         {value.map(v => {
           const option = options.find(o => o.value === v)
@@ -149,7 +154,7 @@ export function MultiSelect({
                 onClick={(e) => handleRemove(v, e)}
                 disabled={disabled}
                 className="text-muted-foreground hover:text-foreground disabled:pointer-events-none"
-                aria-label={`Remove ${option?.label ?? v}`}
+                aria-label={t('ui.multiSelect.removeOption', { label: option?.label ?? v })}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -171,7 +176,7 @@ export function MultiSelect({
               value={search}
               onChange={e => setSearch(e.target.value)}
               onKeyDown={handleInputKeyDown}
-              placeholder={searchPlaceholder}
+              placeholder={resolvedSearchPlaceholder}
               className={cn(
                 'flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors',
                 'placeholder:text-muted-foreground',
@@ -181,7 +186,7 @@ export function MultiSelect({
           </div>
           <div className="max-h-52 overflow-y-auto" role="listbox">
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-center text-sm text-muted-foreground">{emptyMessage}</div>
+              <div className="px-3 py-4 text-center text-sm text-muted-foreground">{resolvedEmptyMessage}</div>
             ) : (
               filteredOptions.map((option, index) => {
                 const isSelected = value.includes(option.value)

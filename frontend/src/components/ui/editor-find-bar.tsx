@@ -2,6 +2,7 @@ import { Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 interface EditorFindBarProps {
   query: string
@@ -23,9 +24,11 @@ export function EditorFindBar({
   onPrev,
   onNext,
   inputName,
-  placeholder = 'Find in content...',
+  placeholder,
   className,
 }: EditorFindBarProps) {
+  const { t } = useI18n()
+  const resolvedPlaceholder = placeholder ?? t('ui.editorFindBar.placeholder')
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -44,8 +47,8 @@ export function EditorFindBar({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          aria-label="Find in content"
+          placeholder={resolvedPlaceholder}
+          aria-label={t('ui.editorFindBar.findInContent')}
           autoComplete="off"
           name={inputName}
           className="pl-9 h-10 md:h-9 text-[16px] md:text-sm"
@@ -53,7 +56,7 @@ export function EditorFindBar({
       </div>
       {query && (
         <span data-testid="find-match-count" className="whitespace-nowrap text-xs text-muted-foreground">
-          {matchCount > 0 ? `${currentMatch} of ${matchCount}` : '0 matches'}
+          {matchCount > 0 ? t('ui.editorFindBar.matchCounter', { current: currentMatch, total: matchCount }) : t('ui.editorFindBar.noMatches')}
         </span>
       )}
       <Button
@@ -61,7 +64,7 @@ export function EditorFindBar({
         variant="ghost"
         size="icon-lg"
         className="md:size-8"
-        aria-label="Previous match"
+        aria-label={t('ui.editorFindBar.previousMatch')}
         disabled={noMatches}
         onClick={onPrev}
       >
@@ -72,7 +75,7 @@ export function EditorFindBar({
         variant="ghost"
         size="icon-lg"
         className="md:size-8"
-        aria-label="Next match"
+        aria-label={t('ui.editorFindBar.nextMatch')}
         disabled={noMatches}
         onClick={onNext}
       >

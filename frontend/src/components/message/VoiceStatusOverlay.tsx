@@ -1,4 +1,5 @@
 import { ArrowUp, LoaderCircle, X } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 export type VoiceStatusOverlayState = 'starting' | 'recording' | 'readyToSend' | 'processing' | 'sending'
 
@@ -33,14 +34,16 @@ function WaveformBars() {
 }
 
 export function VoiceStatusOverlay({ show, label, state }: VoiceStatusOverlayProps) {
+  const { t } = useI18n()
+
   if (!show || !label || !state) {
     return null
   }
 
   const isLoading = state === 'starting' || state === 'processing' || state === 'sending'
   const actionWords = state === 'readyToSend'
-    ? ['Release', 'To', 'Send']
-    : ['Swipe', 'To', 'Send']
+    ? [t('message.voice.release'), t('message.voice.to'), t('message.actions.send')]
+    : [t('message.voice.swipe'), t('message.voice.to'), t('message.actions.send')]
 
   return (
     <div

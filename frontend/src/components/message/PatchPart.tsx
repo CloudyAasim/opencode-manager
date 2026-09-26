@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { components } from '@/api/opencode-types'
 import { getRelativePath } from './FileToolRender'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
 
 type PatchPartType = components['schemas']['PatchPart']
 
@@ -14,6 +15,7 @@ const INITIAL_FILES_SHOWN = 3
 
 export function PatchPart({ part, onFileClick }: PatchPartProps) {
   const [expanded, setExpanded] = useState(false)
+  const { t } = useI18n()
 
   const hasMoreFiles = part.files.length > INITIAL_FILES_SHOWN
   const displayedFiles = expanded ? part.files : part.files.slice(0, INITIAL_FILES_SHOWN)
@@ -26,7 +28,7 @@ export function PatchPart({ part, onFileClick }: PatchPartProps) {
         className="w-full px-3 py-1.5 bg-card hover:bg-card-hover text-left flex items-center justify-between text-sm gap-2"
       >
         <span className="font-medium">
-          File Changes ({part.files.length} file{part.files.length !== 1 ? 's' : ''})
+          {t('message.files.changes', { count: part.files.length })}
         </span>
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-muted-foreground text-xs font-mono">{part.hash.slice(0, 8)}</span>
@@ -51,7 +53,7 @@ export function PatchPart({ part, onFileClick }: PatchPartProps) {
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
           >
             <ChevronDown className="w-3 h-3" />
-            +{hiddenCount} more file{hiddenCount !== 1 ? 's' : ''}
+            {t('message.files.more', { count: hiddenCount })}
           </button>
         )}
 
@@ -61,7 +63,7 @@ export function PatchPart({ part, onFileClick }: PatchPartProps) {
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
           >
             <ChevronUp className="w-3 h-3" />
-            Show less
+            {t('message.actions.showLess')}
           </button>
         )}
       </div>

@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import type { QuestionRequest, QuestionInfo } from '@/api/types'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 
 interface QuestionPromptProps {
   question: QuestionRequest
@@ -14,6 +15,7 @@ interface QuestionPromptProps {
 }
 
 export function QuestionPrompt({ question, onReply, onReject, onMinimize }: QuestionPromptProps) {
+  const { t } = useI18n()
   const questions = question.questions
   const isSingleSelect = questions.length === 1 && !questions[0]?.multiple
   const totalSteps = isSingleSelect ? 1 : questions.length + 1
@@ -66,11 +68,11 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
     try {
       await onReply(question.id, [[label]])
     } catch {
-      showToast.error('Failed to submit answer')
+      showToast.error(t('session.question.submitAnswerFailed'))
     } finally {
       setIsSubmitting(false)
     }
-  }, [onReply, question.id])
+  }, [onReply, question.id, t])
 
   const selectOption = useCallback((questionIndex: number, label: string) => {
     const isMultiple = questions[questionIndex]?.multiple
@@ -173,7 +175,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
     try {
       await onReply(question.id, answers)
     } catch {
-      showToast.error('Failed to submit answers')
+      showToast.error(t('session.question.submitAnswersFailed'))
     } finally {
       setIsSubmitting(false)
     }
@@ -184,7 +186,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
     try {
       await onReject(question.id)
     } catch {
-      showToast.error('Failed to dismiss question')
+      showToast.error(t('session.question.dismissFailed'))
     } finally {
       setIsSubmitting(false)
     }
@@ -222,7 +224,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
             ? <ChevronUp className="w-3 h-3 opacity-60 flex-shrink-0" />
             : <ChevronDown className="w-3 h-3 opacity-60 flex-shrink-0" />
           }
-          {isConfirmStep ? 'Review' : (currentQuestion?.header || 'Question')}
+          {isConfirmStep ? t('session.question.review') : (currentQuestion?.header || t('session.question.headerFallback'))}
         </button>
         <button
           onClick={handleReject}
@@ -271,7 +273,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
           disabled={isSubmitting}
           className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-muted hover:bg-muted/80 text-foreground"
         >
-          Dismiss
+          {t('session.question.dismiss')}
         </Button>
         {!isSingleSelect && (
           isConfirmStep ? (
@@ -284,7 +286,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               {isSubmitting ? (
                 <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
               ) : (
-                'Submit'
+                t('session.question.submit')
               )}
             </Button>
           ) : (
@@ -294,7 +296,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               disabled={isSubmitting || (expandedOther === currentIndex && !customInputs[currentIndex]?.trim())}
               className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              {expandedOther === currentIndex ? 'Confirm' : 'Next'}
+              {expandedOther === currentIndex ? t('session.question.confirm') : t('session.question.next')}
             </Button>
           )
         )}
@@ -332,6 +334,7 @@ function QuestionStep({
   onConfirmCustomInput,
   onCollapseOther,
 }: QuestionStepProps) {
+  const { t } = useI18n()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -348,7 +351,7 @@ function QuestionStep({
       <p className="text-xs sm:text-sm font-semibold text-foreground">
         {question.question}
         {isMultiSelect && (
-          <span className="text-foreground/60 font-normal ml-1">(select all that apply)</span>
+          <span className="text-foreground/60 font-normal ml-1">{t('session.question.selectAllThatApply')}</span>
         )}
       </p>
 
@@ -421,7 +424,7 @@ function QuestionStep({
               "text-xs sm:text-sm font-semibold",
               expandedOther || isCustomSelected ? "text-blue-600 dark:text-blue-300" : "text-foreground"
             )}>
-              Other...
+              {t('session.question.other')}
             </span>
           </div>
         </button>
@@ -432,7 +435,7 @@ function QuestionStep({
               ref={textareaRef}
               value={customInput}
               onChange={(e) => onCustomInputChange(e.target.value)}
-              placeholder="Type your own answer..."
+              placeholder={t('session.question.customPlaceholder')}
               className="min-h-[60px] sm:min-h-[80px] text-[16px] sm:text-xs md:text-sm resize-none border-blue-500/30 focus:border-blue-500"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -464,9 +467,10 @@ interface ConfirmStepProps {
 }
 
 function ConfirmStep({ questions, answers, onEditQuestion }: ConfirmStepProps) {
+  const { t } = useI18n()
   return (
     <div className="space-y-2 sm:space-y-3">
-      <p className="text-xs sm:text-sm font-semibold text-foreground">Review your answers</p>
+      <p className="text-xs sm:text-sm font-semibold text-foreground">{t('session.question.reviewAnswers')}</p>
       
       <div className="space-y-1.5 sm:space-y-2">
         {questions.map((q, i) => {
@@ -490,7 +494,7 @@ function ConfirmStep({ questions, answers, onEditQuestion }: ConfirmStepProps) {
                     "text-xs sm:text-sm font-semibold mt-0.5",
                     hasAnswer ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
                   )}>
-                    {hasAnswer ? answer.join(', ') : '(not answered)'}
+                    {hasAnswer ? answer.join(', ') : t('session.question.notAnswered')}
                   </p>
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-foreground/50 flex-shrink-0 mt-0.5 sm:mt-1" />

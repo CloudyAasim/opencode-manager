@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { FileInfo } from '@/types/files'
+import { useI18n } from '@/lib/i18n'
 
 interface FileTreeProps {
   files: FileInfo[]
@@ -48,6 +49,7 @@ interface TreeNodeProps {
 }
 
 function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename }: TreeNodeProps) {
+  const { t } = useI18n()
   const isMobile = useMobile()
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -190,16 +192,16 @@ function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, o
             {!file.isDirectory && (
               <DropdownMenuItem onClick={handleDownload}>
                 <Download className="w-4 h-4 mr-2" />
-                Download
+                {t('repo.fileBrowser.actions.download')}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={handleRename}>
               <Edit3 className="w-4 h-4 mr-2" />
-              Rename
+              {t('repo.fileBrowser.actions.rename')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleDelete} className="text-red-600">
               <Trash2 className="w-4 h-4 mr-2" />
-              Delete
+              {t('repo.fileBrowser.actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -227,8 +229,8 @@ function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, o
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        title={`Delete ${file.isDirectory ? 'Folder' : 'File'}`}
-        description={`Are you sure you want to delete this ${file.isDirectory ? 'folder' : 'file'}?`}
+        title={file.isDirectory ? t('repo.fileBrowser.deleteFolderTitle') : t('repo.fileBrowser.deleteFileTitle')}
+        description={file.isDirectory ? t('repo.fileBrowser.deleteFolderDescription') : t('repo.fileBrowser.deleteFileDescription')}
         itemName={file.name}
       />
     </div>
@@ -236,6 +238,7 @@ function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, o
 }
 
 export const FileTree = memo(function FileTree({ files, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename, currentPath = '', basePath = '', onNavigateUp, canNavigateUp }: FileTreeProps) {
+  const { t } = useI18n()
   const handleGoUp = () => {
     onNavigateUp?.()
   }
@@ -256,7 +259,7 @@ export const FileTree = memo(function FileTree({ files, onFileSelect, onDirector
       
       {files.length === 0 ? (
         <div className="text-center text-muted-foreground py-8">
-          No files in this directory
+          {t('repo.fileBrowser.noFiles')}
         </div>
       ) : (
         files.map((file) => (

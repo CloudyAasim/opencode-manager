@@ -12,6 +12,7 @@ import { useMobile } from '@/hooks/useMobile'
 import { useFindInText } from '@/lib/useFindInText'
 import { parseJsonc, parseJsoncErrorLine, resolveJsoncIssueLine } from '@/lib/jsonc'
 import { FetchError } from '@/api/fetchWrapper'
+import { useI18n } from '@/lib/i18n'
 import { OpenCodeConfigSchema } from '@opencode-manager/shared'
 import {
   downloadOpenCodeConfigSource,
@@ -40,6 +41,7 @@ export function OpenCodeConfigEditor({
   onClose,
   onUpdate,
 }: OpenCodeConfigEditorProps) {
+  const { t } = useI18n()
   const [draftSource, setDraftSource] = useState<OpenCodeConfigSourceFile | null>(null)
   const [draftRevision, setDraftRevision] = useState<string>('')
   const [editConfigContent, setEditConfigContent] = useState('')
@@ -148,7 +150,7 @@ export function OpenCodeConfigEditor({
       if (!validationResult.success) {
         const issues = resolveIssues(validationResult.error.issues)
         setValidationIssues(issues)
-        setEditError(`Configuration validation failed: ${issues.map(getIssueText).join('; ')}`)
+        setEditError(t('settingsPanels.configEditor.validationFailed', { issues: issues.map(getIssueText).join('; ') }))
         return
       }
 
@@ -160,19 +162,19 @@ export function OpenCodeConfigEditor({
         const line = parseJsoncErrorLine(error)
         setEditErrorLine(line)
         revealLine(line)
-        setEditError(`Invalid JSON/JSONC: ${error.message}`)
+        setEditError(t('settingsPanels.configEditor.invalidJsonc', { message: error.message }))
       } else if (error instanceof FetchError) {
         const issues = resolveIssues(error.validationIssues ?? [])
         setValidationIssues(issues)
         if (error.statusCode === 409) {
-          setEditError(error.detail || 'This configuration changed since you opened it. Reload the file, then reapply your edits.')
+          setEditError(error.detail || t('settingsPanels.configEditor.conflict'))
         } else {
           setEditError(error.detail || error.message)
         }
       } else if (error instanceof Error) {
         setEditError(error.message)
       } else {
-        setEditError('Failed to save configuration')
+        setEditError(t('settingsPanels.configEditor.saveFailed'))
       }
     } finally {
       setIsSaving(false)
@@ -194,7 +196,7 @@ export function OpenCodeConfigEditor({
         >
           <DialogHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b p-4 sm:p-6">
             <DialogTitle className="text-lg font-semibold sm:text-xl">
-              Edit {draftSource.name}
+              {t('settingsPanels.configEditor.editTitle', { name: draftSource.name })}
             </DialogTitle>
           </DialogHeader>
 
@@ -203,14 +205,14 @@ export function OpenCodeConfigEditor({
             className="group/file-details max-h-[45dvh] shrink-0 overflow-y-auto border-b"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:px-6 [&::-webkit-details-marker]:hidden">
-              <span className="text-sm font-medium">File details</span>
+              <span className="text-sm font-medium">{t('settingsPanels.configEditor.fileDetails')}</span>
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open/file-details:rotate-180" />
             </summary>
             <div className="space-y-2 px-4 pb-3 sm:px-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 {sources.length > 1 ? (
                   <div className="flex items-center gap-2">
-                    <Label htmlFor={sourceSelectId} className="shrink-0">Source file</Label>
+                    <Label htmlFor={sourceSelectId} className="shrink-0">{t('settingsPanels.configEditor.sourceFile')}</Label>
                     <Select
                       value={draftSource.name}
                       onValueChange={handleSourceChange}
@@ -237,12 +239,12 @@ export function OpenCodeConfigEditor({
                   className="shrink-0"
                 >
                   <Download className="h-3.5 w-3.5 mr-1" />
-                  Download
+                  {t('settingsPanels.configEditor.download')}
                 </Button>
               </div>
               <p className="break-all text-xs text-muted-foreground">{draftSource.path}</p>
               <p className="text-xs text-muted-foreground">
-                Editing this file directly. Other source files and inherited values stay as they are; removing a value deletes its override so an inherited value can reappear.
+                {t('settingsPanels.configEditor.editingDirectly')}
               </p>
               <OpenCodeConfigSourcesNotice config={config} targetName={draftSource.name} />
             </div>
@@ -256,13 +258,13 @@ export function OpenCodeConfigEditor({
             onPrev={prev}
             onNext={next}
             inputName="config-find"
-            placeholder="Find in config..."
+            placeholder={t('settingsPanels.configEditor.findPlaceholder')}
           />
 
           <div className="min-h-0 flex-1 overflow-hidden sm:p-4">
             <CodeEditor
               id="edit-config-content"
-              ariaLabel="Config content"
+              ariaLabel={t('settingsPanels.configEditor.configContent')}
               value={editConfigContent}
               onChange={(next) => {
                 setEditConfigContent(next)
@@ -288,7 +290,7 @@ export function OpenCodeConfigEditor({
                     onClick={() => revealLine(editErrorLine)}
                     className="ml-2 h-10 rounded px-2 text-xs underline underline-offset-2 md:h-8"
                   >
-                    Go to line {editErrorLine}
+                    {t('settingsPanels.configEditor.goToLine', { line: editErrorLine })}
                   </button>
                 )}
               </p>
@@ -303,7 +305,7 @@ export function OpenCodeConfigEditor({
                           className="min-h-10 w-full text-left underline underline-offset-2 md:min-h-0"
                         >
                           {getIssueText(issue)}{' '}
-                          <span className="text-muted-foreground">(line {issue.line})</span>
+                          <span className="text-muted-foreground">{t('settingsPanels.configEditor.lineLabel', { line: issue.line })}</span>
                         </button>
                       ) : (
                         getIssueText(issue)
@@ -322,7 +324,7 @@ export function OpenCodeConfigEditor({
               disabled={isSaving}
               className="flex-1 sm:flex-none"
             >
-              Cancel
+              {t('settingsPanels.configEditor.cancel')}
             </Button>
             <Button
               onClick={updateConfig}
@@ -330,7 +332,7 @@ export function OpenCodeConfigEditor({
               className="flex-1 sm:flex-none"
             >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Update
+              {t('settingsPanels.configEditor.update')}
             </Button>
           </DialogFooter>
         </DialogContent>

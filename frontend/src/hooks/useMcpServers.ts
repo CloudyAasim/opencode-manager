@@ -13,8 +13,8 @@ export function useMcpServers() {
   const statusQuery = useQuery({
     queryKey: ['mcp-status'],
     queryFn: () => mcpApi.getStatus(),
-    refetchInterval: 5000,
-    staleTime: 2000,
+    refetchInterval: 15000,
+    staleTime: 10000,
   })
 
   const addServerMutation = useMutation({
