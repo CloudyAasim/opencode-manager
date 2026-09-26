@@ -68,7 +68,7 @@ const PROMPT_OVERLAY_CLEARANCE_PX = 16
 function SessionRouteFallback({ message, backTo, backLabel }: { message: string; backTo: string; backLabel: string }) {
   const navigate = useNavigate();
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-background">
+    <div className="flex items-center justify-center min-h-screen bg-background">
       <div className="flex flex-col items-center gap-3 text-center">
         <span className="text-muted-foreground">{message}</span>
         <Button variant="outline" size="sm" onClick={() => navigate(backTo)}>{backLabel}</Button>
@@ -449,7 +449,7 @@ export function SessionDetail() {
 
   if (!isAssistantSession && repoLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-background">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-2">
           <div className="w-8 h-8 animate-spin rounded-full border-2 border-muted border-t-foreground" />
           <span className="text-muted-foreground">{t('session.route.loadingRepository')}</span>
@@ -481,13 +481,13 @@ export function SessionDetail() {
 
   return (
     <div
-      className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col"
+      className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col"
     >
       <div
         data-testid="session-header-region"
         className="flex-shrink-0 overflow-hidden bg-background max-h-72 sm:max-h-80"
       >
-        <Header className="bg-background [&_button]:bg-black [&_button]:text-white [&_button]:border-zinc-700 [&_button:hover]:bg-zinc-900">
+        <Header className="bg-background">
           <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
             {session?.parentID ? (
               <>
@@ -495,7 +495,7 @@ export function SessionDetail() {
                   variant="ghost"
                   size="sm"
                   onClick={handleParentSessionClick}
-                  className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/20 h-7 px-2 gap-1"
+                  className="text-muted-foreground hover:text-foreground hover:bg-accent h-7 px-2 gap-1"
                   title={t('session.header.backToParent')}
                 >
                   <CornerUpLeft className="w-3.5 h-3.5" />
@@ -511,7 +511,7 @@ export function SessionDetail() {
             <Header.EditableTitle
               value={session?.title || t('session.card.untitled')}
               onChange={handleSessionTitleUpdate}
-              subtitle={<span className="text-orange-600 dark:text-orange-400">{workspaceDisplayName}</span>}
+              subtitle={<span className="text-primary">{workspaceDisplayName}</span>}
             />
           </div>
           <Header.Actions className="gap-2 sm:gap-4">
@@ -573,7 +573,7 @@ export function SessionDetail() {
                       handleClearPrompt()
                     }}
                     onClick={handleClearPrompt}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 hover:border-red-400 shadow-md shadow-red-500/30 hover:shadow-red-500/50 backdrop-blur-md transition-all duration-200 active:scale-95 hover:scale-105 ring-1 ring-red-500/20 hover:ring-red-500/40"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-xs transition-colors"
                     aria-label={t('session.header.clear')}
                   >
                     <X className="w-5 h-5" />

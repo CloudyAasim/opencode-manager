@@ -26,7 +26,7 @@ export function Repos() {
   });
 
   return (
-    <div className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col">
+    <div className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col">
       <Header>
         <div className="flex items-center gap-3">
           <Header.Title logo>OpenCode</Header.Title>
@@ -62,7 +62,29 @@ export function Repos() {
           </span>
         </Header.Actions>
       </Header>
-      <div className="container mx-auto flex-1 pt-2 px-2 min-h-0 overflow-auto pb-[calc(env(safe-area-inset-bottom)+60px)] sm:pb-0">
+      <div className="container mx-auto flex-1 px-3 sm:px-4 pt-4 min-h-0 overflow-auto pb-[calc(env(safe-area-inset-bottom)+60px)] sm:pb-4">
+        <section className="mb-5 rounded-xl border border-border bg-card p-5 shadow-xs">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold text-foreground">{t('home.title')}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{t('home.subtitle')}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setFileBrowserOpen(true)}>
+                <FolderOpen className="w-4 h-4" />
+                {t('home.files')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/schedules')}>
+                <CalendarClock className="w-4 h-4" />
+                {t('home.schedules')}
+              </Button>
+              <Button size="sm" onClick={() => setAddRepoOpen(true)}>
+                <Plus className="w-4 h-4" />
+                {t('home.newRepo')}
+              </Button>
+            </div>
+          </div>
+        </section>
 
         <RepoList />
       </div>

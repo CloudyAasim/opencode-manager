@@ -6,6 +6,7 @@ import { schedules } from './ns/zh-CN/schedules'
 import { ui } from './ns/zh-CN/ui'
 import { misc } from './ns/zh-CN/misc'
 import { settingsPanels } from './ns/zh-CN/settingsPanels'
+import { home } from './ns/zh-CN/home'
 import type { DeepString } from './types'
 import type { en } from './en'
 
@@ -200,4 +201,5 @@ export const zhCN: DeepString<typeof en> = {
   ui,
   misc,
   settingsPanels,
+  home,
 }

@@ -209,7 +209,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                   key={branch.name}
                   className={cn(
                     'flex items-center gap-2 px-3 py-2 w-full text-left transition-colors',
-                    isCurrent && 'bg-orange-500/10',
+                    isCurrent && 'bg-warning/10',
                     isCheckedOutElsewhere ? 'opacity-60 cursor-not-allowed' : 'hover:bg-accent/50'
                   )}
                   onClick={handleClick}

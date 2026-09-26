@@ -90,7 +90,7 @@ export function RepoCard({
                 {repoName}
               </h3>
               {isReady && (
-                <div className={`w-2 h-2 rounded-full shrink-0 ${isDirty ? 'bg-orange-500' : 'bg-green-500'}`} />
+                <div className={`w-2 h-2 rounded-full shrink-0 ${isDirty ? 'bg-warning' : 'bg-green-500'}`} />
               )}
             </div>
 
@@ -120,7 +120,7 @@ export function RepoCard({
                     <span className="truncate max-w-[80px]">{branchToDisplay || "main"}</span>
                   </span>
                   {isDirty && (
-                    <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400 shrink-0">
+                    <span className="flex items-center gap-1 text-primary shrink-0">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span className="text-xs whitespace-nowrap">
                         {unstagedCount > 0 && unstagedCount}

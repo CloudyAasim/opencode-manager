@@ -51,7 +51,7 @@ export function AssistantRedirect() {
   })
 
   return (
-    <div className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-br from-background via-background to-background flex flex-col pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
+    <div className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
       <Header>
         <Header.BackButton to="/" />
         <Header.Title>{t('misc.assistant.title')}</Header.Title>
@@ -59,11 +59,11 @@ export function AssistantRedirect() {
           <div className="flex items-center gap-1">
             <PendingActionsGroup />
           </div>
-          <Button onClick={() => handleCreateSession()} disabled={!opcodeUrl || !assistantDirectory || createSessionMutation.isPending} size="sm" className="hidden sm:inline-flex bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 hover:scale-105">
+          <Button onClick={() => handleCreateSession()} disabled={!opcodeUrl || !assistantDirectory || createSessionMutation.isPending} size="sm" className="hidden sm:inline-flex bg-primary hover:bg-primary-hover text-primary-foreground transition-all duration-200 hover:scale-105">
             <Plus className="w-4 h-4 mr-2" />
             <span>{t('misc.assistant.newSession')}</span>
           </Button>
-          <Button onClick={() => handleCreateSession()} disabled={!opcodeUrl || !assistantDirectory || createSessionMutation.isPending} aria-label={t('misc.assistant.newSession')} size="sm" className="sm:hidden h-10 w-10 p-0 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 hover:scale-105">
+          <Button onClick={() => handleCreateSession()} disabled={!opcodeUrl || !assistantDirectory || createSessionMutation.isPending} aria-label={t('misc.assistant.newSession')} size="sm" className="sm:hidden h-10 w-10 p-0 bg-primary hover:bg-primary-hover text-primary-foreground transition-all duration-200 hover:scale-105">
             <Plus className="w-5 h-5" />
           </Button>
         </Header.Actions>

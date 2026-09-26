@@ -45,7 +45,7 @@ function getStatusBadge(status: McpStatus, t: Translate) {
       )
     case 'needs_client_registration':
       return (
-        <Badge variant="outline" className="text-xs flex items-center gap-1 border-orange-500 text-orange-600">
+        <Badge variant="outline" className="text-xs flex items-center gap-1 border-orange-500 text-primary">
           <AlertCircle className="h-3 w-3" />
           {t('settingsPanels.mcpServerCard.registrationRequired')}
         </Badge>

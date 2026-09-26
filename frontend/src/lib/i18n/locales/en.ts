@@ -6,6 +6,7 @@ import { schedules } from './ns/en/schedules'
 import { ui } from './ns/en/ui'
 import { misc } from './ns/en/misc'
 import { settingsPanels } from './ns/en/settingsPanels'
+import { home } from './ns/en/home'
 
 export const en = {
   common: {
@@ -201,4 +202,5 @@ export const en = {
   ui,
   misc,
   settingsPanels,
+  home,
 } as const

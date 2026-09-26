@@ -28,7 +28,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        'relative z-20 flex-shrink-0 border-r border-border bg-card/50 backdrop-blur-sm h-dvh flex flex-col pt-safe pb-safe transition-[width] duration-200',
+        'relative z-20 flex-shrink-0 border-r border-border bg-card h-dvh flex flex-col pt-safe pb-safe transition-[width] duration-200',
         collapsed ? collapsedWidthClass : widthClass,
         className
       )}
@@ -81,14 +81,14 @@ export function SidebarItem({
 }: SidebarItemProps) {
 
   const baseClasses = cn(
-    'flex items-center gap-3 rounded-md transition-colors duration-150',
-    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background',
+    'flex items-center gap-3 rounded-lg transition-colors duration-150',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
     asPrimary ? 'p-3 text-sm font-medium' : 'p-2.5 text-sm',
-    variant === 'primary' && 'bg-primary text-primary-foreground hover:bg-primary/90',
-    variant === 'secondary' && 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+    variant === 'primary' && 'bg-primary text-primary-foreground shadow-xs hover:bg-primary-hover',
+    variant === 'secondary' && 'bg-secondary text-secondary-foreground hover:bg-secondary/70',
     variant === 'danger' && 'text-destructive hover:bg-destructive/10',
-    variant === 'default' && active && 'bg-accent text-accent-foreground',
-    variant === 'default' && !active && 'hover:bg-accent/50 text-foreground',
+    variant === 'default' && active && 'bg-primary-soft text-primary font-medium',
+    variant === 'default' && !active && 'hover:bg-accent text-muted-foreground hover:text-foreground',
     collapsed && 'justify-center'
   )
 
@@ -142,8 +142,8 @@ export function SidebarCollapseToggle({ collapsed, onToggle }: SidebarCollapseTo
       <span aria-hidden="true" className="relative flex items-center justify-center">
         <span
           className={cn(
-            'h-8 w-1 rounded-full bg-orange-500/60 transition-colors duration-150',
-            'group-hover:bg-orange-500 group-focus-visible:bg-orange-500'
+            'h-8 w-1 rounded-full bg-border transition-colors duration-150',
+            'group-hover:bg-primary group-focus-visible:bg-primary'
           )}
         />
         <ChevronLeft

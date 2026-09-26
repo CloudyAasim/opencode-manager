@@ -150,7 +150,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
           {(repoDisplayName || currentBranch) && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {repoDisplayName && (
-                <span className="font-medium text-orange-600 dark:text-orange-400">{repoDisplayName}</span>
+                <span className="font-medium text-primary">{repoDisplayName}</span>
               )}
 
               {currentBranch && (

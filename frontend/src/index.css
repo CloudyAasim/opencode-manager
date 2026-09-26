@@ -1,59 +1,93 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0a;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  --color-background: #09090b;
   --color-foreground: #fafafa;
-  --color-card: #141414;
-  --color-card-hover: #1a1a1a;
-  --color-border: #2a2a2a;
-  --color-primary: #1d4ed8;
-  --color-primary-hover: #1e40af;
-  --color-primary-foreground: #fafafa;
-  --color-muted-foreground: #d4d4d8;
-  --color-accent: #27272a;
-  --color-input: #323232;
-  --color-muted: #18181b;
-  --color-popover: #18181b;
-  --color-destructive: #dc2626;
-  --color-secondary: #27272a;
+  --color-card: #141418;
+  --color-card-foreground: #fafafa;
+  --color-card-hover: #1c1c21;
+  --color-popover: #141418;
+  --color-popover-foreground: #fafafa;
+  --color-border: #26262b;
+  --color-input: #2a2a30;
+  --color-ring: #2563eb;
+
+  --color-muted: #1a1a1f;
+  --color-muted-foreground: #a1a1aa;
+
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-foreground: #ffffff;
+  --color-primary-soft: #172554;
+
+  --color-secondary: #1c1c21;
   --color-secondary-foreground: #fafafa;
+  --color-accent: #1c1c21;
   --color-accent-foreground: #fafafa;
+
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.12), 0 1px 2px -1px rgb(0 0 0 / 0.12);
+  --shadow-md: 0 6px 18px -6px rgb(0 0 0 / 0.35);
 }
 
 :root:not(.dark) {
-  --color-background: #ffffff;
-  --color-foreground: #111827;
-  --color-card: #f9fafb;
-  --color-card-hover: #f3f4f6;
-  --color-border: #e5e7eb;
+  --color-background: #f7f7f8;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-card-hover: #f4f4f5;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
+  --color-border: #e4e4e7;
+  --color-input: #e4e4e7;
+  --color-ring: #1d4ed8;
+
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+
   --color-primary: #1d4ed8;
   --color-primary-hover: #1e40af;
   --color-primary-foreground: #ffffff;
-  --color-muted-foreground: #6b7280;
-  --color-accent: #f3f4f6;
-  --color-input: #e5e7eb;
-  --color-muted: #f4f4f5;
-  --color-popover: #ffffff;
-  --color-destructive: #dc2626;
+  --color-primary-soft: #eff6ff;
+
   --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #111827;
-  --color-accent-foreground: #111827;
+  --color-secondary-foreground: #18181b;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #18181b;
+
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
 }
 
 html {
-  background-color: #0a0a0a;
+  background-color: var(--color-background);
   min-height: calc(100% + env(safe-area-inset-top));
   overscroll-behavior-x: none;
 }
 
-:root:not(.dark) html {
-  background-color: #ffffff;
-}
-
 body {
-  background: linear-gradient(to bottom right, #0a0a0a, #0d0d0d, #0a0a0a);
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
   color: var(--color-foreground);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.2s ease, color 0.2s ease;
   min-height: 100vh;
   min-height: 100dvh;
   overflow: hidden;
@@ -66,15 +100,6 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-}
-
-:root:not(.dark) body {
-  background: linear-gradient(to bottom right, #ffffff, #f0f0f0, #ffffff);
-  min-height: 100vh;
-  min-height: 100dvh;
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
 }
 
 /* Custom animations */

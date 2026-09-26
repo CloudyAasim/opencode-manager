@@ -1333,7 +1333,7 @@ return (
                     >
                       <span className="truncate w-full text-left">{displayModelName || t('message.actions.selectModel')}</span>
 {hasVariants && currentVariant && (
-                        <span className="text-[10px] text-orange-500 truncate w-full text-center capitalize">{currentVariant}</span>
+                        <span className="text-[10px] text-warning truncate w-full text-center capitalize">{currentVariant}</span>
                       )}
                    </button>
                  </ModelQuickSelect>
@@ -1388,7 +1388,7 @@ return (
               disabled={hasPendingPermissionForSession ? false : ((!prompt.trim() && imageAttachments.length === 0) || (isPromptSubmitPending && !isStreamingResponse))}
               className={`px-4 md:px-5 py-1.5 md:py-2 rounded-lg text-sm font-medium transition-colors dark:border flex-shrink-0 min-w-[52px] ${
                 hasPendingPermissionForSession
-                  ? 'bg-orange-500 hover:bg-orange-600 border-orange-400 text-primary-foreground ring-orange-500/20'
+                  ? 'bg-warning hover:bg-orange-600 border-orange-400 text-primary-foreground ring-orange-500/20'
                   : 'bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground border-white/30'
               }`}
               title={hasPendingPermissionForSession ? t('message.actions.viewPendingPermission') : (isStreamingResponse ? t('message.actions.queueMessage') : t('message.actions.send'))}

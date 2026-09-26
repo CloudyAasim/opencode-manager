@@ -178,7 +178,7 @@ const TabBarRow = memo(function TabBarRow({ tabs }: TabBarRowProps) {
             <div className="relative">
               <Icon className="w-5 h-5" />
               {tab.badge && (
-                <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-orange-500 ring-2 ring-card animate-pulse" />
+                <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-warning ring-2 ring-card animate-pulse" />
               )}
             </div>
             <span className="leading-none">{tab.labelKey ? t(tab.labelKey) : tab.label}</span>

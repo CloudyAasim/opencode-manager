@@ -85,7 +85,7 @@ describe('SidebarItem', () => {
       />
     )
 
-    expect(screen.getByRole('button')).toHaveClass('bg-accent')
+    expect(screen.getByRole('button')).toHaveClass('bg-primary-soft')
   })
 
   it('uses title attribute when collapsed', () => {

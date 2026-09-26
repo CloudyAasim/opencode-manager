@@ -107,8 +107,8 @@ export const SessionCard = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    {isPinned && <Pin className="w-3 h-3 text-orange-500 shrink-0" />}
-                    <h3 className="text-base font-semibold text-orange-600 dark:text-orange-400 truncate">
+                    {isPinned && <Pin className="w-3 h-3 text-warning shrink-0" />}
+                    <h3 className="text-base font-semibold text-primary truncate">
                       {session.title || t('session.card.untitled')}
                     </h3>
                   </div>
@@ -129,8 +129,8 @@ export const SessionCard = ({
               <>
                 <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    {isPinned && <Pin className="w-3 h-3 text-orange-500 shrink-0" />}
-                    <h3 className="text-sm font-semibold text-orange-600 dark:text-orange-400 truncate">
+                    {isPinned && <Pin className="w-3 h-3 text-warning shrink-0" />}
+                    <h3 className="text-sm font-semibold text-primary truncate">
                       {session.title || t('session.card.untitled')}
                     </h3>
                   </div>

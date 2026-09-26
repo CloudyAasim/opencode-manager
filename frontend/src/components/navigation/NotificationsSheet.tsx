@@ -40,7 +40,7 @@ export function NotificationsSheet({ isOpen, onClose }: NotificationsSheetProps)
       <BottomSheetContent className="flex flex-col gap-4">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Bell className="w-5 h-5 text-orange-500" />
+            <Bell className="w-5 h-5 text-warning" />
             <h3 className="font-semibold text-foreground">{t('navigation.pendingPermissions')}</h3>
           </div>
           {permissionCount === 0 ? (

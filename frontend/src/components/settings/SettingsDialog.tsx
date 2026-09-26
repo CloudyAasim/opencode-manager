@@ -212,7 +212,7 @@ export function SettingsDialog() {
         </div>
 
         <div className="sm:hidden flex flex-col h-full min-h-0">
-           <div className="flex-shrink-0 bg-gradient-to-b from-background via-background to-transparent border-b border-border backdrop-blur-sm px-3 py-3 flex items-center justify-between">
+           <div className="flex-shrink-0 bg-background/80 backdrop-blur-xl border-b border-border px-3 py-3 flex items-center justify-between">
              <div className="flex items-center gap-2 flex-1">
                 {mobileView !== 'menu' && (
                   <Button
@@ -224,7 +224,7 @@ export function SettingsDialog() {
                     <ChevronLeft className="w-6 h-6" />
                   </Button>
                 )}
-               <h2 className="text-xl font-semibold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+               <h2 className="text-xl font-semibold text-foreground">
                  {mobileView === 'menu' ? t('settings.title') : menuItems.find(item => item.id === mobileView)?.label}
                </h2>
              </div>
@@ -246,7 +246,7 @@ export function SettingsDialog() {
                     <button
                       key={item.id}
                       onClick={() => handleOpenMobileView(item.id)}
-                      className="w-full bg-gradient-to-br from-card to-card-hover border border-border rounded-xl p-4 hover:border-border transition-all duration-200 text-left"
+                      className="w-full bg-card hover:bg-card-hover border border-border rounded-xl p-4 transition-colors text-left"
                     >
                      <div className="flex items-center gap-4">
                        <div className="p-3 bg-accent rounded-lg">

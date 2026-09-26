@@ -5,7 +5,7 @@ import { useI18n } from '@/lib/i18n'
 export function Workspace() {
   const { t } = useI18n()
   return (
-    <div className="h-screen bg-gradient-to-br from-background via-background to-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col">
       <Header>
         <Header.BackButton to="/repos" />
         <Header.Title>{t('session.workspace.title')}</Header.Title>

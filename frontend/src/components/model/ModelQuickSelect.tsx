@@ -455,7 +455,7 @@ export function ModelQuickSelect({
     return (
       <div
         key={item.key}
-        className={`group flex w-full items-center gap-2 rounded-xl py-2 text-left transition-colors hover:bg-white/5 ${isSelected ? 'bg-orange-500/10' : ''}`}
+        className={`group flex w-full items-center gap-2 rounded-xl py-2 text-left transition-colors hover:bg-white/5 ${isSelected ? 'bg-warning/10' : ''}`}
       >
         <button
           type="button"
@@ -493,7 +493,7 @@ export function ModelQuickSelect({
         >
           <Star className={`h-4 w-4 ${isFavorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
         </button>
-        {isSelected && <Check className="h-5 w-5 shrink-0 pr-2 text-orange-500" />}
+        {isSelected && <Check className="h-5 w-5 shrink-0 pr-2 text-warning" />}
       </div>
     )
   }
@@ -523,12 +523,12 @@ export function ModelQuickSelect({
     return (
       <>
         <DropdownMenuLabel>{t('misc.modelQuickSelect.variant')}</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => clearVariant()} className={!currentVariant ? 'text-orange-500' : ''}>
+        <DropdownMenuItem onClick={() => clearVariant()} className={!currentVariant ? 'text-warning' : ''}>
           {t('misc.modelQuickSelect.defaultVariant')}
           {!currentVariant && <Check className="ml-auto h-4 w-4" />}
         </DropdownMenuItem>
         {availableVariants.map(variant => (
-          <DropdownMenuItem key={variant} onClick={() => setVariant(variant)} className={currentVariant === variant ? 'text-orange-500' : ''}>
+          <DropdownMenuItem key={variant} onClick={() => setVariant(variant)} className={currentVariant === variant ? 'text-warning' : ''}>
             <span className="capitalize">{variant}</span>
             {currentVariant === variant && <Check className="ml-auto h-4 w-4" />}
           </DropdownMenuItem>
@@ -561,7 +561,7 @@ export function ModelQuickSelect({
         isOpen={isOpen}
         onClose={() => handleOpenChange(false)}
         heightClass="h-[70dvh] max-h-[720px]"
-        className="z-[300] border-white/10 bg-zinc-950 text-white shadow-2xl md:mx-auto md:max-w-lg"
+        className="z-[300] border-white/10 bg-popover text-popover-foreground shadow-2xl md:mx-auto md:max-w-lg"
         ariaLabel={t('misc.modelQuickSelect.selectModelAria')}
       >
         <div className={`flex items-center justify-between gap-2 px-4 ${showAllModels ? 'pb-2 pt-2' : 'pb-3 pt-0'}`}>
@@ -600,7 +600,7 @@ export function ModelQuickSelect({
               <div className="min-w-0 flex-1 px-3 text-center">
                 <h2 className="truncate text-base font-semibold tracking-tight">
                   {selectedModelLabel}
-                  <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-orange-500" />
+                  <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-warning" />
                 </h2>
                 <p className="truncate text-xs text-white/45">
                   {currentVariant ? `${selectedModelDescription} · ${currentVariant}` : selectedModelDescription}
@@ -643,7 +643,7 @@ export function ModelQuickSelect({
                         onClick={() => handleProviderSelect(provider.id)}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                           selectedProviderId === provider.id
-                            ? 'bg-orange-500/20 text-orange-300 font-medium'
+                            ? 'bg-warning/20 text-warning font-medium'
                             : 'text-white/70 hover:bg-white/5'
                         }`}
                       >
@@ -664,7 +664,7 @@ export function ModelQuickSelect({
                         onClick={() => handleProviderSelect(provider.id)}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                           selectedProviderId === provider.id
-                            ? 'bg-orange-500/20 text-orange-300 font-medium'
+                            ? 'bg-warning/20 text-warning font-medium'
                             : 'text-white/70 hover:bg-white/5'
                         }`}
                       >

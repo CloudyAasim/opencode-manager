@@ -509,7 +509,7 @@ export function ModelSelectDialog({
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   {t('misc.modelSelect.current')}{' '}
                   <span className="inline-flex items-center gap-1.5 font-medium text-foreground break-all">
-                    <span className="h-2 w-2 rounded-full bg-orange-500" />
+                    <span className="h-2 w-2 rounded-full bg-warning" />
                     {currentModel}
                   </span>
                 </p>
