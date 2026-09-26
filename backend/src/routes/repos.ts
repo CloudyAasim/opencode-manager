@@ -5,7 +5,7 @@ import type { Database } from 'bun:sqlite'
 import type { Repo } from '@opencode-manager/shared/types'
 import { DiscoverReposRequestSchema, AssistantModeInitRequestSchema, UpdateRepoRequestSchema } from '@opencode-manager/shared/schemas'
 import { listRepos, getRepoById, updateLastAccessed, getRepoGitCredentialId, setRepoGitCredentialId, updateRepoName } from '../db/queries'
-import { canAccessOwner, canAccessRepo, getRepoOwnerId, principalFrom, type Principal } from '../auth/ownership'
+import { canAccessRepo, canAccessRepoOwner, getRepoOwnerId, principalFrom, type Principal } from '../auth/ownership'
 import type { Session } from '../auth'
 import * as repoService from '../services/repo'
 import * as archiveService from '../services/archive'
@@ -130,7 +130,7 @@ export function createRepoRoutes(
         ...discovery,
         repos: principal === null
           ? discovery.repos
-          : discovery.repos.filter((repo) => canAccessOwner(repo.userId ?? null, principal)),
+          : discovery.repos.filter((repo) => canAccessRepoOwner(repo.userId ?? null, principal)),
       })
     } catch (error: unknown) {
       logger.error('Failed to discover repos:', error)
@@ -146,7 +146,7 @@ app.get('/', async (c) => {
       const allRepos = listRepos(database, settings.preferences.repoOrder)
       const repos = principal === null
         ? allRepos
-        : allRepos.filter((repo) => canAccessOwner(repo.userId ?? null, principal))
+        : allRepos.filter((repo) => canAccessRepoOwner(repo.userId ?? null, principal))
 
       const reposWithCurrentBranch = await Promise.all(
         repos.map(async (repo) => {

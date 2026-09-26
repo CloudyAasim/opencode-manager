@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import type { Database } from 'bun:sqlite'
 import { createTestDb } from '../helpers/assistant-workspace'
-import { accessibleRepoIds, canAccessOwner, canAccessRepo, principalFrom } from '../../src/auth/ownership'
+import { accessibleRepoIds, canAccessOwner, canAccessRepo, canAccessRepoOwner, principalFrom } from '../../src/auth/ownership'
 
 function insertRepo(db: Database, id: number, userId: string | null): void {
   db.prepare(
@@ -53,6 +53,14 @@ describe('ownership helpers', () => {
     expect(canAccessRepo(db, 2, alice)).toBe(false)
     expect(canAccessRepo(db, 3, alice)).toBe(false)
     expect(canAccessRepo(db, 0, alice)).toBe(false)
+  })
+
+  it('scopes repo ownership by owner id', () => {
+    expect(canAccessRepoOwner('alice', alice)).toBe(true)
+    expect(canAccessRepoOwner('bob', alice)).toBe(false)
+    expect(canAccessRepoOwner(null, alice)).toBe(false)
+    expect(canAccessRepoOwner(null, admin)).toBe(true)
+    expect(canAccessRepoOwner('alice', null)).toBe(false)
   })
 
   it('lists accessible repo ids', () => {

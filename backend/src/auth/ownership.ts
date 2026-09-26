@@ -40,12 +40,17 @@ export function setRepoOwner(db: Database, repoId: number, ownerId: string | nul
   db.prepare('UPDATE repos SET user_id = ? WHERE id = ?').run(ownerId, repoId)
 }
 
+export function canAccessRepoOwner(ownerId: string | null | undefined, principal: Principal | null): boolean {
+  if (!principal) return false
+  if (principal.role === 'admin') return true
+  return ownerId === principal.id
+}
+
 export function canAccessRepo(db: Database, repoId: number, principal: Principal | null): boolean {
   if (!principal) return false
   const owner = getRepoOwnerId(db, repoId)
   if (owner === undefined) return false
-  if (principal.role === 'admin') return true
-  return owner === principal.id
+  return canAccessRepoOwner(owner, principal)
 }
 
 export function accessibleRepoIds(db: Database, principal: Principal | null): number[] {
