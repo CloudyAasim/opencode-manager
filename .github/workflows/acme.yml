@@ -2,6 +2,10 @@ name: acme
 
 on:
   workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Optional note (ignored)'
+        required: false
 
 jobs:
   issue:
