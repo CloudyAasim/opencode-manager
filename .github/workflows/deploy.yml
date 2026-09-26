@@ -24,6 +24,7 @@ jobs:
           fetch-depth: 0
 
       - name: Configure Dokku app
+        id: configure
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
           SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
@@ -34,6 +35,7 @@ jobs:
           set -euo pipefail
           HOST=SERVER_HOST
           APP=opencode-manager
+          DOMAIN=APP_DOMAIN
 
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
@@ -61,6 +63,23 @@ jobs:
           dokku checks:disable "$APP" || true
 
           echo "== configuring environment =="
+          # TLS is managed manually (dokku letsencrypt). Detect it so an automated
+          # deploy never downgrades origins/cookies or drops the https port map.
+          SSL_ENABLED=$(dokku certs:report "$APP" --ssl-enabled 2>/dev/null | tail -1 || echo "false")
+          if [ "$SSL_ENABLED" = "true" ]; then
+            DOKKU_ORIGINS="https://$DOMAIN"
+            DOKKU_CORS="https://$DOMAIN"
+            DOKKU_SECURE_COOKIES=true
+            DOKKU_PORT_MAP="http:80:5003 http:8080:5003 https:443:5003"
+            DOKKU_BASE_URL="https://$DOMAIN"
+          else
+            DOKKU_ORIGINS="http://$DOMAIN:8080,https://$DOMAIN"
+            DOKKU_CORS="http://$DOMAIN:8080"
+            DOKKU_SECURE_COOKIES=false
+            DOKKU_PORT_MAP="http:80:5003 http:8080:5003"
+            DOKKU_BASE_URL="http://$DOMAIN:8080"
+          fi
+
           # Output is suppressed because Dokku echoes variable values; the values
           # are sourced from GitHub secrets, which Actions masks anyway.
           dokku config:set --no-restart "$APP" \
@@ -69,22 +88,25 @@ jobs:
             "ADMIN_EMAIL=$ADMIN_EMAIL" \
             "ADMIN_PASSWORD=$ADMIN_PASSWORD" \
             AUTH_ALLOW_SIGNUP=false \
-            AUTH_SECURE_COOKIES=false \
+            "AUTH_SECURE_COOKIES=$DOKKU_SECURE_COOKIES" \
             AUTH_TRUST_PROXY=true \
-            "AUTH_TRUSTED_ORIGINS=http://$HOST:8080,http://$HOST,https://$HOST:8443" \
-            "CORS_ORIGIN=http://$HOST:8080" \
+            "AUTH_TRUSTED_ORIGINS=$DOKKU_ORIGINS" \
+            "CORS_ORIGIN=$DOKKU_CORS" \
+            "PASSKEY_RP_ID=$DOMAIN" \
+            "PASSKEY_ORIGIN=https://$DOMAIN" \
             OCM_ALLOW_SERVER_ENV_EDIT=false \
             OCM_TERMINAL_ENABLED=true \
             OCM_TERMINAL_ADMINS_ONLY=true \
             >/dev/null
 
           echo "== configuring domain and port mapping =="
-          dokku domains:add "$APP" "$HOST" || true
-          # The image EXPOSEs 5003, which Dokku would otherwise publish directly
-          # on host port 5003. Route public HTTP through nginx instead. This host
-          # blocks inbound 80/443 at the provider edge, so 8080 is the public
-          # listener; 80 is kept for hosts/regions where it is reachable.
-          dokku ports:set "$APP" http:8080:5003 http:80:5003 || true
+          dokku domains:add "$APP" "$DOMAIN" || true
+          # Let's Encrypt cannot validate an IP or an unresolvable default vhost;
+          # keep only the real domain so renewals succeed.
+          dokku domains:remove "$APP" "$HOST" || true
+          dokku domains:remove "$APP" "APP_VHOST" || true
+          dokku ports:set "$APP" $DOKKU_PORT_MAP || true
+          echo "base_url=$DOKKU_BASE_URL" >> "$GITHUB_OUTPUT"
 
           echo "== configuring persistent storage =="
           if dokku storage:ensure-directory ocm-data --chown 1000; then
@@ -124,7 +146,7 @@ jobs:
           echo "########## ps:report ##########"; dokku ps:report "$APP" || true
           echo "########## logs (tail 200) ##########"; dokku logs "$APP" --num 200 || true
           echo "########## probe ##########"
-          curl -v -m 15 "http://$HOST:8080/api/health" 2>&1 | tail -15 || true
+          curl -v -m 15 "http://APP_DOMAIN:8080/api/health" 2>&1 | tail -15 || true
 
       - name: Smoke test
         env:
@@ -132,8 +154,8 @@ jobs:
           ADMIN_PASSWORD: ${{ secrets.OCM_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
-          HOST=SERVER_HOST
-          BASE="http://$HOST:8080"
+          BASE="${{ steps.configure.outputs.base_url }}"
+          echo "base=$BASE"
           code=000
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "$BASE/api/health" || true)
