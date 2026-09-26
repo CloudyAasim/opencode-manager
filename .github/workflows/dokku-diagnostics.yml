@@ -7,7 +7,7 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Collect Dokku diagnostics
+      - name: Check user-namespace support inside the app container
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
           SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
@@ -20,24 +20,16 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           printf '%s\n' "$SSH_HOST_KEY" | tr -d '\r' > ~/.ssh/known_hosts
           dokku() { ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15 "dokku@$HOST" "$@"; }
-          section() { echo; echo "########## $* ##########"; }
 
-          section "version"; dokku version || true
-          section "ps:report"; dokku ps:report "$APP" || true
-          section "domains:report"; dokku domains:report "$APP" || true
-          section "ports:report"; dokku ports:report "$APP" || true
-          section "certs:report"; dokku certs:report "$APP" || true
-          section "storage:report"; dokku storage:report "$APP" || true
-          section "checks:report"; dokku checks:report "$APP" || true
-          section "logs (tail 200)"; dokku logs "$APP" --num 200 || true
-
-      - name: HTTP probes
-        run: |
-          set -uo pipefail
-          echo "### https health"
-          curl -sS -m 15 -o /dev/null -w "https=%{http_code}\n" "https://APP_DOMAIN/api/health" || true
-          echo "### http redirect"
-          curl -sS -m 15 -D - -o /dev/null "http://APP_DOMAIN/" 2>&1 | grep -iE "^HTTP|^location" || true
-          for p in 80 443 8080; do
-            if timeout 8 bash -c "cat < /dev/null > /dev/tcp/SERVER_HOST/$p" 2>/dev/null; then echo "tcp $p: open"; else echo "tcp $p: closed/timeout"; fi
-          done
+          echo "########## id ##########"
+          dokku run "$APP" id || true
+          echo "########## unprivileged_userns_clone ##########"
+          dokku run "$APP" cat /proc/sys/kernel/unprivileged_userns_clone || true
+          echo "########## max_user_namespaces ##########"
+          dokku run "$APP" cat /proc/sys/user/max_user_namespaces || true
+          echo "########## unshare -Ur true (exit) ##########"
+          dokku run "$APP" unshare -Ur true; echo "userns_exit=$?"
+          echo "########## unshare -Urm true (exit) ##########"
+          dokku run "$APP" unshare -Urm true; echo "userns_mount_exit=$?"
+          echo "########## bwrap ##########"
+          dokku run "$APP" bwrap --version || true
