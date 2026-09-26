@@ -12,6 +12,7 @@ on:
       - '**/*.test.ts'
       - '**/*.test.tsx'
       - 'backend/test/**'
+      - 'src-tauri/**'
   workflow_dispatch:
 
 concurrency:

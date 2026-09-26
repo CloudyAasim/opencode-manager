@@ -59,6 +59,7 @@ nav:
     - Internationalization: cloud/i18n.md
   - Development:
     - Local Setup: development/setup.md
+    - Cross-platform client & UI: development/cross-platform-ui.md
     - Contributing: development/contributing.md
   - Troubleshooting: troubleshooting.md
 

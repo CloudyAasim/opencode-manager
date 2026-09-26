@@ -6,8 +6,12 @@ import { mkdirSafe } from '../utils/fs-safe'
 
 type ProviderEntry = { options?: Record<string, unknown> } & Record<string, unknown>
 
-function providerConfigPath(username: string): string {
-  return path.join(getUserWorkspacePath(username), 'opencode.json')
+function workspaceRoot(username: string): string {
+  return getUserWorkspacePath(username)
+}
+
+function configPathIn(directory: string): string {
+  return path.join(directory, 'opencode.json')
 }
 
 async function readConfig(configPath: string): Promise<Record<string, unknown>> {
@@ -16,7 +20,7 @@ async function readConfig(configPath: string): Promise<Record<string, unknown>> 
     return JSON.parse(raw) as Record<string, unknown>
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {}
-    logger.error('Failed to read user provider config:', error)
+    logger.error('Failed to read provider config:', error)
     return {}
   }
 }
@@ -30,13 +34,43 @@ function providersOf(config: Record<string, unknown>): Record<string, ProviderEn
   return (config.provider ?? {}) as Record<string, ProviderEntry>
 }
 
+async function listConfigDirectories(username: string): Promise<string[]> {
+  const root = workspaceRoot(username)
+  const directories = [root, path.join(root, 'assistant')]
+  try {
+    const entries = await fs.readdir(path.join(root, 'repos'), { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory()) directories.push(path.join(root, 'repos', entry.name))
+    }
+  } catch {
+    // no repos directory yet
+  }
+  return directories
+}
+
+async function upsertProvider(configPath: string, providerId: string, apiKey: string | null): Promise<void> {
+  const config = await readConfig(configPath)
+  const providers = { ...providersOf(config) }
+
+  if (apiKey === null) {
+    if (!(providerId in providers)) return
+    delete providers[providerId]
+  } else {
+    const existing = providers[providerId] ?? {}
+    providers[providerId] = { ...existing, options: { ...(existing.options ?? {}), apiKey } }
+  }
+
+  await writeConfig(configPath, { ...config, provider: providers })
+}
+
 /**
- * Provider credentials are stored per user in their own workspace `opencode.json`
+ * Provider credentials are stored per user across every OpenCode config their
+ * sessions read (workspace root, assistant workspace and each of their repos),
  * so one account can never read or overwrite another account's providers.
  */
 export class UserProviderService {
   async list(username: string): Promise<string[]> {
-    const config = await readConfig(providerConfigPath(username))
+    const config = await readConfig(configPathIn(workspaceRoot(username)))
     return Object.entries(providersOf(config))
       .filter(([, entry]) => Boolean(entry?.options?.apiKey))
       .map(([providerId]) => providerId)
@@ -47,26 +81,16 @@ export class UserProviderService {
   }
 
   async set(username: string, providerId: string, apiKey: string): Promise<void> {
-    const configPath = providerConfigPath(username)
-    const config = await readConfig(configPath)
-    const providers = { ...providersOf(config) }
-    const existing = providers[providerId] ?? {}
-    providers[providerId] = {
-      ...existing,
-      options: { ...(existing.options ?? {}), apiKey },
+    for (const directory of await listConfigDirectories(username)) {
+      await upsertProvider(configPathIn(directory), providerId, apiKey)
     }
-
-    await writeConfig(configPath, { ...config, provider: providers })
     logger.info(`Set per-user credentials for provider: ${providerId}`)
   }
 
   async delete(username: string, providerId: string): Promise<void> {
-    const configPath = providerConfigPath(username)
-    const config = await readConfig(configPath)
-    const providers = { ...providersOf(config) }
-    delete providers[providerId]
-
-    await writeConfig(configPath, { ...config, provider: providers })
+    for (const directory of await listConfigDirectories(username)) {
+      await upsertProvider(configPathIn(directory), providerId, null)
+    }
     logger.info(`Deleted per-user credentials for provider: ${providerId}`)
   }
 }
