@@ -45,7 +45,7 @@ export function RepoDetail() {
   const { data: repo, isLoading: repoLoading } = useQuery({
     queryKey: ["repo", repoId],
     queryFn: () => getRepo(repoId),
-    enabled: !!repoId,
+    enabled: id !== undefined && id !== '',
   });
 
   useRepoActivity(repoId, Boolean(repo));

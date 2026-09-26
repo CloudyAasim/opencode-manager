@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/hooks/useAuth'
-import { useTheme } from '@/hooks/useTheme'
 import { useI18n } from '@/lib/i18n'
 import { LanguageToggle } from '@/components/LanguageToggle'
 import { Button } from '@/components/ui/button'
@@ -31,7 +30,6 @@ function createRegisterSchema(nameMin: string, emailInvalid: string, passwordMin
 export function Register() {
   const { signUpWithEmail } = useAuth()
   const { config } = useLoaderData() as { config: AuthConfig }
-  const theme = useTheme()
   const { t, locale } = useI18n()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -73,11 +71,7 @@ export function Register() {
       <LanguageToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center space-y-2">
-          <img 
-            src={theme === 'light' ? "/opencode-wordmark-light.svg" : "/opencode-wordmark-dark.svg"} 
-            alt="OpenCode" 
-            className="h-8 w-auto"
-          />
+          <span className="text-2xl font-semibold tracking-tight text-foreground">{t('home.appName')}</span>
           <p className="text-sm text-muted-foreground">
             {config.isFirstUser
               ? t('register.firstUserSubtitle')

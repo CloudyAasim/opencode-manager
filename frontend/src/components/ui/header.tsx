@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { useSettingsDialog } from "@/hooks/useSettingsDialog";
-import { useTheme } from "@/hooks/useTheme";
 import { EditSessionTitleDialog } from "@/components/session/EditSessionTitleDialog";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
@@ -33,27 +32,15 @@ function HeaderBackButton({ to, className }: { to?: string; className?: string }
 
 interface HeaderTitleProps {
   children: ReactNode;
-  logo?: boolean;
   className?: string;
 }
 
-function HeaderTitle({ children, logo, className }: HeaderTitleProps) {
-  const theme = useTheme();
-  const { t } = useI18n();
-
+function HeaderTitle({ children, className }: HeaderTitleProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      {logo && typeof children === "string" && children === "OpenCode" ? (
-        <img 
-          src={theme === 'light' ? "/opencode-wordmark-light.svg" : "/opencode-wordmark-dark.svg"} 
-          alt={t('ui.header.openCodeLogoAlt')} 
-          className="h-6 w-auto sm:h-8"
-        />
-      ) : (
-        <h1 className="text-xl font-semibold text-foreground truncate">
-          {children}
-        </h1>
-      )}
+      <h1 className="text-xl font-semibold text-foreground truncate">
+        {children}
+      </h1>
     </div>
   );
 }
