@@ -9,7 +9,7 @@
 
 ## 1. 前置条件
 
-- 一台 Linux VPS（建议 2 vCPU / 4 GB 内存起步；使用 microVM 沙箱建议 ≥8 GB）。
+- 一台 Linux VPS（建议 2 vCPU / 4 GB 内存起步；若启用浏览器自动化建议 ≥8 GB）。
 - 一个域名，例如 `opencode.example.com`。
 - 已把域名的 `A`/`AAAA` 记录指向 VPS 公网 IP。
 - 已安装 Docker 与 Docker Compose v2。

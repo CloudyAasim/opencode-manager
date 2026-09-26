@@ -11,6 +11,7 @@ const { ENV } = vi.hoisted(() => ({
     AUTH: { TRUST_PROXY: false },
     TERMINAL: {
       ENABLED: true,
+      ISOLATE: true,
       SHELL: '/bin/bash',
       CWD: '/workspace',
       USERS_DIR: 'users',
@@ -35,12 +36,14 @@ const actor: TerminalActor = {
   id: 'user-1',
   email: 'user@example.com',
   username: null,
+  role: 'user',
   ipAddress: '203.0.113.5',
   userAgent: 'vitest',
 }
 
 function resetEnv() {
   ENV.TERMINAL.ENABLED = true
+  ENV.TERMINAL.ISOLATE = true
   ENV.TERMINAL.CWD = '/workspace'
   ENV.TERMINAL.PER_USER_HOME = false
   ENV.TERMINAL.MAX_SESSIONS_PER_USER = 2
@@ -83,9 +86,31 @@ describe('TerminalManager', () => {
   it('creates a session with the configured shell and working directory', () => {
     const session = manager.create(actor, { cols: 80, rows: 24 })
 
-    expect(spawner.spawnOptions).toEqual([{ shell: '/bin/bash', cwd: '/workspace', cols: 80, rows: 24 }])
+    expect(spawner.spawnOptions).toEqual([
+      { shell: '/bin/bash', cwd: '/workspace', cols: 80, rows: 24, isolateWorkspace: '/workspace' },
+    ])
     expect(session.dimensions).toEqual({ cols: 80, rows: 24 })
     expect(manager.list(actor)).toHaveLength(1)
+  })
+
+  it('sandboxes non-admin terminals in the user workspace', () => {
+    manager.create(actor, {})
+
+    expect(spawner.spawnOptions[0]?.isolateWorkspace).toBe('/workspace')
+  })
+
+  it('leaves admin terminals unconfined', () => {
+    manager.create({ ...actor, role: 'admin' }, {})
+
+    expect(spawner.spawnOptions[0]?.isolateWorkspace).toBeUndefined()
+  })
+
+  it('leaves terminals unconfined when isolation is disabled', () => {
+    ENV.TERMINAL.ISOLATE = false
+
+    manager.create(actor, {})
+
+    expect(spawner.spawnOptions[0]?.isolateWorkspace).toBeUndefined()
   })
 
   it('clamps requested dimensions to the configured defaults on bad input', () => {

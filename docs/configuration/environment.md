@@ -127,13 +127,15 @@ When configured, users can enable push notifications in Settings → Notificatio
 
 ## Web Terminal
 
-The web terminal runs an interactive shell inside the container, restricted to the
-workspace directory. It is administrator-only by default and every session is recorded
-in the `terminal_audit` table (user, IP, user agent, shell, cwd, start/end, exit code).
+The web terminal runs an interactive shell inside the container. Non-admin sessions are
+sandboxed so they can only reach the user's own workspace; admin sessions run directly
+in the container. Every session is recorded in the `terminal_audit` table (user, IP,
+user agent, shell, cwd, start/end, exit code).
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `OCM_TERMINAL_ENABLED` | Enable the web terminal | `true` |
+| `OCM_TERMINAL_ISOLATE` | Run non-admin sessions inside a per-user sandbox (`unshare` + `chroot`) | `true` |
 | `OCM_TERMINAL_SHELL` | Shell to launch | `/bin/bash` |
 | `OCM_TERMINAL_CWD` | Working directory (must be inside `WORKSPACE_PATH`, otherwise the workspace root is used) | workspace root |
 | `OCM_TERMINAL_COLS` / `OCM_TERMINAL_ROWS` | Default dimensions | `120` / `30` |
@@ -141,14 +143,15 @@ in the `terminal_audit` table (user, IP, user agent, shell, cwd, start/end, exit
 | `OCM_TERMINAL_MAX_SESSIONS_TOTAL` | Concurrent sessions overall | `4` |
 | `OCM_TERMINAL_IDLE_TIMEOUT_MS` | Close a session after inactivity | `900000` |
 | `OCM_TERMINAL_MAX_DURATION_MS` | Absolute session lifetime cap | `28800000` |
-| `OCM_TERMINAL_ADMINS_ONLY` | Restrict the terminal to administrators | `true` |
+| `OCM_TERMINAL_ADMINS_ONLY` | Restrict the terminal to administrators | `true` (the Dokku deploy sets `false` so users get the sandboxed terminal) |
 | `OCM_TERMINAL_PER_USER_HOME` | Give each user a private directory under the workspace | `true` |
 | `OCM_TERMINAL_USERS_DIR` | Subdirectory that holds per-user terminal homes | `users` |
 
 !!! warning "Terminal equals shell access"
-    A web terminal is equivalent to handing a shell to the signed-in user. Keep
-    `OCM_TERMINAL_ADMINS_ONLY=true`, use a dedicated container and workspace, and only
-    enable it behind TLS. The container boundary is the security boundary.
+    A web terminal is equivalent to handing a shell to the signed-in user. Non-admin
+    sessions are confined to the user's workspace; admin sessions are not. Use a
+    dedicated container and workspace, keep it behind TLS, and leave
+    `OCM_TERMINAL_ISOLATE=true`.
 
 The PTY bridge requires `python3` (already present in the shipped image).
 

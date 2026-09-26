@@ -30,6 +30,7 @@ export interface NavModel {
 
 export interface NavModelOptions {
   isAdmin?: boolean
+  terminalAllowed?: boolean
 }
 
 function getAssistantNavItem(_pathname: string, variant: NavPrimaryCta['variant'] = 'secondary'): NavPrimaryCta {
@@ -48,8 +49,9 @@ function getHomeItem(): MoreDrawerItem {
 }
 
 function getBaseItems(options: NavModelOptions): MoreDrawerItem[] {
+  const showTerminal = options.isAdmin || options.terminalAllowed
   return [
-    ...(options.isAdmin
+    ...(showTerminal
       ? [{ key: 'terminal', label: 'Terminal', labelKey: 'navigation.terminal', icon: TerminalSquare, to: '/terminal' }]
       : []),
     { key: 'settings', label: 'Settings', labelKey: 'navigation.settings', icon: Settings },

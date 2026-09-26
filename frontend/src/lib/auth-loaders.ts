@@ -91,7 +91,7 @@ export async function protectedLoader() {
   return null
 }
 
-export async function adminLoader() {
+export async function terminalLoader() {
   const session = await getSession()
   const user = session.data?.user as { role?: string } | undefined
 
@@ -99,9 +99,21 @@ export async function adminLoader() {
     return redirect('/login')
   }
 
-  if (user.role !== 'admin') {
+  if (user.role === 'admin') {
+    return null
+  }
+
+  try {
+    const response = await fetch('/api/terminal/config')
+    if (response.ok) {
+      const config = (await response.json()) as { enabled?: boolean; adminsOnly?: boolean }
+      if (config.enabled && !config.adminsOnly) {
+        return null
+      }
+    }
+  } catch {
     return redirect('/')
   }
 
-  return null
+  return redirect('/')
 }

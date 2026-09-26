@@ -11,13 +11,17 @@ Every account has an isolated directory tree under the configured workspace:
 ```
 $WORKSPACE_PATH/
 ├── users/
-│   └── <username>/            # the account's workspace root
-│       └── repos/             # repositories created by that account
-└── repos/                     # system/shared repositories (e.g. the Assistant)
+│   └── <username>/
+│       ├── workspace/          # the account's workspace root (projects, files)
+│       │   └── repos/          # repositories created by that account
+│       └── setting/            # per-user configuration and assistant
+│           └── assistant/      # the account's dedicated assistant
+└── repos/                      # system/shared repositories (e.g. the shared Assistant)
 ```
 
 - `<username>` is assigned when the account is created and is never an OS user.
-- `repos/<name>` is the default clone/register target for a normal account.
+- `workspace/repos/<name>` is the default clone/register target for a normal account.
+- `setting/` holds the account's `opencode.json` (providers/models) and its assistant.
 - System repositories (ownerless) live under `repos/` and are managed by the
   server (the shared Assistant repository is one of them).
 
@@ -28,7 +32,8 @@ $WORKSPACE_PATH/
 | Folder browsing | whole workspace | `users/<username>/` |
 | File read/write/upload/delete, archive | whole workspace | `users/<username>/` + their own and shared system repos |
 | Repository list / detail | all repositories | their own repositories and shared system repositories |
-| User management, audit log, terminal | yes | no |
+| Web terminal | unconfined, inside the container | sandboxed to `users/<username>/workspace` |
+| User management, audit log | yes | no |
 
 Enforcement is implemented with a request-scoped access scope
 (`backend/src/auth/access-scope.ts`) resolved from the session
@@ -42,7 +47,7 @@ Enforcement is implemented with a request-scoped access scope
   workspace (there is no `REPO_BROWSE_ROOT` escape hatch).
 
 Relative paths are resolved against the account's browse root; repositories are
-created under `users/<username>/repos` and always persist an absolute
+created under `users/<username>/workspace/repos` and always persist an absolute
 `source_path` so reads never depend on a shared base directory.
 
 ## Administrator

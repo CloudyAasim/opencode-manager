@@ -18,7 +18,7 @@ import { EventProvider, usePermissions, useEventContext } from '@/contexts/Event
 import { SwipeNavigationProvider, useSwipeNavigation } from '@/contexts/SwipeNavigationContext'
 import { PermissionRequestDialog } from './components/session/PermissionRequestDialog'
 import { SSHHostKeyDialog } from './components/ssh/SSHHostKeyDialog'
-import { loginLoader, setupLoader, registerLoader, protectedLoader, adminLoader } from './lib/auth-loaders'
+import { loginLoader, setupLoader, registerLoader, protectedLoader, terminalLoader } from './lib/auth-loaders'
 import { getSwipeBackTarget } from '@/lib/navigation'
 import { onNotificationClick } from '@/lib/serviceWorker'
 import { useAuth } from '@/hooks/useAuth'
@@ -253,7 +253,7 @@ const router = createBrowserRouter([
       {
         path: '/terminal',
         lazy: async () => ({ Component: (await import('./pages/Terminal')).TerminalPage }),
-        loader: adminLoader,
+        loader: terminalLoader,
       },
     ],
   },

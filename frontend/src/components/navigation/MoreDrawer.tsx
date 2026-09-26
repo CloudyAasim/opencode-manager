@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, ChevronRight, Command as CommandIcon, FileText, X, GitBranch } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useServerHealth } from '@/hooks/useServerHealth'
+import { useTerminalAllowed } from '@/hooks/useTerminalAllowed'
 import { useCommands } from '@/hooks/useCommands'
 import { useUrlParams } from '@/hooks/useUrlParams'
 import { useUIState } from '@/stores/uiStateStore'
@@ -39,6 +40,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
   const { logout, user } = useAuth()
   const { t } = useI18n()
   const { data: health } = useServerHealth()
+  const terminalAllowed = useTerminalAllowed()
   const isSessionDetail = /^\/repos\/\d+\/sessions\/[^/]+$/.test(location.pathname)
   const isAssistantRoute = isAssistantPath(location.pathname)
   const isAssistantSession = isSessionDetail && searchParams.get('assistant') === '1'
@@ -120,7 +122,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
     onClose()
   }
 
-  const items = buildMoreItems(location.pathname, { isAdmin: user?.role === 'admin' })
+  const items = buildMoreItems(location.pathname, { isAdmin: user?.role === 'admin', terminalAllowed })
   const commands = filterCommands('')
 
   const opencodeVersion = health?.opencodeVersion

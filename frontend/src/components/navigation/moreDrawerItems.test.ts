@@ -110,6 +110,23 @@ describe('buildMoreItems', () => {
   })
 })
 
+describe('terminal visibility', () => {
+  it('hides the terminal for non-admins by default', () => {
+    const items = buildMoreItems('/')
+    expect(items.some((item) => item.key === 'terminal')).toBe(false)
+  })
+
+  it('shows the terminal for admins', () => {
+    const items = buildMoreItems('/', { isAdmin: true })
+    expect(items.some((item) => item.key === 'terminal')).toBe(true)
+  })
+
+  it('shows the terminal for non-admins when the server allows it', () => {
+    const items = buildMoreItems('/', { terminalAllowed: true })
+    expect(items.some((item) => item.key === 'terminal')).toBe(true)
+  })
+})
+
 describe('buildNavModel', () => {
   it('returns new-repo primary CTA for root path', () => {
     const model = buildNavModel('/')

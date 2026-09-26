@@ -4,6 +4,7 @@ import { useDesktop } from '@/hooks/useDesktop'
 import { useSidebarCollapsed } from '@/hooks/useSidebarCollapsed'
 import { emitSidebarAction } from '@/hooks/useSidebarAction'
 import { useAuth } from '@/hooks/useAuth'
+import { useTerminalAllowed } from '@/hooks/useTerminalAllowed'
 import { useUrlParams } from '@/hooks/useUrlParams'
 import { buildNavModel, type MoreDrawerItem, type NavPrimaryCta } from '@/components/navigation/moreDrawerItems'
 import { getPathWithReturnTo } from '@/lib/navigation'
@@ -24,6 +25,7 @@ export function DesktopSidebar() {
   const [collapsed, toggle] = useSidebarCollapsed()
   const [repoSwitcherOpen, setRepoSwitcherOpen] = useState(false)
   const { isAuthenticated, isLoading, logout, user } = useAuth()
+  const terminalAllowed = useTerminalAllowed()
 
   const isDesktop = useDesktop()
 
@@ -35,7 +37,7 @@ export function DesktopSidebar() {
     return null
   }
 
-  const { primary, items } = buildNavModel(location.pathname, { isAdmin: user?.role === 'admin' })
+  const { primary, items } = buildNavModel(location.pathname, { isAdmin: user?.role === 'admin', terminalAllowed })
 
   const handlePrimaryClick = (item: NavPrimaryCta) => {
     if (item.to) {

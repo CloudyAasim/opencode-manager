@@ -54,11 +54,7 @@ describe('DesktopSidebar', () => {
       logout: vi.fn(),
     } as any)
 
-    const { container } = render(
-      <MemoryRouter>
-        <DesktopSidebar />
-      </MemoryRouter>,
-    )
+    const { container } = render(<DesktopSidebar />, { wrapper: createWrapper() })
 
     expect(container.firstChild).toBeNull()
   })
@@ -72,11 +68,7 @@ describe('DesktopSidebar', () => {
       logout: vi.fn(),
     } as any)
 
-    const { container } = render(
-      <MemoryRouter>
-        <DesktopSidebar />
-      </MemoryRouter>,
-    )
+    const { container } = render(<DesktopSidebar />, { wrapper: createWrapper() })
 
     expect(container.firstChild).toBeNull()
   })
@@ -90,11 +82,7 @@ describe('DesktopSidebar', () => {
       logout: vi.fn(),
     } as any)
 
-    const { container } = render(
-      <MemoryRouter>
-        <DesktopSidebar />
-      </MemoryRouter>
-    )
+    const { container } = render(<DesktopSidebar />, { wrapper: createWrapper() })
 
     expect(container.firstChild).toBeNull()
   })
