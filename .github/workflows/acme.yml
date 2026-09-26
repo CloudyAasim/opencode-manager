@@ -1,0 +1,85 @@
+name: acme
+
+on:
+  workflow_dispatch:
+
+jobs:
+  issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Issue certificate and install into Dokku
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
+          SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
+        run: |
+          set -euo pipefail
+          HOST=SERVER_HOST
+          APP=opencode-manager
+          DOMAIN=APP_DOMAIN
+          EMAIL=admin@BASE_DOMAIN
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_HOST_KEY" | tr -d '\r' > ~/.ssh/known_hosts
+          SSH_ARGS="-i $HOME/.ssh/id_deploy -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15"
+          dokku() { ssh $SSH_ARGS "dokku@$HOST" "$@"; }
+
+          echo "== ensure domain =="
+          dokku domains:add "$APP" "$DOMAIN" || true
+
+          echo "== install certbot =="
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq certbot >/dev/null
+
+          echo "== write hooks =="
+          cat > /tmp/acme-auth.sh <<EOF
+#!/bin/bash
+set -e
+ssh $SSH_ARGS "dokku@$HOST" run "$APP" node /app/backend/scripts/acme-write.mjs "\$CERTBOT_TOKEN" "\$CERTBOT_VALIDATION"
+EOF
+          cat > /tmp/acme-cleanup.sh <<EOF
+#!/bin/bash
+set -e
+ssh $SSH_ARGS "dokku@$HOST" run "$APP" node /app/backend/scripts/acme-remove.mjs "\$CERTBOT_TOKEN" || true
+EOF
+          chmod +x /tmp/acme-auth.sh /tmp/acme-cleanup.sh
+
+          echo "== request certificate =="
+          sudo certbot certonly \
+            --manual \
+            --preferred-challenges http \
+            --manual-auth-hook /tmp/acme-auth.sh \
+            --manual-cleanup-hook /tmp/acme-cleanup.sh \
+            --non-interactive \
+            --agree-tos \
+            --email "$EMAIL" \
+            -d "$DOMAIN" \
+            --config-dir /tmp/certbot \
+            --work-dir /tmp/certbot-work \
+            --logs-dir /tmp/certbot-logs
+
+          echo "== stage cert + key =="
+          mkdir -p /tmp/certs
+          sudo cp "/tmp/certbot/live/$DOMAIN/fullchain.pem" /tmp/certs/server.crt
+          sudo cp "/tmp/certbot/live/$DOMAIN/privkey.pem" /tmp/certs/server.key
+          sudo chown "$(id -u):$(id -g)" /tmp/certs/server.crt /tmp/certs/server.key
+          tar -C /tmp/certs -cf /tmp/certs.tar server.crt server.key
+
+          echo "== install certificate in dokku =="
+          dokku certs:add "$APP" < /tmp/certs.tar
+
+          echo "== reports =="
+          dokku certs:report "$APP" || true
+
+      - name: Verify HTTPS
+        run: |
+          set -uo pipefail
+          DOMAIN=APP_DOMAIN
+          echo "### https://$DOMAIN/api/health"
+          curl -sS -m 20 -o /tmp/health.json -w "code=%{http_code}\n" "https://$DOMAIN/api/health" || true
+          head -c 200 /tmp/health.json 2>/dev/null || true; echo
+          echo "### http redirect"
+          curl -sS -m 20 -D - -o /dev/null "http://$DOMAIN/" 2>&1 | grep -iE "^HTTP|^location" || true
+          echo "### cert"
+          echo | timeout 15 openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -issuer -subject -dates 2>/dev/null || echo "cert probe failed"
