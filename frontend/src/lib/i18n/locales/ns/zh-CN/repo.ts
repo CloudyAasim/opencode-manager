@@ -143,9 +143,6 @@ export const repo = {
   },
   directoryPicker: {
     selectFolder: '选择文件夹',
-    browseDisabled: '未启用文件夹浏览',
-    browseDisabledHintPrefix: '请让管理员在服务器环境中设置',
-    browseDisabledHintSuffix: '，然后暂时手动输入路径。',
     loadFailed: '加载目录失败',
     noSubfolders: '没有子文件夹',
     git: 'git',

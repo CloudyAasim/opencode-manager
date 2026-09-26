@@ -4,6 +4,7 @@ import path from 'node:path'
 export interface AccessScope {
   roots: string[]
   browseRoot: string
+  repoBase: string
 }
 
 const storage = new AsyncLocalStorage<AccessScope>()

@@ -5,10 +5,7 @@ import type { BrowseDirectoryResponse, DirectoryEntry } from '@opencode-manager/
 function resolveRoot(configured: string): string {
   const trimmed = (configured ?? '').trim()
   if (!trimmed) {
-    throw {
-      message: 'Folder browsing is disabled. Set REPO_BROWSE_ROOT in the server environment to enable it.',
-      statusCode: 501,
-    }
+    throw { message: 'No workspace root is available for this account', statusCode: 403 }
   }
   return path.resolve(trimmed)
 }

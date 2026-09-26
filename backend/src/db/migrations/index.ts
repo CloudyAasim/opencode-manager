@@ -22,6 +22,7 @@ import migration020 from './020-drop-opencode-model-state'
 import migration021 from './021-terminal-audit'
 import migration022 from './022-tenant-ownership'
 import migration023 from './023-user-username'
+import migration024 from './024-repo-source-path-backfill'
 
 export const allMigrations: Migration[] = [
   migration001,
@@ -47,4 +48,5 @@ export const allMigrations: Migration[] = [
   migration021,
   migration022,
   migration023,
+  migration024,
 ]

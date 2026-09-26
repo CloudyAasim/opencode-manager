@@ -3,8 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { browseDirectory } from '@/api/filesystem'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { FetchError } from '@/api/fetchWrapper'
-import { Folder, FolderGit2, ChevronUp, Loader2, FolderX } from 'lucide-react'
+import { Folder, FolderGit2, ChevronUp, Loader2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 interface DirectoryPickerDialogProps {
@@ -31,8 +30,6 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
     enabled: open,
     retry: false,
   })
-
-  const isDisabled = error instanceof FetchError && error.statusCode === 501
 
   const navigateTo = useCallback((path: string) => {
     setCurrentPath(path)
@@ -62,14 +59,6 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
           {isLoading ? (
             <div className="flex h-[240px] items-center justify-center text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
-          ) : isDisabled ? (
-            <div className="flex h-[240px] flex-col items-center justify-center gap-3 px-6 text-center">
-              <FolderX className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-foreground">{t('repo.directoryPicker.browseDisabled')}</p>
-              <p className="text-xs text-muted-foreground">
-                {t('repo.directoryPicker.browseDisabledHintPrefix')} <code className="rounded bg-accent px-1 py-0.5 text-foreground">REPO_BROWSE_ROOT</code>{t('repo.directoryPicker.browseDisabledHintSuffix')}
-              </p>
             </div>
           ) : isError ? (
             <div className="flex h-[240px] items-center justify-center px-4 text-center text-sm text-destructive">

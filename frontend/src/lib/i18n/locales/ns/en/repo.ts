@@ -143,9 +143,6 @@ export const repo = {
   },
   directoryPicker: {
     selectFolder: 'Select Folder',
-    browseDisabled: 'Folder browsing is not enabled',
-    browseDisabledHintPrefix: 'Ask your administrator to set',
-    browseDisabledHintSuffix: 'in the server environment, then enter the path manually for now.',
     loadFailed: 'Failed to load directory',
     noSubfolders: 'No subfolders',
     git: 'git',

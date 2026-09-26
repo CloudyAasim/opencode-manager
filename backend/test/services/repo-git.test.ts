@@ -229,7 +229,7 @@ describe('repo service real git', () => {
       const repo = await initLocalRepo(db, gitAuth, sourcePath)
 
       expect(repo.localPath).toBe(path.basename(sourcePath))
-      expect(repo.sourcePath).toBeNull()
+      expect(repo.sourcePath).toBe(path.resolve(sourcePath))
     })
 
     it('marks a linked worktree as a worktree when registering an absolute path', async () => {
@@ -570,6 +570,28 @@ describe('repo service real git', () => {
       expect(repo.cloneStatus).toBe('ready')
       expect(existsSync(path.join(reposPath, name, '.git'))).toBe(true)
       expect(getRepoById(db, repo.id)?.cloneStatus).toBe('ready')
+    })
+
+    it('clones into the access scope repo base for the acting user', async () => {
+      const { cloneRepo } = await import('../../src/services/repo')
+      const { runWithAccessScope } = await import('../../src/auth/access-scope')
+      const origin = path.join(workspaceRoot, uniqueName('scoped-origin.git'))
+      const work = path.join(workspaceRoot, uniqueName('scoped-work'))
+      createOrigin(origin, work)
+      const name = uniqueName('scoped-target')
+      const userRoot = path.join(workspaceRoot, 'users', 'alice')
+      const userBase = path.join(userRoot, 'repos')
+      mkdirSync(userBase, { recursive: true })
+
+      const repo = await runWithAccessScope(
+        { roots: [userRoot], browseRoot: userRoot, repoBase: userBase },
+        () => cloneRepo(db, gitAuth, origin, { directoryName: name, userId: 'alice' }),
+      )
+
+      expect(repo.cloneStatus).toBe('ready')
+      expect(repo.fullPath).toBe(path.join(userBase, name))
+      expect(repo.sourcePath).toBe(path.join(userBase, name))
+      expect(existsSync(path.join(userBase, name, '.git'))).toBe(true)
     })
 
     it('returns the existing repo for the same url and branch', async () => {

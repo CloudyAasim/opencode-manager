@@ -99,7 +99,7 @@ describe('browseDirectory', () => {
     await expect(browseDirectory(filePath, tmpRoot)).rejects.toMatchObject({ statusCode: 400 })
   })
 
-  it('returns 501 when the browse root is not configured', async () => {
-    await expect(browseDirectory(undefined, '')).rejects.toMatchObject({ statusCode: 501 })
+  it('rejects an empty browse root', async () => {
+    await expect(browseDirectory(undefined, '')).rejects.toMatchObject({ statusCode: 403 })
   })
 })

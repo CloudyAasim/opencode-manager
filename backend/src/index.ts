@@ -35,7 +35,7 @@ import { createAuthRoutes, createAuthInfoRoutes } from './routes/auth'
 import { createAuth } from './auth'
 import { createAuthMiddleware } from './auth/middleware'
 import { runWithAccessScope } from './auth/access-scope'
-import { principalFrom, resolveAccessRoots, resolveBrowseRoot } from './auth/ownership'
+import { principalFrom, resolveAccessRoots, resolveBrowseRoot, resolveRepoBase } from './auth/ownership'
 import type { Session } from './auth'
 import { createSecurityHeadersMiddleware } from './middleware/security-headers'
 import { createAdminUserRoutes } from './routes/admin-users'
@@ -290,7 +290,8 @@ protectedApi.use('/*', async (c, next) => {
   const principal = principalFrom(c.get('user'))
   const roots = resolveAccessRoots(db, principal)
   const browseRoot = resolveBrowseRoot(principal)
-  await runWithAccessScope({ roots, browseRoot }, () => next())
+  const repoBase = resolveRepoBase(principal)
+  await runWithAccessScope({ roots, browseRoot, repoBase }, () => next())
 })
 
 protectedApi.route('/repos', createRepoRoutes(db, gitAuthService, scheduleService, openCodeClient))
