@@ -7,7 +7,7 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Collect Dokku diagnostics
+      - name: Probe OpenCode inside the app image
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
           SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
@@ -22,39 +22,17 @@ jobs:
           dokku() { ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes -o LogLevel=ERROR -o ConnectTimeout=15 "dokku@$HOST" "$@"; }
           section() { echo; echo "########## $* ##########"; }
 
-          section "ensure alternate port 8080"
-          dokku ports:add "$APP" http:8080:5003 || true
-          dokku ports:set "$APP" http:80:5003 http:8080:5003 || true
-          dokku ports:report "$APP" || true
+          section "opencode version"
+          dokku run "$APP" opencode --version 2>&1 | tail -5 || true
 
-          APP_IP=$(dokku ps:inspect "$APP" | grep -oE '"IPAddress": *"[0-9.]+"' | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || true)
-          section "app container ip: ${APP_IP:-unknown}"
+          section "opencode serve --help"
+          dokku run "$APP" opencode serve --help 2>&1 | tail -40 || true
 
-          section "direct app health (from one-off container)"
-          dokku run "$APP" curl -sS -m 10 -i "http://${APP_IP}:5003/api/health" 2>&1 | head -25 || true
+          section "manual opencode serve (20s)"
+          dokku run "$APP" sh -c 'timeout 20 opencode serve --port 5559 --hostname 127.0.0.1 2>&1 | head -60' 2>&1 | tail -60 || true
 
-          section "nginx via host gateway 172.17.0.1:80 (bypasses external filtering)"
-          dokku run "$APP" curl -sS -m 10 -i -H 'Host: APP_VHOST' "http://172.17.0.1/api/health" 2>&1 | head -25 || true
+          section "recent opencode-tagged app logs"
+          dokku logs "$APP" --num 1500 2>&1 | grep -aiE "opencode|error|stderr|EADDR|panic|throw" | grep -aivE "Proxy request failed|at async|Unable to connect|health-watch" | tail -80 || true
 
-          section "ps:report"
-          dokku ps:report "$APP" || true
-
-      - name: HTTP probes from runner
-        run: |
-          set -uo pipefail
-          HOST=SERVER_HOST
-          for target in "http://$HOST:80/api/health" "http://$HOST:8080/api/health" "http://$HOST:8080/"; do
-            echo "### $target"
-            curl -sS -m 12 -i "$target" 2>&1 | head -20 || true
-            echo
-          done
-          echo "### Host-header variant on 8080"
-          curl -sS -m 12 -i -H 'Host: APP_VHOST' "http://$HOST:8080/api/health" 2>&1 | head -20 || true
-          echo
-          for p in 22 80 443 5003 8080; do
-            if timeout 8 bash -c "cat < /dev/null > /dev/tcp/$HOST/$p" 2>/dev/null; then
-              echo "tcp $p: open"
-            else
-              echo "tcp $p: closed/timeout"
-            fi
-          done
+          section "health"
+          dokku run "$APP" sh -c 'curl -sS -m 5 http://127.0.0.1:5551/global/health 2>&1 | head -c 400' 2>&1 | tail -5 || true
