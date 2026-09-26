@@ -34,6 +34,10 @@ jobs:
       - name: HTTP probes
         run: |
           set -uo pipefail
-          HOST=SERVER_HOST
-          curl -sS -m 15 -o /dev/null -w "index=%{http_code}\n" "http://$HOST:8080/" || true
-          curl -sS -m 15 "http://$HOST:8080/api/health" | head -c 300 || true; echo
+          echo "### https health"
+          curl -sS -m 15 -o /dev/null -w "https=%{http_code}\n" "https://APP_DOMAIN/api/health" || true
+          echo "### http redirect"
+          curl -sS -m 15 -D - -o /dev/null "http://APP_DOMAIN/" 2>&1 | grep -iE "^HTTP|^location" || true
+          for p in 80 443 8080; do
+            if timeout 8 bash -c "cat < /dev/null > /dev/tcp/SERVER_HOST/$p" 2>/dev/null; then echo "tcp $p: open"; else echo "tcp $p: closed/timeout"; fi
+          done
