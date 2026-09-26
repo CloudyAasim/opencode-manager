@@ -82,11 +82,11 @@ function buildGlobalTabs({ pathname, openSheet, open, close, navigate, isInsideR
   return [
     {
       key: 'repos',
-      label: 'Repos',
+      label: 'Projects',
       labelKey: 'navigation.repos',
       icon: FolderGit2,
-      onClick: () => open('repos'),
-      active: openSheet === 'repos' || (pathname === '/' && !openSheet),
+      onClick: () => { close(); navigate('/') },
+      active: pathname === '/' && !openSheet,
     },
     {
       key: 'files',
@@ -103,14 +103,6 @@ function buildGlobalTabs({ pathname, openSheet, open, close, navigate, isInsideR
       icon: Bot,
       onClick: handleAssistantClick,
       active: isAssistantPath(pathname) && !openSheet,
-    },
-    {
-      key: 'schedules',
-      label: 'Schedules',
-      labelKey: 'navigation.schedules',
-      icon: CalendarClock,
-      onClick: () => navigate('/schedules'),
-      active: pathname === '/schedules' && !openSheet,
     },
     {
       key: 'more',

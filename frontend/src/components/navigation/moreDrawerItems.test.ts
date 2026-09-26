@@ -1,210 +1,65 @@
 import { describe, it, expect } from 'vitest'
 import { buildMoreItems, buildNavModel } from './moreDrawerItems'
 
-describe('buildMoreItems', () => {
-  it('returns Home + All Schedules + Files + Settings + Logout for root path', () => {
-    const items = buildMoreItems('/')
-    expect(items).toHaveLength(5)
-    expect(items[0].key).toBe('home')
-    expect(items[1].key).toBe('all-schedules')
-    expect(items[2].key).toBe('files')
-    expect(items[3].key).toBe('settings')
-    expect(items[4].key).toBe('logout')
+const RAIL_KEYS = ['projects', 'assistant', 'files', 'settings', 'logout']
+const TOOL_KEYS = ['mcp', 'skills', 'source-control', 'schedules', 'reset-permissions']
+
+function keys(items: ReturnType<typeof buildMoreItems>) {
+  return items.map((item) => item.key)
+}
+
+describe('buildNavModel', () => {
+  it('returns the fixed global rail', () => {
+    const { items } = buildNavModel()
+    expect(keys(items)).toEqual(RAIL_KEYS)
   })
 
-  it('returns repo-specific items for /repos/:id', () => {
-    const items = buildMoreItems('/repos/42')
-    expect(items).toHaveLength(9)
-    expect(items[0].key).toBe('home')
-    expect(items[1].key).toBe('files')
-    expect(items[1].dialog).toBe('files')
-    expect(items[2].key).toBe('mcp')
-    expect(items[2].dialog).toBe('mcp')
-    expect(items[3].key).toBe('skills')
-    expect(items[3].dialog).toBe('skills')
-    expect(items[4].key).toBe('reset-permissions')
-    expect(items[4].dialog).toBe('resetPermissions')
-    expect(items[4].danger).toBe(true)
-    expect(items[5].key).toBe('schedules')
-    expect(items[5].to).toBe('/repos/42/schedules')
-    expect(items[6].key).toBe('source-control')
-    expect(items[6].dialog).toBe('sourceControl')
-    expect(items[7].key).toBe('settings')
-    expect(items[8].key).toBe('logout')
+  it('routes projects and assistant to their pages', () => {
+    const { items } = buildNavModel()
+    expect(items.find((item) => item.key === 'projects')?.to).toBe('/')
+    expect(items.find((item) => item.key === 'assistant')?.to).toBe('/assistant')
+    expect(items.find((item) => item.key === 'files')?.dialog).toBe('files')
   })
 
-  it('returns session-specific items for /repos/:id/sessions/:sid', () => {
-    const items = buildMoreItems('/repos/42/sessions/abc')
-    expect(items).toHaveLength(10)
-    expect(items[0].key).toBe('home')
-    expect(items[1].key).toBe('files')
-    expect(items[2].key).toBe('mcp')
-    expect(items[3].key).toBe('skills')
-    expect(items[4].key).toBe('lsp')
-    expect(items[4].dialog).toBe('lsp')
-    expect(items[5].key).toBe('reset-permissions')
-    expect(items[6].key).toBe('schedules')
-    expect(items[6].to).toBe('/repos/42/schedules')
-    expect(items[7].key).toBe('source-control')
-    expect(items[8].key).toBe('settings')
-    expect(items[9].key).toBe('logout')
-  })
-
-  it('returns assistant workspace items for /repos/:id/assistant', () => {
-    const items = buildMoreItems('/repos/42/assistant')
-    expect(items).toHaveLength(9)
-    expect(items[0].key).toBe('home')
-    expect(items[1].key).toBe('files')
-    expect(items[1].dialog).toBe('files')
-    expect(items[2].key).toBe('mcp')
-    expect(items[3].key).toBe('skills')
-    expect(items[4].key).toBe('reset-permissions')
-    expect(items[5].key).toBe('schedules')
-    expect(items[6].key).toBe('source-control')
-    expect(items[7].key).toBe('settings')
-    expect(items[8].key).toBe('logout')
-  })
-
-  it('returns only Home + Settings + Logout for /schedules', () => {
-    const items = buildMoreItems('/schedules')
-    expect(items).toHaveLength(3)
-    expect(items[0].key).toBe('home')
-    expect(items[1].key).toBe('settings')
-    expect(items[2].key).toBe('logout')
-  })
-
-  it('returns only Home + Settings + Logout for /repos/:id/schedules', () => {
-    const items = buildMoreItems('/repos/42/schedules')
-    expect(items).toHaveLength(3)
-    expect(items[0].key).toBe('home')
-    expect(items[1].key).toBe('settings')
-    expect(items[2].key).toBe('logout')
-  })
-
-  it('returns only Home + Settings + Logout for unknown paths', () => {
-    const items = buildMoreItems('/unknown/path')
-    expect(items).toHaveLength(3)
-    expect(items[0].key).toBe('home')
-    expect(items[1].key).toBe('settings')
-    expect(items[2].key).toBe('logout')
-  })
-
-  it('leads every route with a Home item routed to /', () => {
-    const paths = [
-      '/',
-      '/repos/42',
-      '/repos/42/sessions/abc',
-      '/repos/42/assistant',
-      '/assistant',
-      '/schedules',
-      '/repos/42/schedules',
-      '/unknown/path',
-    ]
-
-    for (const path of paths) {
-      const [first] = buildMoreItems(path)
-      expect(first.key).toBe('home')
-      expect(first.label).toBe('Home')
-      expect(first.to).toBe('/')
-    }
-  })
-})
-
-describe('terminal visibility', () => {
   it('hides the terminal for non-admins by default', () => {
-    const items = buildMoreItems('/')
+    const { items } = buildNavModel()
     expect(items.some((item) => item.key === 'terminal')).toBe(false)
   })
 
   it('shows the terminal for admins', () => {
-    const items = buildMoreItems('/', { isAdmin: true })
+    const { items } = buildNavModel({ isAdmin: true })
     expect(items.some((item) => item.key === 'terminal')).toBe(true)
   })
 
   it('shows the terminal for non-admins when the server allows it', () => {
-    const items = buildMoreItems('/', { terminalAllowed: true })
+    const { items } = buildNavModel({ terminalAllowed: true })
     expect(items.some((item) => item.key === 'terminal')).toBe(true)
   })
 })
 
-describe('buildNavModel', () => {
-  it('returns new-repo primary CTA for root path', () => {
-    const model = buildNavModel('/')
-    expect(model.primary).toHaveLength(2)
-    expect(model.primary[0].key).toBe('new-repo')
-    expect(model.primary[0].onSelect).toBe('new-repo')
-    expect(model.primary[1].key).toBe('assistant')
-    expect(model.primary[1].to).toBe('/assistant')
+describe('buildMoreItems', () => {
+  it('returns only the global rail outside a project', () => {
+    expect(keys(buildMoreItems('/'))).toEqual(RAIL_KEYS)
+    expect(keys(buildMoreItems('/schedules'))).toEqual(RAIL_KEYS)
+    expect(keys(buildMoreItems('/unknown/path'))).toEqual(RAIL_KEYS)
   })
 
-  it('returns new-session and assistant primary CTAs for repo detail', () => {
-    const model = buildNavModel('/repos/5')
-    expect(model.primary).toHaveLength(2)
-    expect(model.primary[0].key).toBe('new-session')
-    expect(model.primary[0].onSelect).toBe('new-session')
-    expect(model.primary[1].key).toBe('assistant')
-    expect(model.primary[1].to).toBe('/assistant')
+  it('adds project tooling inside a project', () => {
+    for (const path of ['/repos/42', '/repos/42/sessions/abc', '/repos/42/assistant', '/assistant']) {
+      expect(keys(buildMoreItems(path))).toEqual([...TOOL_KEYS, ...RAIL_KEYS])
+    }
   })
 
-  it('returns new-session and assistant primary CTAs for session detail', () => {
-    const model = buildNavModel('/repos/5/sessions/abc')
-    expect(model.primary).toHaveLength(2)
-    expect(model.primary[0].key).toBe('new-session')
-    expect(model.primary[0].onSelect).toBe('new-session')
-    expect(model.primary[0].variant).toBe('primary')
-    expect(model.primary[1].key).toBe('assistant')
-    expect(model.primary[1].to).toBe('/assistant')
-    expect(model.primary[1].variant).toBe('secondary')
+  it('links schedules to the current project', () => {
+    const schedules = buildMoreItems('/repos/42').find((item) => item.key === 'schedules')
+    expect(schedules?.to).toBe('/repos/42/schedules')
+
+    const assistantSchedules = buildMoreItems('/assistant').find((item) => item.key === 'schedules')
+    expect(assistantSchedules?.to).toBe('/repos/0/schedules')
   })
 
-  it('returns new-session and assistant primary CTAs for assistant workspace', () => {
-    const model = buildNavModel('/repos/5/assistant')
-    expect(model.primary).toHaveLength(2)
-    expect(model.primary[0].key).toBe('new-session')
-    expect(model.primary[0].onSelect).toBe('new-session')
-    expect(model.primary[0].variant).toBe('primary')
-    expect(model.primary[1].key).toBe('assistant')
-    expect(model.primary[1].to).toBe('/assistant')
-    expect(model.primary[1].variant).toBe('secondary')
-  })
-
-  it('returns new-session and assistant primary CTAs for canonical /assistant', () => {
-    const model = buildNavModel('/assistant')
-    expect(model.primary).toHaveLength(2)
-    expect(model.primary[0].key).toBe('new-session')
-    expect(model.primary[0].onSelect).toBe('new-session')
-    expect(model.primary[0].variant).toBe('primary')
-    expect(model.primary[1].key).toBe('assistant')
-    expect(model.primary[1].to).toBe('/assistant')
-    expect(model.primary[1].variant).toBe('secondary')
-  })
-
-  it('returns new-schedule primary CTA for schedules routes', () => {
-    const model1 = buildNavModel('/schedules')
-    expect(model1.primary).toHaveLength(2)
-    expect(model1.primary[0].key).toBe('new-schedule')
-    expect(model1.primary[0].onSelect).toBe('new-schedule')
-    expect(model1.primary[1].key).toBe('assistant')
-    expect(model1.primary[1].to).toBe('/assistant')
-
-    const model2 = buildNavModel('/repos/5/schedules')
-    expect(model2.primary).toHaveLength(2)
-    expect(model2.primary[0].key).toBe('new-schedule')
-    expect(model2.primary[0].onSelect).toBe('new-schedule')
-    expect(model2.primary[1].key).toBe('assistant')
-    expect(model2.primary[1].to).toBe('/assistant')
-  })
-
-  it('returns assistant primary for unknown routes', () => {
-    const model = buildNavModel('/unknown/path')
-    expect(model.primary).toHaveLength(1)
-    expect(model.primary[0].key).toBe('assistant')
-    expect(model.primary[0].to).toBe('/assistant')
-  })
-
-  it('preserves backwards compatibility with buildMoreItems', () => {
-    const model = buildNavModel('/repos/42')
-    const items = buildMoreItems('/repos/42')
-    expect(model.items).toEqual(items)
+  it('marks reset permissions as dangerous', () => {
+    const reset = buildMoreItems('/repos/42').find((item) => item.key === 'reset-permissions')
+    expect(reset?.danger).toBe(true)
   })
 })

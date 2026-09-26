@@ -66,7 +66,7 @@ describe('RepoQuickSwitchSheet', () => {
       { wrapper: createWrapper() },
     )
     await waitFor(() => {
-      expect(screen.getByText('No repos found')).toBeInTheDocument()
+      expect(screen.getByText('No projects found')).toBeInTheDocument()
     })
   })
 

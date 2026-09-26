@@ -40,14 +40,27 @@ function createWrapper(initialEntries?: string[]) {
   )
 }
 
+function mockAuth(user: { role?: string } = { role: 'user' }) {
+  vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    logout: vi.fn(),
+    user,
+  } as any)
+}
+
+function mockDesktop(desktop: boolean) {
+  vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(desktop)
+  vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
+}
+
 describe('DesktopSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('returns null when user is not authenticated', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(false)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
+    mockDesktop(false)
     vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
@@ -60,8 +73,7 @@ describe('DesktopSidebar', () => {
   })
 
   it('returns null when auth state is loading', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(false)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
+    mockDesktop(false)
     vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
       isAuthenticated: true,
       isLoading: true,
@@ -74,109 +86,43 @@ describe('DesktopSidebar', () => {
   })
 
   it('returns null when not desktop', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(false)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
+    mockDesktop(false)
+    mockAuth()
 
     const { container } = render(<DesktopSidebar />, { wrapper: createWrapper() })
 
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders primary CTA for root path', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(true)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
+  it('renders the global rail', () => {
+    mockDesktop(true)
+    mockAuth()
 
     render(<DesktopSidebar />, { wrapper: createWrapper(['/']) })
 
-    expect(screen.getByText('New Repo')).toBeInTheDocument()
+    expect(screen.getByText('Projects')).toBeInTheDocument()
     expect(screen.getByText('Assistant')).toBeInTheDocument()
+    expect(screen.getByText('Files')).toBeInTheDocument()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
+    expect(screen.getByText('Logout')).toBeInTheDocument()
   })
 
-  it('renders primary CTAs for repo detail', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(true)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
+  it('hides the terminal for non-admins and shows it for admins', () => {
+    mockDesktop(true)
+    mockAuth({ role: 'user' })
 
-    render(<DesktopSidebar />, { wrapper: createWrapper(['/repos/5']) })
+    const { unmount } = render(<DesktopSidebar />, { wrapper: createWrapper(['/']) })
+    expect(screen.queryByText('Terminal')).not.toBeInTheDocument()
+    unmount()
 
-    expect(screen.getByText('New Session')).toBeInTheDocument()
-    expect(screen.getByText('Assistant')).toBeInTheDocument()
-  })
-
-  it('renders primary CTAs for session detail', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(true)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
-
-    render(<DesktopSidebar />, { wrapper: createWrapper(['/repos/5/sessions/abc']) })
-
-    expect(screen.getByText('New Session')).toBeInTheDocument()
-    expect(screen.getByText('Assistant')).toBeInTheDocument()
-  })
-
-  it('renders primary CTA for schedules routes', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(true)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
-
-    render(<DesktopSidebar />, { wrapper: createWrapper(['/schedules']) })
-
-    expect(screen.getByText('New Schedule')).toBeInTheDocument()
-    expect(screen.getByText('Assistant')).toBeInTheDocument()
-  })
-
-  it('dispatches oc:sidebar:action event when primary CTA is clicked', () => {
-    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent')
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(true)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
-
-    render(<DesktopSidebar />, { wrapper: createWrapper(['/repos/5']) })
-
-    fireEvent.click(screen.getByText('New Session'))
-
-    expect(dispatchEventSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'oc:sidebar:action',
-        detail: { action: 'new-session' },
-      })
-    )
+    mockAuth({ role: 'admin' })
+    render(<DesktopSidebar />, { wrapper: createWrapper(['/']) })
+    expect(screen.getByText('Terminal')).toBeInTheDocument()
   })
 
   it('opens dialog items by updating the dialog query param (push) and closes on back', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(true)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
+    mockDesktop(true)
+    mockAuth()
 
     render(
       <>
@@ -196,13 +142,8 @@ describe('DesktopSidebar', () => {
   })
 
   it('opens settings by updating settings query params', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(true)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
+    mockDesktop(true)
+    mockAuth()
 
     render(
       <>
@@ -217,25 +158,20 @@ describe('DesktopSidebar', () => {
     expect(screen.getByTestId('location').textContent).toBe('/?dialog=files&settings=open&settingsTab=account')
   })
 
-  it('preserves session route as return target when opening schedules', () => {
-    vi.spyOn(useDesktopModule, 'useDesktop').mockReturnValue(true)
-    vi.spyOn(useSidebarCollapsedModule, 'useSidebarCollapsed').mockReturnValue([false, vi.fn()])
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      logout: vi.fn(),
-    } as any)
+  it('navigates to the projects list', () => {
+    mockDesktop(true)
+    mockAuth()
 
     render(
       <>
         <DesktopSidebar />
         <LocationDisplay />
       </>,
-      { wrapper: createWrapper(['/repos/5/sessions/abc?assistant=1']) }
+      { wrapper: createWrapper(['/repos/5']) }
     )
 
-    fireEvent.click(screen.getByText('Schedules'))
+    fireEvent.click(screen.getByText('Projects'))
 
-    expect(screen.getByTestId('location').textContent).toBe('/repos/5/schedules?returnTo=%2Frepos%2F5%2Fsessions%2Fabc%3Fassistant%3D1')
+    expect(screen.getByTestId('location').textContent).toBe('/')
   })
 })

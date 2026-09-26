@@ -17,6 +17,17 @@ function LocationSpy() {
   return <div data-testid="location">{`${pathname}${search}`}</div>
 }
 
+function renderTabBar(initialEntries: string[]) {
+  const queryClient = new QueryClient()
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={initialEntries}>
+        <MobileTabBar />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
 describe('MobileTabBar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -50,31 +61,17 @@ describe('MobileTabBar', () => {
 
   it('renders global tabs on repo detail (session list) path', () => {
     vi.mocked(useMobile).mockReturnValue(true)
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/repos/123']}>
-          <MobileTabBar />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-    expect(screen.getByText('Repos')).toBeInTheDocument()
-    expect(screen.getByText('Schedules')).toBeInTheDocument()
+    renderTabBar(['/repos/123'])
+    expect(screen.getByText('Projects')).toBeInTheDocument()
+    expect(screen.getByText('Files')).toBeInTheDocument()
+    expect(screen.queryByText('Schedules')).not.toBeInTheDocument()
   })
 
   it('renders global tabs on assistant session list path', () => {
     vi.mocked(useMobile).mockReturnValue(true)
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/assistant?view=sessions']}>
-          <MobileTabBar />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-    expect(screen.getByText('Repos')).toBeInTheDocument()
+    renderTabBar(['/assistant?view=sessions'])
+    expect(screen.getByText('Projects')).toBeInTheDocument()
     expect(screen.getByText('Assistant')).toBeInTheDocument()
-    expect(screen.getByText('Schedules')).toBeInTheDocument()
   })
 
   it('navigates to /assistant when assistant is clicked from repo context', async () => {
@@ -99,14 +96,14 @@ describe('MobileTabBar', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/assistant')
   })
 
-  it('navigates to assistant route when assistant is clicked without repo id', async () => {
+  it('navigates to the projects list when the projects tab is clicked', async () => {
     vi.mocked(useMobile).mockReturnValue(true)
     const queryClient = new QueryClient()
     const user = userEvent.setup()
 
     render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/schedules']}>
+        <MemoryRouter initialEntries={['/repos/123']}>
           <Routes>
             <Route path="*" element={<>
               <MobileTabBar />
@@ -117,20 +114,13 @@ describe('MobileTabBar', () => {
       </QueryClientProvider>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Assistant' }))
-    expect(screen.getByTestId('location')).toHaveTextContent('/assistant')
+    await user.click(screen.getByRole('button', { name: 'Projects' }))
+    expect(screen.getByTestId('location')).toHaveTextContent('/')
   })
 
   it('renders schedule tabs on /repos/:id/schedules path', () => {
     vi.mocked(useMobile).mockReturnValue(true)
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/repos/123/schedules']}>
-          <MobileTabBar />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
+    renderTabBar(['/repos/123/schedules'])
     expect(screen.getByText('Jobs')).toBeInTheDocument()
     expect(screen.getByText('Detail')).toBeInTheDocument()
     expect(screen.getByText('Runs')).toBeInTheDocument()
@@ -139,63 +129,33 @@ describe('MobileTabBar', () => {
 
   it('renders tab bar on root path', () => {
     vi.mocked(useMobile).mockReturnValue(true)
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/']}>
-          <MobileTabBar />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-    expect(screen.getByText('Repos')).toBeInTheDocument()
+    renderTabBar(['/'])
+    expect(screen.getByText('Projects')).toBeInTheDocument()
     expect(screen.getByText('Files')).toBeInTheDocument()
     expect(screen.getByText('Assistant')).toBeInTheDocument()
-    expect(screen.getByText('Schedules')).toBeInTheDocument()
     expect(screen.getByText('More')).toBeInTheDocument()
   })
 
   it('renders tab bar on /schedules path', () => {
     vi.mocked(useMobile).mockReturnValue(true)
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/schedules']}>
-          <MobileTabBar />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-    expect(screen.getByText('Repos')).toBeInTheDocument()
-    expect(screen.getByText('Schedules')).toBeInTheDocument()
+    renderTabBar(['/schedules'])
+    expect(screen.getByText('Projects')).toBeInTheDocument()
+    expect(screen.getByText('More')).toBeInTheDocument()
   })
 
-  it('Repos tab is active when pathname is / and no sheet is open', () => {
+  it('Projects tab is active when pathname is / and no sheet is open', () => {
     vi.mocked(useMobile).mockReturnValue(true)
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/']}>
-          <MobileTabBar />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-    const reposButton = screen.getByText('Repos').closest('button')
-    expect(reposButton).toHaveClass('text-primary')
-    expect(reposButton).toHaveClass('border-primary')
+    renderTabBar(['/'])
+    const projectsButton = screen.getByText('Projects').closest('button')
+    expect(projectsButton).toHaveClass('text-primary')
+    expect(projectsButton).toHaveClass('border-primary')
   })
 
-  it('Repos tab is active when openSheet is repos regardless of pathname', () => {
+  it('Projects tab is not active while a sheet is open', () => {
     vi.mocked(useMobile).mockReturnValue(true)
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/repos/123?mobileTab=repos']}>
-          <MobileTabBar />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-    const reposButton = screen.getByText('Repos').closest('button')
-    expect(reposButton).toHaveClass('text-primary')
-    expect(reposButton).toHaveClass('border-primary')
+    renderTabBar(['/?mobileTab=more'])
+    const projectsButton = screen.getByText('Projects').closest('button')
+    expect(projectsButton).not.toHaveClass('text-primary')
   })
 
   it('maintains stable callbacks when search changes but mobileTab does not', () => {
@@ -210,8 +170,8 @@ describe('MobileTabBar', () => {
       </QueryClientProvider>,
     )
 
-    const firstReposButton = screen.getByText('Repos').closest('button')
-    expect(firstReposButton).toBeInTheDocument()
+    const firstProjectsButton = screen.getByText('Projects').closest('button')
+    expect(firstProjectsButton).toBeInTheDocument()
 
     rerender(
       <QueryClientProvider client={queryClient}>
@@ -221,8 +181,8 @@ describe('MobileTabBar', () => {
       </QueryClientProvider>,
     )
 
-    const secondReposButton = screen.getByText('Repos').closest('button')
-    expect(secondReposButton).toBeInTheDocument()
+    const secondProjectsButton = screen.getByText('Projects').closest('button')
+    expect(secondProjectsButton).toBeInTheDocument()
   })
 
   it('does not render tab bar on SessionDetail path /repos/:id/sessions/:sid', () => {

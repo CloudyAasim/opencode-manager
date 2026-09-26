@@ -236,7 +236,7 @@ describe('MoreDrawer', () => {
     const handleClose = vi.fn()
     renderMoreDrawer({ initialEntry: '/repos/1/assistant', routePath: '/repos/:id/assistant', onClose: handleClose })
 
-    expect(screen.getByText('Assistant')).toBeInTheDocument()
+    expect(screen.getAllByText('Assistant').length).toBeGreaterThan(0)
     expect(screen.queryByText('wrong-repo')).not.toBeInTheDocument()
   })
 
@@ -246,7 +246,7 @@ describe('MoreDrawer', () => {
     const handleClose = vi.fn()
     renderMoreDrawer({ initialEntry: '/assistant', routePath: '/assistant', onClose: handleClose })
 
-    expect(screen.getByText('Assistant')).toBeInTheDocument()
+    expect(screen.getAllByText('Assistant').length).toBeGreaterThan(0)
     expect(screen.queryByText('wrong-repo')).not.toBeInTheDocument()
   })
 

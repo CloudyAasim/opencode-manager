@@ -1,29 +1,20 @@
-import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useDesktop } from '@/hooks/useDesktop'
 import { useSidebarCollapsed } from '@/hooks/useSidebarCollapsed'
-import { emitSidebarAction } from '@/hooks/useSidebarAction'
 import { useAuth } from '@/hooks/useAuth'
 import { useTerminalAllowed } from '@/hooks/useTerminalAllowed'
 import { useUrlParams } from '@/hooks/useUrlParams'
-import { buildNavModel, type MoreDrawerItem, type NavPrimaryCta } from '@/components/navigation/moreDrawerItems'
-import { getPathWithReturnTo } from '@/lib/navigation'
+import { buildNavModel, type MoreDrawerItem } from '@/components/navigation/moreDrawerItems'
+import { isAssistantPath } from '@/lib/navigation'
 import { useI18n } from '@/lib/i18n'
-import { RepoQuickSwitchSheet } from '@/components/navigation/RepoQuickSwitchSheet'
-import {
-  Sidebar,
-  SidebarSection,
-  SidebarItem,
-} from '@/components/ui/sidebar'
-import { FolderGit2 } from 'lucide-react'
+import { Sidebar, SidebarItem } from '@/components/ui/sidebar'
 
 export function DesktopSidebar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { updateParams } = useUrlParams()
+  const { searchParams, updateParams } = useUrlParams()
   const { t } = useI18n()
   const [collapsed, toggle] = useSidebarCollapsed()
-  const [repoSwitcherOpen, setRepoSwitcherOpen] = useState(false)
   const { isAuthenticated, isLoading, logout, user } = useAuth()
   const terminalAllowed = useTerminalAllowed()
 
@@ -37,84 +28,57 @@ export function DesktopSidebar() {
     return null
   }
 
-  const { primary, items } = buildNavModel(location.pathname, { isAdmin: user?.role === 'admin', terminalAllowed })
+  const { items } = buildNavModel({ isAdmin: user?.role === 'admin', terminalAllowed })
 
-  const handlePrimaryClick = (item: NavPrimaryCta) => {
-    if (item.to) {
-      navigate(item.to)
-    } else if (item.onSelect) {
-      emitSidebarAction(item.onSelect)
-    }
+  const isItemActive = (item: MoreDrawerItem) => {
+    if (item.key === 'projects') return location.pathname === '/'
+    if (item.key === 'assistant') return isAssistantPath(location.pathname)
+    if (item.key === 'terminal') return location.pathname === '/terminal'
+    if (item.key === 'settings') return searchParams.get('settings') === 'open'
+    if (item.key === 'files') return searchParams.get('dialog') === 'files'
+    return false
   }
 
   const handleItemClick = (item: MoreDrawerItem) => {
     if (item.to) {
-      const to = item.key === 'schedules'
-        ? getPathWithReturnTo(item.to, `${location.pathname}${location.search}`)
-        : item.to
-      navigate(to)
-    } else if (item.dialog) {
+      navigate(item.to)
+      return
+    }
+    if (item.dialog) {
       updateParams((p) => {
         p.set('dialog', item.dialog!)
         p.delete('mobileTab')
       }, 'push')
-    } else if (item.key === 'logout') {
+      return
+    }
+    if (item.key === 'logout') {
       logout()
-    } else if (item.key === 'settings') {
+      return
+    }
+    if (item.key === 'settings') {
       updateParams((p) => {
         p.set('settings', 'open')
         p.set('settingsTab', 'account')
         p.delete('mobileTab')
       }, 'push')
-    } else if (item.key === 'repos') {
-      setRepoSwitcherOpen(true)
     }
   }
 
-  const [homeItem, ...routeItems] = items
-  const navItems: MoreDrawerItem[] = [
-    homeItem,
-    { key: 'repos', label: 'Repos', labelKey: 'navigation.repos', icon: FolderGit2 },
-    ...routeItems,
-  ]
-
   return (
-    <>
-      <Sidebar collapsed={collapsed} onToggle={toggle} className='mt-2'>
-        {primary.length > 0 && (
-          <SidebarSection collapsed={collapsed}>
-            {primary.map((item: NavPrimaryCta) => (
-              <SidebarItem
-                key={item.key}
-                icon={item.icon}
-                label={item.labelKey ? t(item.labelKey) : item.label}
-                collapsed={collapsed}
-                onClick={() => handlePrimaryClick(item)}
-                asPrimary
-                variant={item.variant}
-              />
-            ))}
-          </SidebarSection>
-        )}
-
-        <div className="flex flex-col gap-1 p-2 pt-0">
-          {navItems.map((item: MoreDrawerItem) => (
-            <SidebarItem
-              key={item.key}
-              icon={item.icon}
-              label={item.labelKey ? t(item.labelKey) : item.label}
-              collapsed={collapsed}
-              onClick={() => handleItemClick(item)}
-              danger={item.danger}
-            />
-          ))}
-        </div>
-      </Sidebar>
-
-      <RepoQuickSwitchSheet
-        isOpen={repoSwitcherOpen}
-        onClose={() => setRepoSwitcherOpen(false)}
-      />
-    </>
+    <Sidebar collapsed={collapsed} onToggle={toggle} className="mt-2">
+      <div className="flex flex-col gap-1 p-2 pt-0">
+        {items.map((item) => (
+          <SidebarItem
+            key={item.key}
+            icon={item.icon}
+            label={item.labelKey ? t(item.labelKey) : item.label}
+            collapsed={collapsed}
+            active={isItemActive(item)}
+            danger={item.danger}
+            onClick={() => handleItemClick(item)}
+          />
+        ))}
+      </div>
+    </Sidebar>
   )
 }

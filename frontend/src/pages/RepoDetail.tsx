@@ -19,7 +19,7 @@ import { WorkspaceManager } from "@/components/repo/WorkspaceManager";
 import { OPENCODE_API_ENDPOINT } from "@/config";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GitBranch, Plus, Loader2, Layers } from "lucide-react";
+import { GitBranch, Plus, Loader2, Layers, Folder, GitCommitHorizontal, CalendarClock, Plug, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ResetPermissionsDialog } from "@/components/repo/ResetPermissionsDialog";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
@@ -231,6 +231,54 @@ export function RepoDetail() {
         onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
         onWorkspaceMenu={handleOpenWorkspaceSelector}
       />
+
+      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-border px-3 py-2 scrollbar-thin">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 shrink-0"
+          onClick={() => setFileBrowserOpen(true)}
+        >
+          <Folder className="h-4 w-4" />
+          {t('navigation.files')}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 shrink-0"
+          onClick={() => setSourceControlOpen(true)}
+        >
+          <GitCommitHorizontal className="h-4 w-4" />
+          {t('navigation.sourceControl')}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 shrink-0"
+          onClick={() => navigate(`/repos/${repoId}/schedules`)}
+        >
+          <CalendarClock className="h-4 w-4" />
+          {t('navigation.schedules')}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 shrink-0"
+          onClick={() => setMcpDialogOpen(true)}
+        >
+          <Plug className="h-4 w-4" />
+          {t('navigation.mcp')}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 shrink-0"
+          onClick={() => setSkillsDialogOpen(true)}
+        >
+          <Sparkles className="h-4 w-4" />
+          {t('navigation.skills')}
+        </Button>
+      </div>
 
       <WorkspaceManager
         open={workspaceSelectorOpen}
