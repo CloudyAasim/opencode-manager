@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import path from 'node:path'
 import type { Database } from 'bun:sqlite'
 import { createTestDb } from '../helpers/assistant-workspace'
-import { accessibleRepoIds, canAccessOwner, canAccessRepo, canAccessRepoOwner, principalFrom } from '../../src/auth/ownership'
+import { getReposPath, getUserWorkspacePath, getWorkspacePath } from '@opencode-manager/shared/config/env'
+import { accessibleRepoIds, canAccessOwner, canAccessRepo, canAccessRepoOwner, principalFrom, resolveAccessRoots } from '../../src/auth/ownership'
 
 function insertRepo(db: Database, id: number, userId: string | null): void {
   db.prepare(
@@ -67,5 +69,18 @@ describe('ownership helpers', () => {
     expect(accessibleRepoIds(db, alice).sort()).toEqual([0, 1, 3])
     expect(accessibleRepoIds(db, admin).sort()).toEqual([0, 1, 2, 3])
     expect(accessibleRepoIds(db, null)).toEqual([])
+  })
+
+  it('resolves per-user access roots (workspace + own/shared repos)', () => {
+    const roots = resolveAccessRoots(db, alice)
+    expect(roots).toContain(path.resolve(getUserWorkspacePath('alice')))
+    expect(roots).toContain(path.resolve(path.join(getReposPath(), 'r1')))
+    expect(roots).toContain(path.resolve(path.join(getReposPath(), 'r3')))
+    expect(roots).not.toContain(path.resolve(path.join(getReposPath(), 'r2')))
+  })
+
+  it('gives administrators the whole workspace root', () => {
+    expect(resolveAccessRoots(db, admin)).toEqual([path.resolve(getWorkspacePath())])
+    expect(resolveAccessRoots(db, null)).toEqual([])
   })
 })

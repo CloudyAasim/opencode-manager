@@ -8,6 +8,10 @@ on:
       - '.github/**'
       - 'docs/**'
       - '**/*.md'
+      - 'mkdocs.yml'
+      - '**/*.test.ts'
+      - '**/*.test.tsx'
+      - 'backend/test/**'
   workflow_dispatch:
 
 concurrency:

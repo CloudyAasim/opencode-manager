@@ -51,6 +51,7 @@ nav:
     - Authentication: configuration/authentication.md
     - OAuth Providers: configuration/oauth.md
     - Docker: configuration/docker.md
+    - Multi-tenant & Permissions: configuration/multi-tenant.md
   - Cloud Deployment:
     - One-Click Deploy: cloud/one-click-deploy.md
     - Security Plan: cloud/security-plan.md
