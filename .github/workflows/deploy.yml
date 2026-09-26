@@ -1,8 +1,14 @@
 name: 'deploy'
+
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-opencode-manager
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -13,6 +19,80 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure Dokku app
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
+          SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
+          AUTH_SECRET: ${{ secrets.OCM_AUTH_SECRET }}
+          ADMIN_EMAIL: ${{ secrets.OCM_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.OCM_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          HOST=SERVER_HOST
+          APP=opencode-manager
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_HOST_KEY" | tr -d '\r' > ~/.ssh/known_hosts
+
+          dokku() {
+            ssh -i ~/.ssh/id_deploy \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              -o StrictHostKeyChecking=yes \
+              -o LogLevel=ERROR \
+              -o ConnectTimeout=15 \
+              "dokku@$HOST" "$@"
+          }
+
+          echo "== dokku version =="
+          dokku version || true
+
+          # The Dokku host ships a docker-container-healthchecker binary that is
+          # incompatible with the host glibc (GLIBC_2.32/2.34 not found). The
+          # check-deploy hook runs under `set -e`, so pre-flight checks abort for
+          # every app regardless of whether the app itself is healthy. Zero
+          # downtime is therefore disabled for this app.
+          echo "== disabling zero-downtime checks (broken host healthchecker) =="
+          dokku checks:disable "$APP" || true
+
+          echo "== configuring environment =="
+          # Output is suppressed because Dokku echoes variable values; the values
+          # are sourced from GitHub secrets, which Actions masks anyway.
+          dokku config:set --no-restart "$APP" \
+            NODE_ENV=production \
+            "AUTH_SECRET=$AUTH_SECRET" \
+            "ADMIN_EMAIL=$ADMIN_EMAIL" \
+            "ADMIN_PASSWORD=$ADMIN_PASSWORD" \
+            AUTH_ALLOW_SIGNUP=false \
+            AUTH_SECURE_COOKIES=false \
+            AUTH_TRUST_PROXY=true \
+            "AUTH_TRUSTED_ORIGINS=http://$HOST,https://$HOST" \
+            "CORS_ORIGIN=http://$HOST" \
+            OCM_ALLOW_SERVER_ENV_EDIT=false \
+            OCM_TERMINAL_ENABLED=true \
+            OCM_TERMINAL_ADMINS_ONLY=true \
+            >/dev/null
+
+          echo "== configuring domain and port mapping =="
+          dokku domains:add "$APP" "$HOST" || true
+          # The image EXPOSEs 5003, which Dokku would otherwise publish directly
+          # on host port 5003. Route public HTTP 80 to the container instead.
+          dokku ports:set "$APP" http:80:5003 || true
+
+          echo "== configuring persistent storage =="
+          if dokku storage:ensure-directory ocm-data --chown 1000; then
+            dokku storage:mount "$APP" /var/lib/dokku/data/storage/ocm-data:/app/data || true
+          fi
+          if dokku storage:ensure-directory ocm-workspace --chown 1000; then
+            dokku storage:mount "$APP" /var/lib/dokku/data/storage/ocm-workspace:/workspace || true
+          fi
+
+          echo "== reports =="
+          dokku ports:report "$APP" || true
+          dokku storage:report "$APP" || true
+          dokku checks:report "$APP" || true
+
       - name: Push to dokku
         uses: dokku/github-action@master
         with:
@@ -20,3 +100,26 @@ jobs:
           ssh_private_key: ${{ secrets.DEBAINDOKKU001 }}
           ssh_host_key: ${{ secrets.SSH_HOST_KEY }}
           branch: main
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          HOST=SERVER_HOST
+          code=000
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "http://$HOST/api/health" || true)
+            echo "health attempt $i: $code"
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            sleep 10
+          done
+          echo "--- health body ---"
+          curl -s -m 10 "http://$HOST/api/health" || true
+          echo
+          echo "--- index status ---"
+          curl -s -o /dev/null -w 'index=%{http_code}\n' -m 10 "http://$HOST/" || true
+          if [ "$code" != "200" ]; then
+            echo "::error::health check never returned 200 (last=$code)"
+            exit 1
+          fi
