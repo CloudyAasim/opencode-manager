@@ -8,7 +8,7 @@ import { Header } from "@/components/ui/header";
 import { RepoMcpDialog } from "@/components/repo/RepoMcpDialog";
 import { RepoSkillsDialog } from "@/components/repo/RepoSkillsDialog";
 import { SourceControlPanel } from "@/components/source-control";
-import { useCreateSession } from "@/hooks/useOpenCode";
+import { useCreateSession, useSessionsAcrossDirectories } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
 import { useCreateRepoWorkspace, useDeleteRepoWorkspaces, useRepoSiblings } from "@/hooks/useRepoSiblings";
 import { useSSE } from "@/hooks/useSSE";
@@ -110,6 +110,14 @@ export function RepoDetail() {
     },
     [repoId, activeTab],
   );
+
+  const { data: existingSessions } = useSessionsAcrossDirectories(opcodeUrl, sessionListDirectories, { limit: 25 });
+
+  useEffect(() => {
+    if (existingSessions.length > 0) {
+      navigate(sessionUrl(existingSessions[0].id), { replace: true });
+    }
+  }, [existingSessions, navigate, sessionUrl]);
 
   const createSessionMutation = useCreateSession(opcodeUrl, composerDirectory, (session) => {
     navigate(sessionUrl(session.id));

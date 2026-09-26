@@ -1,8 +1,8 @@
 import { Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { PageHeader } from "@/components/ui/page-header";
-import { useSettingsDialog } from "@/hooks/useSettingsDialog";
 import { EditSessionTitleDialog } from "@/components/session/EditSessionTitleDialog";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
@@ -151,14 +151,14 @@ function HeaderActions({ children, className }: { children: ReactNode; className
 }
 
 function HeaderSettingsButton() {
-  const { open } = useSettingsDialog();
+  const navigate = useNavigate();
   const { t } = useI18n();
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={open}
+      onClick={() => navigate('/settings')}
       aria-label={t('ui.header.settings')}
       className="text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 h-8 w-8"
     >

@@ -5,7 +5,7 @@ import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/components/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/components/message/PromptInput";
 import { FloatingTTSButton } from '@/components/message/FloatingTTSButton'
-import { X, CornerUpLeft, PanelRight, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info } from "lucide-react";
+import { X, CornerUpLeft, PanelLeft, PanelRight, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info } from "lucide-react";
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/components/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
@@ -26,7 +26,6 @@ import { useUIState } from "@/stores/uiStateStore";
 import { useSettings } from "@/hooks/useSettings";
 import { useModelSelection } from "@/hooks/useModelSelection";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useSettingsDialog } from "@/hooks/useSettingsDialog";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { useMobile } from "@/hooks/useMobile";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
@@ -89,7 +88,7 @@ export function SessionDetail() {
   const repoId = Number(id) || 0;
   const isAssistantSession = new URLSearchParams(location.search).get('assistant') === '1';
   const { preferences, updateSettings } = useSettings();
-  const { open: openSettings } = useSettingsDialog();
+  const openSettings = useCallback(() => navigate('/settings'), [navigate]);
   const isDesktop = useDesktop();
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const promptInputRef = useRef<PromptInputHandle>(null);
@@ -105,6 +104,7 @@ export function SessionDetail() {
     return Number.isFinite(stored) && stored >= 220 && stored <= 560 ? stored : 288
   })
   const [rightPanelOpen, setRightPanelOpen] = useState(false)
+  const [railOpen, setRailOpen] = useState(true)
   const [rightTab, setRightTab] = useState<'files' | 'info' | 'review'>('files')
   const [panelFile, setPanelFile] = useState<FileInfo | null>(null)
 
@@ -549,6 +549,15 @@ export function SessionDetail() {
             <div className="flex items-center gap-1">
               <PendingActionsGroup />
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRailOpen((open) => !open)}
+              aria-label={t('navigation.sessions')}
+              className="hidden md:inline-flex text-muted-foreground hover:text-foreground"
+            >
+              <PanelLeft className="w-5 h-5" />
+            </Button>
             <ContextUsageIndicator
               opcodeUrl={opcodeUrl}
               sessionID={sessionId}
@@ -575,7 +584,7 @@ export function SessionDetail() {
       </div>
 
       <div className="flex flex-1 min-h-0">
-        {isDesktop && opcodeUrl && (
+        {isDesktop && opcodeUrl && railOpen && (
           <>
             <aside
               className="hidden md:flex shrink-0 flex-col min-h-0 border-r border-border overflow-hidden"

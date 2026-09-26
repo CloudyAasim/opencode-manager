@@ -19,6 +19,7 @@ export const navigation = {
   more: '更多',
   jobs: '任务',
   detail: '详情',
+  sessions: '会话',
   runs: '运行记录',
   close: '关闭',
   commands: '命令',

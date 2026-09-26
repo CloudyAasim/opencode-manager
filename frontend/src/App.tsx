@@ -1,7 +1,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter, RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { lazy, Suspense, useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { Toaster } from 'sonner'
 import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
@@ -24,10 +24,6 @@ import { onNotificationClick } from '@/lib/serviceWorker'
 import { useAuth } from '@/hooks/useAuth'
 import { useServerHealth } from '@/hooks/useServerHealth'
 import { usePrefetchRoutes } from '@/hooks/usePrefetchRoutes'
-
-const LazySettingsDialog = lazy(() =>
-  import('./components/settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog }))
-)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,7 +90,6 @@ function PermissionDialogWrapper() {
 function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
-  const settingsOpen = new URLSearchParams(location.search).get('settings') === 'open'
   const rootRef = useRef<HTMLDivElement>(null)
   const { openSheet, open } = useMobileTabBar()
   useTheme()
@@ -174,11 +169,6 @@ function AppShell() {
         <MobileSheetHost />
         <PermissionDialogWrapper />
         <SSHHostKeyDialogWrapper />
-        {settingsOpen && (
-          <Suspense fallback={null}>
-            <LazySettingsDialog />
-          </Suspense>
-        )}
         <HealthMonitor />
         <RoutePrefetcher />
         <VersionNotifier />

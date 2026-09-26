@@ -19,6 +19,7 @@ export const navigation = {
   more: 'More',
   jobs: 'Jobs',
   detail: 'Detail',
+  sessions: 'Sessions',
   runs: 'Runs',
   close: 'Close',
   commands: 'Commands',
