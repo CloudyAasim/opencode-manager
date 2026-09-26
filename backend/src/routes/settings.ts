@@ -14,7 +14,6 @@ import type { OpenCodeClient } from '../services/opencode/client'
 import { getAgentsMdPath } from '@opencode-manager/shared/config/env'
 import {
   UserPreferencesSchema,
-  type SandboxPreferences,
 } from '../types/settings'
 import type { GitCredential } from '@opencode-manager/shared'
 import {
@@ -26,6 +25,7 @@ import {
   type SkillScope,
 } from '@opencode-manager/shared'
 import { logger } from '../utils/logger'
+import { canEditServerEnv } from '../utils/server-env-policy'
 import {
   discoverModelsCached,
 } from '../utils/discovery-cache'
@@ -33,8 +33,6 @@ import { opencodeServerManager, ConfigReloadError, resolveOpenCodeExecutable } f
 import { getOrCreateInternalToken, rotateInternalToken } from '../services/internal-token'
 import { sseAggregator } from '../services/sse-aggregator'
 import type { OpenCodeSupervisor } from '../services/opencode-supervisor'
-import { detectSandboxCapability } from '../services/sandbox/capability'
-import { getProcessIdentityAttestationError } from '../services/opencode/process-identity'
 import { restartOpenCode, reloadOpenCodeConfig, getOpenCodeRestartCoordinator } from '../services/opencode-restart'
 import type { GitAuthService } from '../services/git-auth'
 import { DEFAULT_AGENTS_MD } from '../constants'
@@ -192,14 +190,6 @@ const SKILL_INSTALL_ERROR_STATUS: ReadonlyArray<readonly [string, 400 | 404 | 40
   ['not a valid file', 400],
 ]
 
-function sandboxEnforcementChanged(
-  previous: SandboxPreferences | undefined,
-  next: SandboxPreferences | undefined,
-): boolean {
-  if (next === undefined) return false
-  return (previous?.enabled ?? false) !== next.enabled
-}
-
 function parseOptionalRepoId(value: string | undefined): number | undefined {
   if (value === undefined) return undefined
   const parsed = parseInt(value, 10)
@@ -306,9 +296,17 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
   const app = new Hono()
   const settingsService = new SettingsService(db)
 
+  // Preferences are always scoped to the authenticated user; the legacy
+  // ?userId= query parameter is ignored so users cannot read or write another
+  // tenant's preferences (git credentials, keys, and general settings).
+  const currentUserId = (c: unknown): string => {
+    const ctx = c as { get?: (key: string) => { id?: string } | undefined }
+    return ctx.get?.('user')?.id ?? 'default'
+  }
+
   app.get('/', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = currentUserId(c)
       const settings = settingsService.getSettings(userId)
       return c.json(settings)
     } catch (error) {
@@ -319,9 +317,20 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
   app.patch('/', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = currentUserId(c)
       const body = await c.req.json()
       const validated = UpdateSettingsSchema.parse(body)
+
+      const touchesServerEnv =
+        validated.preferences.serverEnvVars !== undefined ||
+        validated.preferences.disabledDefaultServerEnvVars !== undefined
+      if (touchesServerEnv) {
+        const user = (c as unknown as { get: (key: string) => { role?: string } | undefined }).get('user')
+        if (!canEditServerEnv(user?.role)) {
+          logger.warn('Blocked server environment variable edit: disabled for non-admins')
+          return c.json({ error: 'SERVER_ENV_EDIT_DISABLED' }, 403)
+        }
+      }
 
       if (validated.preferences.gitCredentials) {
         const validations = await Promise.all(
@@ -353,20 +362,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
       const currentSettings = settingsService.getSettings(userId)
 
-      if (currentSettings.preferences.sandbox?.enabled !== true && validated.preferences.sandbox?.enabled === true) {
-        const capability = detectSandboxCapability()
-        if (capability.available === false) {
-          return c.json({ error: `Cannot enable sandboxing: ${capability.reason}` }, 400)
-        }
-        const attestationError = getProcessIdentityAttestationError()
-        if (attestationError !== null) {
-          return c.json({ error: `Cannot enable sandboxing: ${attestationError}` }, 400)
-        }
-      }
-
       const settings = settingsService.updateSettings(validated.preferences, userId)
-
-      const sandboxChanged = sandboxEnforcementChanged(currentSettings.preferences.sandbox, validated.preferences.sandbox)
 
       const credentialsChanged = validated.preferences.gitCredentials !== undefined &&
         JSON.stringify(currentSettings.preferences.gitCredentials || []) !== JSON.stringify(validated.preferences.gitCredentials)
@@ -375,7 +371,6 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
         JSON.stringify(currentSettings.preferences.gitIdentity || {}) !== JSON.stringify(validated.preferences.gitIdentity)
 
       const restartReasons = [
-        sandboxChanged && 'sandbox',
         credentialsChanged && 'git credentials',
         identityChanged && 'git identity',
       ].filter((reason): reason is string => typeof reason === 'string')
@@ -401,17 +396,9 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
   app.delete('/', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
-      const currentSettings = settingsService.getSettings(userId)
+      const userId = currentUserId(c)
       const settings = settingsService.resetSettings(userId)
-
-      const sandboxChanged = sandboxEnforcementChanged(currentSettings.preferences.sandbox, settings.preferences.sandbox)
-      if (sandboxChanged) {
-        logger.info('Sandbox enforcement changed, marking OpenCode server restart as pending')
-        opencodeServerManager.markRestartPending()
-      }
-
-      return c.json(sandboxChanged ? { ...settings, restartRequired: true } : settings)
+      return c.json(settings)
     } catch (error) {
       logger.error('Failed to reset settings:', error)
       return c.json({ error: 'Failed to reset settings' }, 500)
@@ -824,7 +811,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
   // Custom Commands routes
   app.get('/custom-commands', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = currentUserId(c)
       const settings = settingsService.getSettings(userId)
       return c.json(settings.preferences.customCommands)
     } catch (error) {
@@ -835,7 +822,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
   app.post('/custom-commands', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = currentUserId(c)
       const body = await c.req.json()
       const validated = CreateCustomCommandSchema.parse(body)
       
@@ -861,7 +848,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
   app.put('/custom-commands/:name', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = currentUserId(c)
       const commandName = decodeURIComponent(c.req.param('name'))
       const body = await c.req.json()
       const validated = UpdateCustomCommandSchema.parse(body)
@@ -895,7 +882,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
   app.delete('/custom-commands/:name', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = currentUserId(c)
       const commandName = decodeURIComponent(c.req.param('name'))
       
       const settings = settingsService.getSettings(userId)

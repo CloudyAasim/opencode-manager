@@ -328,7 +328,7 @@ Load this skill when the user asks about managing schedules, schedule jobs, sche
 
 ## Tool
 
-Use the \`${MANAGER_TOOL_NAME}\` tool with the \`request\` action. The tool runs inside OpenCode Manager, so it needs no token, no base URL, and no network access from the shell. It works the same in a normal session, a sandboxed session, and a scheduled run. Paths are relative to the internal API (for example \`/schedules/all\` or \`/repos/0/schedules\`) and query strings are allowed.
+Use the \`${MANAGER_TOOL_NAME}\` tool with the \`request\` action. The tool runs inside OpenCode Manager, so it needs no token, no base URL, and no network access from the shell. It works the same in a normal session and a scheduled run. Paths are relative to the internal API (for example \`/schedules/all\` or \`/repos/0/schedules\`) and query strings are allowed.
 
 **Arguments:**
 \`\`\`ts
@@ -526,7 +526,7 @@ Load this skill when you need to notify the user about important events, complet
 
 ## Tool
 
-Use the \`${MANAGER_TOOL_NAME}\` tool with the \`send_notification\` action. The tool runs inside OpenCode Manager, so it needs no token, no base URL, and no network access from the shell. It works the same in a normal session, a sandboxed session, and a scheduled run.
+Use the \`${MANAGER_TOOL_NAME}\` tool with the \`send_notification\` action. The tool runs inside OpenCode Manager, so it needs no token, no base URL, and no network access from the shell. It works the same in a normal session and a scheduled run.
 
 The tool declares its arguments as a typed schema, so the editor and the model both see the exact shape and the tool call is rejected before it runs if it does not match.
 
@@ -584,7 +584,7 @@ Load this skill when you need to inspect or update the user's UI preferences, th
 
 ## Tool
 
-Use the \`${MANAGER_TOOL_NAME}\` tool with the \`request\` action. The tool runs inside OpenCode Manager, so it needs no token, no base URL, and no network access from the shell. It works the same in a normal session, a sandboxed session, and a scheduled run. Paths are relative to the internal API (for example \`/settings\` or \`/assistant/reload\`) and query strings are allowed.
+Use the \`${MANAGER_TOOL_NAME}\` tool with the \`request\` action. The tool runs inside OpenCode Manager, so it needs no token, no base URL, and no network access from the shell. It works the same in a normal session and a scheduled run. Paths are relative to the internal API (for example \`/settings\` or \`/assistant/reload\`) and query strings are allowed.
 
 **Arguments:**
 \`\`\`ts
@@ -801,7 +801,7 @@ Load this skill when you need to discover repos, look up repo IDs, or need to re
 
 ## Tool
 
-Use the \`${MANAGER_TOOL_NAME}\` tool with the \`request\` action. The tool runs inside OpenCode Manager, so it needs no token, no base URL, and no network access from the shell. It works the same in a normal session, a sandboxed session, and a scheduled run. Paths are relative to the internal API (for example \`/repos\` or \`/repos/0/schedules\`) and query strings are allowed.
+Use the \`${MANAGER_TOOL_NAME}\` tool with the \`request\` action. The tool runs inside OpenCode Manager, so it needs no token, no base URL, and no network access from the shell. It works the same in a normal session and a scheduled run. Paths are relative to the internal API (for example \`/repos\` or \`/repos/0/schedules\`) and query strings are allowed.
 
 **Arguments:**
 \`\`\`ts

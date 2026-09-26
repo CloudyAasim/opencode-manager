@@ -5,6 +5,9 @@ import { createAuthenticatedOpenCodeProxyRoutes } from '../../src/routes/opencod
 import type { OpenCodeClient } from '../../src/services/opencode/client'
 import { OpenCodeSupervisor } from '../../src/services/opencode-supervisor'
 import type { SettingsService } from '../../src/services/settings'
+import { createTestDb } from '../helpers/assistant-workspace'
+
+const proxyTestDb = createTestDb()
 
 const isLifecycleInitializedMock = vi.hoisted(() => vi.fn().mockReturnValue(true))
 
@@ -26,7 +29,7 @@ function buildApp() {
   const app = new Hono()
   app.route(
     '/api/opencode',
-    createAuthenticatedOpenCodeProxyRoutes({ forwardRaw: forwardRawMock } as unknown as OpenCodeClient, passThroughAuth),
+    createAuthenticatedOpenCodeProxyRoutes({ forwardRaw: forwardRawMock } as unknown as OpenCodeClient, passThroughAuth, proxyTestDb),
   )
   return app
 }
@@ -93,7 +96,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwardRawMock).toHaveBeenCalledTimes(2)
   })
 
-  it('forwards ordinary endpoints when enforcement is off', async () => {
+  it('forwards ordinary endpoints', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/session/ses_1/message')
     expect(res.status).toBe(200)
@@ -142,14 +145,14 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwardRawMock).toHaveBeenCalled()
   })
 
-  it('forwards percent-encoded PTY paths when enforced', async () => {
+  it('forwards percent-encoded PTY paths', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/%70ty', { method: 'POST' })
     expect(res.status).toBe(200)
     expect(forwardRawMock).toHaveBeenCalled()
   })
 
-  it('forwards a PATCH /config mutation with plugins exactly when enforced', async () => {
+  it('forwards a PATCH /config mutation with plugins', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/config', {
       method: 'PATCH',
@@ -162,7 +165,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded).toEqual({ theme: 'dark', plugin: ['opencode-plugin-npm'] })
   })
 
-  it('forwards a PATCH /config mutation with local MCP servers and formatter config exactly when enforced', async () => {
+  it('forwards a PATCH /config mutation with local MCP servers and formatter config', async () => {
     const app = buildApp()
     const body = JSON.stringify({
       formatter: { command: 'prettier' },
@@ -178,7 +181,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded).toEqual(JSON.parse(body))
   })
 
-  it('forwards a malformed PATCH /config body exactly when enforced', async () => {
+  it('forwards a malformed PATCH /config body', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/config', {
       method: 'PATCH',
@@ -190,7 +193,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(await (forwardRawMock.mock.calls[0]![0] as Request).text()).toBe('{not json')
   })
 
-  it('forwards PATCH /config mutations raw when enforcement is off', async () => {
+  it('forwards PATCH /config mutations', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/config', {
       method: 'PATCH',
@@ -202,7 +205,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded.plugin).toEqual(['opencode-plugin-npm'])
   })
 
-  it('forwards a local MCP server add when enforced', async () => {
+  it('forwards a local MCP server add', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/mcp', {
       method: 'POST',
@@ -221,7 +224,7 @@ describe('authenticated opencode proxy routes', () => {
     })
   })
 
-  it('forwards a remote MCP server add when enforced', async () => {
+  it('forwards a remote MCP server add', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/mcp', {
       method: 'POST',
@@ -240,7 +243,7 @@ describe('authenticated opencode proxy routes', () => {
     })
   })
 
-  it('forwards MCP server adds raw when enforcement is off', async () => {
+  it('forwards MCP server adds', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/mcp', {
       method: 'POST',
@@ -255,7 +258,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded.config.type).toBe('local')
   })
 
-  it('forwards a PATCH /config mutation with LSP servers and experimental hooks exactly when enforced', async () => {
+  it('forwards a PATCH /config mutation with LSP servers and experimental hooks', async () => {
     const app = buildApp()
     const body = JSON.stringify({
       lsp: { typescript: { command: ['typescript-language-server'] } },
@@ -274,7 +277,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded).toEqual(JSON.parse(body))
   })
 
-  it('forwards a PATCH /config mutation without host-execution sections unchanged when enforced', async () => {
+  it('forwards a PATCH /config mutation without host-execution sections unchanged', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/config', {
       method: 'PATCH',
@@ -286,7 +289,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded).toEqual({ theme: 'dark' })
   })
 
-  it('forwards a well-known auth write when enforced', async () => {
+  it('forwards a well-known auth write', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/auth/sso.example.com', {
       method: 'PUT',
@@ -299,7 +302,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded).toEqual({ type: 'wellknown', key: 'SSO_TOKEN', token: 't' })
   })
 
-  it('forwards api and oauth auth writes when enforced', async () => {
+  it('forwards api and oauth auth writes', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/auth/anthropic', {
       method: 'PUT',
@@ -312,7 +315,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded).toEqual({ type: 'api', key: 'sk-test' })
   })
 
-  it('forwards auth writes raw when enforcement is off', async () => {
+  it('forwards auth writes', async () => {
     const app = buildApp()
     const res = await app.request('/api/opencode/auth/sso.example.com', {
       method: 'PUT',
@@ -324,7 +327,7 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwarded.type).toBe('wellknown')
   })
 
-  it('forwards a PATCH /config mutation with custom provider npm selectors exactly when enforced', async () => {
+  it('forwards a PATCH /config mutation with custom provider npm selectors', async () => {
     const app = buildApp()
     const body = JSON.stringify({
       model: 'x',
@@ -342,5 +345,47 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwardRawMock).toHaveBeenCalledTimes(1)
     const forwarded = JSON.parse(await (forwardRawMock.mock.calls[0]![0] as Request).text()) as Record<string, unknown>
     expect(forwarded).toEqual(JSON.parse(body))
+  })
+
+  it('blocks a non-admin from proxying another tenant directory', async () => {
+    const workspace = process.env.WORKSPACE_PATH ?? '/tmp/test-workspace'
+    proxyTestDb.prepare(
+      `INSERT OR REPLACE INTO repos (id, repo_url, local_path, default_branch, clone_status, cloned_at, user_id)
+       VALUES (901, ?, 'r901', 'main', 'ready', ?, 'u2')`,
+    ).run('https://example.com/a/b.git', Date.now())
+    const directory = `${workspace}/repos/r901`
+
+    const app = new Hono()
+    app.use('/*', async (c, next) => {
+      ;(c as unknown as { set: (key: string, value: unknown) => void }).set('user', { id: 'u1', role: 'user' })
+      await next()
+    })
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes({ forwardRaw: forwardRawMock } as unknown as OpenCodeClient, passThroughAuth, proxyTestDb),
+    )
+
+    const res = await app.request(`/api/opencode/session?directory=${encodeURIComponent(directory)}`)
+    expect(res.status).toBe(403)
+    expect(forwardRawMock).not.toHaveBeenCalled()
+  })
+
+  it('lets an administrator proxy any directory', async () => {
+    const workspace = process.env.WORKSPACE_PATH ?? '/tmp/test-workspace'
+    const directory = `${workspace}/repos/r901`
+
+    const app = new Hono()
+    app.use('/*', async (c, next) => {
+      ;(c as unknown as { set: (key: string, value: unknown) => void }).set('user', { id: 'root', role: 'admin' })
+      await next()
+    })
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes({ forwardRaw: forwardRawMock } as unknown as OpenCodeClient, passThroughAuth, proxyTestDb),
+    )
+
+    const res = await app.request(`/api/opencode/session?directory=${encodeURIComponent(directory)}`)
+    expect(res.status).toBe(200)
+    expect(forwardRawMock).toHaveBeenCalled()
   })
 })

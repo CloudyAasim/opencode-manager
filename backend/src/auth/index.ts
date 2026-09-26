@@ -2,6 +2,9 @@ import { betterAuth } from 'better-auth'
 import { passkey } from '@better-auth/passkey'
 import { Database } from 'bun:sqlite'
 import { ENV } from '@opencode-manager/shared/config/env'
+import { logger } from '../utils/logger'
+import { isInternalSignupAllowed } from './internal-signup'
+import { canCreateAccount } from './access-policy'
 
 export type AuthInstance = ReturnType<typeof createAuth>
 
@@ -30,7 +33,7 @@ export function createAuth(db: Database) {
   }
 
   const baseURL = ENV.AUTH.TRUSTED_ORIGINS.split(',')[0]?.trim() || `http://localhost:${ENV.SERVER.PORT}`
-  
+
   const auth = betterAuth({
     baseURL,
     basePath: '/api/auth',
@@ -43,6 +46,35 @@ export function createAuth(db: Database) {
       maxPasswordLength: 128,
       autoSignIn: true,
     },
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user) => {
+            if (isInternalSignupAllowed()) return true
+            const email = typeof user.email === 'string' ? user.email : undefined
+            if (canCreateAccount(email)) return true
+            logger.warn('Blocked account creation: self-signup disabled', { email: email ?? 'unknown' })
+            return false
+          },
+        },
+      },
+    },
+    rateLimit: ENV.AUTH.RATE_LIMIT_ENABLED
+      ? {
+          enabled: true,
+          window: 60,
+          max: 100,
+          storage: 'memory',
+          customRules: {
+            '/sign-in/email': { window: 60, max: 5 },
+            '/sign-in/passkey': { window: 60, max: 10 },
+            '/sign-in/social': { window: 60, max: 10 },
+            '/sign-up/email': { window: 60, max: 3 },
+            '/forget-password': { window: 60, max: 3 },
+            '/reset-password': { window: 60, max: 5 },
+          },
+        }
+      : { enabled: false },
     socialProviders: Object.keys(socialProviders).length > 0 ? socialProviders : undefined,
     plugins: [
       passkey({
@@ -56,7 +88,7 @@ export function createAuth(db: Database) {
       }),
     ],
     session: {
-      expiresIn: 60 * 60 * 24 * 7,
+      expiresIn: ENV.AUTH.SESSION_EXPIRES_IN_DAYS * 60 * 60 * 24,
       updateAge: 60 * 60 * 24,
       cookieCache: {
         enabled: true,
@@ -71,11 +103,21 @@ export function createAuth(db: Database) {
           defaultValue: 'user',
           input: false,
         },
+        username: {
+          type: 'string',
+          required: false,
+          input: false,
+        },
       },
     },
     advanced: {
       cookiePrefix: 'opencode',
       useSecureCookies: ENV.AUTH.SECURE_COOKIES,
+      ipAddress: {
+        ipAddressHeaders: ENV.AUTH.TRUST_PROXY
+          ? ['x-real-ip', 'cf-connecting-ip', 'x-forwarded-for']
+          : [],
+      },
     },
   })
 
@@ -102,5 +144,6 @@ export type Session = {
     createdAt: Date
     updatedAt: Date
     role?: string
+    username?: string | null
   }
 }

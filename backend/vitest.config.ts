@@ -10,7 +10,6 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
-      'test/routes/internal-sandbox.test.ts',
       'src/routes/repos.test.ts',
     ],
     coverage: {

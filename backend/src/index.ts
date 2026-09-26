@@ -31,9 +31,15 @@ import { createSSERoutes } from './routes/sse'
 import { createSSHRoutes } from './routes/ssh'
 import { createNotificationRoutes } from './routes/notifications'
 import { createMcpOauthProxyRoutes } from './routes/mcp-oauth-proxy'
-import { createAuthRoutes, createAuthInfoRoutes, syncAdminFromEnv } from './routes/auth'
+import { createAuthRoutes, createAuthInfoRoutes } from './routes/auth'
 import { createAuth } from './auth'
 import { createAuthMiddleware } from './auth/middleware'
+import { createSecurityHeadersMiddleware } from './middleware/security-headers'
+import { createAdminUserRoutes } from './routes/admin-users'
+import { createAuditRoutes } from './routes/admin-audit'
+import { UserAdminService } from './services/user-admin'
+import { createTerminalRoutes } from './routes/terminal'
+import { TerminalManager } from './services/terminal/manager'
 import { createPromptTemplateRoutes } from './routes/prompt-templates'
 import { createSessionPinRoutes } from './routes/session-pins'
 import { createLogRoutes } from './routes/logs'
@@ -52,8 +58,6 @@ import { CredentialProvider } from './services/credential-provider'
 import { ScheduleWorktreeManager } from './services/schedule-worktree'
 import { migrateGlobalSkills } from './services/skills'
 import { installAssistantWorkspace } from './services/assistant-mode'
-import { detectSandboxCapability } from './services/sandbox/capability'
-import { SandboxRuntimeService, stopWorkspaceSandboxOnShutdown } from './services/sandbox/runtime'
 import { getOpenCodeImportStatus, syncOpenCodeImport } from './services/opencode-import'
 import { readOpenCodeConfigFile } from './services/opencode-config-file'
 import { seedOpenCodeConfigFile } from './services/opencode-config-apply'
@@ -83,15 +87,17 @@ const app = new Hono()
  */
 const REFLECT_ANY_ORIGIN_PREFIXES = ['/api/opencode-proxy/', '/api/internal/']
 
+app.use('/*', createSecurityHeadersMiddleware())
+
 app.use('/*', cors({
   origin: (origin, c) => {
     if (origin && REFLECT_ANY_ORIGIN_PREFIXES.some(prefix => c.req.path.startsWith(prefix))) {
       return origin
     }
+    if (!origin) return undefined
     const trustedOrigins = ENV.AUTH.TRUSTED_ORIGINS.split(',').map(o => o.trim())
-    if (!origin) return trustedOrigins[0]
     if (trustedOrigins.includes(origin)) return origin
-    return trustedOrigins[0]
+    return undefined
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'CF-Access-Client-Id', 'CF-Access-Client-Secret'],
@@ -101,6 +107,8 @@ app.use('/*', cors({
 const db = initializeDatabase(DB_PATH)
 const auth = createAuth(db)
 const requireAuth = createAuthMiddleware(auth)
+const userAdminService = new UserAdminService(db, auth)
+const terminalManager = new TerminalManager(db)
 const openCodeClient = createOpenCodeClient(
   () => new SettingsService(db).getOpenCodeServerPassword(),
   () => opencodeServerManager.getEffectiveServerHost(),
@@ -176,6 +184,10 @@ try {
     process.exit(1)
   }
 
+  if (ENV.SERVER.NODE_ENV === 'production' && ENV.AUTH.ALLOW_SIGNUP) {
+    logger.warn('AUTH_ALLOW_SIGNUP=true: anyone can create an account. This is unsafe for public deployments.')
+  }
+
   await ensureDirectoryExists(getWorkspacePath())
   await ensureDirectoryExists(getReposPath())
   await ensureDirectoryExists(getConfigPath())
@@ -202,13 +214,12 @@ try {
   await gitAuthService.initialize(ipcServer, db)
   logger.info(`Git IPC server running at ${ipcServer.ipcHandlePath}`)
 
-  await syncAdminFromEnv(auth, db)
-
+  await userAdminService.ensureAdminFromEnv()
+  if (userAdminService.countUsers() === 0) {
+    logger.warn('No user accounts exist. Set ADMIN_EMAIL and ADMIN_PASSWORD and restart to bootstrap the first administrator.')
+  }
+  terminalManager.start()
   opencodeServerManager.setDatabase(db)
-  detectSandboxCapability()
-  void new SandboxRuntimeService(db).prepareWorkspaceSandboxOnBoot().catch((error) => {
-    logger.warn('Workspace sandbox preparation failed:', error)
-  })
   const openCodeStatus = await openCodeSupervisor.start()
   if (openCodeStatus.healthy) {
     logger.info(`OpenCode server running on port ${openCodeStatus.port}`)
@@ -274,6 +285,11 @@ const protectedApi = new Hono()
 protectedApi.use('/*', requireAuth)
 
 protectedApi.route('/repos', createRepoRoutes(db, gitAuthService, scheduleService, openCodeClient))
+protectedApi.route('/admin/users', createAdminUserRoutes(userAdminService, {
+  onUserDeleted: (id) => terminalManager.closeAllForUser(id),
+}))
+protectedApi.route('/admin/audit', createAuditRoutes(db))
+protectedApi.route('/terminal', createTerminalRoutes(terminalManager))
 protectedApi.route('/settings', createSettingsRoutes(db, gitAuthService, openCodeClient, openCodeSupervisor))
   protectedApi.route('/files', createFileRoutes())
   protectedApi.route('/filesystem', createFilesystemRoutes())
@@ -281,17 +297,17 @@ protectedApi.route('/providers', createProvidersRoutes(openCodeClient, openCodeS
 protectedApi.route('/oauth', createOAuthRoutes(openCodeClient, openCodeSupervisor))
 protectedApi.route('/tts', createTTSRoutes(db))
 protectedApi.route('/stt', createSTTRoutes(db))
-protectedApi.route('/sse', createSSERoutes())
+protectedApi.route('/sse', createSSERoutes(db))
 protectedApi.route('/ssh', createSSHRoutes(gitAuthService))
 protectedApi.route('/notifications', createNotificationRoutes(notificationService))
 protectedApi.route('/prompt-templates', createPromptTemplateRoutes(db))
 protectedApi.route('/session-pins', createSessionPinRoutes(db))
-protectedApi.route('/schedules', createScheduleRoutes(scheduleService))
+protectedApi.route('/schedules', createScheduleRoutes(scheduleService, db))
 protectedApi.route('/logs', createLogRoutes())
 
 app.route('/api', protectedApi)
 
-app.route('/api/opencode', createAuthenticatedOpenCodeProxyRoutes(openCodeClient, requireAuth))
+app.route('/api/opencode', createAuthenticatedOpenCodeProxyRoutes(openCodeClient, requireAuth, db))
 
 const isProduction = ENV.SERVER.NODE_ENV === 'production'
 
@@ -369,6 +385,8 @@ const shutdown = async (signal: string) => {
 
   logger.info(`${signal} received, shutting down gracefully...`)
   try {
+    terminalManager.shutdown()
+    logger.info('Terminal sessions stopped')
     sseAggregator.shutdown()
     logger.info('SSE Aggregator stopped')
     if (ipcServer) {
@@ -386,12 +404,6 @@ const shutdown = async (signal: string) => {
     logger.info('OpenCode server stopped')
   } catch (error) {
     logger.error('Error during shutdown:', error)
-  }
-  try {
-    await stopWorkspaceSandboxOnShutdown(db)
-    logger.info('Workspace sandbox stopped')
-  } catch (error) {
-    logger.error('Error stopping workspace sandbox:', error)
   }
   process.exit(0)
 }

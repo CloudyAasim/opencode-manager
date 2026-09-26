@@ -1,19 +1,39 @@
 import { Hono } from 'hono'
+import type { Database } from 'bun:sqlite'
 import { stream } from 'hono/streaming'
 import { sseAggregator } from '../services/sse-aggregator'
 import { SSESubscribeSchema, SSEVisibilitySchema } from '@opencode-manager/shared/schemas'
 import { logger } from '../utils/logger'
 import { DEFAULTS } from '@opencode-manager/shared/config'
 import { createQueuedSSEWriter } from './sse-writer'
+import { getRepoByDirectory } from '../db/queries'
+import { canAccessRepo, principalFrom, principalIsAdmin } from '../auth/ownership'
+import type { Session } from '../auth'
 
 const { HEARTBEAT_INTERVAL_MS } = DEFAULTS.SSE
 
-export function createSSERoutes() {
+function scopedDirectories(
+  database: Database,
+  directories: string[],
+  principal: ReturnType<typeof principalFrom>,
+) : string[] {
+  if (!principal || principalIsAdmin(principal)) return directories
+  return directories.filter((directory) => {
+    const repo = getRepoByDirectory(database, directory)
+    return !!repo && canAccessRepo(database, repo.id, principal)
+  })
+}
+
+export function createSSERoutes(database: Database) {
   const app = new Hono()
+
+  const currentPrincipal = (c: unknown) =>
+    principalFrom((c as { get?: (key: string) => Session['user'] | undefined }).get?.('user'))
 
   app.get('/stream', async (c) => {
     const directoriesParam = c.req.query('directories')
-    const directories = directoriesParam ? directoriesParam.split(',').filter(Boolean) : []
+    const requested = directoriesParam ? directoriesParam.split(',').filter(Boolean) : []
+    const directories = scopedDirectories(database, requested, currentPrincipal(c))
     const clientId = `client_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
     c.header('Content-Type', 'text/event-stream')
@@ -66,7 +86,10 @@ export function createSSERoutes() {
     if (!result.success) {
       return c.json({ success: false, error: 'Invalid request', details: result.error.issues }, 400)
     }
-    const success = sseAggregator.addDirectories(result.data.clientId, result.data.directories)
+    const success = sseAggregator.addDirectories(
+      result.data.clientId,
+      scopedDirectories(database, result.data.directories, currentPrincipal(c)),
+    )
     if (!success) {
       return c.json({ success: false, error: 'Client not found' }, 404)
     }

@@ -32,13 +32,6 @@ vi.mock('../src/services/schedules', () => ({
   ScheduleRunner: vi.fn().mockImplementation(() => scheduleRunnerMock),
 }))
 
-vi.mock('../src/services/sandbox/runtime', () => ({
-  SandboxRuntimeService: vi.fn().mockImplementation(() => ({
-    prepareWorkspaceSandboxOnBoot: vi.fn().mockResolvedValue(undefined),
-  })),
-  stopWorkspaceSandboxOnShutdown: vi.fn().mockResolvedValue(undefined),
-}))
-
 const ipcServerMock = vi.hoisted(() => ({
   ipcHandlePath: '/tmp/opencode-test-ipc.sock',
   dispose: vi.fn().mockResolvedValue(undefined),

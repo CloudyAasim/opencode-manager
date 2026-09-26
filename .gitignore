@@ -21,3 +21,6 @@ workspace/
 temp/
 .forge/
 
+
+__pycache__/
+*.pyc

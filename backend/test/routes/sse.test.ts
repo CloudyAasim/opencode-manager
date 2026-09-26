@@ -25,8 +25,10 @@ vi.mock('../../src/utils/logger', () => ({
 
 import { createSSERoutes } from '../../src/routes/sse'
 import { encodeSSEFrame } from '../../src/utils/sse-frame'
+import { createTestDb } from '../helpers/assistant-workspace'
 
 const decoder = new TextDecoder()
+const testDb = createTestDb()
 
 async function readChunk(reader: { read(): Promise<{ value?: Uint8Array }> }): Promise<string> {
   const { value } = await reader.read()
@@ -47,7 +49,7 @@ describe('SSE Routes', () => {
     sseMocks.getActiveDirectories.mockReturnValue([])
     sseMocks.getActiveSessions.mockReturnValue({})
 
-    app = createSSERoutes()
+    app = createSSERoutes(testDb)
   })
 
   describe('GET /stream', () => {

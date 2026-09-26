@@ -1,10 +1,13 @@
 import { Hono } from 'hono'
+import type { Database } from 'bun:sqlite'
 import {
   CreateScheduleJobRequestSchema,
   UpdateScheduleJobRequestSchema,
 } from '@opencode-manager/shared/schemas'
 import { ScheduleService, ScheduleServiceError } from '../services/schedules'
 import { parseId, handleServiceError } from '../utils/route-helpers'
+import { accessibleRepoIds, principalFrom } from '../auth/ownership'
+import type { Session } from '../auth'
 
 function parseRunListLimit(value: string | undefined): number {
   if (value === undefined) {
@@ -19,13 +22,21 @@ function parseRunListLimit(value: string | undefined): number {
   return Math.min(parsed, 100)
 }
 
-export function createScheduleRoutes(scheduleService: ScheduleService) {
+export function createScheduleRoutes(scheduleService: ScheduleService, database: Database) {
   const app = new Hono()
+
+  const principalOf = (c: unknown) =>
+    principalFrom((c as { get?: (key: string) => Session['user'] | undefined }).get?.('user'))
 
   app.get('/all', (c) => {
     try {
       const jobs = scheduleService.listAllJobsWithRepos()
-      return c.json({ jobs })
+      const principal = principalOf(c)
+      if (!principal || principal.role === 'admin') {
+        return c.json({ jobs })
+      }
+      const allowed = new Set(accessibleRepoIds(database, principal))
+      return c.json({ jobs: jobs.filter((job) => allowed.has(job.repoId)) })
     } catch (error) {
       return handleServiceError(c, error, 'Failed to list all schedules', ScheduleServiceError)
     }
@@ -49,7 +60,12 @@ export function createScheduleRoutes(scheduleService: ScheduleService) {
       })() : undefined
       const triggerSource = c.req.query('triggerSource') || undefined
       const runs = scheduleService.listAllRuns({ limit, offset, status, repoId, jobId, triggerSource })
-      return c.json({ runs })
+      const principal = principalOf(c)
+      if (!principal || principal.role === 'admin') {
+        return c.json({ runs })
+      }
+      const allowed = new Set(accessibleRepoIds(database, principal))
+      return c.json({ runs: runs.filter((run) => allowed.has(run.repoId)) })
     } catch (error) {
       return handleServiceError(c, error, 'Failed to list all schedule runs', ScheduleServiceError)
     }

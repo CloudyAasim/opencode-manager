@@ -9,7 +9,6 @@ vi.mock('../../src/services/opencode-single-server', () => ({
     getMinVersion: vi.fn(() => '1.0.137'),
     isVersionSupported: vi.fn(() => true),
     isRestartPending: vi.fn(() => false),
-    isSandboxEnforced: vi.fn(() => false),
   },
 }))
 
@@ -23,18 +22,9 @@ vi.mock('bun:sqlite', () => ({
   },
 }))
 
-vi.mock('../../src/services/sandbox/capability', () => ({
-  detectSandboxCapability: vi.fn(),
-}))
-
 import { opencodeServerManager } from '../../src/services/opencode-single-server'
 import { createHealthRoutes } from '../../src/routes/health'
-import { detectSandboxCapability } from '../../src/services/sandbox/capability'
-import { forceProcessAttestation } from '../../src/services/opencode/process-identity'
 import type { OpenCodeSupervisor } from '../../src/services/opencode-supervisor'
-
-const mockDetectSandboxCapability = detectSandboxCapability as ReturnType<typeof vi.fn>
-const mockIsSandboxEnforced = opencodeServerManager.isSandboxEnforced as ReturnType<typeof vi.fn>
 
 describe('Health Routes', () => {
   let healthApp: ReturnType<typeof createHealthRoutes>
@@ -42,8 +32,6 @@ describe('Health Routes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockDetectSandboxCapability.mockReturnValue({ available: false, reason: '/dev/kvm is not available or not writable' })
-    mockIsSandboxEnforced.mockReturnValue(false)
 
     const mockPrepareGet = vi.fn()
     const mockQueryGet = vi.fn()
@@ -115,160 +103,6 @@ describe('Health Routes', () => {
       expect(res.status).toBe(200)
       expect(json.status).toBe('degraded')
       expect(json.database).toBe('disconnected')
-    })
-
-    it('should include sandbox availability and enforcement in the payload', async () => {
-      mockDb.prepare().get.mockReturnValue({ 1: 1 })
-      ;(opencodeServerManager.checkHealth as ReturnType<typeof vi.fn>).mockResolvedValueOnce(true)
-      ;(opencodeServerManager.getLastStartupError as ReturnType<typeof vi.fn>).mockReturnValueOnce(null)
-      mockDetectSandboxCapability.mockReturnValue({ available: true, msbVersion: 'msb 0.3.1' })
-      mockIsSandboxEnforced.mockReturnValue(true)
-      mockDb.query().get.mockReturnValue({
-        preferences: JSON.stringify({ sandbox: { enabled: true } }),
-        updated_at: Date.now(),
-      })
-      forceProcessAttestation(true)
-      try {
-        const req = new Request('http://localhost/')
-        const res = await healthApp.fetch(req)
-        const json = await res.json() as Record<string, unknown>
-
-        expect(res.status).toBe(200)
-        expect(json.status).toBe('healthy')
-        expect(json.sandbox).toEqual({ available: true, enabled: true, enforced: true, msbVersion: 'msb 0.3.1' })
-      } finally {
-        forceProcessAttestation(null)
-      }
-    })
-
-    it('should keep the overall status unchanged when the sandbox runtime is unavailable', async () => {
-      mockDb.prepare().get.mockReturnValue({ 1: 1 })
-      ;(opencodeServerManager.checkHealth as ReturnType<typeof vi.fn>).mockResolvedValueOnce(true)
-      ;(opencodeServerManager.getLastStartupError as ReturnType<typeof vi.fn>).mockReturnValueOnce(null)
-
-      const req = new Request('http://localhost/')
-      const res = await healthApp.fetch(req)
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json.status).toBe('healthy')
-      expect(json.sandbox).toEqual({
-        available: false,
-        enabled: false,
-        enforced: false,
-        reason: '/dev/kvm is not available or not writable',
-      })
-    })
-
-    it('reports enabled-but-not-enforced when the preference is enabled but the child has not restarted', async () => {
-      mockDb.prepare().get.mockReturnValue({ 1: 1 })
-      ;(opencodeServerManager.checkHealth as ReturnType<typeof vi.fn>).mockResolvedValueOnce(true)
-      ;(opencodeServerManager.getLastStartupError as ReturnType<typeof vi.fn>).mockReturnValueOnce(null)
-      mockDb.query().get.mockReturnValue({
-        preferences: JSON.stringify({ sandbox: { enabled: true } }),
-        updated_at: Date.now(),
-      })
-
-      const req = new Request('http://localhost/')
-      const res = await healthApp.fetch(req)
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json.status).toBe('healthy')
-      expect(json.sandbox).toEqual({
-        available: false,
-        enabled: true,
-        enforced: false,
-        reason: '/dev/kvm is not available or not writable',
-      })
-    })
-
-    it('reports an enforced running child even when the sandbox runtime is unavailable', async () => {
-      mockDb.prepare().get.mockReturnValue({ 1: 1 })
-      ;(opencodeServerManager.checkHealth as ReturnType<typeof vi.fn>).mockResolvedValueOnce(true)
-      ;(opencodeServerManager.getLastStartupError as ReturnType<typeof vi.fn>).mockReturnValueOnce(null)
-      mockIsSandboxEnforced.mockReturnValue(true)
-      mockDb.query().get.mockReturnValue({
-        preferences: JSON.stringify({ sandbox: { enabled: true } }),
-        updated_at: Date.now(),
-      })
-
-      const req = new Request('http://localhost/')
-      const res = await healthApp.fetch(req)
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json.status).toBe('healthy')
-      expect(json.sandbox).toEqual({
-        available: false,
-        enabled: true,
-        enforced: true,
-        reason: '/dev/kvm is not available or not writable',
-      })
-    })
-
-    it('reports an enforced running child while a disable-pending restart still runs it', async () => {
-      mockDb.prepare().get.mockReturnValue({ 1: 1 })
-      ;(opencodeServerManager.checkHealth as ReturnType<typeof vi.fn>).mockResolvedValueOnce(true)
-      ;(opencodeServerManager.getLastStartupError as ReturnType<typeof vi.fn>).mockReturnValueOnce(null)
-      mockIsSandboxEnforced.mockReturnValue(true)
-
-      const req = new Request('http://localhost/')
-      const res = await healthApp.fetch(req)
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json.sandbox).toEqual({
-        available: false,
-        enabled: false,
-        enforced: true,
-        reason: '/dev/kvm is not available or not writable',
-      })
-    })
-
-    it('returns 200 with a safe sandbox status when the sandbox status lookup throws', async () => {
-      mockDb.prepare().get.mockReturnValue({ 1: 1 })
-      ;(opencodeServerManager.checkHealth as ReturnType<typeof vi.fn>).mockResolvedValueOnce(true)
-      ;(opencodeServerManager.getLastStartupError as ReturnType<typeof vi.fn>).mockReturnValueOnce(null)
-      mockDb.query.mockImplementationOnce(() => {
-        throw new Error('user_preferences table is unavailable')
-      })
-
-      const req = new Request('http://localhost/')
-      const res = await healthApp.fetch(req)
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json.status).toBe('healthy')
-      expect(json.sandbox).toEqual({
-        available: false,
-        enabled: false,
-        enforced: false,
-        reason: 'user_preferences table is unavailable',
-      })
-    })
-
-    it('keeps the running child enforcement in the fallback payload when the sandbox status lookup throws', async () => {
-      mockDb.prepare().get.mockReturnValue({ 1: 1 })
-      ;(opencodeServerManager.checkHealth as ReturnType<typeof vi.fn>).mockResolvedValueOnce(true)
-      ;(opencodeServerManager.getLastStartupError as ReturnType<typeof vi.fn>).mockReturnValueOnce(null)
-      mockIsSandboxEnforced.mockReturnValue(true)
-      mockDb.query.mockImplementationOnce(() => {
-        throw new Error('user_preferences table is unavailable')
-      })
-
-      const req = new Request('http://localhost/')
-      const res = await healthApp.fetch(req)
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json.status).toBe('healthy')
-      expect(json.sandbox).toEqual({
-        available: false,
-        enabled: false,
-        enforced: true,
-        reason: 'user_preferences table is unavailable',
-      })
     })
 
     it('should return 503 when health check throws an error', async () => {

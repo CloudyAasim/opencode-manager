@@ -12,6 +12,12 @@ Complete reference for all configuration options.
 | `ADMIN_PASSWORD_RESET` | Set to `true` to reset admin password | `false` |
 | `AUTH_TRUSTED_ORIGINS` | Comma-separated list of trusted origins (frontend + backend) | `http://localhost:5173,http://localhost:5003` |
 | `AUTH_SECURE_COOKIES` | Use secure cookies (HTTPS only) | `true` in prod, `false` in dev |
+| `AUTH_ALLOW_SIGNUP` | Allow public self-registration / new OAuth users | `false` |
+| `AUTH_ALLOWED_EMAILS` | Comma-separated emails allowed to sign up while registration is off | - |
+| `AUTH_ALLOWED_EMAIL_DOMAINS` | Comma-separated email domains allowed to sign up while registration is off | - |
+| `AUTH_SESSION_EXPIRES_IN_DAYS` | Session lifetime in days | `7` |
+| `AUTH_RATE_LIMIT_ENABLED` | Enable built-in auth rate limiting | `true` |
+| `AUTH_TRUST_PROXY` | Trust proxy client-IP headers for per-IP rate limiting. Prefers `x-real-ip` over `x-forwarded-for`; enable only behind a reverse proxy that overwrites them | `false` |
 
 ## OAuth Providers
 
@@ -32,6 +38,16 @@ Complete reference for all configuration options.
 | `PASSKEY_RP_NAME` | Display name for passkey prompts | `OpenCode Manager` |
 | `PASSKEY_ORIGIN` | Origin URL for WebAuthn (backend port) | `http://localhost:5003` |
 
+
+## Security Headers
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SECURITY_HSTS` | Send `Strict-Transport-Security` | `true` in production |
+| `SECURITY_CSP` | Override the default `Content-Security-Policy` (empty string disables it) | Built-in policy |
+
+The built-in CSP allows the SPA to load its own assets and inline styles. If a feature
+that needs `eval` or an external origin is added, set `SECURITY_CSP` explicitly.
 
 ## Push Notifications (VAPID)
 
@@ -75,6 +91,7 @@ When configured, users can enable push notifications in Settings → Notificatio
 | `CORS_ORIGIN` | CORS origin for frontend | `http://localhost:5173` |
 | `LOG_LEVEL` | Logging level | `info` |
 | `DEBUG` | Enable debug logging | `false` |
+| `OCM_ALLOW_SERVER_ENV_EDIT` | Allow non-admins to edit server environment variables (injected into the OpenCode process). Disabled in production by default | `false` in prod |
 
 ## Database
 
@@ -108,21 +125,32 @@ When configured, users can enable push notifications in Settings → Notificatio
 | `OPENCODE_IMPORT_CONFIG_PATH` | Existing standalone OpenCode config file to import on first startup. When set to a single file, only that file is imported. When unset, the host's recognized config files (`config.json`, `opencode.json`, `opencode.jsonc`) are mirrored into the workspace and workspace copies absent on the host are removed | - |
 | `OPENCODE_IMPORT_STATE_PATH` | Existing standalone OpenCode state directory to import on first startup | - |
 
-## Agent Sandboxing
+## Web Terminal
 
-Sandboxed agent commands run inside a microVM managed by `msb` (see [Agent Sandboxing](../features/sandboxing.md)). Requires a Linux host with `/dev/kvm` and the sandbox compose overlay.
+The web terminal runs an interactive shell inside the container, restricted to the
+workspace directory. It is administrator-only by default and every session is recorded
+in the `terminal_audit` table (user, IP, user agent, shell, cwd, start/end, exit code).
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MSB_PATH` | Path to the `msb` executable | `msb` |
-| `MSB_LIBKRUNFW_PATH` | Path to the `libkrunfw` firmware library used by `msb` (set in the container image) | `/opt/microsandbox/lib/libkrunfw.so` |
-| `SANDBOX_IMAGE` | OCI image the microVM boots from. Digest-pinned by default so a rebuilt guest image is actually adopted; see [Sandbox Guest Image](../features/sandboxing.md#sandbox-guest-image) for what the default ships and how to build your own | `docker.io/cstechdev/ocm-sandbox@sha256:9df035cf…` |
-| `SANDBOX_MEMORY` | MicroVM memory (e.g. `4G`) | `4G` |
-| `SANDBOX_CPUS` | MicroVM CPU count | `2` |
-| `SANDBOX_EXEC_USER` | Guest identity sandboxed commands run as: a numeric `uid`, a numeric `uid:gid`, or a guest username. A numeric uid must match the Manager's effective uid (`PUID`); the compose overlay defaults it to `${PUID:-1000}`. A guest username is resolved to the Manager's effective `uid:gid` so writes to the mounted project roots always succeed. When a configured numeric identity cannot write the workspace, enforcement is reported unavailable | `${PUID:-1000}` via the overlay, otherwise `node` |
-| `SANDBOX_NET` | Network mode for the microVM: `public`, `private`, or `host`, or a comma-separated composition (for example `public,host`). Passed to `msb run --net` and attested against the profile's canonical network policy | `public` |
-| `SANDBOX_START_TIMEOUT_MS` | Timeout for microVM startup, in milliseconds | `300000` |
-| `SANDBOX_EXEC_TIMEOUT_MS` | Timeout for a single sandboxed command, in milliseconds | `600000` |
+| `OCM_TERMINAL_ENABLED` | Enable the web terminal | `true` |
+| `OCM_TERMINAL_SHELL` | Shell to launch | `/bin/bash` |
+| `OCM_TERMINAL_CWD` | Working directory (must be inside `WORKSPACE_PATH`, otherwise the workspace root is used) | workspace root |
+| `OCM_TERMINAL_COLS` / `OCM_TERMINAL_ROWS` | Default dimensions | `120` / `30` |
+| `OCM_TERMINAL_MAX_SESSIONS_PER_USER` | Concurrent sessions per user | `2` |
+| `OCM_TERMINAL_MAX_SESSIONS_TOTAL` | Concurrent sessions overall | `4` |
+| `OCM_TERMINAL_IDLE_TIMEOUT_MS` | Close a session after inactivity | `900000` |
+| `OCM_TERMINAL_MAX_DURATION_MS` | Absolute session lifetime cap | `28800000` |
+| `OCM_TERMINAL_ADMINS_ONLY` | Restrict the terminal to administrators | `true` |
+| `OCM_TERMINAL_PER_USER_HOME` | Give each user a private directory under the workspace | `true` |
+| `OCM_TERMINAL_USERS_DIR` | Subdirectory that holds per-user terminal homes | `users` |
+
+!!! warning "Terminal equals shell access"
+    A web terminal is equivalent to handing a shell to the signed-in user. Keep
+    `OCM_TERMINAL_ADMINS_ONLY=true`, use a dedicated container and workspace, and only
+    enable it behind TLS. The container boundary is the security boundary.
+
+The PTY bridge requires `python3` (already present in the shipped image).
 
 ## Timeouts
 

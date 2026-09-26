@@ -37,11 +37,24 @@ git clone https://github.com/chriswritescode-dev/opencode-manager.git
 cd opencode-manager
 cp .env.example .env
 echo "AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+echo "ADMIN_EMAIL=admin@example.com" >> .env
+echo "ADMIN_PASSWORD=$(openssl rand -base64 12)" >> .env
 docker-compose up -d
 # Open http://localhost:5003
 ```
 
-On first launch, you'll be prompted to create an admin account. That's it!
+On first launch in local development you'll be prompted to create an admin account. In
+production, self-registration is disabled: set `ADMIN_EMAIL` and `ADMIN_PASSWORD` to
+bootstrap the first administrator, then create further users in **Settings → Users**.
+
+For a hardened public deployment, run the one-click installer (VPS + Caddy + automatic
+TLS, only 80/443 exposed):
+
+```bash
+cd deploy && ./install.sh --domain opencode.example.com --email you@example.com
+```
+
+See [docs/cloud/one-click-deploy.md](docs/cloud/one-click-deploy.md) for the full guide.
 
 For local development setup, see the [Development Guide](https://chriswritescode-dev.github.io/opencode-manager/development/setup/).
 
@@ -59,6 +72,10 @@ For local development setup, see the [Development Guide](https://chriswritescode
 - **Notifications** — Push notifications for session events, questions, errors, and completions
 - **Audio** — Text-to-speech and speech-to-text (browser native and OpenAI-compatible APIs)
 - **Mobile & PWA** — Responsive mobile-first UI, installable on any device, iOS-optimized
+- **Multi-user & Access Control** — Administrator-created accounts, `admin`/`user` roles, no self-registration, built-in auth rate limiting
+- **Web Terminal** — Admin-only interactive shell inside the container, a private per-user working directory, and an administrator audit log (Settings → Audit Log)
+- **Internationalization** — English and Simplified Chinese, with an in-app language switch
+- **Secure Cloud Deployment** — Caddy + automatic TLS, security headers, internal-only app ports
 
 ## Architecture
 
@@ -90,13 +107,17 @@ See the [Development Guide](https://chriswritescode-dev.github.io/opencode-manag
 # Required for production
 AUTH_SECRET=your-secure-random-secret  # Generate with: openssl rand -base64 32
 
-# Pre-configured admin (optional)
+# Pre-configured admin (creates/promotes the first administrator)
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=your-secure-password
+
+# Self-registration (disabled in production by default)
+AUTH_ALLOW_SIGNUP=false
 
 # For LAN/remote access
 AUTH_TRUSTED_ORIGINS=http://localhost:5003,https://yourl33tdomain.com
 AUTH_SECURE_COOKIES=false  # Set to true when using HTTPS
+AUTH_TRUST_PROXY=true      # Set true only behind a reverse proxy
 ```
 
 For OAuth, Passkeys, Push Notifications (VAPID), and advanced configuration, see the [Configuration Guide](https://chriswritescode-dev.github.io/opencode-manager/configuration/environment/).

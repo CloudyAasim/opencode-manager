@@ -63,7 +63,6 @@ vi.mock('../../src/services/opencode-single-server', () => ({
   opencodeServerManager: {
     clearStartupError: vi.fn(),
     restart: vi.fn().mockResolvedValue(undefined),
-    isSandboxEnforced: vi.fn(),
   },
 }))
 
@@ -106,7 +105,6 @@ function createMockRepo(overrides: Partial<Repo> = {}): Repo {
 describe('Repo Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(opencodeServerManager.isSandboxEnforced).mockReturnValue(false)
     mockGetSettings.mockReturnValue({
       preferences: { repoOrder: [], gitCredentials: [] },
       updatedAt: Date.now(),
@@ -411,7 +409,7 @@ describe('Repo Routes', () => {
       expect(res.status).toBe(200)
       const body = await res.json() as Repo
       expect(body.id).toBe(1)
-      expect(repoService.initLocalRepo).toHaveBeenCalledWith(mockDb, mockGitAuthService, 'repos/test-repo', 'main')
+      expect(repoService.initLocalRepo).toHaveBeenCalledWith(mockDb, mockGitAuthService, 'repos/test-repo', 'main', null)
     })
 
     it('should clone a remote repo through cloneRepo', async () => {
@@ -434,6 +432,7 @@ describe('Repo Routes', () => {
         useWorktree: undefined,
         skipSSHVerification: undefined,
         baseBranch: undefined,
+        userId: null,
       })
     })
 
@@ -480,7 +479,7 @@ describe('Repo Routes', () => {
       expect(res.status).toBe(200)
       const body = await res.json() as typeof discovery
       expect(body.discoveredCount).toBe(1)
-      expect(repoService.discoverLocalRepos).toHaveBeenCalledWith(mockDb, mockGitAuthService, '/tmp/repos', 2)
+      expect(repoService.discoverLocalRepos).toHaveBeenCalledWith(mockDb, mockGitAuthService, '/tmp/repos', 2, null)
     })
 
     it('should return 500 when discovery throws', async () => {

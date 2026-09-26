@@ -1,0 +1,99 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        TOOLS_CACHEBUST: ${TOOLS_CACHEBUST:-0}
+        DEBIAN_MIRROR: ${DEBIAN_MIRROR:-mirrors.ustc.edu.cn}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        WITH_PLAYWRIGHT: ${WITH_PLAYWRIGHT:-false}
+        OPENCODE_DOWNLOAD_BASE: ${OPENCODE_DOWNLOAD_BASE:-https://github.com/anomalyco/opencode/releases}
+    container_name: opencode-manager
+    user: "${PUID:-1000}:${PGID:-1000}"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=5003
+      - OPENCODE_HOST=127.0.0.1
+      - OPENCODE_SERVER_PORT=5551
+      - DATABASE_PATH=/app/data/opencode.db
+      - WORKSPACE_PATH=/workspace
+      - AUTH_SECURE_COOKIES=true
+      - AUTH_TRUST_PROXY=true
+      - SECURITY_HSTS=true
+    volumes:
+      - ${OCM_WORKSPACE_HOST_PATH:-opencode-workspace}:/workspace
+      - opencode-data:/app/data
+      - opencode-bin:/home/node/.opencode/bin
+    expose:
+      - "5003"
+    networks:
+      - ocm
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: opencode-manager-caddy
+    depends_on:
+      app:
+        condition: service_healthy
+    user: "1000:1000"
+    ports:
+      - "80:8080"
+      - "443:8443"
+      - "443:8443/udp"
+    environment:
+      - OCM_DOMAIN=${OCM_DOMAIN}
+      - OCM_ACME_EMAIL=${OCM_ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - ocm
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ocm:
+    driver: bridge
+
+volumes:
+  opencode-workspace:
+    driver: local
+  opencode-data:
+    driver: local
+  opencode-bin:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local

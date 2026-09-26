@@ -309,7 +309,7 @@ describe('opencode-proxy routes', () => {
     expect(upstreamFetch).toHaveBeenCalled()
   })
 
-  it('forwards percent-encoded PTY paths when the OpenCode child is enforced', async () => {
+  it('forwards percent-encoded PTY paths', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'text/plain' } })
     )
@@ -324,7 +324,7 @@ describe('opencode-proxy routes', () => {
     expect(upstreamFetch).toHaveBeenCalled()
   })
 
-  it('forwards custom slash command execution when the OpenCode child is enforced', async () => {
+  it('forwards custom slash command execution', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'text/plain' } })
     )
@@ -339,7 +339,7 @@ describe('opencode-proxy routes', () => {
     expect(upstreamFetch).toHaveBeenCalled()
   })
 
-  it('forwards a local MCP server add when the OpenCode child is enforced', async () => {
+  it('forwards a local MCP server add', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -366,7 +366,7 @@ describe('opencode-proxy routes', () => {
     })
   })
 
-  it('forwards a command-bearing MCP add without an explicit local type when the OpenCode child is enforced', async () => {
+  it('forwards a command-bearing MCP add without an explicit local type', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -393,7 +393,7 @@ describe('opencode-proxy routes', () => {
     })
   })
 
-  it('forwards a remote MCP server add when the OpenCode child is enforced', async () => {
+  it('forwards a remote MCP server add', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -420,7 +420,7 @@ describe('opencode-proxy routes', () => {
     })
   })
 
-  it('forwards MCP server adds raw when enforcement is off', async () => {
+  it('forwards MCP server adds', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -444,7 +444,7 @@ describe('opencode-proxy routes', () => {
     expect(forwarded.config.type).toBe('local')
   })
 
-  it('forwards a PATCH /config mutation with LSP servers and experimental hooks exactly when enforced', async () => {
+  it('forwards a PATCH /config mutation with LSP servers and experimental hooks', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -472,7 +472,7 @@ describe('opencode-proxy routes', () => {
     expect(forwarded).toEqual(JSON.parse(body))
   })
 
-  it('forwards ordinary agent endpoints when the OpenCode child is enforced', async () => {
+  it('forwards ordinary agent endpoints', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'text/plain' } })
     )
@@ -487,7 +487,7 @@ describe('opencode-proxy routes', () => {
     expect(upstreamFetch).toHaveBeenCalled()
   })
 
-  it('forwards a PATCH /config mutation with plugins exactly when the OpenCode child is enforced', async () => {
+  it('forwards a PATCH /config mutation with plugins', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -509,7 +509,7 @@ describe('opencode-proxy routes', () => {
     expect(forwarded).toEqual(JSON.parse(body))
   })
 
-  it('forwards a PATCH /config mutation with local MCP servers and formatter config exactly when enforced', async () => {
+  it('forwards a PATCH /config mutation with local MCP servers and formatter config', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -534,7 +534,7 @@ describe('opencode-proxy routes', () => {
     expect(forwarded).toEqual(JSON.parse(body))
   })
 
-  it('forwards a malformed PATCH /config body exactly when enforced', async () => {
+  it('forwards a malformed PATCH /config body', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -554,7 +554,7 @@ describe('opencode-proxy routes', () => {
     expect(await new Response(fetchCall[1].body as ReadableStream).text()).toBe('{not json')
   })
 
-  it('forwards PATCH /config mutations raw when enforcement is off', async () => {
+  it('forwards PATCH /config mutations', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -575,7 +575,7 @@ describe('opencode-proxy routes', () => {
     expect(forwarded.plugin).toEqual(['opencode-plugin-npm'])
   })
 
-  it('forwards non-config mutations raw when enforced', async () => {
+  it('forwards non-config mutations', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -596,7 +596,7 @@ describe('opencode-proxy routes', () => {
     expect(forwarded.content).toBe('hello')
   })
 
-  it('forwards a well-known auth write when enforced', async () => {
+  it('forwards a well-known auth write', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -617,7 +617,7 @@ describe('opencode-proxy routes', () => {
     expect(forwarded).toEqual({ type: 'wellknown', key: 'SSO_TOKEN', token: 't' })
   })
 
-  it('forwards api and oauth auth writes when enforced', async () => {
+  it('forwards api and oauth auth writes', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )
@@ -638,7 +638,7 @@ describe('opencode-proxy routes', () => {
     expect(forwarded).toEqual({ type: 'api', key: 'sk-test' })
   })
 
-  it('forwards auth writes raw when enforcement is off', async () => {
+  it('forwards auth writes', async () => {
     const upstreamFetch = vi.fn().mockResolvedValue(
       new Response('ok', { status: 200, headers: { 'content-type': 'application/json' } })
     )

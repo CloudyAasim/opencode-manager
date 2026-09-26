@@ -1,9 +1,12 @@
 import { Hono } from 'hono'
+import type { MiddlewareHandler } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type { Database } from 'bun:sqlite'
 import type { Repo } from '@opencode-manager/shared/types'
 import { DiscoverReposRequestSchema, AssistantModeInitRequestSchema, UpdateRepoRequestSchema } from '@opencode-manager/shared/schemas'
 import { listRepos, getRepoById, updateLastAccessed, getRepoGitCredentialId, setRepoGitCredentialId, updateRepoName } from '../db/queries'
+import { canAccessOwner, canAccessRepo, getRepoOwnerId, principalFrom, type Principal } from '../auth/ownership'
+import type { Session } from '../auth'
 import * as repoService from '../services/repo'
 import * as archiveService from '../services/archive'
 import { SettingsService } from '../services/settings'
@@ -37,8 +40,30 @@ export function createRepoRoutes(
 ) {
   const app = new Hono()
 
+  const currentPrincipal = (c: Parameters<MiddlewareHandler>[0]): Principal | null =>
+    principalFrom((c as unknown as { get: (key: string) => Session['user'] | undefined }).get('user'))
+
+  const repoAccessGuard: MiddlewareHandler = async (c, next) => {
+    const raw = c.req.param('id')
+    const id = Number(raw)
+    if (!raw || !Number.isFinite(id)) {
+      // Static single-segment routes like /discover, /order, /git-status-batch.
+      await next()
+      return
+    }
+    const principal = currentPrincipal(c)
+    if (principal !== null && !canAccessRepo(database, id, principal)) {
+      const exists = id === ASSISTANT_REPO_ID || getRepoOwnerId(database, id) !== undefined
+      return c.json({ error: exists ? 'Forbidden' : 'Repository not found' }, exists ? 403 : 404)
+    }
+    await next()
+  }
+
+  app.use('/:id', repoAccessGuard)
+  app.use('/:id/*', repoAccessGuard)
+
   app.route('/', createRepoGitRoutes(database, gitAuthService))
-  app.route('/:id/schedules', createScheduleRoutes(scheduleService))
+  app.route('/:id/schedules', createScheduleRoutes(scheduleService, database))
 
   app.post('/', async (c) => {
     try {
@@ -50,24 +75,32 @@ export function createRepoRoutes(
       }
 
       logger.info(`Creating repo - URL: ${repoUrl}, Provider: ${provider || 'auto-detect'}`)
-      
+
+      const principal = currentPrincipal(c)
+      const ownerId = principal?.id ?? null
+
       let repo
       if (localPath) {
         repo = await repoService.initLocalRepo(
           database,
           gitAuthService,
           localPath,
-          branch
+          branch,
+          ownerId
         )
       } else {
         repo = await repoService.cloneRepo(
           database,
           gitAuthService,
           repoUrl!,
-          { branch, directoryName, useWorktree, skipSSHVerification, baseBranch }
+          { branch, directoryName, useWorktree, skipSSHVerification, baseBranch, userId: ownerId }
         )
       }
-      
+
+      if (principal !== null && !canAccessRepo(database, repo.id, principal)) {
+        return c.json({ error: 'Forbidden' }, 403)
+      }
+
       return c.json(repo)
     } catch (error: unknown) {
       logger.error('Failed to create repo:', error)
@@ -88,10 +121,17 @@ export function createRepoRoutes(
         database,
         gitAuthService,
         result.data.rootPath,
-        result.data.maxDepth
+        result.data.maxDepth,
+        currentPrincipal(c)?.id ?? null
       )
 
-      return c.json(discovery)
+      const principal = currentPrincipal(c)
+      return c.json({
+        ...discovery,
+        repos: principal === null
+          ? discovery.repos
+          : discovery.repos.filter((repo) => canAccessOwner(repo.userId ?? null, principal)),
+      })
     } catch (error: unknown) {
       logger.error('Failed to discover repos:', error)
       return c.json({ error: getErrorMessage(error) }, getStatusCode(error) as ContentfulStatusCode)
@@ -100,9 +140,13 @@ export function createRepoRoutes(
 
 app.get('/', async (c) => {
     try {
+      const principal = currentPrincipal(c)
       const settingsService = new SettingsService(database)
-      const settings = settingsService.getSettings()
-      const repos = listRepos(database, settings.preferences.repoOrder)
+      const settings = settingsService.getSettings(principal?.id)
+      const allRepos = listRepos(database, settings.preferences.repoOrder)
+      const repos = principal === null
+        ? allRepos
+        : allRepos.filter((repo) => canAccessOwner(repo.userId ?? null, principal))
 
       const reposWithCurrentBranch = await Promise.all(
         repos.map(async (repo) => {

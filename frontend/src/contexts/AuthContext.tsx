@@ -10,7 +10,7 @@ interface AuthConfig {
   adminConfigured: boolean
 }
 
-interface AuthContextValue {
+export interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
   isLoading: boolean

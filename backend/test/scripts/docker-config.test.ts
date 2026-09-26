@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, statSync, existsSync, chmodSync } from 'fs'
-import { execFileSync, execSync, spawnSync } from 'child_process'
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, statSync, existsSync } from 'fs'
+import { execSync } from 'child_process'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { repoRoot } from '../helpers/repo-root'
@@ -49,21 +49,6 @@ describe('entrypoint library wiring', () => {
     expect(warnIndex).toBeLessThan(chownIndex)
   })
 
-  it('grants node access to /dev/kvm before dropping privileges without aborting startup', () => {
-    const entrypoint = read(entrypointPath)
-    expect(entrypoint).toMatch(/^grant_kvm_access\(\) \{/m)
-    const alignIndex = entrypoint.indexOf('if ! align_container_user node; then')
-    const grantCallIndex = entrypoint.indexOf('if ! grant_kvm_access; then')
-    const runuserIndex = entrypoint.indexOf('exec runuser -u node')
-    expect(alignIndex, 'entrypoint must align the container user').toBeGreaterThan(-1)
-    expect(grantCallIndex, 'entrypoint must call grant_kvm_access').toBeGreaterThan(-1)
-    expect(grantCallIndex).toBeGreaterThan(alignIndex)
-    expect(runuserIndex).toBeGreaterThan(grantCallIndex)
-    const grantBlock = entrypoint.slice(grantCallIndex, grantCallIndex + 200)
-    expect(grantBlock).toMatch(/WARNING: continuing without \/dev\/kvm access/)
-    expect(grantBlock.slice(0, grantBlock.indexOf('fi'))).not.toMatch(/exit 1/)
-  })
-
   it('does not re-chown /app when ids change', () => {
     const entrypoint = read(entrypointPath)
 
@@ -81,58 +66,8 @@ describe('entrypoint library wiring', () => {
   })
 })
 
-describe('microsandbox runtime install', () => {
-  const dockerfile = read(dockerfilePath)
-
-  it('declares MICROSANDBOX_VERSION next to the other tool args', () => {
-    expect(dockerfile).toMatch(/ARG MICROSANDBOX_VERSION=0\.7\.2/)
-  })
-
-  it('resolves the release URL from MICROSANDBOX_VERSION, not only the log message', () => {
-    const microsandboxRun = dockerfile.slice(dockerfile.indexOf('Installing microsandbox='), dockerfile.indexOf('msb --version'))
-    expect(microsandboxRun).toMatch(/releases\/download\/\$\{MSB_VERSION\}/)
-    expect(microsandboxRun).toMatch(/MSB_VERSION="v\$\{MICROSANDBOX_VERSION\}"/)
-  })
-
-  it('pins a tested version and avoids unauthenticated GitHub API lookups', () => {
-    const microsandboxRun = dockerfile.slice(dockerfile.indexOf('Installing microsandbox='), dockerfile.indexOf('msb --version'))
-    expect(microsandboxRun).not.toMatch(/releases\/latest\/download/)
-    expect(microsandboxRun).not.toContain('install.microsandbox.dev')
-    expect(microsandboxRun).not.toMatch(/api\.github\.com/)
-  })
-
-  it('passes the same MICROSANDBOX_VERSION from the docker-build workflow', () => {
-    const workflow = read(join(repoRoot, '.github/workflows/docker-build.yml'))
-    expect(workflow).toContain('MICROSANDBOX_VERSION=0.7.2')
-    expect(workflow).toContain('MICROSANDBOX_VERSION=${{ steps.versions.outputs.microsandbox }}')
-  })
-
-  it('downloads the arch-specific bundle and verifies its checksum', () => {
-    const microsandboxRun = dockerfile.slice(dockerfile.indexOf('Installing microsandbox='), dockerfile.indexOf('msb --version'))
-    expect(microsandboxRun).toMatch(/MSB_BUNDLE="microsandbox-linux-\$\{MSB_TARGET\}\.tar\.gz"/)
-    expect(microsandboxRun).toMatch(/MSB_TARGET="x86_64"/)
-    expect(microsandboxRun).toMatch(/MSB_TARGET="aarch64"/)
-    expect(microsandboxRun).toMatch(/checksums\.sha256/)
-    expect(microsandboxRun).toMatch(/sha256sum -c --quiet/)
-  })
-
-  it('installs msb and libkrunfw under /opt/microsandbox with the runtime symlinks', () => {
-    expect(dockerfile).toContain('/opt/microsandbox/bin/msb')
-    expect(dockerfile).toContain('/usr/local/bin/msb')
-    expect(dockerfile).toContain('/opt/microsandbox/lib/libkrunfw.so')
-    expect(dockerfile).toMatch(/chmod -R a\+rX \/opt\/microsandbox/)
-    expect(dockerfile).toMatch(/msb --version/)
-  })
-
-  it('keeps the state directory writable by the node user', () => {
-    expect(dockerfile).toMatch(/mkdir -p \/workspace \/app\/data \/home\/node\/\.cache \/home\/node\/\.opencode \/home\/node\/\.microsandbox/)
-    expect(dockerfile).toMatch(/chown -R node:node \/workspace \/app\/data \/home\/node/)
-  })
-})
-
 describe('uv install pin', () => {
   const dockerfile = read(dockerfilePath)
-  const sandboxDockerfile = read(join(repoRoot, 'Dockerfile.sandbox'))
   const workflow = read(join(repoRoot, '.github/workflows/docker-build.yml'))
   const uvRun = dockerfile.slice(dockerfile.indexOf('Installing uv='), dockerfile.indexOf('Downloading opencode'))
 
@@ -150,15 +85,10 @@ describe('uv install pin', () => {
     expect(workflow).not.toContain('astral-sh/uv.git')
   })
 
-  it('pins the same UV_VERSION in the sandbox guest image', () => {
-    expect(sandboxDockerfile).toMatch(/ARG UV_VERSION=0\.12\.7/)
-    expect(sandboxDockerfile).toContain('test "$(uv --version | cut -d\' \' -f2)" = "${UV_VERSION}"')
-  })
 })
 
 describe('chromium runtime libraries for playwright', () => {
   const dockerfile = read(dockerfilePath)
-  const sandboxDockerfile = read(join(repoRoot, 'Dockerfile.sandbox'))
   const workflow = read(join(repoRoot, '.github/workflows/docker-build.yml'))
   const installRun = dockerfile.slice(
     dockerfile.indexOf('Installing Chromium runtime libraries'),
@@ -180,10 +110,6 @@ describe('chromium runtime libraries for playwright', () => {
 
   it('cleans the apt lists and npm cache in the same layer', () => {
     expect(installRun).toContain('rm -rf /var/lib/apt/lists/* /root/.npm')
-  })
-
-  it('pins the same PLAYWRIGHT_VERSION in the sandbox guest image', () => {
-    expect(sandboxDockerfile).toMatch(/ARG PLAYWRIGHT_VERSION=1\.63\.0/)
   })
 
   it('passes the same PLAYWRIGHT_VERSION from the docker-build workflow', () => {
@@ -286,205 +212,6 @@ describe('docker lifecycle scripts', () => {
   })
 })
 
-describe('sandbox guest image', () => {
-  const sandboxDockerfilePath = join(repoRoot, 'Dockerfile.sandbox')
-  const sandboxDockerfile = read(sandboxDockerfilePath)
-
-  it('pins the pnpm store to a container-internal path via PNPM_CONFIG_STORE_DIR', () => {
-    expect(sandboxDockerfile).toContain('PNPM_CONFIG_STORE_DIR=/home/ocm-agent/.local/share/pnpm/store')
-    expect(sandboxDockerfile, 'pnpm 11 ignores npm_config_* env vars').not.toContain('npm_config_store_dir=')
-  })
-
-  it('builds from the same pinned base tag as the Manager image', () => {
-    const managerBase = read(dockerfilePath).match(/^FROM (node:\S+) AS base$/m)?.[1]
-    expect(managerBase).toMatch(/^node:\d+\.\d+\.\d+-trixie$/)
-    expect(sandboxDockerfile).toMatch(new RegExp(`^FROM ${managerBase!.replace(/\./g, '\\.')}$`, 'm'))
-  })
-
-  it('installs pnpm through npm at a pinned version and asserts it, without corepack', () => {
-    expect(sandboxDockerfile).toMatch(/ARG PNPM_VERSION=11\.24\.0/)
-    expect(sandboxDockerfile).toContain('npm install -g "pnpm@${PNPM_VERSION}"')
-    expect(sandboxDockerfile).toContain('test "$(pnpm --version)" = "${PNPM_VERSION}"')
-    expect(sandboxDockerfile).not.toContain('corepack')
-  })
-
-  it('pins bun through the installer tag and asserts the installed version', () => {
-    expect(sandboxDockerfile).toMatch(/ARG BUN_VERSION=1\.4\.2/)
-    expect(sandboxDockerfile).toContain('bash -s "bun-v${BUN_VERSION}"')
-    expect(sandboxDockerfile).toContain('test "$(bun --version)" = "${BUN_VERSION}"')
-  })
-
-  it('pins fallow, rust and go and asserts each installed version', () => {
-    expect(sandboxDockerfile).toMatch(/ARG FALLOW_VERSION=3\.27\.0/)
-    expect(sandboxDockerfile).toContain('"fallow@${FALLOW_VERSION}"')
-    expect(sandboxDockerfile).toContain('fallow --version | grep -x "fallow ${FALLOW_VERSION}" >/dev/null')
-    expect(sandboxDockerfile).toMatch(/ARG RUST_VERSION=1\.98\.1/)
-    expect(sandboxDockerfile).toContain('--profile minimal --default-toolchain "${RUST_VERSION}"')
-    expect(sandboxDockerfile).toContain('test "$(rustc --version | cut -d\' \' -f2)" = "${RUST_VERSION}"')
-    expect(sandboxDockerfile).toMatch(/ARG GO_VERSION=1\.27\.1/)
-    expect(sandboxDockerfile).toContain('test "$(go version | cut -d\' \' -f3)" = "go${GO_VERSION}"')
-  })
-
-  it('opens the rust homes to every uid and routes go installs onto the agent tools PATH', () => {
-    expect(sandboxDockerfile).toContain('ENV RUSTUP_HOME=/usr/local/rustup')
-    expect(sandboxDockerfile).toContain('ENV CARGO_HOME=/usr/local/cargo')
-    expect(sandboxDockerfile).toContain('chmod -R a+w "${RUSTUP_HOME}" "${CARGO_HOME}"')
-    expect(sandboxDockerfile).toContain('ENV GOBIN=/opt/agent-tools/bin')
-    expect(sandboxDockerfile).toContain('ENV PNPM_HOME=/opt/agent-tools')
-    expect(sandboxDockerfile).toMatch(/ENV PATH=\/opt\/agent-tools:\/opt\/agent-tools\/bin:\/usr\/local\/cargo\/bin:\/usr\/local\/go\/bin:\$PATH/)
-  })
-
-  it('declares npm_config_prefix only after every root-run npm install -g', () => {
-    const prefixIndex = sandboxDockerfile.indexOf('ENV npm_config_prefix=')
-    expect(prefixIndex).toBeGreaterThan(-1)
-    expect(sandboxDockerfile.lastIndexOf('npm install -g "')).toBeLessThan(prefixIndex)
-  })
-
-  it('verifies the rust and go toolchains as the unknown uid', () => {
-    const verifyRun = sandboxDockerfile.slice(sandboxDockerfile.indexOf('Verifying guest toolchain'))
-    expect(verifyRun).toMatch(/setpriv --reuid=4242 [^\n]*fallow --version/)
-    expect(verifyRun).toMatch(/setpriv --reuid=4242 [^\n]*cargo build/)
-    expect(verifyRun).toMatch(/setpriv --reuid=4242 [^\n]*go run \./)
-  })
-
-  it('runs each verification step under bash errexit and pipefail without head pipelines', () => {
-    const verifyRun = sandboxDockerfile.slice(sandboxDockerfile.indexOf('Verifying guest toolchain'))
-    expect(verifyRun).not.toContain('sh -c "set -e;')
-    expect(verifyRun).not.toContain('| head')
-    const scripts = [...verifyRun.matchAll(/bash -euo pipefail -c '([^']*)'/g)].map((match) => match[1]!)
-    expect(scripts).toHaveLength(3)
-  })
-
-  it('aborts the verification script when an injected cargo build fails', () => {
-    const verifyRun = sandboxDockerfile.slice(sandboxDockerfile.indexOf('Verifying guest toolchain'))
-    const rustGoScript = [...verifyRun.matchAll(/bash -euo pipefail -c '([^']*)'/g)]
-      .map((match) => match[1]!)
-      .find((script) => script.includes('cargo build'))
-    expect(rustGoScript, 'rust/go verification script must be extractable').toBeDefined()
-
-    const workDir = mkdtempSync(join(tmpdir(), 'sandbox-verify-'))
-    const binDir = join(workDir, 'bin')
-    mkdirSync(binDir)
-
-    const writeStub = (name: string, lines: string[]) => {
-      const stubPath = join(binDir, name)
-      writeFileSync(stubPath, ['#!/usr/bin/env bash', 'set -euo pipefail', ...lines, ''].join('\n'))
-      chmodSync(stubPath, 0o755)
-    }
-
-    writeStub('cargo', [
-      'crate_dir=""',
-      'for arg in "$@"; do crate_dir="$arg"; done',
-      'case "$1" in',
-      '  new) mkdir -p "$crate_dir/target/debug"; printf "%s\\n" "$crate_dir" > "$STUB_STATE/crate-dir" ;;',
-      '  build)',
-      '    dir="$(cat "$STUB_STATE/crate-dir")"',
-      '    printf "#!/usr/bin/env bash\\necho \\"Hello, world!\\"\\n" > "$dir/target/debug/rs-check"',
-      '    chmod +x "$dir/target/debug/rs-check"',
-      '    exit 1 ;;',
-      'esac',
-    ])
-
-    writeStub('go', [
-      'case "$1" in',
-      '  mod) exit 0 ;;',
-      '  run) echo go-ok ;;',
-      'esac',
-    ])
-
-    let status = 0
-    try {
-      execFileSync('bash', ['-e', '-u', '-o', 'pipefail', '-c', rustGoScript!], {
-        cwd: workDir,
-        env: { ...process.env, PATH: `${binDir}:${process.env.PATH ?? ''}`, TMPDIR: workDir, HOME: workDir, STUB_STATE: binDir },
-        stdio: 'pipe',
-      })
-    } catch (error) {
-      status = (error as { status?: number }).status ?? 1
-    }
-
-    expect(status, 'a failed cargo build must abort the verification script').not.toBe(0)
-    expect(existsSync(join(binDir, 'crate-dir'))).toBe(true)
-    rmSync(workDir, { recursive: true, force: true })
-  })
-})
-
-describe('sandbox image workflow', () => {
-  const workflow = read(join(repoRoot, '.github/workflows/sandbox-image.yml'))
-
-  it('builds each platform on a native runner instead of under qemu', () => {
-    expect(workflow).toMatch(/platform: linux\/amd64\n\s+runner: ubuntu-latest/)
-    expect(workflow).toMatch(/platform: linux\/arm64\n\s+runner: ubuntu-24\.04-arm/)
-    expect(workflow).not.toContain('setup-qemu-action')
-  })
-
-  it('pushes per-platform digests and merges them into one manifest list', () => {
-    expect(workflow).toContain('push-by-digest=true,name-canonical=true,push=true')
-    expect(workflow).toContain('docker buildx imagetools create')
-    expect(workflow).toContain('file: Dockerfile.sandbox')
-  })
-
-  it('publishes the digest-pinned default image repository', () => {
-    expect(workflow).toContain('IMAGE: docker.io/cstechdev/ocm-sandbox')
-  })
-
-  it('only pushes from this repository, never from fork pull requests', () => {
-    expect(workflow).toContain("github.event.pull_request.head.repo.full_name == github.repository")
-  })
-
-  it('validates pull requests without registry credentials or publishing', () => {
-    expect(workflow).toMatch(/- name: Login to Docker Hub\n\s+if: github.event_name == 'workflow_dispatch'/)
-    expect(workflow).toContain("|| 'type=cacheonly'")
-    expect(workflow).toMatch(/- name: Export digest\n\s+if: github.event_name == 'workflow_dispatch'/)
-    expect(workflow).toMatch(/- name: Upload digest\n\s+if: github.event_name == 'workflow_dispatch'/)
-    expect(workflow).toMatch(/merge:\n\s+if: github.event_name == 'workflow_dispatch'/)
-  })
-})
-
-describe('sandbox compose overlay', () => {
-  const overlayPath = join(repoRoot, 'docker-compose.sandbox.yml')
-  const overlay = read(overlayPath)
-  const overlayDirectives = overlay
-    .split('\n')
-    .filter((line) => line.trim() !== '' && !line.trimStart().startsWith('#'))
-
-  it('defaults SANDBOX_EXEC_USER from PUID so the guest identity tracks the workspace owner', () => {
-    expect(overlay).toContain('- SANDBOX_EXEC_USER=${SANDBOX_EXEC_USER:-${PUID:-1000}}')
-  })
-
-  it('keeps the base compose free of KVM and privileged flags', () => {
-    const compose = read(composePath)
-    expect(compose).not.toContain('privileged')
-    expect(compose).not.toContain('/dev/kvm')
-  })
-
-  it('grants KVM and persists microsandbox state only in the overlay', () => {
-    expect(overlay).toContain('"/dev/kvm:/dev/kvm"')
-    expect(overlay).toContain('"/dev/net/tun:/dev/net/tun"')
-    expect(overlay).toContain('- NET_ADMIN')
-    expect(overlay).toContain('microsandbox-data:/home/node/.microsandbox')
-    expect(overlay).toMatch(/^volumes:\n(?:.*\n)*?\s+microsandbox-data:/m)
-  })
-
-  it('grants only the devices and capability msb needs, never full container privilege', () => {
-    expect(overlayDirectives.join('\n')).not.toContain('privileged')
-  })
-
-  it('keeps the sandbox overlay docs snippet in sync with docker-compose.sandbox.yml', () => {
-    const docs = read(dockerDocsPath)
-    const docsOverlay = [...docs.matchAll(/```yaml\n([\s\S]*?)\n```/g)]
-      .map((match) => match[1]!)
-      .find((block) => block.includes('microsandbox-data'))
-
-    expect(docsOverlay, 'docs must contain the sandbox overlay yaml block').toBeDefined()
-
-    const significantLines = (source: string[]) =>
-      source.filter((line) => line.trim() !== '').map((line) => line.replace(/\s+$/, '')).join('\n')
-
-    expect(significantLines(docsOverlay!.split('\n'))).toBe(significantLines(overlayDirectives))
-  })
-})
-
 describe('named-volume migration recipe', () => {
   const runMigrationShell = (src: string, dst: string) => {
     const scriptDir = mkdtempSync(join(tmpdir(), 'migrate-script-'))
@@ -547,96 +274,3 @@ chown -R "$(id -u):$(id -g)" "$dst"
   })
 })
 
-describe('sandbox dockerd startup helper', () => {
-  const sandboxDockerfilePath = join(repoRoot, 'Dockerfile.sandbox')
-  const sandboxDockerdPath = join(repoRoot, 'scripts/sandbox-dockerd-start.sh')
-  const sandboxWorkflowPath = join(repoRoot, '.github/workflows/sandbox-image.yml')
-
-  const runSandboxDockerd = (options: { dockerExit?: number; env?: Record<string, string> } = {}) => {
-    const stubDir = mkdtempSync(join(tmpdir(), 'ocm-dockerd-'))
-    const logPath = join(stubDir, 'calls.log')
-    try {
-      const writeStub = (name: string, body: string) => {
-        const file = join(stubDir, name)
-        writeFileSync(file, `#!/bin/bash\n${body}\n`)
-        chmodSync(file, 0o755)
-      }
-
-      writeStub('timeout', 'shift\nexec "$@"')
-      writeStub(
-        'docker',
-        [
-          'echo "docker $*" >> "$OCM_STUB_LOG"',
-          'echo "DOCKER_HOST=${DOCKER_HOST:-<unset>}" >> "$OCM_STUB_LOG"',
-          'echo "DOCKER_CONTEXT=${DOCKER_CONTEXT:-<unset>}" >> "$OCM_STUB_LOG"',
-          'exit "${OCM_STUB_DOCKER_EXIT:-0}"',
-        ].join('\n'),
-      )
-      writeStub('id', 'case "$1" in\n  -u) echo "${OCM_STUB_CALLER_UID:-1000}" ;;\n  *) echo 0 ;;\nesac')
-      writeStub('sudo', 'echo "sudo $*" >> "$OCM_STUB_LOG"\nexit 0')
-      writeStub('setsid', 'echo "setsid $*" >> "$OCM_STUB_LOG"\nexit 0')
-
-      const result = spawnSync('sh', [sandboxDockerdPath], {
-        encoding: 'utf-8',
-        env: {
-          ...process.env,
-          PATH: `${stubDir}:${process.env.PATH ?? ''}`,
-          OCM_STUB_LOG: logPath,
-          OCM_STUB_DOCKER_EXIT: String(options.dockerExit ?? 0),
-          ...options.env,
-        },
-      })
-
-      const calls = existsSync(logPath) ? readFileSync(logPath, 'utf-8').split('\n').filter(Boolean) : []
-      return { result, calls }
-    } finally {
-      rmSync(stubDir, { recursive: true, force: true })
-    }
-  }
-
-  it('exits successfully against a ready guest daemon without sudo or setsid', () => {
-    const { result, calls } = runSandboxDockerd()
-
-    expect(result.status).toBe(0)
-    expect(calls.some((call) => call.startsWith('sudo '))).toBe(false)
-    expect(calls.some((call) => call.startsWith('setsid '))).toBe(false)
-  })
-
-  it('probes with the explicit socket after stripping ambient DOCKER_HOST and DOCKER_CONTEXT', () => {
-    const { result, calls } = runSandboxDockerd({
-      env: { DOCKER_HOST: 'tcp://ambient:2375', DOCKER_CONTEXT: 'ambient-context' },
-    })
-
-    expect(result.status).toBe(0)
-    expect(calls).toContain('docker -H unix:///var/run/docker.sock info')
-    expect(calls).toContain('DOCKER_HOST=<unset>')
-    expect(calls).toContain('DOCKER_CONTEXT=<unset>')
-  })
-
-  it('reexecutes itself through sudo -n when a non-root caller cannot reach the daemon', () => {
-    const { result, calls } = runSandboxDockerd({
-      dockerExit: 1,
-      env: { OCM_STUB_CALLER_UID: '1000' },
-    })
-
-    expect(result.status).toBe(0)
-    expect(calls).toContain(`sudo -n ${sandboxDockerdPath}`)
-    expect(calls.some((call) => call.startsWith('setsid '))).toBe(false)
-  })
-
-  it('installs Docker from the official Debian repository', () => {
-    const sandboxDockerfile = read(sandboxDockerfilePath)
-    expect(sandboxDockerfile).toContain('https://download.docker.com/linux/debian')
-    expect(sandboxDockerfile).toContain('docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin')
-  })
-
-  it('copies the startup helper into the guest image', () => {
-    const sandboxDockerfile = read(sandboxDockerfilePath)
-    expect(sandboxDockerfile).toMatch(/^COPY --chmod=0755 scripts\/sandbox-dockerd-start\.sh \/usr\/local\/bin\/ocm-dockerd-start$/m)
-  })
-
-  it('runs the sandbox image workflow when the helper changes', () => {
-    const workflow = read(sandboxWorkflowPath)
-    expect(workflow).toMatch(/pull_request:\n\s+paths:\n(?:\s+-\s+\S+\n)*\s+-\s+scripts\/sandbox-dockerd-start\.sh/)
-  })
-})

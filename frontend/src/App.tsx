@@ -12,6 +12,7 @@ import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { Setup } from './pages/Setup'
 import { AssistantRedirect } from './pages/AssistantRedirect'
+import { TerminalPage } from './pages/Terminal'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
@@ -28,7 +29,7 @@ import { EventProvider, usePermissions, useEventContext } from '@/contexts/Event
 import { SwipeNavigationProvider, useSwipeNavigation } from '@/contexts/SwipeNavigationContext'
 import { PermissionRequestDialog } from './components/session/PermissionRequestDialog'
 import { SSHHostKeyDialog } from './components/ssh/SSHHostKeyDialog'
-import { loginLoader, setupLoader, registerLoader, protectedLoader } from './lib/auth-loaders'
+import { loginLoader, setupLoader, registerLoader, protectedLoader, adminLoader } from './lib/auth-loaders'
 import { getSwipeBackTarget } from '@/lib/navigation'
 import { onNotificationClick } from '@/lib/serviceWorker'
 import { useAuth } from '@/hooks/useAuth'
@@ -235,6 +236,11 @@ const router = createBrowserRouter([
         path: '/schedules',
         element: <GlobalSchedules />,
         loader: protectedLoader,
+      },
+      {
+        path: '/terminal',
+        element: <TerminalPage />,
+        loader: adminLoader,
       },
     ],
   },

@@ -36,7 +36,7 @@ describe('prompt template repository', () => {
   })
 
   it('lists the seeded templates in ascending id order', () => {
-    const templates = listPromptTemplates(db)
+    const templates = listPromptTemplates(db, 'u1')
 
     expect(templates.length).toBeGreaterThan(0)
     expect(templates.map(template => template.id)).toEqual(
@@ -45,7 +45,7 @@ describe('prompt template repository', () => {
   })
 
   it('creates a template and reads it back by id', () => {
-    const created = createPromptTemplate(db, createTemplateInput())
+    const created = createPromptTemplate(db, createTemplateInput(), 'u1')
 
     expect(created.id).toBeGreaterThan(0)
     expect(created.title).toBe('Daily standup')
@@ -55,10 +55,10 @@ describe('prompt template repository', () => {
   })
 
   it('includes newly created templates in the list ordered by id', () => {
-    const first = createPromptTemplate(db, createTemplateInput({ title: 'First' }))
-    const second = createPromptTemplate(db, createTemplateInput({ title: 'Second' }))
+    const first = createPromptTemplate(db, createTemplateInput({ title: 'First' }), 'u1')
+    const second = createPromptTemplate(db, createTemplateInput({ title: 'Second' }), 'u1')
 
-    const ids = listPromptTemplates(db).map(template => template.id)
+    const ids = listPromptTemplates(db, 'u1').map(template => template.id)
     expect(ids).toContain(first.id)
     expect(ids).toContain(second.id)
     expect(ids.indexOf(first.id)).toBeLessThan(ids.indexOf(second.id))
@@ -70,7 +70,7 @@ describe('prompt template repository', () => {
   })
 
   it('updates provided fields and preserves the rest', () => {
-    const created = createPromptTemplate(db, createTemplateInput())
+    const created = createPromptTemplate(db, createTemplateInput(), 'u1')
 
     const updated = updatePromptTemplate(db, created.id, {
       title: 'Renamed',
@@ -90,11 +90,11 @@ describe('prompt template repository', () => {
   })
 
   it('deletes an existing template and reports success', () => {
-    const created = createPromptTemplate(db, createTemplateInput())
+    const created = createPromptTemplate(db, createTemplateInput(), 'u1')
 
     expect(deletePromptTemplate(db, created.id)).toBe(true)
     expect(getPromptTemplateById(db, created.id)).toBeNull()
-    expect(listPromptTemplates(db).map(template => template.id)).not.toContain(created.id)
+    expect(listPromptTemplates(db, 'u1').map(template => template.id)).not.toContain(created.id)
   })
 
   it('returns false when deleting an unknown template', () => {

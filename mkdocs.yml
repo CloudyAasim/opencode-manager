@@ -44,13 +44,18 @@ nav:
     - Push Notifications: features/notifications.md
     - OpenCode Server Health: features/server-health.md
     - Manager Logs: features/logs.md
-    - Agent Sandboxing: features/sandboxing.md
+    - Web Terminal: features/terminal.md
     - Mobile & PWA: features/mobile.md
   - Configuration:
     - Environment Variables: configuration/environment.md
     - Authentication: configuration/authentication.md
     - OAuth Providers: configuration/oauth.md
     - Docker: configuration/docker.md
+  - Cloud Deployment:
+    - One-Click Deploy: cloud/one-click-deploy.md
+    - Security Plan: cloud/security-plan.md
+    - VPS + Caddy: cloud/deployment.md
+    - Internationalization: cloud/i18n.md
   - Development:
     - Local Setup: development/setup.md
     - Contributing: development/contributing.md

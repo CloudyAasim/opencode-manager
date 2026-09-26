@@ -7,19 +7,22 @@ import { LogsViewer } from '@/components/settings/LogsViewer'
 import { OpenCodeServerAuthSettings } from '@/components/settings/OpenCodeServerAuthSettings'
 import { ManagerTokenSettings } from '@/components/settings/ManagerTokenSettings'
 import { ServerEnvVarsSettings } from '@/components/settings/ServerEnvVarsSettings'
-import { SandboxSettings } from '@/components/settings/SandboxSettings'
 import { ServerHealthStatus } from '@/components/settings/ServerHealthStatus'
 import { ProviderSettings } from '@/components/settings/ProviderSettings'
 import { AccountSettings } from '@/components/settings/AccountSettings'
+import { UsersSettings } from '@/components/settings/UsersSettings'
+import { AuditSettings } from '@/components/settings/AuditSettings'
 import { VoiceSettings } from '@/components/settings/VoiceSettings'
 import { NotificationSettings } from '@/components/settings/NotificationSettings'
 import { VersionSelectDialog } from '@/components/settings/VersionSelectDialog'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { RowActionsMenuContext } from '@/components/ui/settings-list'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Volume2, Bell, X, ScrollText, type LucideIcon } from 'lucide-react'
+import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Users, History, Volume2, Bell, X, ScrollText, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSettingsDialog, isSettingsContentTab, type SettingsContentTab } from '@/hooks/useSettingsDialog'
+import { useOptionalAuth } from '@/hooks/useAuth'
+import { useI18n } from '@/lib/i18n'
 import { DESKTOP_MEDIA_QUERY, useMediaQuery } from '@/hooks/useMediaQuery'
 
 type SettingsView = 'menu' | SettingsContentTab
@@ -40,7 +43,6 @@ function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => 
             <ManagerTokenSettings isOpen={authSectionsOpen} onToggle={toggleAuthSections} />
           </div>
           <ServerEnvVarsSettings />
-          <SandboxSettings />
         </section>
       </div>
     </RowActionsMenuContext.Provider>
@@ -49,6 +51,9 @@ function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => 
 
 export function SettingsDialog() {
   const { isOpen, close, activeTab, setActiveTab } = useSettingsDialog()
+  const auth = useOptionalAuth()
+  const user = auth?.user ?? null
+  const { t } = useI18n()
   const isDesktop = useMediaQuery(DESKTOP_MEDIA_QUERY)
   const [mobileView, setMobileView] = useState<SettingsView>('menu')
   const [isVersionDialogOpen, setIsVersionDialogOpen] = useState(false)
@@ -108,15 +113,21 @@ export function SettingsDialog() {
   }, [isOpen, close, isVersionDialogOpen])
 
   const menuItems: Array<{ id: SettingsContentTab; icon: LucideIcon; label: string; description: string }> = [
-    { id: 'account', icon: User, label: 'Account', description: 'Profile, passkeys, and sign out' },
-    { id: 'general', icon: Settings2, label: 'General Settings', description: 'App preferences and behavior' },
-    { id: 'notifications', icon: Bell, label: 'Notifications', description: 'Push notification preferences' },
-    { id: 'voice', icon: Volume2, label: 'Voice', description: 'Text-to-speech and speech-to-text settings' },
-    { id: 'git', icon: GitBranch, label: 'Git', description: 'Git identity and credentials for repositories' },
-    { id: 'shortcuts', icon: Keyboard, label: 'Keyboard Shortcuts', description: 'Customize keyboard shortcuts' },
-    { id: 'opencode', icon: Code, label: 'OpenCode Config', description: 'Manage OpenCode configurations, commands, and agents' },
-    { id: 'logs', icon: ScrollText, label: 'Logs', description: 'Live manager and OpenCode server logs' },
-    { id: 'providers', icon: Key, label: 'Providers', description: 'Manage AI provider API keys' },
+    { id: 'account', icon: User, label: t('settings.menu.account.label'), description: t('settings.menu.account.description') },
+    { id: 'general', icon: Settings2, label: t('settings.menu.general.label'), description: t('settings.menu.general.description') },
+    { id: 'notifications', icon: Bell, label: t('settings.menu.notifications.label'), description: t('settings.menu.notifications.description') },
+    { id: 'voice', icon: Volume2, label: t('settings.menu.voice.label'), description: t('settings.menu.voice.description') },
+    { id: 'git', icon: GitBranch, label: t('settings.menu.git.label'), description: t('settings.menu.git.description') },
+    { id: 'shortcuts', icon: Keyboard, label: t('settings.menu.shortcuts.label'), description: t('settings.menu.shortcuts.description') },
+    { id: 'opencode', icon: Code, label: t('settings.menu.opencode.label'), description: t('settings.menu.opencode.description') },
+    { id: 'logs', icon: ScrollText, label: t('settings.menu.logs.label'), description: t('settings.menu.logs.description') },
+    { id: 'providers', icon: Key, label: t('settings.menu.providers.label'), description: t('settings.menu.providers.description') },
+    ...(user?.role === 'admin'
+      ? [
+          { id: 'users' as const, icon: Users, label: t('settings.menu.users.label'), description: t('settings.menu.users.description') },
+          { id: 'audit' as const, icon: History, label: t('settings.menu.audit.label'), description: t('settings.menu.audit.description') },
+        ]
+      : []),
   ]
 
   const handleOpenMobileView = useCallback((view: SettingsContentTab) => {
@@ -147,7 +158,7 @@ export function SettingsDialog() {
          <DialogTitle className="sr-only">Settings</DialogTitle>
          <div className="hidden sm:flex sm:h-full sm:min-h-0 sm:flex-col">
            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-background px-4">
-             <h2 className="text-lg font-semibold text-foreground">Settings</h2>
+             <h2 className="text-lg font-semibold text-foreground">{t('settings.title')}</h2>
              <Button
                variant="ghost"
                size="icon"
@@ -190,6 +201,12 @@ export function SettingsDialog() {
               </TabsContent>
               <TabsContent key="logs" value="logs" className="mt-0 h-full min-h-0 px-0">{isDesktop && <LogsViewer />}</TabsContent>
               <TabsContent key="providers" value="providers" className="mt-0 px-0 max-w-7xl"><ProviderSettings /></TabsContent>
+              {user?.role === 'admin' && (
+                <TabsContent key="users" value="users" className="mt-0 px-0 max-w-7xl"><UsersSettings /></TabsContent>
+              )}
+              {user?.role === 'admin' && (
+                <TabsContent key="audit" value="audit" className="mt-0 px-0 max-w-7xl"><AuditSettings /></TabsContent>
+              )}
             </div>
           </Tabs>
         </div>
@@ -208,7 +225,7 @@ export function SettingsDialog() {
                   </Button>
                 )}
                <h2 className="text-xl font-semibold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
-                 {mobileView === 'menu' ? 'Settings' : menuItems.find(item => item.id === mobileView)?.label}
+                 {mobileView === 'menu' ? t('settings.title') : menuItems.find(item => item.id === mobileView)?.label}
                </h2>
              </div>
               <Button
@@ -255,6 +272,8 @@ export function SettingsDialog() {
                    <OpenCodeSettings key="opencode" onOpenVersionDialog={() => setIsVersionDialogOpen(true)} />
                 )}
               {mobileView === 'providers' && <div key="providers"><ProviderSettings /></div>}
+              {mobileView === 'users' && user?.role === 'admin' && <div key="users"><UsersSettings /></div>}
+              {mobileView === 'audit' && user?.role === 'admin' && <div key="audit"><AuditSettings /></div>}
               {mobileView === 'logs' && !isDesktop && <div key="logs" className="h-full min-h-0"><LogsViewer /></div>}
            </div>
         </div>

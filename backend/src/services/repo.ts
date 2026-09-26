@@ -243,7 +243,8 @@ async function registerExistingLocalRepo(
   gitAuthService: GitAuthService,
   sourcePath: string,
   branch?: string,
-  rootPath?: string
+  rootPath?: string,
+  userId?: string | null
 ): Promise<{ repo: Repo; existed: boolean }> {
   const normalizedSourcePath = normalizeAbsolutePath(sourcePath)
   const env = gitAuthService.getGitEnvironment()
@@ -296,6 +297,7 @@ async function registerExistingLocalRepo(
     clonedAt: Date.now(),
     isLocal: true,
     isWorktree: await isGitWorktreeRepo(normalizedSourcePath),
+    userId: userId ?? null,
   })
 
   logger.info(`Registered local repo at ${normalizedSourcePath} as ${repoLocalPath}`)
@@ -306,7 +308,8 @@ export async function discoverLocalRepos(
   database: Database,
   gitAuthService: GitAuthService,
   rootPath: string,
-  maxDepth: number = DEFAULT_DISCOVERY_MAX_DEPTH
+  maxDepth: number = DEFAULT_DISCOVERY_MAX_DEPTH,
+  userId?: string | null
 ): Promise<{
   repos: Repo[]
   discoveredCount: number
@@ -360,7 +363,7 @@ export async function discoverLocalRepos(
 
   for (const repoPath of repoPaths.sort((left, right) => left.localeCompare(right))) {
     try {
-      const result = await registerExistingLocalRepo(database, gitAuthService, repoPath, undefined, normalizedRootPath)
+      const result = await registerExistingLocalRepo(database, gitAuthService, repoPath, undefined, normalizedRootPath, userId)
       repos.push(result.repo)
       if (result.existed) {
         existingCount += 1
@@ -491,12 +494,13 @@ export async function initLocalRepo(
   database: Database,
   gitAuthService: GitAuthService,
   localPath: string,
-  branch?: string
+  branch?: string,
+  userId?: string | null
 ): Promise<Repo> {
   const normalizedInputPath = normalizeInputPath(localPath)
 
   if (path.isAbsolute(normalizedInputPath)) {
-    const result = await registerExistingLocalRepo(database, gitAuthService, normalizedInputPath, branch)
+    const result = await registerExistingLocalRepo(database, gitAuthService, normalizedInputPath, branch, undefined, userId)
     return result.repo
   }
 
@@ -515,6 +519,7 @@ export async function initLocalRepo(
     cloneStatus: 'cloning',
     clonedAt: Date.now(),
     isLocal: true,
+    userId: userId ?? null,
   }
   
   let repo: Repo
@@ -580,6 +585,7 @@ export interface CloneRepoOptions {
   useWorktree?: boolean
   skipSSHVerification?: boolean
   baseBranch?: string
+  userId?: string | null
 }
 
 export async function cloneRepo(
@@ -588,7 +594,7 @@ export async function cloneRepo(
   repoUrl: string,
   options: CloneRepoOptions = {}
 ): Promise<Repo> {
-  const { branch, directoryName, useWorktree = false, skipSSHVerification = false, baseBranch } = options
+  const { branch, directoryName, useWorktree = false, skipSSHVerification = false, baseBranch, userId = null } = options
   const effectiveUrl = normalizeSSHUrl(repoUrl)
   const isSSH = isSSHUrl(effectiveUrl)
   const preserveSSH = isSSH
@@ -619,6 +625,7 @@ export async function cloneRepo(
     defaultBranch: branch || 'main',
     cloneStatus: 'cloning',
     clonedAt: Date.now(),
+    userId,
   }
   
   if (shouldUseWorktree) {
@@ -1089,8 +1096,8 @@ export async function ensureMirrorTarget(database: Database, repo: Repo, branch:
 
   try {
     const worktreeRepo = createRepo(database, repo.repoUrl
-      ? { repoUrl: repo.repoUrl, localPath: plan.localPath, branch, defaultBranch: branch, cloneStatus: 'ready', clonedAt: Date.now(), isWorktree: true }
-      : { isLocal: true, localPath: plan.localPath, branch, defaultBranch: branch, cloneStatus: 'ready', clonedAt: Date.now(), isWorktree: true })
+      ? { repoUrl: repo.repoUrl, localPath: plan.localPath, branch, defaultBranch: branch, cloneStatus: 'ready', clonedAt: Date.now(), isWorktree: true, userId: repo.userId ?? null }
+      : { isLocal: true, localPath: plan.localPath, branch, defaultBranch: branch, cloneStatus: 'ready', clonedAt: Date.now(), isWorktree: true, userId: repo.userId ?? null })
 
     if (worktreeRepo.localPath !== plan.localPath) {
       throw new Error(`branch ${branch} is already registered as repo ${worktreeRepo.id} at ${worktreeRepo.fullPath}`)
@@ -1128,9 +1135,9 @@ export function ensureMirrorTargetPath(name: string): { fullPath: string; localP
 
 export function createRepoRow(
   database: Database,
-  params: { name: string; originUrl?: string; localPath: string; fullPath: string; branch?: string }
+  params: { name: string; originUrl?: string; localPath: string; fullPath: string; branch?: string; userId?: string | null }
 ): { repo: Repo; created: boolean } {
-  const { originUrl, localPath, branch } = params
+  const { originUrl, localPath, branch, userId = null } = params
 
   const existing = originUrl
     ? getRepoByUrlAndBranch(database, originUrl, branch)
@@ -1148,6 +1155,7 @@ export function createRepoRow(
     cloneStatus: 'ready',
     clonedAt: Date.now(),
     isLocal: !originUrl,
+    userId,
   } as CreateRepoInput)
 
   return { repo, created: true }

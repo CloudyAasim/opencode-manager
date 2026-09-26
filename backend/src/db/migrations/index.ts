@@ -19,6 +19,9 @@ import migration017 from './017-schedule-run-workspace-id'
 import migration018 from './018-session-pins'
 import migration019 from './019-drop-opencode-configs'
 import migration020 from './020-drop-opencode-model-state'
+import migration021 from './021-terminal-audit'
+import migration022 from './022-tenant-ownership'
+import migration023 from './023-user-username'
 
 export const allMigrations: Migration[] = [
   migration001,
@@ -41,4 +44,7 @@ export const allMigrations: Migration[] = [
   migration018,
   migration019,
   migration020,
+  migration021,
+  migration022,
+  migration023,
 ]

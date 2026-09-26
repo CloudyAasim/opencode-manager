@@ -36,3 +36,6 @@ backend/data
 *~
 .npm
 .yarn
+
+**/__pycache__
+**/*.pyc

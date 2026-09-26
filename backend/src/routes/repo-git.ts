@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import type { Database } from 'bun:sqlite'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { getRepoById } from '../db/queries'
+import { canAccessRepo, principalFrom } from '../auth/ownership'
+import type { Session } from '../auth'
 import { logger } from '../utils/logger'
 import { parseGitError } from '../utils/git-errors'
 import { GitService } from '../services/git/GitService'
@@ -47,10 +49,17 @@ export function createRepoGitRoutes(database: Database, gitAuthService: GitAuthS
         return c.json({ error: 'repoIds must be an array of numbers' }, 400)
       }
 
+      const principal = principalFrom(
+        (c as unknown as { get: (key: string) => Session['user'] | undefined }).get('user'),
+      )
+      const allowedRepoIds = principal === null
+        ? repoIds
+        : repoIds.filter((id: number) => canAccessRepo(database, id, principal))
+
       const BATCH_CONCURRENCY = 3
       const results: Array<[number, GitStatusResponse] | null> = []
-      for (let i = 0; i < repoIds.length; i += BATCH_CONCURRENCY) {
-        const batch = repoIds.slice(i, i + BATCH_CONCURRENCY)
+      for (let i = 0; i < allowedRepoIds.length; i += BATCH_CONCURRENCY) {
+        const batch = allowedRepoIds.slice(i, i + BATCH_CONCURRENCY)
         const batchResults = await Promise.all(
           batch.map(async (id) => {
             try {

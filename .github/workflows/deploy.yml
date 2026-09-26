@@ -1,0 +1,21 @@
+name: 'deploy'
+on:
+  push:
+    branches:
+      - main   # 改成你的主分支名，如 main 或 master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cloning repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to dokku
+        uses: dokku/github-action@master
+        with:
+          git_remote_url: 'ssh://dokku@dokku.BASE_DOMAIN:22/opencode-manager'
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh_host_key: ${{ secrets.SSH_HOST_KEY }}

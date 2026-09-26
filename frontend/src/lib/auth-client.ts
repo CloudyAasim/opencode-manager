@@ -26,4 +26,5 @@ export const {
 export const passkey = authClient.passkey
 
 export type AuthSession = typeof authClient.$Infer.Session
-export type AuthUser = AuthSession['user']
+export type UserRole = 'admin' | 'user'
+export type AuthUser = AuthSession['user'] & { role?: UserRole; username?: string | null }

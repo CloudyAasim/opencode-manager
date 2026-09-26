@@ -14,6 +14,7 @@ interface CreateRepoInputBase {
   defaultBranch: string
   cloneStatus: 'cloning' | 'ready' | 'error'
   clonedAt: number
+  userId?: string | null
   isWorktree?: boolean
 }
 

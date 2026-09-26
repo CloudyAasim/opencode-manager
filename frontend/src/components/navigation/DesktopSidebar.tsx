@@ -21,7 +21,7 @@ export function DesktopSidebar() {
   const { updateParams } = useUrlParams()
   const [collapsed, toggle] = useSidebarCollapsed()
   const [repoSwitcherOpen, setRepoSwitcherOpen] = useState(false)
-  const { isAuthenticated, isLoading, logout } = useAuth()
+  const { isAuthenticated, isLoading, logout, user } = useAuth()
 
   const isDesktop = useDesktop()
 
@@ -33,7 +33,7 @@ export function DesktopSidebar() {
     return null
   }
 
-  const { primary, items } = buildNavModel(location.pathname)
+  const { primary, items } = buildNavModel(location.pathname, { isAdmin: user?.role === 'admin' })
 
   const handlePrimaryClick = (item: NavPrimaryCta) => {
     if (item.to) {

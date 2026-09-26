@@ -15,7 +15,6 @@ import {
   type UpdateOpenCodeConfigRequest,
   type ModelConfig,
   type ProviderConfig,
-  type SandboxPreferences,
   type SkillFileInfo,
   type CreateSkillRequest,
   type UpdateSkillRequest,
@@ -26,7 +25,7 @@ import {
 import type { NotificationPreferences } from '@opencode-manager/shared/types'
 import { saveFile } from '@/lib/download'
 
-export type { TTSConfig, STTConfig, OpenCodeConfigFile, OpenCodeConfigSourceFile, OpenCodeConfigSourceName, UpdateOpenCodeConfigRequest, ModelConfig, ProviderConfig, SandboxPreferences, NotificationPreferences, SkillFileInfo, CreateSkillRequest, UpdateSkillRequest, SkillScope, InstallSkillFromGithubRequest, InstallSkillResponse }
+export type { TTSConfig, STTConfig, OpenCodeConfigFile, OpenCodeConfigSourceFile, OpenCodeConfigSourceName, UpdateOpenCodeConfigRequest, ModelConfig, ProviderConfig, NotificationPreferences, SkillFileInfo, CreateSkillRequest, UpdateSkillRequest, SkillScope, InstallSkillFromGithubRequest, InstallSkillResponse }
 export { DEFAULT_TTS_CONFIG, DEFAULT_STT_CONFIG, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_USER_PREFERENCES, DEFAULT_LEADER_KEY, BLOCKED_SERVER_ENV_KEYS, DEFAULT_SERVER_ENV_VARS }
 export { isOpenCodeConfigSourceName } from '@opencode-manager/shared'
 
@@ -92,7 +91,6 @@ export interface UserPreferences {
   repoSortMode?: 'recent' | 'manual' | 'name'
   serverEnvVars?: Array<{ key: string; value: string }>
   disabledDefaultServerEnvVars?: string[]
-  sandbox?: SandboxPreferences
 }
 
 export interface SettingsResponse {

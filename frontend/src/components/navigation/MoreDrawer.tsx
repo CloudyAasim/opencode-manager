@@ -35,7 +35,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
   const swipeRef = useRef<HTMLDivElement>(null)
   const { bind } = useSwipeBack(onClose, { enabled: isOpen, suspendsRouteSwipe: true })
   const { searchParams, updateParams } = useUrlParams()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const { data: health } = useServerHealth()
   const isSessionDetail = /^\/repos\/\d+\/sessions\/[^/]+$/.test(location.pathname)
   const isAssistantRoute = isAssistantPath(location.pathname)
@@ -118,7 +118,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
     onClose()
   }
 
-  const items = buildMoreItems(location.pathname)
+  const items = buildMoreItems(location.pathname, { isAdmin: user?.role === 'admin' })
   const commands = filterCommands('')
 
   const opencodeVersion = health?.opencodeVersion

@@ -11,14 +11,50 @@ The authentication system supports:
 - OAuth social login (optional)
 - Session-based auth with secure cookies
 
+## Account Management
+
+OpenCode Manager defaults to **no self-registration**. Accounts can only be created by:
+
+1. Setting `ADMIN_EMAIL` + `ADMIN_PASSWORD` (bootstrap administrator on first startup).
+2. An administrator creating users in **Settings → Users** (create, change role, reset
+   password, delete).
+
+`AUTH_ALLOW_SIGNUP=false` (the default) blocks the email sign-up endpoint *and* blocks
+new identities created through an OAuth provider. Set it to `true` only on a trusted
+network. `AUTH_ALLOWED_EMAILS` / `AUTH_ALLOWED_EMAIL_DOMAINS` allow specific sign-ups
+without opening registration.
+
+Roles are `admin` and `user`. Administrators can manage accounts; the last remaining
+administrator cannot be deleted or demoted, and you cannot delete your own account.
+
+## Rate Limiting
+
+The authentication API is rate limited per client IP out of the box:
+
+| Endpoint | Limit |
+|----------|-------|
+| `/sign-in/email` | 5 / minute |
+| `/sign-up/email` | 3 / minute |
+| `/sign-in/passkey` | 10 / minute |
+| `/forget-password` | 3 / minute |
+
+Set `AUTH_TRUST_PROXY=true` when running behind a reverse proxy (Caddy, Nginx,
+Cloudflare) so the real client IP is used. Leave it `false` when the application port is
+exposed directly, otherwise clients can spoof the header and bypass the limits.
+
 ## First-Run Setup
 
-On first launch with no admin account:
+Self-registration is disabled, so the first administrator is created from the
+environment. Set:
 
-1. You're redirected to the Setup page
-2. Create your admin account
-3. Optionally configure providers
-4. Start using the application
+```bash
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your-secure-password
+```
+
+On startup the account is created (or promoted to `admin` if it already exists) and you
+sign in with those credentials. If no account exists and `ADMIN_*` is not configured, the
+app shows a notice and logs a warning — it cannot be used until an administrator exists.
 
 ## Pre-Configured Admin
 

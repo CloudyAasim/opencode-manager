@@ -48,6 +48,20 @@ const resolveBrowseRoot = (): string => {
   return path.resolve(envPath)
 }
 
+const resolveTerminalCwd = (): string => {
+  const workspace = resolveWorkspacePath()
+  const envPath = process.env.OCM_TERMINAL_CWD
+  if (!envPath) {
+    return workspace
+  }
+  const resolved = envPath.startsWith('~')
+    ? path.join(os.homedir(), envPath.slice(1))
+    : path.resolve(envPath)
+  const relative = path.relative(workspace, resolved)
+  const insideWorkspace = relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
+  return insideWorkspace ? resolved : workspace
+}
+
 const generateDefaultSecret = (): string => {
   return randomBytes(32).toString('base64').slice(0, 32)
 }
@@ -62,6 +76,7 @@ export const ENV = {
     HOST: getEnvString('HOST', DEFAULTS.SERVER.HOST),
     CORS_ORIGIN: getEnvString('CORS_ORIGIN', DEFAULTS.SERVER.CORS_ORIGIN),
     NODE_ENV: getEnvString('NODE_ENV', 'development'),
+    ALLOW_ENV_EDIT: getEnvBoolean('OCM_ALLOW_SERVER_ENV_EDIT', getEnvString('NODE_ENV', 'development') !== 'production'),
   },
 
   OPENCODE: {
@@ -86,17 +101,6 @@ export const ENV = {
     SCHEDULE_WORKTREES_DIR: DEFAULTS.WORKSPACE.SCHEDULE_WORKTREES_DIR,
     CONFIG_DIR: DEFAULTS.WORKSPACE.CONFIG_DIR,
     AUTH_FILE: DEFAULTS.WORKSPACE.AUTH_FILE,
-  },
-
-  SANDBOX: {
-    MSB_PATH: getEnvString('MSB_PATH', DEFAULTS.SANDBOX.MSB_PATH),
-    IMAGE: getEnvString('SANDBOX_IMAGE', DEFAULTS.SANDBOX.IMAGE),
-    MEMORY: getEnvString('SANDBOX_MEMORY', DEFAULTS.SANDBOX.MEMORY),
-    CPUS: getEnvNumber('SANDBOX_CPUS', DEFAULTS.SANDBOX.CPUS),
-    EXEC_USER: getEnvString('SANDBOX_EXEC_USER', DEFAULTS.SANDBOX.EXEC_USER),
-    NET: getEnvString('SANDBOX_NET', DEFAULTS.SANDBOX.NET),
-    START_TIMEOUT_MS: getEnvNumber('SANDBOX_START_TIMEOUT_MS', DEFAULTS.SANDBOX.START_TIMEOUT_MS),
-    EXEC_TIMEOUT_MS: getEnvNumber('SANDBOX_EXEC_TIMEOUT_MS', DEFAULTS.SANDBOX.EXEC_TIMEOUT_MS),
   },
 
   TIMEOUTS: {
@@ -128,6 +132,12 @@ export const ENV = {
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
     ADMIN_PASSWORD_RESET: getEnvBoolean('ADMIN_PASSWORD_RESET', false),
+    ALLOW_SIGNUP: getEnvBoolean('AUTH_ALLOW_SIGNUP', getEnvString('NODE_ENV', 'development') !== 'production'),
+    ALLOWED_EMAILS: getEnvString('AUTH_ALLOWED_EMAILS', ''),
+    ALLOWED_EMAIL_DOMAINS: getEnvString('AUTH_ALLOWED_EMAIL_DOMAINS', ''),
+    SESSION_EXPIRES_IN_DAYS: getEnvNumber('AUTH_SESSION_EXPIRES_IN_DAYS', 7),
+    RATE_LIMIT_ENABLED: getEnvBoolean('AUTH_RATE_LIMIT_ENABLED', true),
+    TRUST_PROXY: getEnvBoolean('AUTH_TRUST_PROXY', false),
     GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
@@ -139,9 +149,31 @@ export const ENV = {
     PASSKEY_ORIGIN: getEnvString('PASSKEY_ORIGIN', 'http://localhost:5003'),
   },
 
+  SECURITY: {
+    HSTS: getEnvBoolean('SECURITY_HSTS', getEnvString('NODE_ENV', 'development') === 'production'),
+    CSP: getEnvString('SECURITY_CSP', DEFAULTS.SECURITY.CONTENT_SECURITY_POLICY),
+  },
+
+  TERMINAL: {
+    ENABLED: getEnvBoolean('OCM_TERMINAL_ENABLED', DEFAULTS.TERMINAL.ENABLED),
+    SHELL: getEnvString('OCM_TERMINAL_SHELL', DEFAULTS.TERMINAL.SHELL),
+    get CWD() { return resolveTerminalCwd() },
+    COLS: getEnvNumber('OCM_TERMINAL_COLS', DEFAULTS.TERMINAL.COLS),
+    ROWS: getEnvNumber('OCM_TERMINAL_ROWS', DEFAULTS.TERMINAL.ROWS),
+    MAX_SESSIONS_PER_USER: getEnvNumber('OCM_TERMINAL_MAX_SESSIONS_PER_USER', DEFAULTS.TERMINAL.MAX_SESSIONS_PER_USER),
+    MAX_SESSIONS_TOTAL: getEnvNumber('OCM_TERMINAL_MAX_SESSIONS_TOTAL', DEFAULTS.TERMINAL.MAX_SESSIONS_TOTAL),
+    IDLE_TIMEOUT_MS: getEnvNumber('OCM_TERMINAL_IDLE_TIMEOUT_MS', DEFAULTS.TERMINAL.IDLE_TIMEOUT_MS),
+    MAX_DURATION_MS: getEnvNumber('OCM_TERMINAL_MAX_DURATION_MS', DEFAULTS.TERMINAL.MAX_DURATION_MS),
+    ADMINS_ONLY: getEnvBoolean('OCM_TERMINAL_ADMINS_ONLY', DEFAULTS.TERMINAL.ADMINS_ONLY),
+    PER_USER_HOME: getEnvBoolean('OCM_TERMINAL_PER_USER_HOME', DEFAULTS.TERMINAL.PER_USER_HOME),
+    USERS_DIR: getEnvString('OCM_TERMINAL_USERS_DIR', DEFAULTS.TERMINAL.USERS_DIR),
+  },
+
 } as const
 
 export const getWorkspacePath = () => ENV.WORKSPACE.BASE_PATH
+export const getUsersWorkspacePath = () => path.join(getWorkspacePath(), 'users')
+export const getUserWorkspacePath = (username: string) => path.join(getUsersWorkspacePath(), username)
 export const getBrowseRootPath = () => ENV.WORKSPACE.BROWSE_ROOT
 export const getReposPath = () => path.join(ENV.WORKSPACE.BASE_PATH, ENV.WORKSPACE.REPOS_DIR)
 export const getScheduleWorktreesPath = () => path.join(ENV.WORKSPACE.BASE_PATH, ENV.WORKSPACE.SCHEDULE_WORKTREES_DIR)

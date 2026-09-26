@@ -50,7 +50,6 @@ vi.mock('@opencode-manager/shared/config/env', async (importOriginal) => {
         SERVER_USERNAME: 'opencode',
         PUBLIC_URL: '',
       },
-      SANDBOX: { ...actual.ENV.SANDBOX, MSB_PATH: 'msb' },
       TIMEOUTS: { ...actual.ENV.TIMEOUTS, HEALTH_CHECK_TIMEOUT_MS: 50 },
       DATABASE: { PATH: ':memory:' },
     },
@@ -108,35 +107,8 @@ vi.mock('../../src/services/opencode/plugin-registry', () => ({
   installManagedPlugins: installManagedPluginsMock,
 }))
 
-const restoreQuarantinedOpenCodePluginsMock = vi.hoisted(() => vi.fn())
-const getOpenCodePluginDiscoveryHomeMock = vi.hoisted(() => vi.fn(() => '/test/home'))
-
-vi.mock('../../src/services/opencode-plugin-quarantine', () => ({
-  restoreQuarantinedOpenCodePlugins: restoreQuarantinedOpenCodePluginsMock,
-  getOpenCodePluginDiscoveryHome: getOpenCodePluginDiscoveryHomeMock,
-}))
-
-const sandboxRuntimeServiceMock = vi.hoisted(() => ({
-  SandboxRuntimeService: vi.fn<() => {
-    isEnabled: () => boolean
-    stopWorkspaceSandboxForToggle?: () => Promise<void>
-    prepareWorkspaceSandboxOnBoot?: () => Promise<void>
-  }>(() => ({ isEnabled: () => false })),
-}))
-
-vi.mock('../../src/services/sandbox/runtime', () => ({
-  SandboxRuntimeService: function SandboxRuntimeServiceStub() {
-    return {
-      prepareWorkspaceSandboxOnBoot: async () => undefined,
-      ...sandboxRuntimeServiceMock.SandboxRuntimeService(),
-    }
-  },
-}))
-
 import { promises as fs, accessSync, readdirSync } from 'fs'
 import { execSync, spawnSync } from 'child_process'
-import path from 'path'
-import os from 'os'
 import { ConfigReloadError, resolveOpenCodeExecutable } from '../../src/services/opencode-single-server'
 import { forceProcessAttestation, resetProcessIdentityProvider } from '../../src/services/opencode/process-identity'
 import { encryptSecret } from '../../src/utils/crypto'
@@ -203,33 +175,6 @@ describe('OpenCodeServerManager - server auth', () => {
     vi.clearAllMocks()
   })
 
-  const MSB_ENV_KEYS = [
-    'MSB_HOME',
-    'MSB_PATH',
-    'MSB_LIBKRUNFW_PATH',
-    'MSB_BACKEND',
-    'MSB_PROFILE',
-    'MSB_API_URL',
-    'MSB_API_KEY',
-  ]
-
-  function snapshotMicrosandboxEnv(): Record<string, string | undefined> {
-    const snapshot: Record<string, string | undefined> = {}
-    for (const key of MSB_ENV_KEYS) snapshot[key] = process.env[key]
-    return snapshot
-  }
-
-  function clearMicrosandboxEnv(): void {
-    for (const key of MSB_ENV_KEYS) delete process.env[key]
-  }
-
-  function restoreMicrosandboxEnv(snapshot: Record<string, string | undefined>): void {
-    for (const key of MSB_ENV_KEYS) {
-      if (snapshot[key] === undefined) delete process.env[key]
-      else process.env[key] = snapshot[key]
-    }
-  }
-
   it('rebuilds the client with env password when no DB password is stored', async () => {
     setOpenCodeEnv({ host: '127.0.0.1', password: 'envpassword123' })
     const { opencodeServerManager } = await import('../../src/services/opencode-single-server')
@@ -249,22 +194,20 @@ describe('OpenCodeServerManager - server auth', () => {
     expect(createOpenCodeClientMock).toHaveBeenCalledWith('dbpassword123', '127.0.0.1')
   })
 
-  it('rebuilds the client against the configured host regardless of enforcement', async () => {
+  it('rebuilds the client against the configured host', async () => {
     setOpenCodeEnv({ host: '192.168.1.10', password: 'envpassword123' })
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
-    ;(manager as unknown as { sandboxEnforced: boolean }).sandboxEnforced = true
 
     await manager.rebuildClient()
 
     expect(createOpenCodeClientMock).toHaveBeenCalledWith('envpassword123', '192.168.1.10')
   })
 
-  it('rebuilds the client against the configured IPv6 host regardless of enforcement', async () => {
+  it('rebuilds the client against the configured IPv6 host', async () => {
     setOpenCodeEnv({ host: '::1', password: 'envpassword123' })
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
-    ;(manager as unknown as { sandboxEnforced: boolean }).sandboxEnforced = true
 
     await manager.rebuildClient()
 
@@ -302,38 +245,7 @@ describe('OpenCodeServerManager - server auth', () => {
     )
   })
 
-  it('binds an enforced server to the configured host even when OPENCODE_HOST is externally bound', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    setOpenCodeEnv({ host: '0.0.0.0', password: 'envpassword123' })
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb('envpassword123'))
-
-    await manager.start()
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      'opencode',
-      ['serve', '--port', '5551', '--hostname', '0.0.0.0'],
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OCM_SANDBOX_ENFORCED: 'true',
-          OPENCODE_SERVER_PASSWORD: 'envpassword123',
-        }),
-      })
-    )
-  })
-
-  it('requires an OpenCode password for an enforced server bound to an external host', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
+  it('requires an OpenCode password for a server bound to an external host', async () => {
     execSyncMock.mockImplementation((cmd: string) => {
       if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
       if (cmd.includes('opencode --version')) return '1.18.16\n'
@@ -350,172 +262,7 @@ describe('OpenCodeServerManager - server auth', () => {
     expect(manager.getLastStartupError()).toContain('OPENCODE_HOST=0.0.0.0')
   })
 
-  it('stamps OCM_SANDBOX_ENFORCED=false into the spawned env by default', async () => {
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    await OpenCodeServerManager.getInstance().start()
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      'opencode',
-      expect.any(Array),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OCM_SANDBOX_ENFORCED: 'false',
-        }),
-      })
-    )
-  })
-
-  it('stamps OCM_SANDBOX_ENFORCED=true when the sandbox runtime reports enforcement', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await manager.start()
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      'opencode',
-      expect.any(Array),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OCM_SANDBOX_ENFORCED: 'true',
-        }),
-      })
-    )
-  })
-
-  it('keeps OCM_SANDBOX_ENFORCED manager-controlled despite a user-supplied serverEnvVars entry', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPreferencesDb({
-      serverEnvVars: [{ key: 'OCM_SANDBOX_ENFORCED', value: 'user-tampered' }],
-    }))
-
-    await manager.start()
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      'opencode',
-      expect.any(Array),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OCM_SANDBOX_ENFORCED: 'false',
-        }),
-      })
-    )
-  })
-
-  it('drops user-supplied MSB_* serverEnvVars so the child always runs the manager-owned microsandbox runtime', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
-    const savedEnv = snapshotMicrosandboxEnv()
-    try {
-      clearMicrosandboxEnv()
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPreferencesDb({
-        serverEnvVars: [
-          { key: 'MSB_HOME', value: '/evil/msb-home' },
-          { key: 'MSB_BACKEND', value: 'cloud' },
-          { key: 'MSB_PATH', value: '/evil/msb' },
-          { key: 'MSB_LIBKRUNFW_PATH', value: '/evil/libkrunfw.so' },
-          { key: 'MSB_PROFILE', value: 'tampered' },
-          { key: 'MSB_API_URL', value: 'https://evil.example.com' },
-        ],
-      }))
-
-      await manager.start()
-
-      const env = (spawnMock.mock.calls[0] as unknown as [unknown, unknown, { env: Record<string, string> }])[2].env
-      expect(env.MSB_HOME).toBe(path.join(process.env.HOME ?? os.homedir(), '.microsandbox'))
-      expect(env.MSB_BACKEND).toBe('local')
-      expect(env.MSB_PATH).toBe('msb')
-      expect(env.MSB_LIBKRUNFW_PATH).toBeUndefined()
-      expect(env.MSB_PROFILE).toBeUndefined()
-      expect(env.MSB_API_URL).toBeUndefined()
-    } finally {
-      restoreMicrosandboxEnv(savedEnv)
-    }
-  })
-
-  it('stamps manager-owned microsandbox control variables after user variables in the child environment', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
-    const savedEnv = snapshotMicrosandboxEnv()
-    try {
-      clearMicrosandboxEnv()
-      process.env.MSB_HOME = '/opt/manager-msb-home'
-      process.env.MSB_BACKEND = 'local'
-      process.env.MSB_LIBKRUNFW_PATH = '/opt/manager/libkrunfw.so'
-      process.env.MSB_PROFILE = 'manager-profile'
-      process.env.MSB_API_URL = 'https://manager.example.com'
-      process.env.MSB_API_KEY = 'manager-key'
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPreferencesDb({
-        serverEnvVars: [
-          { key: 'MSB_HOME', value: '/evil/msb-home' },
-          { key: 'MSB_LIBKRUNFW_PATH', value: '/evil/libkrunfw.so' },
-        ],
-      }))
-
-      await manager.start()
-
-      const env = (spawnMock.mock.calls[0] as unknown as [unknown, unknown, { env: Record<string, string> }])[2].env
-      expect(env.MSB_HOME).toBe('/opt/manager-msb-home')
-      expect(env.MSB_BACKEND).toBe('local')
-      expect(env.MSB_LIBKRUNFW_PATH).toBe('/opt/manager/libkrunfw.so')
-      expect(env.MSB_PROFILE).toBe('manager-profile')
-      expect(env.MSB_API_URL).toBe('https://manager.example.com')
-      expect(env.MSB_API_KEY).toBe('manager-key')
-    } finally {
-      restoreMicrosandboxEnv(savedEnv)
-    }
-  })
-
-  it('keeps manager-owned microsandbox control variables when enforcement is on', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    const savedEnv = snapshotMicrosandboxEnv()
-    try {
-      clearMicrosandboxEnv()
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await manager.start()
-
-      const env = (spawnMock.mock.calls[0] as unknown as [unknown, unknown, { env: Record<string, string> }])[2].env
-      expect(env.OCM_SANDBOX_ENFORCED).toBe('true')
-      expect(env.MSB_HOME).toBe(path.join(process.env.HOME ?? os.homedir(), '.microsandbox'))
-      expect(env.MSB_BACKEND).toBe('local')
-      expect(env.MSB_PATH).toBe('msb')
-    } finally {
-      restoreMicrosandboxEnv(savedEnv)
-    }
-  })
-
   it('stamps OPENCODE_PURE=false despite a user-supplied serverEnvVars entry', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
     manager.setDatabase(createPreferencesDb({
@@ -558,36 +305,7 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   })
 
-  it('stamps OPENCODE_PURE=false in enforced mode despite inherited and configured values', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPreferencesDb({
-      serverEnvVars: [{ key: 'OPENCODE_PURE', value: 'true' }],
-    }))
-    process.env.OPENCODE_PURE = 'true'
-    try {
-      await manager.start()
-
-      const env = (spawnMock.mock.calls[0] as unknown as [unknown, unknown, { env: Record<string, string> }])[2].env
-      expect(env.OPENCODE_PURE).toBe('false')
-      expect(env.OCM_SANDBOX_ENFORCED).toBe('true')
-    } finally {
-      delete process.env.OPENCODE_PURE
-    }
-  })
-
   it('captures the manager token in the spawned child environment at start time', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
     let storedInternalToken: string | null = null
@@ -670,10 +388,7 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   })
 
-  it('honors a user-supplied HOME serverEnvVars entry while enforced', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
+  it('honors a user-supplied HOME serverEnvVars entry', async () => {
     execSyncMock.mockImplementation((cmd: string) => {
       if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
       if (cmd.includes('opencode --version')) return '1.18.16\n'
@@ -692,9 +407,6 @@ describe('OpenCodeServerManager - server auth', () => {
   })
 
   it('passes through user-supplied config-source and well-known auth serverEnvVars', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
     manager.setDatabase(createPreferencesDb({
@@ -714,9 +426,6 @@ describe('OpenCodeServerManager - server auth', () => {
   })
 
   it('passes inherited shell startup variables through to the spawned env', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
     manager.setDatabase(createPasswordDb(null))
@@ -758,10 +467,7 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   })
 
-  it('honors a user-supplied SHELL serverEnvVars entry and passes inherited shell vars through while enforced', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
+  it('honors a user-supplied SHELL serverEnvVars entry and passes inherited shell vars through', async () => {
     execSyncMock.mockImplementation((cmd: string) => {
       if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
       if (cmd.includes('opencode --version')) return '1.18.16\n'
@@ -801,11 +507,7 @@ describe('OpenCodeServerManager - server auth', () => {
       expect(spawnMock).toHaveBeenCalledWith(
         '/verified/bin/opencode',
         expect.any(Array),
-        expect.objectContaining({
-          env: expect.objectContaining({
-            OCM_SANDBOX_ENFORCED: 'false',
-          }),
-        }),
+        expect.anything(),
       )
     } finally {
       accessSyncMock.mockImplementation(() => {
@@ -823,6 +525,8 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('prefers the user-installed OpenCode executable over the bundled executable', () => {
     const accessSyncMock = accessSync as ReturnType<typeof vi.fn>
+    const previousHome = process.env.HOME
+    process.env.HOME = '/test/home'
     try {
       accessSyncMock.mockImplementation((candidate) => {
         if (candidate === '/test/home/.opencode/bin/opencode' || candidate === '/usr/local/bin/opencode') return
@@ -831,6 +535,11 @@ describe('OpenCodeServerManager - server auth', () => {
 
       expect(resolveOpenCodeExecutable()).toBe('/test/home/.opencode/bin/opencode')
     } finally {
+      if (previousHome === undefined) {
+        delete process.env.HOME
+      } else {
+        process.env.HOME = previousHome
+      }
       accessSyncMock.mockImplementation(() => {
         const error = new Error('ENOENT: no such file or directory') as NodeJS.ErrnoException
         error.code = 'ENOENT'
@@ -839,212 +548,12 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   })
 
-  it('exposes the running child sandbox enforcement state for worktree placement', async () => {
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-
-    expect(manager.isSandboxEnforced()).toBe(false)
-
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    manager.setDatabase(createPasswordDb(null))
-
-    await manager.start()
-
-    expect(manager.isSandboxEnforced()).toBe(true)
-  })
-
-  it('aborts startup when the sandbox enforcement state cannot be determined', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => {
-        throw new Error('database unavailable')
-      },
-    }))
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await expect(manager.start()).rejects.toThrow('database unavailable')
-    expect(spawnMock).not.toHaveBeenCalled()
-  })
-
-  it('fails closed and terminates a surviving server when the sandbox enforcement state cannot be determined', async () => {
-    const killSpy = vi.spyOn(process, 'kill')
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => {
-          throw new Error('database unavailable')
-        },
-      }))
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return '9999\n'
-        throw new Error('not found')
-      })
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await expect(manager.start()).rejects.toThrow('database unavailable')
-
-      expect(manager.isSandboxEnforced()).toBe(true)
-      expect(spawnMock).not.toHaveBeenCalled()
-      expect(execSyncMock).toHaveBeenCalledWith('lsof -nP -t -iTCP:5551 -sTCP:LISTEN')
-      expect(killSpy).toHaveBeenCalledWith(9999, 'SIGKILL')
-      expect(manager.isLastStartupErrorNonRecoverable()).toBe(true)
-    } finally {
-      killSpy.mockRestore()
-    }
-  })
-
-  it('propagates the predecessor termination failure as non-recoverable when enforcement state cannot be determined', async () => {
-    const killSpy = vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill)
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => {
-          throw new Error('database unavailable')
-        },
-      }))
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return '9999\n'
-        throw new Error('not found')
-      })
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await expect(manager.start()).rejects.toThrow('could not be proven terminated')
-
-      expect(spawnMock).not.toHaveBeenCalled()
-      expect(manager.isSandboxEnforced()).toBe(true)
-      expect(manager.isLastStartupErrorNonRecoverable()).toBe(true)
-      expect(manager.getLastStartupError()).toContain('database unavailable')
-      expect(manager.getLastStartupError()).toContain('9999')
-    } finally {
-      killSpy.mockRestore()
-    }
-  }, 15000)
-
-  it('stops the workspace sandbox when a restart disables enforcement', async () => {
-    const stopWorkspaceSandboxForToggle = vi.fn().mockResolvedValue(undefined)
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-      stopWorkspaceSandboxForToggle,
-    }))
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-    ;(manager as any).sandboxEnforced = true
-
-    await manager.start()
-
-    expect(stopWorkspaceSandboxForToggle).toHaveBeenCalledTimes(1)
-    expect(spawnMock).toHaveBeenCalledWith(
-      'opencode',
-      expect.any(Array),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OCM_SANDBOX_ENFORCED: 'false',
-        }),
-      })
-    )
-  })
-
-  it('does not stop the workspace sandbox when the restarted server stays enforced', async () => {
-    const stopWorkspaceSandboxForToggle = vi.fn().mockResolvedValue(undefined)
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-      stopWorkspaceSandboxForToggle,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-    ;(manager as any).sandboxEnforced = true
-
-    await manager.start()
-
-    expect(stopWorkspaceSandboxForToggle).not.toHaveBeenCalled()
-    expect(spawnMock).toHaveBeenCalledWith(
-      'opencode',
-      expect.any(Array),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OCM_SANDBOX_ENFORCED: 'true',
-        }),
-      })
-    )
-  })
-
-  it('aborts the disabled restart when the workspace sandbox cannot be stopped', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-      stopWorkspaceSandboxForToggle: vi.fn().mockRejectedValue(new Error('msb stop failed; the managed microVM is still running')),
-    }))
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-    ;(manager as any).sandboxEnforced = true
-
-    await expect(manager.start()).rejects.toThrow('Failed to stop the workspace sandbox while disabling enforcement')
-
-    expect(spawnMock).not.toHaveBeenCalled()
-    expect(manager.isSandboxEnforced()).toBe(true)
-    expect(manager.isLastStartupErrorNonRecoverable()).toBe(true)
-  })
-
-  it('replaces an existing healthy process in production when enforcement is enabled', async () => {
-    const originalNodeEnv = ENV.SERVER.NODE_ENV
-    Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) {
-          return spawnMock.mock.calls.length > 0 ? '1234\n' : '9999\n'
-        }
-        if (cmd.includes('opencode --version')) return '1.18.16\n'
-        throw new Error('not found')
-      })
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await manager.start()
-
-      expect(spawnMock).toHaveBeenCalledWith(
-        'opencode',
-        expect.any(Array),
-        expect.objectContaining({
-          env: expect.objectContaining({
-            OCM_SANDBOX_ENFORCED: 'true',
-          }),
-        })
-      )
-    } finally {
-      Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
-    }
-  }, 15000)
-
   it('terminates the whole process group when stopping a detached production child', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     let groupChecks = 0
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -1079,14 +588,11 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('starts and stops an unenforced production server on non-Linux hosts without /proc attestation', async () => {
+  it('starts and stops a production server on non-Linux hosts without /proc attestation', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -1118,7 +624,6 @@ describe('OpenCodeServerManager - server auth', () => {
         expect.any(Array),
         expect.objectContaining({ detached: true }),
       )
-      expect(manager.isSandboxEnforced()).toBe(false)
 
       await manager.stop()
 
@@ -1133,49 +638,11 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('fails closed when enforcement is on and process identity attestation is unavailable', async () => {
-    const originalNodeEnv = ENV.SERVER.NODE_ENV
-    Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
-      execSyncMock.mockImplementation(() => {
-        throw new Error('not found')
-      })
-      readFileSyncMock.mockImplementation(((filePath: unknown) => {
-        if (String(filePath).startsWith('/proc/')) {
-          const error = new Error('ENOENT: no such file or directory') as NodeJS.ErrnoException
-          error.code = 'ENOENT'
-          throw error
-        }
-        return ''
-      }) as typeof readFileSyncMock)
-      forceProcessAttestation(false)
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await expect(manager.start()).rejects.toThrow('process identity attestation, which is unavailable on this platform')
-
-      expect(spawnMock).not.toHaveBeenCalled()
-      expect(manager.isSandboxEnforced()).toBe(true)
-      expect(manager.isLastStartupErrorNonRecoverable()).toBe(true)
-    } finally {
-      readFileSyncMock.mockReturnValue(procStatString(1234, '42'))
-      forceProcessAttestation(true)
-      Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
-    }
-  }, 15000)
-
   it('keeps the child state marker and fails the stop when the process group survives SIGKILL', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -1213,9 +680,6 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -1290,9 +754,6 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -1339,9 +800,6 @@ describe('OpenCodeServerManager - server auth', () => {
     const killSpy = vi.spyOn(process, 'kill')
     let groupChecks = 0
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -1421,9 +879,6 @@ describe('OpenCodeServerManager - server auth', () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -1476,15 +931,12 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('reconciles an attested surviving descendant group before an unenforced replacement start', async () => {
+  it('reconciles an attested surviving descendant group before a replacement start', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     let groupChecks = 0
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       const marker = JSON.stringify({
         pid: 9999,
         pgid: 9999,
@@ -1548,9 +1000,6 @@ describe('OpenCodeServerManager - server auth', () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       const marker = JSON.stringify({
         pid: 9999,
         pgid: 9999,
@@ -1600,9 +1049,6 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const capturedCommands: string[] = []
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         capturedCommands.push(cmd)
         return ''
@@ -1619,74 +1065,12 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('terminates the attested predecessor process group before an enforced start', async () => {
-    const originalNodeEnv = ENV.SERVER.NODE_ENV
-    Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
-    const killSpy = vi.spyOn(process, 'kill')
-    let groupChecks = 0
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) {
-          return spawnMock.mock.calls.length > 0 ? '1234\n' : '9999\n'
-        }
-        if (cmd.includes('opencode --version')) return '1.18.16\n'
-        throw new Error('not found')
-      })
-      readFileSyncMock.mockReturnValue(procStatStringWithGroup(9999, '42'))
-      readFileMock.mockImplementation((filePath: string) => {
-        if (filePath.includes('opencode-server-child.json')) {
-          return Promise.resolve(JSON.stringify({ pid: 9999, enforced: false, startToken: '42', generation: 0 }))
-        }
-        return Promise.resolve(undefined)
-      })
-      killSpy.mockImplementation(((pid: number, signal?: number | string) => {
-        if (pid === -9999) {
-          if (signal === 0) {
-            groupChecks += 1
-            if (groupChecks === 1) return true
-            const error = new Error('No such process') as NodeJS.ErrnoException
-            error.code = 'ESRCH'
-            throw error
-          }
-          return true
-        }
-        const error = new Error('No such process') as NodeJS.ErrnoException
-        error.code = 'ESRCH'
-        throw error
-      }) as typeof process.kill)
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await manager.start()
-
-      expect(killSpy).toHaveBeenCalledWith(-9999, 'SIGTERM')
-      expect(spawnMock).toHaveBeenCalledWith(
-        'opencode',
-        expect.any(Array),
-        expect.objectContaining({
-          env: expect.objectContaining({ OCM_SANDBOX_ENFORCED: 'true' }),
-        })
-      )
-    } finally {
-      killSpy.mockRestore()
-      readFileMock.mockReset()
-      Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
-    }
-  }, 15000)
-
   it('terminates the predecessor process group via the persisted group id when the leader has exited and a recorded member still survives', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     let groupChecks = 0
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
         if (cmd.includes('opencode --version')) return '1.18.16\n'
@@ -1742,13 +1126,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
       expect(killSpy).toHaveBeenCalledWith(-9999, 'SIGTERM')
       expect(killSpy).not.toHaveBeenCalledWith(9999, 'SIGTERM')
-      expect(spawnMock).toHaveBeenCalledWith(
-        'opencode',
-        expect.any(Array),
-        expect.objectContaining({
-          env: expect.objectContaining({ OCM_SANDBOX_ENFORCED: 'true' }),
-        }),
-      )
+      expect(spawnMock).toHaveBeenCalled()
     } finally {
       killSpy.mockRestore()
       readFileMock.mockReset()
@@ -1758,14 +1136,11 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('refuses an enforced start when a reused process group cannot be proven to belong to the exited leader', async () => {
+  it('refuses a start when a reused process group cannot be proven to belong to the exited leader', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return ''
         if (cmd.includes('opencode --version')) return '1.18.16\n'
@@ -1826,9 +1201,6 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
         if (cmd.includes('opencode --version')) return '1.18.16\n'
@@ -1862,13 +1234,7 @@ describe('OpenCodeServerManager - server auth', () => {
       expect(killSpy).not.toHaveBeenCalledWith(9999, 'SIGTERM')
       expect(killSpy).not.toHaveBeenCalledWith(9999, 'SIGKILL')
       expect(killSpy).not.toHaveBeenCalledWith(-9999, 'SIGTERM')
-      expect(spawnMock).toHaveBeenCalledWith(
-        'opencode',
-        expect.any(Array),
-        expect.objectContaining({
-          env: expect.objectContaining({ OCM_SANDBOX_ENFORCED: 'true' }),
-        }),
-      )
+      expect(spawnMock).toHaveBeenCalled()
     } finally {
       killSpy.mockRestore()
       readFileMock.mockReset()
@@ -1877,56 +1243,11 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('refuses an enforced start when the attested predecessor process group retains live members', async () => {
+  it('aborts a replacement when an existing port owner survives the termination attempts', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return '9999\n'
-        if (cmd.includes('opencode --version')) return '1.18.16\n'
-        throw new Error('not found')
-      })
-      readFileSyncMock.mockReturnValue(procStatStringWithGroup(9999, '42'))
-      readFileMock.mockImplementation((filePath: string) => {
-        if (filePath.includes('opencode-server-child.json')) {
-          return Promise.resolve(JSON.stringify({ pid: 9999, enforced: false, startToken: '42', generation: 0 }))
-        }
-        return Promise.resolve(undefined)
-      })
-      killSpy.mockImplementation(((pid: number) => {
-        if (pid === -9999) {
-          return true
-        }
-        const error = new Error('No such process') as NodeJS.ErrnoException
-        error.code = 'ESRCH'
-        throw error
-      }) as typeof process.kill)
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await expect(manager.start()).rejects.toThrow('refusing to start an enforced server')
-      expect(manager.getLastStartupError()).toContain('9999')
-      expect(spawnMock).not.toHaveBeenCalled()
-    } finally {
-      killSpy.mockRestore()
-      readFileMock.mockReset()
-      Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
-    }
-  }, 15000)
-
-  it('aborts an enforced replacement when an existing port owner survives the termination attempts', async () => {
-    const originalNodeEnv = ENV.SERVER.NODE_ENV
-    Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
-    const killSpy = vi.spyOn(process, 'kill')
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return '9998\n'
         if (cmd.includes('opencode --version')) return '1.18.16\n'
@@ -1961,9 +1282,6 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return '9997\n'
         if (cmd.includes('opencode --version')) return '1.18.16\n'
@@ -1988,64 +1306,11 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('refuses an enforced fresh start when the spawned process does not own the port', async () => {
-    const originalNodeEnv = ENV.SERVER.NODE_ENV
-    Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
-    const killSpy = vi.spyOn(process, 'kill')
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => true,
-      }))
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '8888\n' : ''
-        if (cmd.includes('opencode --version')) return '1.18.16\n'
-        throw new Error('not found')
-      })
-      killSpy.mockImplementation(((pid: number, signal?: number | string) => {
-        if (pid === 1234 && signal !== 0) return true
-        const error = new Error('No such process') as NodeJS.ErrnoException
-        error.code = 'ESRCH'
-        throw error
-      }) as typeof process.kill)
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await expect(manager.start()).rejects.toThrow('does not own the OpenCode port')
-      expect(spawnMock).toHaveBeenCalledTimes(1)
-      expect(manager.getLastStartupError()).toContain('1234')
-      expect(manager.getLastStartupError()).toContain('8888')
-      expect((manager as any).isHealthy).toBe(false)
-    } finally {
-      killSpy.mockRestore()
-      Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
-    }
-  }, 15000)
-
-  it('fails an enforced start when the port owner inspection cannot run', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation(() => {
-      throw new Error('lsof is not installed')
-    })
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await expect(manager.start()).rejects.toThrow('Cannot inspect port 5551 ownership')
-    expect(spawnMock).not.toHaveBeenCalled()
-    expect(manager.isLastStartupErrorNonRecoverable()).toBe(true)
-  })
-
   it('refuses to signal a reused PID whose identity no longer matches the child state marker on stop', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
         throw new Error('not found')
@@ -2095,9 +1360,6 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     const killSpy = vi.spyOn(process, 'kill')
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
         throw new Error('not found')
@@ -2125,13 +1387,10 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('adopts an existing healthy process in production when enforcement is off and the child state is attested as unenforced', async () => {
+  it('adopts an existing healthy process in production when the child state is attested as unenforced', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return '9999\n'
         throw new Error('not found')
@@ -2150,20 +1409,16 @@ describe('OpenCodeServerManager - server auth', () => {
       await manager.start()
 
       expect(spawnMock).not.toHaveBeenCalled()
-      expect(manager.isSandboxEnforced()).toBe(false)
     } finally {
       readFileMock.mockReset()
       Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
     }
   })
 
-  it('writes a durable child state marker with pid, enforcement, identity, and generation for a production spawn', async () => {
+  it('writes a durable child state marker with pid, identity, and generation for a production spawn', async () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -2187,9 +1442,6 @@ describe('OpenCodeServerManager - server auth', () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -2341,9 +1593,6 @@ describe('OpenCodeServerManager - server auth', () => {
       throw error
     })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -2374,9 +1623,6 @@ describe('OpenCodeServerManager - server auth', () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : '9999\n'
         throw new Error('not found')
@@ -2405,9 +1651,6 @@ describe('OpenCodeServerManager - server auth', () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : '9999\n'
         throw new Error('not found')
@@ -2435,9 +1678,6 @@ describe('OpenCodeServerManager - server auth', () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
@@ -2459,9 +1699,6 @@ describe('OpenCodeServerManager - server auth', () => {
     const originalNodeEnv = ENV.SERVER.NODE_ENV
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof') && spawnMock.mock.calls.length > 0) return '1234\n'
         throw new Error('not found')
@@ -2500,76 +1737,6 @@ describe('OpenCodeServerManager - server auth', () => {
     }
   }, 15000)
 
-  it('terminates a healthy existing process stamped as enforced when the sandbox preference is off', async () => {
-    const originalNodeEnv = ENV.SERVER.NODE_ENV
-    Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : '9999\n'
-        throw new Error('not found')
-      })
-      readFileMock.mockImplementation((filePath: string) => {
-        if (filePath.includes('opencode-server-child.json')) {
-          return Promise.resolve(JSON.stringify({ pid: 9999, enforced: true, writtenAt: Date.now() }))
-        }
-        return Promise.resolve(undefined)
-      })
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await manager.start()
-
-      expect(spawnMock).toHaveBeenCalledWith(
-        'opencode',
-        expect.any(Array),
-        expect.objectContaining({
-          env: expect.objectContaining({
-            OCM_SANDBOX_ENFORCED: 'false',
-          }),
-        }),
-      )
-      expect(manager.isSandboxEnforced()).toBe(false)
-    } finally {
-      readFileMock.mockReset()
-      Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
-    }
-  }, 15000)
-
-  it('terminates a healthy existing process whose enforcement stamp cannot be attested when the preference is off', async () => {
-    const originalNodeEnv = ENV.SERVER.NODE_ENV
-    Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
-    try {
-      sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-        isEnabled: () => false,
-      }))
-      execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : '9999\n'
-        throw new Error('not found')
-      })
-      const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-      const manager = OpenCodeServerManager.getInstance()
-      manager.setDatabase(createPasswordDb(null))
-
-      await manager.start()
-
-      expect(spawnMock).toHaveBeenCalledWith(
-        'opencode',
-        expect.any(Array),
-        expect.objectContaining({
-          env: expect.objectContaining({
-            OCM_SANDBOX_ENFORCED: 'false',
-          }),
-        }),
-      )
-    } finally {
-      Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
-    }
-  }, 15000)
-
   it('installs the generated plugins into the same config dir', async () => {
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     await OpenCodeServerManager.getInstance().start()
@@ -2584,28 +1751,7 @@ describe('OpenCodeServerManager - server auth', () => {
     expect(installManagedPluginsMock).toHaveBeenCalledWith('/test/workspace/.config')
   })
 
-  it('aborts enforced startup when the gh-env plugin cannot be installed', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    installManagedPluginsMock.mockRejectedValueOnce(new Error('readonly filesystem'))
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await expect(manager.start()).rejects.toThrow('readonly filesystem')
-    expect(spawnMock).not.toHaveBeenCalled()
-  })
-
-  it('continues startup without enforcement when the gh-env plugin cannot be installed', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
+  it('continues startup when the gh-env plugin cannot be installed', async () => {
     installManagedPluginsMock.mockRejectedValueOnce(new Error('readonly filesystem'))
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
@@ -2616,118 +1762,7 @@ describe('OpenCodeServerManager - server auth', () => {
     expect(spawnMock).toHaveBeenCalled()
   })
 
-  it('restores legacy quarantined plugins before an enforced start', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await manager.start()
-
-    expect(restoreQuarantinedOpenCodePluginsMock).toHaveBeenCalledWith(
-      '/test/workspace/.config',
-      '/test/workspace/.config/opencode.json',
-    )
-  })
-
-  it('restores legacy quarantined plugins before a non-enforced start', async () => {
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    await OpenCodeServerManager.getInstance().start()
-
-    expect(restoreQuarantinedOpenCodePluginsMock).toHaveBeenCalledWith(
-      '/test/workspace/.config',
-      '/test/workspace/.config/opencode.json',
-    )
-  })
-
-  it('spawns an enforced server without disabling project config', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await manager.start()
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      'opencode',
-      expect.any(Array),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OCM_SANDBOX_ENFORCED: 'true',
-        }),
-      })
-    )
-    const env = (spawnMock.mock.calls[0] as unknown as [unknown, unknown, { env: Record<string, string> }])[2].env
-    expect(env.OPENCODE_DISABLE_PROJECT_CONFIG).toBeUndefined()
-  })
-
-  it('aborts an enforced start when legacy quarantined plugins cannot be restored', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    restoreQuarantinedOpenCodePluginsMock.mockRejectedValueOnce(new Error('readonly filesystem'))
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await expect(manager.start()).rejects.toThrow('readonly filesystem')
-    expect(spawnMock).not.toHaveBeenCalled()
-  })
-
-  it('aborts a non-enforced start when quarantined plugins cannot be restored', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
-    restoreQuarantinedOpenCodePluginsMock.mockRejectedValueOnce(new Error('readonly filesystem'))
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await expect(manager.start()).rejects.toThrow('readonly filesystem')
-    expect(spawnMock).not.toHaveBeenCalled()
-  })
-
-  it('aborts enforced startup when the sandbox plugin cannot be installed', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    installManagedPluginsMock.mockRejectedValueOnce(new Error('readonly filesystem'))
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await expect(manager.start()).rejects.toThrow('readonly filesystem')
-    expect(spawnMock).not.toHaveBeenCalled()
-  })
-
-  it('continues startup without enforcement when the sandbox plugin cannot be installed', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
+  it('continues startup when a generated plugin cannot be installed', async () => {
     installManagedPluginsMock.mockRejectedValueOnce(new Error('readonly filesystem'))
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
@@ -2738,36 +1773,7 @@ describe('OpenCodeServerManager - server auth', () => {
     expect(spawnMock).toHaveBeenCalled()
   })
 
-  it('starts an enforced server on any OpenCode build', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => true,
-    }))
-    execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
-      if (cmd.includes('opencode --version')) return '1.18.16\n'
-      throw new Error('not found')
-    })
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
-    const manager = OpenCodeServerManager.getInstance()
-    manager.setDatabase(createPasswordDb(null))
-
-    await manager.start()
-
-    expect(spawnMock).toHaveBeenCalledWith(
-      'opencode',
-      expect.any(Array),
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OCM_SANDBOX_ENFORCED: 'true',
-        }),
-      })
-    )
-  })
-
-  it('does not block an incompatible OpenCode build when enforcement is off', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
+  it('does not block an incompatible OpenCode build', async () => {
     execSyncMock.mockImplementation((cmd: string) => {
       if (cmd.includes('opencode --version')) return '1.18.15\n'
       throw new Error('not found')
@@ -2782,9 +1788,6 @@ describe('OpenCodeServerManager - server auth', () => {
   })
 
   it('keeps a restart request pending when it is marked during startup', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
     manager.setDatabase(createPasswordDb(null))
@@ -2811,9 +1814,6 @@ describe('OpenCodeServerManager - server auth', () => {
   })
 
   it('clears a restart request when no newer change arrives during startup', async () => {
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     const manager = OpenCodeServerManager.getInstance()
     manager.setDatabase(createPasswordDb(null))

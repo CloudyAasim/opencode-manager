@@ -34,8 +34,11 @@ function rowToPromptTemplate(row: PromptTemplateRow): PromptTemplate {
   })
 }
 
-export function listPromptTemplates(db: Database): PromptTemplate[] {
-  const rows = db.prepare('SELECT * FROM prompt_templates ORDER BY id ASC').all() as PromptTemplateRow[]
+export function listPromptTemplates(db: Database, userId: string | null, includeAll = false): PromptTemplate[] {
+  const rows = (includeAll || userId === null
+    ? db.prepare('SELECT * FROM prompt_templates ORDER BY id ASC').all()
+    : db.prepare('SELECT * FROM prompt_templates WHERE user_id IS NULL OR user_id = ? ORDER BY id ASC').all(userId)
+  ) as PromptTemplateRow[]
   return rows.map(rowToPromptTemplate)
 }
 
@@ -44,12 +47,18 @@ export function getPromptTemplateById(db: Database, id: number): PromptTemplate 
   return row ? rowToPromptTemplate(row) : null
 }
 
-export function createPromptTemplate(db: Database, data: CreatePromptTemplateRequest): PromptTemplate {
+export function getPromptTemplateOwnerId(db: Database, id: number): string | null | undefined {
+  const row = db.prepare('SELECT user_id FROM prompt_templates WHERE id = ?').get(id) as { user_id: string | null } | undefined
+  if (!row) return undefined
+  return row.user_id
+}
+
+export function createPromptTemplate(db: Database, data: CreatePromptTemplateRequest, userId: string | null): PromptTemplate {
   const now = Date.now()
   const result = db.prepare(`
-    INSERT INTO prompt_templates (title, category, cadence_hint, suggested_name, suggested_description, description, prompt, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(data.title, data.category, data.cadenceHint, data.suggestedName, data.suggestedDescription, data.description, data.prompt, now, now)
+    INSERT INTO prompt_templates (title, category, cadence_hint, suggested_name, suggested_description, description, prompt, created_at, updated_at, user_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(data.title, data.category, data.cadenceHint, data.suggestedName, data.suggestedDescription, data.description, data.prompt, now, now, userId)
   return getPromptTemplateById(db, result.lastInsertRowid as number)!
 }
 

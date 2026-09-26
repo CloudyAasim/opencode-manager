@@ -1,28 +1,42 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Link, useLoaderData } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
+import { useI18n } from '@/lib/i18n'
+import { LanguageToggle } from '@/components/LanguageToggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, UserPlus, AlertCircle } from 'lucide-react'
+import { Loader2, UserPlus, AlertCircle, ShieldAlert } from 'lucide-react'
+import type { AuthConfig } from '@/lib/auth-loaders'
 
-const setupSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-})
+type SetupFormData = z.infer<ReturnType<typeof createSetupSchema>>
 
-type SetupFormData = z.infer<typeof setupSchema>
+function createSetupSchema(nameMin: string, emailInvalid: string, passwordMin: string) {
+  return z.object({
+    name: z.string().min(2, nameMin),
+    email: z.string().email(emailInvalid),
+    password: z.string().min(8, passwordMin),
+  })
+}
 
 export function Setup() {
   const { signUpWithEmail } = useAuth()
+  const { config } = useLoaderData() as { config: AuthConfig }
   const theme = useTheme()
+  const { t, locale } = useI18n()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const setupSchema = useMemo(
+    () => createSetupSchema(t('register.nameMin'), t('auth.emailInvalid'), t('register.passwordMin')),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, t],
+  )
 
   const {
     register,
@@ -46,7 +60,8 @@ export function Setup() {
   }
 
   return (
-    <div className="h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-background p-4">
+    <div className="relative h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-background p-4">
+      <LanguageToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center space-y-2">
           <img 
@@ -54,70 +69,84 @@ export function Setup() {
             alt="OpenCode" 
             className="h-8 w-auto"
           />
-          <p className="text-sm text-muted-foreground">Create Admin Account</p>
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm text-muted-foreground">Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Your name"
-                className="bg-input border-border focus:border-primary"
-                {...register('name')}
-                aria-invalid={!!errors.name}
-              />
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
-              )}
+        {!config.registrationEnabled ? (
+          <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-amber-500" />
+              <h1 className="text-base font-semibold">{t('setup.disabledTitle')}</h1>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@example.com"
-                className="bg-input border-border focus:border-primary"
-                {...register('email')}
-                aria-invalid={!!errors.email}
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm text-muted-foreground">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="At least 8 characters"
-                className="bg-input border-border focus:border-primary"
-                {...register('password')}
-                aria-invalid={!!errors.password}
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <UserPlus className="mr-2 h-4 w-4" />
-              )}
-              Create Admin Account
+            <p className="text-sm text-muted-foreground">{t('setup.disabledDescription')}</p>
+            <Button asChild className="w-full">
+              <Link to="/login">{t('setup.goToSignIn')}</Link>
             </Button>
-          </form>
-        </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+            <p className="text-center text-sm text-muted-foreground">{t('register.firstUserSubtitle')}</p>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm text-muted-foreground">{t('register.name')}</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder={t('register.namePlaceholder')}
+                  className="bg-input border-border focus:border-primary"
+                  {...register('name')}
+                  aria-invalid={!!errors.name}
+                />
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm text-muted-foreground">{t('auth.email')}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@example.com"
+                  className="bg-input border-border focus:border-primary"
+                  {...register('email')}
+                  aria-invalid={!!errors.email}
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm text-muted-foreground">{t('auth.password')}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder={t('register.passwordPlaceholder')}
+                  className="bg-input border-border focus:border-primary"
+                  {...register('password')}
+                  aria-invalid={!!errors.password}
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus className="mr-2 h-4 w-4" />
+                )}
+                {t('register.createAdminAccount')}
+              </Button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   )

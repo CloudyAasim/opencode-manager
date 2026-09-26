@@ -209,7 +209,6 @@ describe('ocm-manager plugin', () => {
     const tool = await loadTool(configHome)
     const deniedRoutes = [
       ['GET', '/git-credentials/gh-env'],
-      ['POST', '/sandbox/shell'],
       ['GET', '/repos/0/mirror/head'],
       ['POST', '/notifications/send'],
       ['DELETE', '/settings'],
@@ -454,7 +453,6 @@ describe.skipIf(SHIPPED_OPENCODE_BIN === null)('ocm-manager plugin against the s
         HOME: root,
         XDG_CONFIG_HOME: configHome,
         PWD: workDir,
-        OCM_SANDBOX_ENFORCED: 'false',
         OCM_INTERNAL_API_URL: `http://127.0.0.1:${api.port}/api/internal`,
         OCM_INTERNAL_TOKEN: 'test-token',
       })

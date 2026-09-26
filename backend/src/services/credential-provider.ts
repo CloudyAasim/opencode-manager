@@ -9,12 +9,9 @@ import {
   findGitHubCredential,
   type ResolvedGitCredential,
 } from '../utils/git-auth'
-import { limitForwardedGitConfigs, SANDBOX_MAX_FORWARDED_GIT_CONFIGS } from './sandbox/shell-shim'
-import { logger } from '../utils/logger'
 import {
   getRepoByDirectory,
   getRepoGitCredentialId,
-  getRepoSandboxGitCredentials,
   listRepos,
 } from '../db/queries'
 
@@ -66,31 +63,6 @@ export class CredentialProvider {
     return this.getGitEnvForContext(this.resolveContext(options))
   }
 
-  isSandboxGitCredentialsAllowed(options: CredentialResolutionOptions = {}): boolean {
-    return this.getSandboxGitCredentialsAllowed(options)
-  }
-
-  getSandboxGitEnv(options: CredentialResolutionOptions = {}): Record<string, string> {
-    const repo = this.resolveRepo(options)
-    const repoOverride = repo ? getRepoSandboxGitCredentials(this.database, repo.id) : null
-    if (repoOverride === false) return {}
-
-    const context = this.resolveContext(options, repo)
-    if (repoOverride !== true && context.preferences.sandbox?.gitCredentials !== true) return {}
-
-    const gitEnv = this.getGitEnvForContext(context)
-    if (gitEnv.GIT_CONFIG_COUNT === '0') return {}
-
-    const { env, dropped } = limitForwardedGitConfigs(gitEnv)
-    if (dropped > 0) {
-      logger.warn(
-        `Sandbox git credentials exceed the forwarding limit of ${SANDBOX_MAX_FORWARDED_GIT_CONFIGS} hosts; ${dropped} host(s) will not authenticate inside the microVM`,
-      )
-    }
-
-    return { ...env, ...this.getGhCliEnvForContext(context) }
-  }
-
   getGhCliEnv(options: CredentialResolutionOptions = {}): Record<string, string> {
     return this.getGhCliEnvForContext(this.resolveContext(options))
   }
@@ -119,12 +91,6 @@ export class CredentialProvider {
   private getGhCliEnvForContext(context: CredentialResolutionContext): Record<string, string> {
     const credential = this.getGhCliCredential(context)
     return createGhCliEnv(credential ? [credential] : [])
-  }
-
-  private getSandboxGitCredentialsAllowed(options: CredentialResolutionOptions): boolean {
-    const repo = this.resolveRepo(options)
-    const repoOverride = repo ? getRepoSandboxGitCredentials(this.database, repo.id) : null
-    return repoOverride ?? (this.getPreferences().sandbox?.gitCredentials === true)
   }
 
   private resolveRepo(options: CredentialResolutionOptions): Repo | null {

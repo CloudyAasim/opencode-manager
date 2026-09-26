@@ -69,11 +69,11 @@ describe('restartOpenCode', () => {
   })
 
   it('throws with the startup failure reason when the coordinator reports an unhealthy restart', async () => {
-    managerMock.getLastStartupError.mockReturnValue('OpenCode version 1.18.15 does not support sandboxed bash tool rewriting')
+    managerMock.getLastStartupError.mockReturnValue('OpenCode version 1.18.15 is below the minimum required version 1.0.137')
     setOpenCodeRestartCoordinator(createCoordinator(false))
 
     await expect(restartOpenCode(createSupervisor(true))).rejects.toThrow(
-      'OpenCode version 1.18.15 does not support sandboxed bash tool rewriting',
+      'OpenCode version 1.18.15 is below the minimum required version 1.0.137',
     )
   })
 

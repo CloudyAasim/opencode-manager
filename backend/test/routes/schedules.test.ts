@@ -36,6 +36,9 @@ vi.mock('../../src/utils/logger', () => ({
 }))
 
 import { createScheduleRoutes } from '../../src/routes/schedules'
+import type { Database } from 'bun:sqlite'
+
+const testDb = {} as Database
 
 describe('Schedule Routes', () => {
   let app: Hono
@@ -43,7 +46,7 @@ describe('Schedule Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     app = new Hono()
-    app.route('/repos/:id/schedules', createScheduleRoutes(scheduleService as unknown as import('../../src/services/schedules').ScheduleService))
+    app.route('/repos/:id/schedules', createScheduleRoutes(scheduleService as unknown as import('../../src/services/schedules').ScheduleService, testDb))
   })
 
   it('lists jobs for a repo', async () => {

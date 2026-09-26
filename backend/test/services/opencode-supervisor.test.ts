@@ -152,7 +152,7 @@ describe('OpenCodeSupervisor', () => {
       watchEnabled: false,
     })
 
-    manager.start.mockRejectedValueOnce(new Error('OpenCode version 1.18.15 does not support sandboxed bash tool rewriting'))
+    manager.start.mockRejectedValueOnce(new Error('OpenCode version 1.18.15 is below the minimum required version 1.0.137'))
     manager.isLastStartupErrorNonRecoverable.mockReturnValue(true)
 
     const status = await supervisor.start()
@@ -273,14 +273,14 @@ describe('OpenCodeSupervisor', () => {
       failureThreshold: 1,
     })
 
-    manager.start.mockRejectedValueOnce(new Error('OpenCode version 1.18.15 does not support sandboxed bash tool rewriting'))
+    manager.start.mockRejectedValueOnce(new Error('OpenCode version 1.18.15 is below the minimum required version 1.0.137'))
     manager.isLastStartupErrorNonRecoverable.mockReturnValue(true)
 
     const status = await supervisor.start()
 
     expect(status.state).toBe('failed')
     expect(status.healthy).toBe(false)
-    expect(status.lastError).toContain('does not support sandboxed bash tool rewriting')
+    expect(status.lastError).toContain('is below the minimum required version 1.0.137')
     expect(manager.restart).not.toHaveBeenCalled()
     expect(archiveBrokenOpenCodeConfigFile).not.toHaveBeenCalled()
     expect(settings.getLastKnownGoodConfig).not.toHaveBeenCalled()
@@ -297,7 +297,7 @@ describe('OpenCodeSupervisor', () => {
       failureThreshold: 1,
     })
 
-    manager.restart.mockRejectedValueOnce(new Error('Failed to install a generated OpenCode plugin; refusing to start an enforced server'))
+    manager.restart.mockRejectedValueOnce(new Error('Failed to install a generated OpenCode plugin'))
     manager.isLastStartupErrorNonRecoverable.mockReturnValue(true)
 
     const status = await supervisor.restart('settings_restart')
@@ -322,7 +322,7 @@ describe('OpenCodeSupervisor', () => {
     manager.checkHealth.mockResolvedValue(false)
     manager.restart.mockImplementation(async () => {
       manager.isLastStartupErrorNonRecoverable.mockReturnValue(true)
-      throw new Error('Failed to install a generated OpenCode plugin; refusing to start an enforced server')
+      throw new Error('Failed to install a generated OpenCode plugin')
     })
 
     const status = await supervisor.start()

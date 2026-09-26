@@ -79,7 +79,8 @@ describe('Database Queries', () => {
         repo.clonedAt,
         clonedAt,
         repo.isWorktree ? 1 : 0,
-        1
+        1,
+        null
       )
       expect(result.id).toBe(1)
     })
@@ -123,6 +124,7 @@ describe('Database Queries', () => {
         clonedAt: clonedAt,
         lastPulled: null,
         lastAccessedAt: lastAccessedAt,
+        userId: null,
         isWorktree: undefined,
         isLocal: undefined
       })

@@ -7,39 +7,12 @@ export PATH="$BUN_INSTALL/bin:$HOME/.opencode/bin:/usr/local/bin:$PATH"
 
 source /usr/local/lib/ocm/container-user.sh
 
-grant_kvm_access() {
-  local dev="${1:-/dev/kvm}"
-  [ -e "$dev" ] || return 0
-
-  local dev_gid group_name holder
-  dev_gid="$(stat -c '%g' "$dev" 2>/dev/null)" || return 0
-  case "$dev_gid" in
-    ''|*[!0-9]*) return 0 ;;
-  esac
-
-  holder="$(getent group "$dev_gid" 2>/dev/null | cut -d: -f1 || true)"
-  if [ -n "$holder" ]; then
-    group_name="$holder"
+as_app_user() {
+  if [ "$(id -u)" = "0" ]; then
+    runuser -u node -- "$@"
   else
-    group_name="kvm"
-    if ! groupadd -g "$dev_gid" "$group_name"; then
-      echo "ERROR: could not create group '$group_name' (gid $dev_gid) required for $dev access" >&2
-      return 1
-    fi
+    "$@"
   fi
-
-  if ! usermod -aG "$group_name" node; then
-    echo "ERROR: could not add node to group '$group_name' (gid $dev_gid) required for $dev access" >&2
-    return 1
-  fi
-
-  if ! runuser -u node -- test -r "$dev" || ! runuser -u node -- test -w "$dev"; then
-    echo "ERROR: node cannot access $dev (group '$group_name', gid $dev_gid)" >&2
-    echo "ERROR: grant the container group access to $dev or run the sandbox overlay (docker-compose.sandbox.yml)" >&2
-    return 1
-  fi
-
-  echo "Granted node access to $dev (group '$group_name', gid $dev_gid)"
 }
 
 MIN_OPENCODE_VERSION="1.0.137"
@@ -54,7 +27,7 @@ read_opencode_version() {
   if [ -z "$binary" ] || [ ! -x "$binary" ]; then
     return 0
   fi
-  runuser -u node -- "$binary" --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true
+  as_app_user "$binary" --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true
 }
 
 install_opencode() {
@@ -72,9 +45,10 @@ install_opencode() {
     return 1
   fi
   echo "Installing OpenCode ${opencode_version}..."
-  local staging
+  local staging download_base
+  download_base="${OPENCODE_DOWNLOAD_BASE:-https://github.com/anomalyco/opencode/releases}"
   staging="$(mktemp -d)"
-  curl -fsSL "https://github.com/anomalyco/opencode/releases/download/v${opencode_version}/opencode-linux-$(uname -m | sed 's/x86_64/x64/; s/aarch64/arm64/').tar.gz" \
+  curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 20 --max-time 1800 "${download_base}/download/v${opencode_version}/opencode-linux-$(uname -m | sed 's/x86_64/x64/; s/aarch64/arm64/').tar.gz" \
     -o "$staging/opencode.tar.gz"
   tar -xzf "$staging/opencode.tar.gz" -C "$staging"
   mkdir -p "$HOME/.opencode/bin"
@@ -100,7 +74,7 @@ echo "Checking Bun installation..."
 
 if ! command -v bun >/dev/null 2>&1; then
   echo "Bun not found. Installing..."
-  curl -fsSL https://bun.sh/install | bash
+  curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 20 --max-time 900 https://bun.sh/install | bash
 
   if ! command -v bun >/dev/null 2>&1; then
     echo "Failed to install Bun. Exiting."
@@ -164,17 +138,36 @@ if [ -z "$AUTH_SECRET" ]; then
   exit 1
 fi
 
-if ! align_container_user node; then
-  exit 1
+# Root path: align the container user to PUID/PGID, fix ownership, then drop
+# privileges. Non-root path: never call root-only tools; just verify the mounted
+# directories are writable by the current user and exec directly.
+if [ "$(id -u)" = "0" ]; then
+  if ! align_container_user node; then
+    exit 1
+  fi
+
+  warn_if_workspace_owner_differs /workspace "$OCM_TARGET_UID" "$OCM_TARGET_GID"
+
+  mkdir -p /app/data /workspace /home/node/.cache /home/node/.opencode
+  chown -R node:node /app/data /workspace /home/node
+
+  exec runuser -u node -- "$@"
 fi
 
-if ! grant_kvm_access; then
-  echo "WARNING: continuing without /dev/kvm access; agent sandboxing will report itself unavailable" >&2
-fi
+require_writable_dir() {
+  local dir="$1"
+  if ! mkdir -p "$dir" 2>/dev/null || [ ! -w "$dir" ]; then
+    echo "ERROR: $dir is not writable by uid $(id -u)." >&2
+    echo "ERROR: the container is running as a non-root user (PUID/PGID)." >&2
+    echo "ERROR: ensure the host workspace/data directories are owned by that uid:gid," >&2
+    echo "ERROR: or run the container as root to let the entrypoint chown them once." >&2
+    exit 1
+  fi
+}
 
-warn_if_workspace_owner_differs /workspace "$OCM_TARGET_UID" "$OCM_TARGET_GID"
+require_writable_dir /app/data
+require_writable_dir /workspace
+require_writable_dir /home/node/.cache
+require_writable_dir /home/node/.opencode
 
-mkdir -p /app/data /workspace /home/node/.cache /home/node/.opencode /home/node/.microsandbox
-chown -R node:node /app/data /workspace /home/node
-
-exec runuser -u node -- "$@"
+exec "$@"

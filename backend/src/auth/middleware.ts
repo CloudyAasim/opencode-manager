@@ -40,4 +40,20 @@ export function createAuthMiddleware(auth: AuthInstance) {
   })
 }
 
+export function isAdmin(user: Session['user'] | undefined): boolean {
+  return user?.role === 'admin'
+}
+
+export const requireAdmin = createMiddleware<{
+  Variables: {
+    session: Session['session']
+    user: Session['user']
+  }
+}>(async (c, next) => {
+  if (!isAdmin(c.get('user'))) {
+    return c.json({ error: 'Forbidden' }, 403)
+  }
+  await next()
+})
+
 

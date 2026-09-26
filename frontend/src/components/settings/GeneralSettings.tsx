@@ -1,6 +1,7 @@
 import { useSettings } from '@/hooks/useSettings'
 import { useVersionCheck } from '@/hooks/useVersionCheck'
 import { Loader2 } from 'lucide-react'
+import { useI18n, SUPPORTED_LOCALES, LOCALE_LABELS, type SupportedLocale } from '@/lib/i18n'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
@@ -8,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 export function GeneralSettings() {
   const { preferences, isLoading, updateSettings, isUpdating } = useSettings()
   const { data: versionInfo, isLoading: isVersionLoading } = useVersionCheck()
+  const { t, locale, setLocale } = useI18n()
 
   if (isLoading) {
     return (
@@ -20,7 +22,7 @@ export function GeneralSettings() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-foreground">General Preferences</h2>
+        <h2 className="text-lg font-semibold text-foreground">{t('settings.general.title')}</h2>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>OpenCode Manager</span>
           {isVersionLoading ? (
@@ -37,44 +39,65 @@ export function GeneralSettings() {
                   rel="noopener noreferrer"
                   className="text-xs font-medium text-green-500 hover:text-green-400 transition-colors"
                 >
-                  v{versionInfo.latestVersion} available
+                  {t('settings.general.updateAvailable', { version: `v${versionInfo.latestVersion}` })}
                 </a>
               )}
             </>
           ) : (
-            <span>unknown</span>
+            <span>{t('common.unknown')}</span>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="min-w-0 space-y-0.5">
-          <Label htmlFor="theme">Theme</Label>
-          <p className="text-sm text-muted-foreground">
-            Choose your preferred color scheme
-          </p>
-        </div>
-        <Select
-          value={preferences?.theme || 'dark'}
-          onValueChange={(value) => updateSettings({ theme: value as 'dark' | 'light' | 'system' })}
-        >
-          <SelectTrigger id="theme" className="w-full shrink-0 sm:w-40">
-            <SelectValue placeholder="Select a theme" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="dark">Dark</SelectItem>
-            <SelectItem value="light">Light</SelectItem>
-            <SelectItem value="system">System</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       <div className="divide-y divide-border">
+        <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0 space-y-0.5">
+            <Label htmlFor="language">{t('settings.general.language')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('settings.general.languageDescription')}
+            </p>
+          </div>
+          <Select value={locale} onValueChange={(value) => setLocale(value as SupportedLocale)}>
+            <SelectTrigger id="language" className="w-full shrink-0 sm:w-40">
+              <SelectValue placeholder={t('settings.general.selectLanguage')} />
+            </SelectTrigger>
+            <SelectContent>
+              {SUPPORTED_LOCALES.map((supported) => (
+                <SelectItem key={supported} value={supported}>
+                  {LOCALE_LABELS[supported]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0 space-y-0.5">
+            <Label htmlFor="theme">{t('settings.general.theme')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('settings.general.themeDescription')}
+            </p>
+          </div>
+          <Select
+            value={preferences?.theme || 'dark'}
+            onValueChange={(value) => updateSettings({ theme: value as 'dark' | 'light' | 'system' })}
+          >
+            <SelectTrigger id="theme" className="w-full shrink-0 sm:w-40">
+              <SelectValue placeholder={t('settings.general.theme')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dark">{t('settings.general.themeDark')}</SelectItem>
+              <SelectItem value="light">{t('settings.general.themeLight')}</SelectItem>
+              <SelectItem value="system">{t('settings.general.themeSystem')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex items-start justify-between gap-4 py-3">
           <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="simpleChatMode">Simple chat mode</Label>
+            <Label htmlFor="simpleChatMode">{t('settings.general.simpleChatMode')}</Label>
             <p className="text-sm text-muted-foreground">
-              Show only your messages and the assistant's replies. Hides tool calls, reasoning, diffs, and agent details.
+              {t('settings.general.simpleChatModeDescription')}
             </p>
           </div>
           <Switch
@@ -86,9 +109,9 @@ export function GeneralSettings() {
 
         <div className="flex items-start justify-between gap-4 py-3">
           <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="autoScroll">Auto-scroll</Label>
+            <Label htmlFor="autoScroll">{t('settings.general.autoScroll')}</Label>
             <p className="text-sm text-muted-foreground">
-              Automatically scroll to bottom when new messages arrive
+              {t('settings.general.autoScrollDescription')}
             </p>
           </div>
           <Switch
@@ -102,9 +125,9 @@ export function GeneralSettings() {
           <>
             <div className="flex items-start justify-between gap-4 py-3">
               <div className="min-w-0 space-y-0.5">
-                <Label htmlFor="showReasoning">Show reasoning</Label>
+                <Label htmlFor="showReasoning">{t('settings.general.showReasoning')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Display model reasoning and thought process
+                  {t('settings.general.showReasoningDescription')}
                 </p>
               </div>
               <Switch
@@ -116,9 +139,9 @@ export function GeneralSettings() {
 
             <div className="flex items-start justify-between gap-4 py-3">
               <div className="min-w-0 space-y-0.5">
-                <Label htmlFor="expandToolCalls">Expand tool calls</Label>
+                <Label htmlFor="expandToolCalls">{t('settings.general.expandToolCalls')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Automatically expand tool call details by default
+                  {t('settings.general.expandToolCallsDescription')}
                 </p>
               </div>
               <Switch
@@ -130,9 +153,9 @@ export function GeneralSettings() {
 
             <div className="flex items-start justify-between gap-4 py-3">
               <div className="min-w-0 space-y-0.5">
-                <Label htmlFor="expandDiffs">Expand diffs</Label>
+                <Label htmlFor="expandDiffs">{t('settings.general.expandDiffs')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Show file diffs expanded by default for edit operations
+                  {t('settings.general.expandDiffsDescription')}
                 </p>
               </div>
               <Switch
@@ -148,7 +171,7 @@ export function GeneralSettings() {
       {isUpdating && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Saving...</span>
+          <span>{t('settings.general.saving')}</span>
         </div>
       )}
     </div>

@@ -1,13 +1,11 @@
 import { useState, useRef, useEffect, useMemo, memo } from 'react'
-import { unwrapSandboxExecCommand } from '@opencode-manager/shared/utils'
 import type { components } from '@/api/opencode-types'
 import { useSettings } from '@/hooks/useSettings'
 import { useUserBash } from '@/stores/userBashStore'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
 import { usePermissions, useQuestions } from '@/contexts/EventContext'
 import { detectFileReferences } from '@/lib/fileReferences'
-import { ExternalLink, Loader2, Shield } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
 import { getToolSpecificRender } from './FileToolRender'
 
@@ -106,14 +104,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
   const rawCommand = part.tool === 'bash' && typeof part.state.input?.command === 'string'
     ? part.state.input.command
     : undefined
-  const displayCommand = useMemo(
-    () => (rawCommand === undefined ? undefined : unwrapSandboxExecCommand(rawCommand)),
-    [rawCommand]
-  )
-  const isSandboxedCommand = rawCommand !== undefined && (
-    displayCommand !== rawCommand ||
-    (part.state.status === 'completed' && (part.state.metadata as Record<string, unknown> | undefined)?.sandbox === true)
-  )
+  const displayCommand = rawCommand
   const isUserBashCommand = part.state.status === 'completed' &&
     typeof displayCommand === 'string' &&
     userBashCommands.has(displayCommand)
@@ -192,16 +183,6 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
 
   const previewText = getPreviewText()
   const isFileTool = ['read', 'write', 'edit'].includes(part.tool)
-  const sandboxIndicator = isSandboxedCommand ? (
-    <Badge
-      variant="outline"
-      className="shrink-0 gap-1 border-green-600/40 bg-green-500/15 text-green-700 dark:text-green-400"
-      title="Executed inside the sandbox microVM"
-    >
-      <Shield className="w-3 h-3" />
-      sandbox
-    </Badge>
-  ) : null
 
   if (part.tool === 'task') {
     const sessionId = taskSessionId
@@ -282,7 +263,6 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
           <span className="text-green-600 dark:text-green-400">✓</span>
           <span className="font-medium">$</span>
           <span className="text-foreground">{command}</span>
-          {sandboxIndicator}
           {part.state.status === 'completed' && part.state.time && (
             <span className="text-muted-foreground text-xs ml-auto">
               {((part.state.time.end - part.state.time.start) / 1000).toFixed(2)}s
@@ -322,7 +302,6 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
       >
         <span className={getStatusColor()}>{getStatusIcon()}</span>
         <span className="font-medium">{part.tool}</span>
-        {sandboxIndicator}
 
         {previewText && isFileTool ? (
           <span

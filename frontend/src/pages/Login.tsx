@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useLoaderData } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
+import { useI18n } from '@/lib/i18n'
+import { LanguageToggle } from '@/components/LanguageToggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,21 +14,30 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Github, KeyRound, Mail, AlertCircle } from 'lucide-react'
 import type { AuthConfig } from '@/lib/auth-loaders'
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-})
+type LoginFormData = z.infer<ReturnType<typeof createLoginSchema>>
 
-type LoginFormData = z.infer<typeof loginSchema>
+function createLoginSchema(emailInvalid: string, passwordRequired: string) {
+  return z.object({
+    email: z.string().email(emailInvalid),
+    password: z.string().min(1, passwordRequired),
+  })
+}
 
 export function Login() {
   const { signInWithEmail, signInWithProvider, signInWithPasskey } = useAuth()
   const { config } = useLoaderData() as { config: AuthConfig }
   const theme = useTheme()
+  const { t, locale } = useI18n()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
+
+  const loginSchema = useMemo(
+    () => createLoginSchema(t('auth.emailInvalid'), t('auth.passwordRequired')),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, t],
+  )
 
   const {
     register,
@@ -80,7 +91,8 @@ export function Login() {
   const hasCredentials = config.enabledProviders.includes('credentials')
 
   return (
-    <div className="h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-background p-4">
+    <div className="relative h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-background p-4">
+      <LanguageToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center space-y-2">
           <img 
@@ -110,7 +122,7 @@ export function Login() {
               ) : (
                 <KeyRound className="mr-2 h-4 w-4" />
               )}
-              Sign in with Passkey
+              {t('auth.signInWithPasskey')}
             </Button>
           )}
 
@@ -128,7 +140,7 @@ export function Login() {
                   ) : (
                     <Github className="mr-2 h-4 w-4" />
                   )}
-                  Continue with GitHub
+                  {t('auth.continueWithGithub')}
                 </Button>
               )}
               {config.enabledProviders.includes('google') && (
@@ -160,7 +172,7 @@ export function Login() {
                       />
                     </svg>
                   )}
-                  Continue with Google
+                  {t('auth.continueWithGoogle')}
                 </Button>
               )}
               {config.enabledProviders.includes('discord') && (
@@ -180,7 +192,7 @@ export function Login() {
                       />
                     </svg>
                   )}
-                  Continue with Discord
+                  {t('auth.continueWithDiscord')}
                 </Button>
               )}
             </div>
@@ -192,7 +204,7 @@ export function Login() {
                 <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
+                <span className="bg-card px-2 text-muted-foreground">{t('auth.orContinueWithEmail')}</span>
               </div>
             </div>
           )}
@@ -200,7 +212,7 @@ export function Login() {
           {hasCredentials && (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
+                <Label htmlFor="email" className="text-sm text-muted-foreground">{t('auth.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -214,7 +226,7 @@ export function Login() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm text-muted-foreground">Password</Label>
+                <Label htmlFor="password" className="text-sm text-muted-foreground">{t('auth.password')}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -233,7 +245,7 @@ export function Login() {
                 ) : (
                   <Mail className="mr-2 h-4 w-4" />
                 )}
-                Sign In
+                {t('auth.signIn')}
               </Button>
             </form>
           )}

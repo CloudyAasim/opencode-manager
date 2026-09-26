@@ -90,3 +90,18 @@ export async function protectedLoader() {
 
   return null
 }
+
+export async function adminLoader() {
+  const session = await getSession()
+  const user = session.data?.user as { role?: string } | undefined
+
+  if (!user) {
+    return redirect('/login')
+  }
+
+  if (user.role !== 'admin') {
+    return redirect('/')
+  }
+
+  return null
+}

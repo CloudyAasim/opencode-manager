@@ -211,7 +211,6 @@ vi.mock('../../src/services/opencode-single-server', async (importOriginal) => {
       checkHealth: vi.fn().mockResolvedValue(true),
       markRestartPending: vi.fn(),
       isRestartPending: vi.fn(),
-      isSandboxEnforced: vi.fn(),
       setDatabase: vi.fn(),
       reinitializeBinDirectory: vi.fn(),
     },
@@ -238,23 +237,6 @@ vi.mock('../../src/services/repo', () => ({
   relinkReposFromSessionDirectories: vi.fn(),
 }))
 
-const sandboxRuntimeServiceMock = vi.hoisted(() => ({
-  SandboxRuntimeService: vi.fn(),
-}))
-
-vi.mock('../../src/services/sandbox/runtime', () => ({
-  SandboxRuntimeService: sandboxRuntimeServiceMock.SandboxRuntimeService,
-}))
-
-const capabilityMock = vi.hoisted(() => ({
-  detectSandboxCapability: vi.fn(),
-}))
-
-vi.mock('../../src/services/sandbox/capability', () => ({
-  detectSandboxCapability: capabilityMock.detectSandboxCapability,
-  resetSandboxCapabilityCache: vi.fn(),
-}))
-
 vi.mock('@opencode-manager/shared/config/env', () => ({
   getWorkspacePath: vi.fn(() => '/tmp/test-workspace'),
   getReposPath: vi.fn(() => '/tmp/test-repos'),
@@ -269,7 +251,6 @@ vi.mock('@opencode-manager/shared/config/env', () => ({
     AUTH: { TRUSTED_ORIGINS: 'http://localhost:5173', SECRET: 'test-secret-for-encryption-key-32c' },
     WORKSPACE: { BASE_PATH: '/tmp/test-workspace', REPOS_DIR: 'repos', CONFIG_DIR: 'config', AUTH_FILE: 'auth.json' },
     OPENCODE: { PORT: 5551, HOST: '127.0.0.1' },
-    SANDBOX: { START_TIMEOUT_MS: 300000, EXEC_TIMEOUT_MS: 600000 },
     DATABASE: { PATH: ':memory:' },
     FILE_LIMITS: {
       MAX_SIZE_BYTES: 1024 * 1024,
@@ -286,8 +267,6 @@ import { createSettingsRoutes } from '../../src/routes/settings'
 import { getImportedSessionDirectories, getOpenCodeImportStatus, OpenCodeImportProtectionError, syncOpenCodeImport } from '../../src/services/opencode-import'
 import { relinkReposFromSessionDirectories } from '../../src/services/repo'
 import { opencodeServerManager } from '../../src/services/opencode-single-server'
-import { detectSandboxCapability } from '../../src/services/sandbox/capability'
-import { forceProcessAttestation } from '../../src/services/opencode/process-identity'
 import { setOpenCodeRestartCoordinator } from '../../src/services/opencode-restart'
 import { createRepo } from '../../src/db/queries'
 
@@ -297,12 +276,10 @@ const mockFetchVersion = opencodeServerManager.fetchVersion as ReturnType<typeof
 const mockRestart = opencodeServerManager.restart as ReturnType<typeof vi.fn>
 const mockClearStartupError = opencodeServerManager.clearStartupError as ReturnType<typeof vi.fn>
 const mockGetLastStartupError = opencodeServerManager.getLastStartupError as ReturnType<typeof vi.fn>
-const mockIsSandboxEnforced = opencodeServerManager.isSandboxEnforced as ReturnType<typeof vi.fn>
 const mockGetOpenCodeImportStatus = getOpenCodeImportStatus as ReturnType<typeof vi.fn>
 const mockSyncOpenCodeImport = syncOpenCodeImport as ReturnType<typeof vi.fn>
 const mockGetImportedSessionDirectories = getImportedSessionDirectories as ReturnType<typeof vi.fn>
 const mockRelinkReposFromSessionDirectories = relinkReposFromSessionDirectories as ReturnType<typeof vi.fn>
-const mockDetectSandboxCapability = detectSandboxCapability as ReturnType<typeof vi.fn>
 
 describe('Settings Routes - OpenCode Upgrade', () => {
   let settingsApp: ReturnType<typeof createSettingsRoutes>
@@ -314,7 +291,6 @@ describe('Settings Routes - OpenCode Upgrade', () => {
     mockFetchVersion.mockReset()
     mockRestart.mockReset()
     mockClearStartupError.mockReset()
-    mockIsSandboxEnforced.mockReset()
     mockGetSettings.mockReset()
     mockUpdateSettings.mockReset()
     mockResetSettings.mockReset()
@@ -328,13 +304,6 @@ describe('Settings Routes - OpenCode Upgrade', () => {
     mockArchiveBrokenOpenCodeConfigFile.mockReset()
     mockRestoreOpenCodeConfigSnapshot.mockReset()
     mockApplyOpenCodeConfigUpdate.mockReset()
-    mockDetectSandboxCapability.mockReset()
-    mockDetectSandboxCapability.mockReturnValue({ available: true, msbVersion: 'msb 1.0.0' })
-    forceProcessAttestation(true)
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockReset()
-    sandboxRuntimeServiceMock.SandboxRuntimeService.mockImplementation(() => ({
-      isEnabled: () => false,
-    }))
     
     testDb = {} as any
     settingsApp = createSettingsRoutes(testDb, { getGitEnvironment: vi.fn().mockReturnValue({}) } as any, createStubOpenCodeClient())
@@ -767,18 +736,6 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         expect(mockRestart).toHaveBeenCalledTimes(1)
       })
 
-      it('allows upgrading while sandbox enforcement is active', async () => {
-        mockIsSandboxEnforced.mockReturnValue(true)
-        mockGetVersion.mockReturnValueOnce('1.18.16')
-        mockFetchVersion.mockResolvedValueOnce('1.19.0')
-        mockSpawnSync.mockReturnValueOnce({ stdout: 'Upgrade successful\n', stderr: '', signal: null, status: 0, error: undefined })
-
-        const res = await settingsApp.fetch(new Request('http://localhost/opencode-upgrade', { method: 'POST' }))
-
-        expect(res.status).toBe(200)
-        expect(mockSpawnSync).toHaveBeenCalled()
-        expect(mockRestart).toHaveBeenCalled()
-      })
     })
 
     describe('timeout and recovery scenarios', () => {
@@ -919,26 +876,6 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         expect(json.success).toBe(false)
         expect(json.details).toContain('did not result in the requested version 1.0.5')
         expect(json.newVersion).toBe('1.0.0')
-      })
-
-      it('allows installing any version while sandbox enforcement is active', async () => {
-        mockIsSandboxEnforced.mockReturnValue(true)
-        mockGetVersion.mockReturnValueOnce('1.18.16')
-        mockFetchVersion.mockResolvedValueOnce('1.20.0')
-        mockSpawnSync.mockReturnValueOnce({ stdout: 'Installed v1.20.0\n', stderr: '', signal: null, status: 0, error: undefined })
-
-        const res = await settingsApp.fetch(new Request('http://localhost/opencode-install-version', {
-          method: 'POST',
-          body: JSON.stringify({ version: '1.20.0' }),
-          headers: { 'Content-Type': 'application/json' }
-        }))
-
-        expect(res.status).toBe(200)
-        expect(mockSpawnSync).toHaveBeenCalledWith(
-          'opencode',
-          ['upgrade', 'v1.20.0', '--method', 'curl'],
-          expect.any(Object)
-        )
       })
 
       it('should prepend v to version if missing', async () => {
@@ -1269,7 +1206,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
     })
 
     it('returns 500 with the startup failure reason when a supervisor restart is unhealthy', async () => {
-      mockGetLastStartupError.mockReturnValue('OpenCode version 1.18.15 does not support sandboxed bash tool rewriting')
+      mockGetLastStartupError.mockReturnValue('OpenCode version 1.18.15 is below the minimum required version 1.0.137')
       const unhealthySupervisor = {
         restart: vi.fn().mockResolvedValue({ healthy: false }),
       }
@@ -1287,7 +1224,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
       expect(res.status).toBe(500)
       expect(json.success).toBeUndefined()
       expect(json.error).toBe('Failed to restart OpenCode server')
-      expect(json.details).toContain('does not support sandboxed bash tool rewriting')
+      expect(json.details).toContain('is below the minimum required version 1.0.137')
       expect(unhealthySupervisor.restart).toHaveBeenCalledWith('settings_restart')
     })
 
@@ -1327,90 +1264,6 @@ describe('Settings Routes - OpenCode Upgrade', () => {
   })
 
   describe('PATCH / - restart pending', () => {
-    it('marks the OpenCode server restart pending when sandbox.enabled changes', async () => {
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: false } },
-        updatedAt: 1,
-      })
-      mockUpdateSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true } },
-        updatedAt: 2,
-      })
-
-      const req = new Request('http://localhost/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: { sandbox: { enabled: true } } }),
-      })
-      const res = await settingsApp.fetch(req)
-
-      expect(res.status).toBe(200)
-      expect(opencodeServerManager.markRestartPending).toHaveBeenCalledTimes(1)
-    })
-
-    it('does not mark the OpenCode server restart pending when sandbox is unchanged', async () => {
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true } },
-        updatedAt: 1,
-      })
-      mockUpdateSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true } },
-        updatedAt: 1,
-      })
-
-      const req = new Request('http://localhost/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: { sandbox: { enabled: true } } }),
-      })
-      const res = await settingsApp.fetch(req)
-
-      expect(res.status).toBe(200)
-      expect(opencodeServerManager.markRestartPending).not.toHaveBeenCalled()
-    })
-
-    it('does not mark the OpenCode server restart pending when only sandbox.gitCredentials changes', async () => {
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true, gitCredentials: false } },
-        updatedAt: 1,
-      })
-      mockUpdateSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true, gitCredentials: true } },
-        updatedAt: 2,
-      })
-
-      const req = new Request('http://localhost/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: { sandbox: { enabled: true, gitCredentials: true } } }),
-      })
-      const res = await settingsApp.fetch(req)
-
-      expect(res.status).toBe(200)
-      expect(opencodeServerManager.markRestartPending).not.toHaveBeenCalled()
-    })
-
-    it('does not mark the OpenCode server restart pending when sandbox is absent from the patch', async () => {
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true } },
-        updatedAt: 1,
-      })
-      mockUpdateSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true } },
-        updatedAt: 1,
-      })
-
-      const req = new Request('http://localhost/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: { theme: 'dark' } }),
-      })
-      const res = await settingsApp.fetch(req)
-
-      expect(res.status).toBe(200)
-      expect(opencodeServerManager.markRestartPending).not.toHaveBeenCalled()
-    })
-
     it('requires a restart when git credentials change instead of reloading config', async () => {
       const credential = { id: 'cred-1', name: 'gh', host: 'github.com', type: 'pat', token: 'new-token' }
       mockGetSettings.mockReturnValue({
@@ -1479,142 +1332,6 @@ describe('Settings Routes - OpenCode Upgrade', () => {
 
       expect(res.status).toBe(200)
       expect(json.restartRequired).toBeUndefined()
-      expect(opencodeServerManager.markRestartPending).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('PATCH / - sandbox enable guard', () => {
-    afterEach(() => {
-      forceProcessAttestation(null)
-    })
-
-    it('rejects enabling sandboxing with 400 when sandbox capability is unavailable and does not persist settings', async () => {
-      mockDetectSandboxCapability.mockReturnValue({
-        available: false,
-        reason: '/dev/kvm is not available or not writable; pass --device /dev/kvm and run on a KVM-capable Linux host',
-      })
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: false } },
-        updatedAt: 1,
-      })
-
-      const req = new Request('http://localhost/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: { sandbox: { enabled: true } } }),
-      })
-      const res = await settingsApp.fetch(req)
-      const json = await res.json() as { error: string }
-
-      expect(res.status).toBe(400)
-      expect(json.error).toBe('Cannot enable sandboxing: /dev/kvm is not available or not writable; pass --device /dev/kvm and run on a KVM-capable Linux host')
-      expect(mockUpdateSettings).not.toHaveBeenCalled()
-      expect(opencodeServerManager.markRestartPending).not.toHaveBeenCalled()
-    })
-
-    it('rejects enabling sandboxing with 400 when capability is available but process identity is not attested', async () => {
-      forceProcessAttestation(false)
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: false } },
-        updatedAt: 1,
-      })
-
-      const req = new Request('http://localhost/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: { sandbox: { enabled: true } } }),
-      })
-      const res = await settingsApp.fetch(req)
-      const json = await res.json() as { error: string }
-
-      expect(res.status).toBe(400)
-      expect(json.error).toBe('Cannot enable sandboxing: process identity attestation is unavailable on this platform (Linux /proc is required)')
-      expect(mockUpdateSettings).not.toHaveBeenCalled()
-      expect(opencodeServerManager.markRestartPending).not.toHaveBeenCalled()
-    })
-
-    it('enables sandboxing with 200 when capability is available and process identity is attested', async () => {
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: false } },
-        updatedAt: 1,
-      })
-      mockUpdateSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true } },
-        updatedAt: 2,
-      })
-
-      const req = new Request('http://localhost/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: { sandbox: { enabled: true } } }),
-      })
-      const res = await settingsApp.fetch(req)
-
-      expect(res.status).toBe(200)
-      expect(mockUpdateSettings).toHaveBeenCalledWith({ sandbox: { enabled: true } }, 'default')
-      expect(opencodeServerManager.markRestartPending).toHaveBeenCalledTimes(1)
-    })
-
-    it('allows disabling sandboxing with 200 even when capability is unavailable and identity is not attested', async () => {
-      mockDetectSandboxCapability.mockReturnValue({
-        available: false,
-        reason: '/dev/kvm is not available or not writable; pass --device /dev/kvm and run on a KVM-capable Linux host',
-      })
-      forceProcessAttestation(false)
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true } },
-        updatedAt: 1,
-      })
-      mockUpdateSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: false } },
-        updatedAt: 2,
-      })
-
-      const req = new Request('http://localhost/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: { sandbox: { enabled: false } } }),
-      })
-      const res = await settingsApp.fetch(req)
-
-      expect(res.status).toBe(200)
-      expect(mockUpdateSettings).toHaveBeenCalledWith({ sandbox: { enabled: false } }, 'default')
-      expect(opencodeServerManager.markRestartPending).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  describe('DELETE / - sandbox preference restart pending', () => {
-    it('marks the OpenCode server restart pending when resetting disables sandboxing', async () => {
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: true } },
-        updatedAt: 1,
-      })
-      mockResetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: false } },
-        updatedAt: 2,
-      })
-
-      const req = new Request('http://localhost/', { method: 'DELETE' })
-      const res = await settingsApp.fetch(req)
-
-      expect(res.status).toBe(200)
-      expect(opencodeServerManager.markRestartPending).toHaveBeenCalledTimes(1)
-    })
-
-    it('does not mark the OpenCode server restart pending when resetting an already-default sandbox preference', async () => {
-      mockGetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: false } },
-        updatedAt: 1,
-      })
-      mockResetSettings.mockReturnValue({
-        preferences: { sandbox: { enabled: false } },
-        updatedAt: 2,
-      })
-
-      const req = new Request('http://localhost/', { method: 'DELETE' })
-      const res = await settingsApp.fetch(req)
-
-      expect(res.status).toBe(200)
       expect(opencodeServerManager.markRestartPending).not.toHaveBeenCalled()
     })
   })

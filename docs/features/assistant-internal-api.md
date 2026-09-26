@@ -16,7 +16,7 @@ The token has two in-product consumers, neither of which is an agent:
 
 | Consumer | How it obtains the token |
 |----------|--------------------------|
-| Generated plugins (`ocm-manager.js`, `ocm-sandbox.js`, `ocm-gh-env.js`) | The `OCM_INTERNAL_TOKEN` environment variable, injected into the OpenCode child process |
+| Generated plugins (`ocm-manager.js`, `ocm-gh-env.js`) | The `OCM_INTERNAL_TOKEN` environment variable, injected into the OpenCode child process |
 | External clients such as the `ocm` CLI | Settings -> Manager Token, served by `GET /api/settings/manager-token` |
 
 Agents never authenticate against this API themselves. They call the `ocm` tool, which holds the token inside the Manager process.
@@ -25,7 +25,7 @@ Agents never authenticate against this API themselves. They call the `ocm` tool,
 
 The Manager installs a generated plugin (`ocm-manager.js`) that gives every agent an `ocm` tool. The tool calls this API from inside the Manager's own OpenCode process, so it needs no token, no base URL, and no network access from the agent shell.
 
-That makes it the only path that works everywhere: a scheduled run executes in a throwaway worktree with no token of its own, and a sandboxed `bash` call runs in a microVM where `localhost` is the guest, not the Manager.
+That makes it the only path that works everywhere: a scheduled run executes in a throwaway worktree with no token of its own, and an agent `bash` call runs in a shell where `localhost` is not the Manager.
 
 The tool has two actions.
 
@@ -83,7 +83,6 @@ POST /repos/*/schedules/*/runs/*/cancel
 
 - `POST /notifications/send` — use the `send_notification` action instead.
 - `GET /git-credentials/gh-env` — returns the GitHub CLI environment (`GH_TOKEN`, `GITHUB_TOKEN`) for the OpenCode host process; it must not be readable by the agent.
-- `POST /sandbox/shell` — the sandbox planner's internal route that resolves and pins the shell for a `bash` call; exposing it would let the agent drive shell planning directly.
 - `/repos/*/mirror/*` — the repo mirror protocol that the `ocm` CLI uses to sync entire repositories; it can create, replace, patch, or delete whole repos, so it stays reserved for the CLI.
 
 Agents should use the `ocm` tool rather than the raw bearer-token endpoints below. Those endpoints remain available to the frontend, generated plugins, and other Manager-internal clients.

@@ -31,17 +31,6 @@ export const DEFAULTS = {
     AUTH_FILE: '.opencode/state/opencode/auth.json',
   },
 
-  SANDBOX: {
-    MSB_PATH: 'msb',
-    IMAGE: 'docker.io/cstechdev/ocm-sandbox@sha256:9df035cfb1a7c367bac6edbfd660d084b08e02faa051a93e0a6e381272b85342',
-    MEMORY: '4G',
-    CPUS: 2,
-    EXEC_USER: 'node',
-    NET: 'public',
-    START_TIMEOUT_MS: 300000,
-    EXEC_TIMEOUT_MS: 600000,
-  },
-
   TIMEOUTS: {
     PROCESS_START_WAIT_MS: 2000,
     PROCESS_VERIFY_WAIT_MS: 1000,
@@ -74,6 +63,39 @@ export const DEFAULTS = {
     HEARTBEAT_INTERVAL_MS: 30000,
     STALL_THRESHOLD_MS: 90000,
     WATCHDOG_TICK_MS: 15000,
+  },
+
+  TERMINAL: {
+    ENABLED: true,
+    SHELL: '/bin/bash',
+    COLS: 120,
+    ROWS: 30,
+    MAX_SESSIONS_PER_USER: 2,
+    MAX_SESSIONS_TOTAL: 4,
+    IDLE_TIMEOUT_MS: 15 * 60 * 1000,
+    MAX_DURATION_MS: 8 * 60 * 60 * 1000,
+    ADMINS_ONLY: true,
+    PER_USER_HOME: true,
+    USERS_DIR: 'users',
+  },
+
+  SECURITY: {
+    HSTS_MAX_AGE: 'max-age=31536000; includeSubDomains',
+    CONTENT_SECURITY_POLICY: [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' ws: wss:",
+      "media-src 'self' blob: data:",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+    ].join('; '),
   },
 } as const
 

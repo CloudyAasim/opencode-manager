@@ -15,7 +15,6 @@ import { createInternalRepoMirrorRoutes as mirrorRoutes } from './repo-mirror'
 import { createInternalOpenCodeWorkspacesRoutes } from './opencode-workspaces'
 import { createInternalAssistantRoutes } from './assistant'
 import { createInternalGitCredentialsRoutes } from './git-credentials'
-import { createInternalSandboxRoutes } from './sandbox'
 
 export function createInternalRoutes(
   db: Database,
@@ -26,19 +25,18 @@ export function createInternalRoutes(
 ) {
   const app = new Hono()
   app.use('/*', createInternalTokenMiddleware(db))
-  app.route('/schedules', createScheduleRoutes(scheduleService))
+  app.route('/schedules', createScheduleRoutes(scheduleService, db))
   app.route('/notifications', createInternalNotificationRoutes(notificationService))
   app.route('/settings', createInternalSettingsRoutes(settingsService))
   app.route('/opencode-config', createOpenCodeConfigRoutes(settingsService, openCodeClient))
   const repos = new Hono()
   repos.route('/', createInternalRepoRoutes(db, settingsService))
-  repos.route('/:id/schedules', createScheduleRoutes(scheduleService))
+  repos.route('/:id/schedules', createScheduleRoutes(scheduleService, db))
   repos.route('/', createInternalRepoSyncRoutes(db))
   repos.route('/', mirrorRoutes(db))
   app.route('/repos', repos)
   app.route('/opencode-workspaces', createInternalOpenCodeWorkspacesRoutes(db))
   app.route('/assistant', createInternalAssistantRoutes(openCodeClient))
   app.route('/git-credentials', createInternalGitCredentialsRoutes(db))
-  app.route('/sandbox', createInternalSandboxRoutes(db))
   return app
 }

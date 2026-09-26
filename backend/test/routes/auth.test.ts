@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createTestDb } from '../helpers/assistant-workspace'
-import { createAuthRoutes, createAuthInfoRoutes, syncAdminFromEnv } from '../../src/routes/auth'
+import { createAuthRoutes, createAuthInfoRoutes } from '../../src/routes/auth'
+import { UserAdminService } from '../../src/services/user-admin'
 import type { AuthInstance, Session } from '../../src/auth'
 
 const { ENV } = vi.hoisted(() => ({
@@ -13,6 +14,12 @@ const { ENV } = vi.hoisted(() => ({
       ADMIN_EMAIL: undefined as string | undefined,
       ADMIN_PASSWORD: undefined as string | undefined,
       ADMIN_PASSWORD_RESET: false,
+      ALLOW_SIGNUP: false,
+      ALLOWED_EMAILS: '',
+      ALLOWED_EMAIL_DOMAINS: '',
+      SESSION_EXPIRES_IN_DAYS: 7,
+      RATE_LIMIT_ENABLED: true,
+      TRUST_PROXY: false,
       GITHUB_CLIENT_ID: undefined as string | undefined,
       GITHUB_CLIENT_SECRET: undefined as string | undefined,
       GOOGLE_CLIENT_ID: undefined as string | undefined,
@@ -52,6 +59,9 @@ function resetEnv(): void {
   ENV.AUTH.ADMIN_EMAIL = undefined
   ENV.AUTH.ADMIN_PASSWORD = undefined
   ENV.AUTH.ADMIN_PASSWORD_RESET = false
+  ENV.AUTH.ALLOW_SIGNUP = false
+  ENV.AUTH.ALLOWED_EMAILS = ''
+  ENV.AUTH.ALLOWED_EMAIL_DOMAINS = ''
   ENV.AUTH.GITHUB_CLIENT_ID = undefined
   ENV.AUTH.GITHUB_CLIENT_SECRET = undefined
   ENV.AUTH.GOOGLE_CLIENT_ID = undefined
@@ -116,7 +126,8 @@ describe('createAuthRoutes', () => {
     expect(res.headers.get('set-cookie')).toBe('opencode.session=1')
   })
 
-  it('proxies POST requests and preserves the status', async () => {
+  it('proxies POST sign-up requests when self-registration is enabled', async () => {
+    ENV.AUTH.ALLOW_SIGNUP = true
     const handler = vi.fn(async () => new Response('created', { status: 201 }))
     const app = createAuthRoutes({ handler } as unknown as AuthInstance)
 
@@ -125,6 +136,34 @@ describe('createAuthRoutes', () => {
     expect(handler).toHaveBeenCalledTimes(1)
     expect(res.status).toBe(201)
     expect(await res.text()).toBe('created')
+  })
+
+  it('blocks sign-up when self-registration is disabled', async () => {
+    const handler = vi.fn(async () => new Response('created', { status: 201 }))
+    const app = createAuthRoutes({ handler } as unknown as AuthInstance)
+
+    const res = await app.fetch(new Request('http://localhost/api/auth/sign-up/email', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'stranger@example.com', password: 'password123', name: 'Stranger' }),
+    }))
+
+    expect(handler).not.toHaveBeenCalled()
+    expect(res.status).toBe(403)
+    expect(await res.json()).toMatchObject({ error: 'SIGN_UP_DISABLED' })
+  })
+
+  it('allows allowlisted emails to sign up while self-registration is disabled', async () => {
+    ENV.AUTH.ALLOWED_EMAILS = 'invited@example.com'
+    const handler = vi.fn(async () => new Response('created', { status: 201 }))
+    const app = createAuthRoutes({ handler } as unknown as AuthInstance)
+
+    const res = await app.fetch(new Request('http://localhost/api/auth/sign-up/email', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'invited@example.com', password: 'password123', name: 'Invited' }),
+    }))
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(res.status).toBe(201)
   })
 
   it('logs sign-in responses when a set-cookie header is present', async () => {
@@ -165,16 +204,24 @@ describe('createAuthRoutes', () => {
   })
 })
 
-describe('syncAdminFromEnv', () => {
+describe('UserAdminService.ensureAdminFromEnv', () => {
   let db: ReturnType<typeof createTestDb>
   let signUpEmail: ReturnType<typeof vi.fn>
+
+  const createService = () => new UserAdminService(db, { api: { signUpEmail } } as unknown as AuthInstance)
 
   beforeEach(() => {
     resetEnv()
     hashPasswordMock.mockImplementation(async (password: string) => `hashed:${password}`)
     db = createTestDb()
     vi.clearAllMocks()
-    signUpEmail = vi.fn(async () => ({}))
+    signUpEmail = vi.fn(async ({ body }: { body: { email: string; name: string } }) => {
+      const id = `user-${body.email}`
+      db.prepare(
+        'INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt, role) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).run(id, body.name, body.email, 0, Date.now(), Date.now(), 'user')
+      return { user: { id }, token: 'token' }
+    })
   })
 
   afterEach(() => {
@@ -182,9 +229,7 @@ describe('syncAdminFromEnv', () => {
   })
 
   it('does nothing when the admin credentials are not configured', async () => {
-    const auth = { api: { signUpEmail } } as unknown as AuthInstance
-
-    await syncAdminFromEnv(auth, db)
+    await createService().ensureAdminFromEnv()
 
     expect(signUpEmail).not.toHaveBeenCalled()
     expect(mockLoggerInfo).not.toHaveBeenCalled()
@@ -192,37 +237,36 @@ describe('syncAdminFromEnv', () => {
 
   it('does nothing when only one admin credential is configured', async () => {
     ENV.AUTH.ADMIN_EMAIL = 'admin@example.com'
-    const auth = { api: { signUpEmail } } as unknown as AuthInstance
 
-    await syncAdminFromEnv(auth, db)
+    await createService().ensureAdminFromEnv()
 
     expect(signUpEmail).not.toHaveBeenCalled()
   })
 
-  it('returns without resetting when an existing user has no password reset flag', async () => {
+  it('promotes an existing user to admin without resetting the password', async () => {
     ENV.AUTH.ADMIN_EMAIL = 'admin@example.com'
     ENV.AUTH.ADMIN_PASSWORD = 'admin-password'
     insertUser(db, 'user-1', 'admin@example.com')
     insertCredentialAccount(db, 'account-1', 'user-1', 'old-hash')
-    const auth = { api: { signUpEmail } } as unknown as AuthInstance
 
-    await syncAdminFromEnv(auth, db)
+    await createService().ensureAdminFromEnv()
 
     expect(signUpEmail).not.toHaveBeenCalled()
     expect(hashPasswordMock).not.toHaveBeenCalled()
     const account = db.prepare('SELECT password FROM "account" WHERE "userId" = ?').get('user-1') as { password: string }
     expect(account.password).toBe('old-hash')
+    const user = db.prepare('SELECT role FROM "user" WHERE id = ?').get('user-1') as { role: string }
+    expect(user.role).toBe('admin')
   })
 
-  it('resets the credential account password for an existing user', async () => {
+  it('resets the credential account password for an existing user when requested', async () => {
     ENV.AUTH.ADMIN_EMAIL = 'admin@example.com'
     ENV.AUTH.ADMIN_PASSWORD = 'new-password'
     ENV.AUTH.ADMIN_PASSWORD_RESET = true
     insertUser(db, 'user-1', 'admin@example.com')
     insertCredentialAccount(db, 'account-1', 'user-1', 'old-hash')
-    const auth = { api: { signUpEmail } } as unknown as AuthInstance
 
-    await syncAdminFromEnv(auth, db)
+    await createService().ensureAdminFromEnv()
 
     expect(hashPasswordMock).toHaveBeenCalledWith('new-password')
     expect(signUpEmail).not.toHaveBeenCalled()
@@ -235,13 +279,14 @@ describe('syncAdminFromEnv', () => {
   it('creates a new admin user when none exists', async () => {
     ENV.AUTH.ADMIN_EMAIL = 'admin@example.com'
     ENV.AUTH.ADMIN_PASSWORD = 'admin-password'
-    const auth = { api: { signUpEmail } } as unknown as AuthInstance
 
-    await syncAdminFromEnv(auth, db)
+    await createService().ensureAdminFromEnv()
 
     expect(signUpEmail).toHaveBeenCalledWith({
       body: { email: 'admin@example.com', password: 'admin-password', name: 'Admin' },
     })
+    const user = db.prepare('SELECT role FROM "user" WHERE email = ?').get('admin@example.com') as { role: string }
+    expect(user.role).toBe('admin')
     expect(mockLoggerInfo).toHaveBeenCalledWith(expect.stringContaining('Admin user created'))
   })
 
@@ -250,11 +295,10 @@ describe('syncAdminFromEnv', () => {
     ENV.AUTH.ADMIN_PASSWORD = 'admin-password'
     const failure = new Error('sign up failed')
     signUpEmail.mockRejectedValueOnce(failure)
-    const auth = { api: { signUpEmail } } as unknown as AuthInstance
 
-    await expect(syncAdminFromEnv(auth, db)).resolves.toBeUndefined()
+    await expect(createService().ensureAdminFromEnv()).resolves.toBeUndefined()
 
-    expect(mockLoggerError).toHaveBeenCalledWith('Failed to create admin user from environment:', failure)
+    expect(mockLoggerError).toHaveBeenCalledWith('Failed to create admin user from environment', failure)
   })
 })
 
@@ -281,10 +325,19 @@ describe('createAuthInfoRoutes', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({
       enabledProviders: ['credentials', 'passkey'],
-      registrationEnabled: true,
+      registrationEnabled: false,
       isFirstUser: true,
       adminConfigured: false,
     })
+  })
+
+  it('reports registration as enabled only when explicitly allowed', async () => {
+    ENV.AUTH.ALLOW_SIGNUP = true
+
+    const res = await app.fetch(new Request('http://localhost/config'))
+    const json = await res.json() as { registrationEnabled: boolean }
+
+    expect(json.registrationEnabled).toBe(true)
   })
 
   it('lists every configured social provider', async () => {

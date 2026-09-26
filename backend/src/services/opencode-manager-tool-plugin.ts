@@ -159,7 +159,7 @@ export default async function () {
       ${MANAGER_TOOL_NAME}: {
         description: [
           'Perform an OpenCode Manager action.',
-          'The action runs inside OpenCode Manager itself, so it needs no token and no network access from the agent shell, and it works in sandboxed sessions and scheduled runs.',
+          'The action runs inside OpenCode Manager itself, so it needs no token and no network access from the agent shell, and it works in normal sessions and scheduled runs.',
           'Actions:',
           '- send_notification: send a push notification to every device the user has registered.',
           '- request: call an allow-listed internal API route to read and manage settings, the OpenCode configuration file, repos, OpenCode workspaces, and schedules.',

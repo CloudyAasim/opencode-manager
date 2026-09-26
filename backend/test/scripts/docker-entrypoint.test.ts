@@ -31,6 +31,7 @@ const extractMinOpenCodeVersion = () => {
 
 const installPrelude = () => [
   extractMinOpenCodeVersion(),
+  extractShellFunction('as_app_user'),
   extractShellFunction('version_gte'),
   extractShellFunction('read_opencode_version'),
   extractShellFunction('install_opencode'),
@@ -42,15 +43,7 @@ beforeEach(() => {
   mkdirSync(stubDir, { recursive: true })
   logPath = join(stubDir, 'calls.log')
 
-  writeStub('stat', `echo "${'${OCM_STUB_DEV_GID:-44}'}"`)
-  writeStub('getent', `
-if [ "$1" = "group" ] && [ "$2" = "${'${OCM_STUB_DEV_GID:-44}'}" ]; then
-  echo "${'${OCM_STUB_GROUP_HOLDER}'}:x:$2:"
-  exit 0
-fi
-exit 2`)
-  writeStub('groupadd', `echo "groupadd $*" >> "$OCM_STUB_LOG"`)
-  writeStub('usermod', `echo "usermod $*" >> "$OCM_STUB_LOG"`)
+  writeStub('id', `echo 0`)
   writeStub('runuser', `echo "runuser $*" >> "$OCM_STUB_LOG"
 if [ "${'${OCM_STUB_RUNUSER_EXEC:-0}'}" = "1" ]; then
   while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do shift; done
@@ -65,107 +58,10 @@ afterEach(() => {
   rmSync(stubDir, { recursive: true, force: true })
 })
 
-const runScript = (snippet: string, env: Record<string, string> = {}) => {
-  const scriptPath = join(stubDir, 'test.sh')
-  writeFileSync(scriptPath, `set -e\n${extractShellFunction('grant_kvm_access')}\n${snippet}\n`)
-  return spawnSync('bash', [scriptPath], {
-    encoding: 'utf-8',
-    env: {
-      ...process.env,
-      PATH: `${stubDir}:${process.env.PATH}`,
-      OCM_STUB_LOG: logPath,
-      ...env,
-    },
-  })
-}
-
 const stubCalls = () => {
   if (!existsSync(logPath)) return []
   return readFileSync(logPath, 'utf-8').split('\n').filter(Boolean)
 }
-
-const mockDevice = () => {
-  const dev = join(stubDir, 'dev-kvm')
-  writeFileSync(dev, '')
-  return dev
-}
-
-describe('grant_kvm_access', () => {
-  it('is a no-op when the device does not exist', () => {
-    const res = runScript(`grant_kvm_access ${JSON.stringify(join(stubDir, 'missing-device'))}; echo ok`)
-    expect(res.status).toBe(0)
-    expect(res.stdout).toContain('ok')
-    expect(stubCalls()).toEqual([])
-  })
-
-  it('is a no-op when the device gid is not numeric', () => {
-    const res = runScript(`grant_kvm_access ${JSON.stringify(mockDevice())}; echo ok`, {
-      OCM_STUB_DEV_GID: 'abc',
-    })
-    expect(res.status).toBe(0)
-    expect(res.stdout).toContain('ok')
-    expect(stubCalls()).toEqual([])
-  })
-
-  it('reuses the existing group holding the device gid', () => {
-    const dev = mockDevice()
-    const res = runScript(`grant_kvm_access ${JSON.stringify(dev)}; echo ok`, {
-      OCM_STUB_DEV_GID: '44',
-      OCM_STUB_GROUP_HOLDER: 'video',
-    })
-    expect(res.status).toBe(0)
-    expect(res.stdout).toContain('Granted node access')
-    expect(stubCalls().some((c) => c === 'usermod -aG video node')).toBe(true)
-    expect(stubCalls().some((c) => c.startsWith('runuser -u node -- test -r'))).toBe(true)
-    expect(stubCalls().some((c) => c.startsWith('runuser -u node -- test -w'))).toBe(true)
-  })
-
-  it('creates a matching group when none holds the device gid', () => {
-    const dev = mockDevice()
-    const res = runScript(`grant_kvm_access ${JSON.stringify(dev)}; echo ok`, {
-      OCM_STUB_DEV_GID: '232',
-      OCM_STUB_GROUP_HOLDER: '',
-    })
-    expect(res.status).toBe(0)
-    expect(res.stdout).toContain('Granted node access')
-    expect(stubCalls().some((c) => c === 'groupadd -g 232 kvm')).toBe(true)
-    expect(stubCalls().some((c) => c.startsWith('usermod -aG kvm node'))).toBe(true)
-  })
-
-  it('fails clearly when the group cannot be created', () => {
-    writeStub('groupadd', `echo "groupadd $*" >> "$OCM_STUB_LOG"\nexit 1`)
-    const dev = mockDevice()
-    const res = runScript(`grant_kvm_access ${JSON.stringify(dev)} || echo "failed"`, {
-      OCM_STUB_DEV_GID: '232',
-      OCM_STUB_GROUP_HOLDER: '',
-    })
-    expect(res.status).toBe(0)
-    expect(res.stdout).toContain('failed')
-    expect(res.stderr).toMatch(/could not create group/)
-  })
-
-  it('fails clearly when node cannot be added to the group', () => {
-    writeStub('usermod', `echo "usermod $*" >> "$OCM_STUB_LOG"\nexit 1`)
-    const dev = mockDevice()
-    const res = runScript(`grant_kvm_access ${JSON.stringify(dev)} || echo "failed"`, {
-      OCM_STUB_GROUP_HOLDER: 'video',
-    })
-    expect(res.status).toBe(0)
-    expect(res.stdout).toContain('failed')
-    expect(res.stderr).toMatch(/could not add node to group/)
-  })
-
-  it('fails clearly when the node user cannot open the device', () => {
-    const dev = mockDevice()
-    const res = runScript(`grant_kvm_access ${JSON.stringify(dev)} || echo "failed"`, {
-      OCM_STUB_GROUP_HOLDER: 'video',
-      OCM_STUB_RUNUSER_EXIT: '1',
-    })
-    expect(res.status).toBe(0)
-    expect(res.stdout).toContain('failed')
-    expect(res.stderr).toMatch(/node cannot access/)
-  })
-})
 
 const extractOpenCodeInstallSection = () => {
   const entrypoint = readFileSync(entrypointPath, 'utf-8')
