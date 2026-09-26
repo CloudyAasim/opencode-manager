@@ -17,7 +17,7 @@ export function WorkspaceDashboard({ onNewRepo, onOpenFiles, onOpenSchedules }: 
   const { data: repos } = useQuery({ queryKey: ['repos'], queryFn: listRepos, staleTime: 60_000 })
   const { data: schedules } = useAllSchedules()
 
-  const repoCount = repos?.length ?? 0
+  const repoCount = (repos ?? []).filter((repo) => repo.id !== 0).length
   const scheduleCount = schedules?.length ?? 0
   const enabledCount = (schedules ?? []).filter((job) => (job as { enabled?: boolean }).enabled !== false).length
 

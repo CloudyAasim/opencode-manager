@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom"
+import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { getRepo } from "@/api/repos"
+import { getRepo, initializeAssistantMode } from "@/api/repos"
 import { useCreateSession } from "@/hooks/useOpenCode"
 import { useDialogParam } from "@/hooks/useDialogParam"
 import { useSidebarAction } from "@/hooks/useSidebarAction"
@@ -35,6 +36,11 @@ export function AssistantRedirect() {
   })
 
   const assistantDirectory = repo?.fullPath
+
+  useEffect(() => {
+    if (!assistantDirectory) return
+    void initializeAssistantMode(repoId).catch(() => undefined)
+  }, [assistantDirectory, repoId])
 
   useSSE(opcodeUrl, assistantDirectory)
 

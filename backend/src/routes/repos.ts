@@ -21,8 +21,13 @@ import { ScheduleService } from '../services/schedules'
 import { ensureAssistantMode, getAssistantModeStatus, buildAssistantRepo } from '../services/assistant-mode'
 import path from 'path'
 
-function resolveRepo(database: Database, id: number): Repo | null {
-  return getRepoById(database, id) ?? (id === ASSISTANT_REPO_ID ? buildAssistantRepo() : null)
+function resolveRepo(database: Database, id: number, principal?: Principal | null): Repo | null {
+  if (id === ASSISTANT_REPO_ID) {
+    const username = principal?.username
+    if (username) return buildAssistantRepo(username)
+    return getRepoById(database, id) ?? buildAssistantRepo()
+  }
+  return getRepoById(database, id)
 }
 
 function withRepoSettings(database: Database, repo: Repo): Repo {
@@ -186,7 +191,7 @@ app.get('/', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
 
-      const repo: Repo | null = resolveRepo(database, id)
+      const repo: Repo | null = resolveRepo(database, id, currentPrincipal(c))
 
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
@@ -533,13 +538,16 @@ app.get('/', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
 
-      const repo: Repo | null = resolveRepo(database, id)
+      const repo: Repo | null = resolveRepo(database, id, currentPrincipal(c))
 
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
       }
 
-      const status = await getAssistantModeStatus(repo)
+      const username = currentPrincipal(c)?.username
+      const status = username
+        ? await getAssistantModeStatus(repo, username)
+        : await getAssistantModeStatus(repo)
       return c.json(status)
     } catch (error: unknown) {
       logger.error('Failed to get assistant mode status:', error)
@@ -551,7 +559,7 @@ app.get('/', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
 
-      const repo: Repo | null = resolveRepo(database, id)
+      const repo: Repo | null = resolveRepo(database, id, currentPrincipal(c))
 
       if (!repo) {
         return c.json({ error: 'Repo not found' }, 404)
@@ -560,7 +568,10 @@ app.get('/', async (c) => {
       const body = await c.req.json().catch(() => ({}))
       const options = AssistantModeInitRequestSchema.parse(body)
 
-      const status = await ensureAssistantMode(repo, options)
+      const username = currentPrincipal(c)?.username
+      const status = username
+        ? await ensureAssistantMode(repo, options, username)
+        : await ensureAssistantMode(repo, options)
       return c.json(status)
     } catch (error: unknown) {
       logger.error('Failed to initialize assistant mode:', error)

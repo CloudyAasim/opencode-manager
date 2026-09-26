@@ -13,14 +13,13 @@ import {
   ensureDirectoryExists,
 } from './file-operations'
 import { ASSISTANT_NOTIFICATION_LIMITS, OpenCodeConfigSchema } from '@opencode-manager/shared/schemas'
-import { ASSISTANT_REPO_ID, ASSISTANT_REPO_PATH, ASSISTANT_OPENCODE_DIR_NAME } from '@opencode-manager/shared/utils'
-import { getAssistantModePath, getReposPath } from '@opencode-manager/shared/config/env'
+import { ASSISTANT_REPO_ID, ASSISTANT_OPENCODE_DIR_NAME } from '@opencode-manager/shared/utils'
+import { getAssistantModePath, getReposPath, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
 import type { Database } from 'bun:sqlite'
 import { MANAGER_TOOL_NAME } from './opencode-manager-tool-plugin'
 import { ensureAssistantRepo } from '../db/queries'
 
 
-const ASSISTANT_MODE_DIR = ASSISTANT_REPO_PATH
 const ASSISTANT_MODE_RELATIVE_PATH = 'repos/assistant'
 const ASSISTANT_AGENTS_MD_FILENAME = 'AGENTS.md'
 const ASSISTANT_OPENCODE_CONFIG_FILENAME = 'opencode.json'
@@ -35,7 +34,11 @@ const ASSISTANT_AGENTS_DIR = 'agents'
 const ASSISTANT_DEFAULT_AGENT_NAME = 'assistant'
 const ASSISTANT_DEFAULT_AGENT_FILENAME = `${ASSISTANT_DEFAULT_AGENT_NAME}.md`
 
-export function getAssistantModeDirectory(): string {
+export function getAssistantModeDirectory(username?: string | null): string {
+  if (username) {
+    return path.resolve(getUserWorkspacePath(username), 'assistant')
+  }
+
   const assistantDir = getAssistantModePath()
   const resolvedReposRoot = path.resolve(getReposPath())
   const resolvedAssistantDir = path.resolve(assistantDir)
@@ -47,11 +50,15 @@ export function getAssistantModeDirectory(): string {
   return resolvedAssistantDir
 }
 
-export function buildAssistantRepo(): Repo {
+export function assistantRelativePath(username?: string | null): string {
+  return username ? `users/${username}/assistant` : ASSISTANT_MODE_RELATIVE_PATH
+}
+
+export function buildAssistantRepo(username?: string | null): Repo {
   return {
     id: ASSISTANT_REPO_ID,
-    localPath: ASSISTANT_MODE_DIR,
-    fullPath: getAssistantModeDirectory(),
+    localPath: 'assistant',
+    fullPath: getAssistantModeDirectory(username),
     defaultBranch: 'main',
     cloneStatus: 'ready',
     clonedAt: Date.now(),
@@ -884,8 +891,9 @@ export function buildAssistantOpenCodeConfig(): OpenCodeConfigInput {
 export async function ensureAssistantMode(
   repo: Repo,
   options?: AssistantModeInitRequest,
+  username?: string | null,
 ): Promise<AssistantModeStatus> {
-  const assistantDir = getAssistantModeDirectory()
+  const assistantDir = getAssistantModeDirectory(username)
 
   await ensureDirectoryExists(assistantDir)
 
@@ -1034,7 +1042,7 @@ export async function ensureAssistantMode(
   return {
     repoId: repo.id,
     directory: assistantDir,
-    relativePath: ASSISTANT_MODE_RELATIVE_PATH,
+    relativePath: assistantRelativePath(username),
     warnings,
     files: {
       agentsMd: {
@@ -1159,8 +1167,8 @@ async function isLegacyAssistantOpenCodeConfig(opencodeJsonPath: string): Promis
   }
 }
 
-export async function getAssistantModeStatus(repo: Repo): Promise<AssistantModeStatus> {
-  const assistantDir = getAssistantModeDirectory()
+export async function getAssistantModeStatus(repo: Repo, username?: string | null): Promise<AssistantModeStatus> {
+  const assistantDir = getAssistantModeDirectory(username)
 
   const agentsMdPath = path.join(assistantDir, ASSISTANT_AGENTS_MD_FILENAME)
   const opencodeJsonPath = path.join(assistantDir, ASSISTANT_OPENCODE_CONFIG_FILENAME)
@@ -1177,7 +1185,7 @@ export async function getAssistantModeStatus(repo: Repo): Promise<AssistantModeS
   return {
     repoId: repo.id,
     directory: assistantDir,
-    relativePath: ASSISTANT_MODE_RELATIVE_PATH,
+    relativePath: assistantRelativePath(username),
     files: {
       agentsMd: {
         path: agentsMdPath,

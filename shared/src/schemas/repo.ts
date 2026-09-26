@@ -70,7 +70,7 @@ export const AssistantModeFileSchema = z.object({
 export const AssistantModeStatusSchema = z.object({
   repoId: z.number(),
   directory: z.string(),
-  relativePath: z.literal('repos/assistant'),
+  relativePath: z.string().min(1),
   warnings: z.array(z.object({
     code: z.string(),
     path: z.string(),
