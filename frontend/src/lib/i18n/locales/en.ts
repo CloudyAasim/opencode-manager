@@ -66,7 +66,7 @@ export const en = {
   },
   terminal: {
     title: 'Terminal',
-    description: 'Shell access to the server workspace, restricted to a safe directory',
+    description: 'A shell scoped to your own workspace, sandboxed away from the rest of the server',
     connecting: 'Connecting…',
     connected: 'Connected',
     disconnected: 'Disconnected',

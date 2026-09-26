@@ -68,7 +68,7 @@ export const zhCN: DeepString<typeof en> = {
   },
   terminal: {
     title: '终端',
-    description: '访问服务器工作目录的终端，限定在安全目录内',
+    description: '限定在你自己的工作区内的终端，与其他数据隔离',
     connecting: '连接中…',
     connected: '已连接',
     disconnected: '已断开',
