@@ -71,8 +71,8 @@ jobs:
             AUTH_ALLOW_SIGNUP=false \
             AUTH_SECURE_COOKIES=false \
             AUTH_TRUST_PROXY=true \
-            "AUTH_TRUSTED_ORIGINS=http://$HOST,https://$HOST" \
-            "CORS_ORIGIN=http://$HOST" \
+            "AUTH_TRUSTED_ORIGINS=http://$HOST:8080,http://$HOST,https://$HOST:8443" \
+            "CORS_ORIGIN=http://$HOST:8080" \
             OCM_ALLOW_SERVER_ENV_EDIT=false \
             OCM_TERMINAL_ENABLED=true \
             OCM_TERMINAL_ADMINS_ONLY=true \
@@ -81,8 +81,10 @@ jobs:
           echo "== configuring domain and port mapping =="
           dokku domains:add "$APP" "$HOST" || true
           # The image EXPOSEs 5003, which Dokku would otherwise publish directly
-          # on host port 5003. Route public HTTP 80 to the container instead.
-          dokku ports:set "$APP" http:80:5003 || true
+          # on host port 5003. Route public HTTP through nginx instead. This host
+          # blocks inbound 80/443 at the provider edge, so 8080 is the public
+          # listener; 80 is kept for hosts/regions where it is reachable.
+          dokku ports:set "$APP" http:8080:5003 http:80:5003 || true
 
           echo "== configuring persistent storage =="
           if dokku storage:ensure-directory ocm-data --chown 1000; then
@@ -122,15 +124,19 @@ jobs:
           echo "########## ps:report ##########"; dokku ps:report "$APP" || true
           echo "########## logs (tail 200) ##########"; dokku logs "$APP" --num 200 || true
           echo "########## probe ##########"
-          curl -v -m 15 "http://$HOST/api/health" 2>&1 | tail -15 || true
+          curl -v -m 15 "http://$HOST:8080/api/health" 2>&1 | tail -15 || true
 
       - name: Smoke test
+        env:
+          ADMIN_EMAIL: ${{ secrets.OCM_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.OCM_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
           HOST=SERVER_HOST
+          BASE="http://$HOST:8080"
           code=000
           for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "http://$HOST/api/health" || true)
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "$BASE/api/health" || true)
             echo "health attempt $i: $code"
             if [ "$code" = "200" ]; then
               break
@@ -138,11 +144,30 @@ jobs:
             sleep 10
           done
           echo "--- health body ---"
-          curl -s -m 10 "http://$HOST/api/health" || true
+          curl -s -m 10 "$BASE/api/health" || true
           echo
           echo "--- index status ---"
-          curl -s -o /dev/null -w 'index=%{http_code}\n' -m 10 "http://$HOST/" || true
+          curl -s -o /dev/null -w 'index=%{http_code}\n' -m 10 "$BASE/" || true
           if [ "$code" != "200" ]; then
             echo "::error::health check never returned 200 (last=$code)"
             exit 1
           fi
+          echo "--- admin sign-in ---"
+          signin_code=$(curl -s -m 15 -c /tmp/cookies.txt -o /tmp/signin.json -w '%{http_code}' \
+            -X POST "$BASE/api/auth/sign-in/email" \
+            -H 'Content-Type: application/json' \
+            --data "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" || true)
+          echo "signin=$signin_code"
+          if [ "$signin_code" != "200" ]; then
+            echo "::error::admin sign-in failed ($signin_code)"
+            head -c 300 /tmp/signin.json || true
+            exit 1
+          fi
+          echo "--- session check ---"
+          session_code=$(curl -s -m 15 -b /tmp/cookies.txt -o /tmp/session.json -w '%{http_code}' "$BASE/api/auth/get-session" || true)
+          echo "session=$session_code"
+          if [ "$session_code" != "200" ]; then
+            echo "::error::session check failed ($session_code)"
+            exit 1
+          fi
+
