@@ -35,7 +35,7 @@ export function DesktopSidebar() {
     if (item.key === 'assistant') return isAssistantPath(location.pathname)
     if (item.key === 'terminal') return location.pathname === '/terminal'
     if (item.key === 'settings') return searchParams.get('settings') === 'open'
-    if (item.key === 'files') return searchParams.get('dialog') === 'files'
+    if (item.key === 'files') return location.pathname === '/files'
     return false
   }
 

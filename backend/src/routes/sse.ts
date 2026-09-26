@@ -6,8 +6,8 @@ import { SSESubscribeSchema, SSEVisibilitySchema } from '@opencode-manager/share
 import { logger } from '../utils/logger'
 import { DEFAULTS } from '@opencode-manager/shared/config'
 import { createQueuedSSEWriter } from './sse-writer'
-import { getRepoByDirectory } from '../db/queries'
-import { canAccessRepo, principalFrom, principalIsAdmin } from '../auth/ownership'
+import { principalFrom, principalIsAdmin, resolveAccessRoots } from '../auth/ownership'
+import { isWithinRoots } from '../auth/access-scope'
 import type { Session } from '../auth'
 
 const { HEARTBEAT_INTERVAL_MS } = DEFAULTS.SSE
@@ -18,10 +18,8 @@ function scopedDirectories(
   principal: ReturnType<typeof principalFrom>,
 ) : string[] {
   if (!principal || principalIsAdmin(principal)) return directories
-  return directories.filter((directory) => {
-    const repo = getRepoByDirectory(database, directory)
-    return !!repo && canAccessRepo(database, repo.id, principal)
-  })
+  const roots = resolveAccessRoots(database, principal)
+  return directories.filter((directory) => isWithinRoots(directory, roots))
 }
 
 export function createSSERoutes(database: Database) {

@@ -18,7 +18,7 @@ describe('buildNavModel', () => {
     const { items } = buildNavModel()
     expect(items.find((item) => item.key === 'projects')?.to).toBe('/')
     expect(items.find((item) => item.key === 'assistant')?.to).toBe('/assistant')
-    expect(items.find((item) => item.key === 'files')?.dialog).toBe('files')
+    expect(items.find((item) => item.key === 'files')?.to).toBe('/files')
   })
 
   it('hides the terminal for non-admins by default', () => {

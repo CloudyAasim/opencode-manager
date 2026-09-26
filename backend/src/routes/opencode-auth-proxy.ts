@@ -3,8 +3,8 @@ import type { MiddlewareHandler } from 'hono'
 import type { Database } from 'bun:sqlite'
 import { opencodeServerManager } from '../services/opencode-single-server'
 import type { OpenCodeClient } from '../services/opencode/client'
-import { getRepoByDirectory } from '../db/queries'
-import { canAccessRepo, principalFrom, principalIsAdmin } from '../auth/ownership'
+import { principalFrom, principalIsAdmin, resolveAccessRoots } from '../auth/ownership'
+import { isWithinRoots } from '../auth/access-scope'
 import type { Session } from '../auth'
 import { logger } from '../utils/logger'
 
@@ -26,8 +26,8 @@ export function createAuthenticatedOpenCodeProxyRoutes(
         (c as unknown as { get: (key: string) => Session['user'] | undefined }).get('user'),
       )
       if (principal && !principalIsAdmin(principal)) {
-        const repo = getRepoByDirectory(database, directory)
-        if (!repo || !canAccessRepo(database, repo.id, principal)) {
+        const roots = resolveAccessRoots(database, principal)
+        if (!isWithinRoots(directory, roots)) {
           logger.warn(`Blocked cross-tenant OpenCode proxy access to directory: ${directory}`)
           return c.json({ error: 'Forbidden' }, 403)
         }

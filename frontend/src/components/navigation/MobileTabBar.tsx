@@ -4,7 +4,6 @@ import { FolderGit2, FolderOpen, CalendarClock, Menu, Info, History, Bot } from 
 import { cn } from '@/lib/utils'
 import { useMobile } from '@/hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
-import { useUrlParams } from '@/hooks/useUrlParams'
 import { useScheduleUrlState, type ScheduleTab } from '@/hooks/useScheduleUrlState'
 import { getAssistantPath, isAssistantPath } from '@/lib/navigation'
 import { useI18n } from '@/lib/i18n'
@@ -25,9 +24,6 @@ interface GlobalTabsArgs {
   open: ReturnType<typeof useMobileTabBar>['open']
   close: ReturnType<typeof useMobileTabBar>['close']
   navigate: ReturnType<typeof useNavigate>
-  isInsideRepo: boolean
-  repoId: string | null
-  updateParams: ReturnType<typeof useUrlParams>['updateParams']
 }
 
 type TabBarMode = 'hidden' | 'global' | 'schedule'
@@ -65,13 +61,10 @@ function getMobileTabRouteState(pathname: string): MobileTabRouteState {
   }
 }
 
-function buildGlobalTabs({ pathname, openSheet, open, close, navigate, isInsideRepo, repoId, updateParams }: GlobalTabsArgs): TabDef[] {
+function buildGlobalTabs({ pathname, openSheet, open, close, navigate }: GlobalTabsArgs): TabDef[] {
   const handleFilesClick = () => {
-    if (isInsideRepo && repoId) {
-      updateParams((p) => { p.set('dialog', 'files'); p.delete('mobileTab') }, 'push')
-    } else {
-      open('files')
-    }
+    close()
+    navigate('/files')
   }
 
   const handleAssistantClick = () => {
@@ -185,7 +178,6 @@ export const MobileTabBar = memo(function MobileTabBar() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { openSheet, open, close } = useMobileTabBar()
-  const { updateParams } = useUrlParams()
   const { scheduleTab, setScheduleTab } = useScheduleUrlState()
   const isMobile = useMobile()
   const routeState = useMemo(() => getMobileTabRouteState(pathname), [pathname])
@@ -199,9 +191,6 @@ export const MobileTabBar = memo(function MobileTabBar() {
         open,
         close,
         navigate,
-        isInsideRepo: routeState.isInsideRepo,
-        repoId: routeState.repoId,
-        updateParams,
       })),
     [
       routeState,
@@ -212,7 +201,6 @@ export const MobileTabBar = memo(function MobileTabBar() {
       open,
       close,
       navigate,
-      updateParams,
     ],
   )
 

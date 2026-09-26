@@ -237,7 +237,7 @@ export function RepoDetail() {
           variant="ghost"
           size="sm"
           className="h-8 gap-1.5 shrink-0"
-          onClick={() => setFileBrowserOpen(true)}
+          onClick={() => navigate('/files')}
         >
           <Folder className="h-4 w-4" />
           {t('navigation.files')}

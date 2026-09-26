@@ -51,6 +51,7 @@ import { SourceControlPanel } from "@/components/source-control";
 import { SessionSendErrorBanner } from "@/components/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/components/message/SessionTodoDisplay";
 import { useDialogParam } from "@/hooks/useDialogParam";
+import { useDesktop } from "@/hooks/useDesktop";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/components/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
@@ -86,6 +87,7 @@ export function SessionDetail() {
   const isAssistantSession = new URLSearchParams(location.search).get('assistant') === '1';
   const { preferences, updateSettings } = useSettings();
   const { open: openSettings } = useSettingsDialog();
+  const isDesktop = useDesktop();
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const promptInputRef = useRef<PromptInputHandle>(null);
   const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
@@ -534,7 +536,18 @@ export function SessionDetail() {
         </div>
       </div>
 
-      <div className="relative flex-1 overflow-hidden flex flex-col">
+      <div className="flex flex-1 min-h-0">
+        {isDesktop && opcodeUrl && (
+          <aside className="hidden md:flex w-72 shrink-0 flex-col min-h-0 border-r border-border overflow-hidden">
+            <SessionList
+              opcodeUrl={opcodeUrl}
+              directory={repoDirectory}
+              activeSessionID={sessionId || undefined}
+              onSelectSession={(sessionID) => navigate(`/repos/${repoId}/sessions/${sessionID}${sessionRouteSuffix}`)}
+            />
+          </aside>
+        )}
+        <div className="relative flex-1 overflow-hidden flex flex-col">
         <div key={sessionId} data-testid="session-message-scroll" ref={messageContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]" style={{ paddingBottom: promptOverlayHeight + inputBottomOffset + PROMPT_OVERLAY_CLEARANCE_PX }}>
           {repoLoading || sessionLoading || messagesLoading ? (
             <MessageSkeleton />
@@ -621,6 +634,7 @@ export function SessionDetail() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Sessions Dialog */}

@@ -120,7 +120,7 @@ describe('DesktopSidebar', () => {
     expect(screen.getByText('Terminal')).toBeInTheDocument()
   })
 
-  it('opens dialog items by updating the dialog query param (push) and closes on back', () => {
+  it('navigates to the files view', () => {
     mockDesktop(true)
     mockAuth()
 
@@ -134,11 +134,7 @@ describe('DesktopSidebar', () => {
 
     fireEvent.click(screen.getByText('Files'))
 
-    expect(screen.getByTestId('location').textContent).toBe('/repos/5/sessions/abc?assistant=1&dialog=files')
-
-    fireEvent.click(screen.getByTestId('back-button'))
-
-    expect(screen.getByTestId('location').textContent).toBe('/repos/5/sessions/abc?assistant=1')
+    expect(screen.getByTestId('location').textContent).toBe('/files')
   })
 
   it('opens settings by updating settings query params', () => {

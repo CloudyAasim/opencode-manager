@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Hono } from 'hono'
 import type { MiddlewareHandler } from 'hono'
 import { createAuthenticatedOpenCodeProxyRoutes } from '../../src/routes/opencode-auth-proxy'
+import { getUserSettingPath } from '@opencode-manager/shared/config/env'
 import type { OpenCodeClient } from '../../src/services/opencode/client'
 import { OpenCodeSupervisor } from '../../src/services/opencode-supervisor'
 import type { SettingsService } from '../../src/services/settings'
@@ -368,6 +369,24 @@ describe('authenticated opencode proxy routes', () => {
     const res = await app.request(`/api/opencode/session?directory=${encodeURIComponent(directory)}`)
     expect(res.status).toBe(403)
     expect(forwardRawMock).not.toHaveBeenCalled()
+  })
+
+  it('lets a non-admin proxy their own assistant workspace', async () => {
+    const directory = getUserSettingPath('u1') + '/assistant'
+
+    const app = new Hono()
+    app.use('/*', async (c, next) => {
+      ;(c as unknown as { set: (key: string, value: unknown) => void }).set('user', { id: 'u1', role: 'user', username: 'u1' })
+      await next()
+    })
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes({ forwardRaw: forwardRawMock } as unknown as OpenCodeClient, passThroughAuth, proxyTestDb),
+    )
+
+    const res = await app.request(`/api/opencode/session?directory=${encodeURIComponent(directory)}`)
+    expect(res.status).toBe(200)
+    expect(forwardRawMock).toHaveBeenCalled()
   })
 
   it('lets an administrator proxy any directory', async () => {

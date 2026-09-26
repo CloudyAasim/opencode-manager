@@ -31,7 +31,7 @@ export function buildNavModel(options: NavModelOptions = {}): NavModel {
   const items: MoreDrawerItem[] = [
     { key: 'projects', label: 'Projects', labelKey: 'navigation.repos', icon: FolderGit2, to: '/' },
     { key: 'assistant', label: 'Assistant', labelKey: 'navigation.assistant', icon: Bot, to: getAssistantPath() },
-    { key: 'files', label: 'Files', labelKey: 'navigation.files', icon: Folder, dialog: 'files' },
+    { key: 'files', label: 'Files', labelKey: 'navigation.files', icon: Folder, to: '/files' },
   ]
 
   if (showTerminal) {
