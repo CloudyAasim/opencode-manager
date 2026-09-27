@@ -14,6 +14,10 @@ import { FetchError } from '@/api/fetchWrapper'
 import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
 import { FileTreeExplorer } from "@/components/file-browser/FileTreeExplorer";
 import { FilePreview } from "@/components/file-browser/FilePreview";
+import { FileDiffView } from "@/components/file-browser/FileDiffView";
+import { WorktreeTabs } from "@/components/repo/WorktreeTabs";
+import { useRepoSiblings, useCreateRepoWorkspace } from "@/hooks/useRepoSiblings";
+import { useWorktreeTab } from "@/hooks/useWorktreeTab";
 import type { FileInfo } from "@/types/files";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -105,6 +109,19 @@ export function SessionDetail() {
   })
   const [rightPanelOpen, setRightPanelOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(true)
+  const [reviewFile, setReviewFile] = useState<{ path: string; staged: boolean } | null>(null)
+  const { data: siblings } = useRepoSiblings(repoId)
+  const { activeTab: worktreeTab, setActiveTab: setWorktreeTab } = useWorktreeTab()
+  const createWorkspace = useCreateRepoWorkspace(repoId)
+
+  const switchWorktreeTab = useCallback((value: 'repo' | 'workspaces') => {
+    setWorktreeTab(value)
+    navigate(value === 'workspaces' ? `/repos/${repoId}?repoTab=workspaces` : `/repos/${repoId}`)
+  }, [navigate, repoId, setWorktreeTab])
+
+  const handleCreateWorkspace = useCallback(() => {
+    void createWorkspace.mutateAsync().then(() => navigate(`/repos/${repoId}?repoTab=workspaces`))
+  }, [createWorkspace, navigate, repoId])
   const [rightTab, setRightTab] = useState<'files' | 'info' | 'review'>('files')
   const [panelFile, setPanelFile] = useState<FileInfo | null>(null)
 
@@ -590,6 +607,15 @@ export function SessionDetail() {
               className="hidden md:flex shrink-0 flex-col min-h-0 border-r border-border overflow-hidden"
               style={{ width: railWidth }}
             >
+              {!isAssistantSession && (
+                <WorktreeTabs
+                  workspaces={siblings ?? []}
+                  value={worktreeTab}
+                  onValueChange={switchWorktreeTab}
+                  baseLabel={repo?.currentBranch || repo?.branch || 'main'}
+                  onCreateWorkspace={handleCreateWorkspace}
+                />
+              )}
               <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2 py-1.5 scrollbar-thin">
                 <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate('/files')}>
                   <Folder className="h-3.5 w-3.5" />
@@ -758,7 +784,17 @@ export function SessionDetail() {
               )}
               {rightTab === 'review' && (
                 <div className="h-full overflow-y-auto">
-                  <ChangesTab repoId={repoId} onFileSelect={(path) => handleFileClick(path)} isMobile={false} />
+                  {reviewFile ? (
+                    <FileDiffView
+                      repoId={repoId}
+                      filePath={reviewFile.path}
+                      includeStaged={reviewFile.staged}
+                      onBack={() => setReviewFile(null)}
+                      isMobile={false}
+                    />
+                  ) : (
+                    <ChangesTab repoId={repoId} onFileSelect={(path, staged) => setReviewFile({ path, staged })} isMobile={false} />
+                  )}
                 </div>
               )}
               {rightTab === 'info' && (
