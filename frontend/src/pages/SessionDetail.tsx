@@ -656,6 +656,16 @@ export function SessionDetail() {
             ) : (
               <Header.BackButton to={sessionBackPath} className="text-xs sm:text-sm" />
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRailOpen((open) => !open)}
+              aria-label={t('navigation.sessions')}
+              title={t('navigation.sessions')}
+              className={cn('h-8 w-8 shrink-0', railOpen && 'bg-accent text-foreground')}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
             <Header.EditableTitle
               value={session?.title || t('session.card.untitled')}
               onChange={handleSessionTitleUpdate}
@@ -666,16 +676,6 @@ export function SessionDetail() {
             <div className="flex items-center gap-1">
               <PendingActionsGroup />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setRailOpen((open) => !open)}
-              aria-label={t('navigation.sessions')}
-              title={t('navigation.sessions')}
-              className={cn('h-8 w-8', railOpen && 'bg-accent text-foreground')}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
             <ContextUsageIndicator
               opcodeUrl={opcodeUrl}
               sessionID={sessionId}
