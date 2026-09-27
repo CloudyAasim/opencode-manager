@@ -12,6 +12,15 @@ import type { Database } from 'bun:sqlite'
 import type { GitBranch, GitCommit, FileDiffResponse, GitDiffOptions, GitStatusResponse, GitFileStatus, GitFileStatusType, CommitDetails, CommitFile } from '../../types/git'
 import path from 'path'
 
+async function hasCommit(repoPath: string, env: Record<string, string>): Promise<boolean> {
+  try {
+    await executeCommand(['git', '-C', repoPath, 'rev-parse', '--verify', '--quiet', 'HEAD'], { env, silent: true })
+    return true
+  } catch {
+    return false
+  }
+}
+
 export class GitService {
   constructor(
     private gitAuthService: GitAuthService,
@@ -261,7 +270,12 @@ export class GitService {
         return ''
       }
 
-      const args = ['git', '-C', repoPath, 'restore', '--staged', '--', ...paths]
+      // `git restore --staged` needs a commit to resolve against. A freshly
+      // initialized repository has an unborn HEAD, so fall back to removing the
+      // entries from the index instead.
+      const args = (await hasCommit(repoPath, env))
+        ? ['git', '-C', repoPath, 'restore', '--staged', '--', ...paths]
+        : ['git', '-C', repoPath, 'rm', '--cached', '--quiet', '--ignore-unmatch', '-r', '--', ...paths]
       const result = await executeCommand(args, { env })
 
       return result
