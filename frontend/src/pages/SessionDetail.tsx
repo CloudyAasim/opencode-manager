@@ -652,28 +652,16 @@ export function SessionDetail() {
             ) : (
               <Header.BackButton to={sessionBackPath} className="text-xs sm:text-sm" />
             )}
-            <div className="hidden md:flex items-center rounded-md border border-border p-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRailOpen((open) => !open)}
-                aria-label={t('navigation.sessions')}
-                title={t('navigation.sessions')}
-                className={cn('h-7 w-7', railOpen && 'bg-accent text-foreground')}
-              >
-                <PanelLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRightPanelOpen((open) => !open)}
-                aria-label={t('navigation.detail')}
-                title={t('navigation.detail')}
-                className={cn('h-7 w-7', rightPanelOpen && 'bg-accent text-foreground')}
-              >
-                <PanelRight className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRightPanelOpen((open) => !open)}
+              aria-label={t('navigation.detail')}
+              title={t('navigation.detail')}
+              className={cn('h-8 w-8', rightPanelOpen && 'bg-accent text-foreground')}
+            >
+              <PanelRight className="h-4 w-4" />
+            </Button>
             <Header.EditableTitle
               value={session?.title || t('session.card.untitled')}
               onChange={handleSessionTitleUpdate}
@@ -684,6 +672,16 @@ export function SessionDetail() {
             <div className="flex items-center gap-1">
               <PendingActionsGroup />
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRailOpen((open) => !open)}
+              aria-label={t('navigation.sessions')}
+              title={t('navigation.sessions')}
+              className={cn('h-8 w-8', railOpen && 'bg-accent text-foreground')}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
             <ContextUsageIndicator
               opcodeUrl={opcodeUrl}
               sessionID={sessionId}
