@@ -652,28 +652,16 @@ export function SessionDetail() {
             ) : (
               <Header.BackButton to={sessionBackPath} className="text-xs sm:text-sm" />
             )}
-            <div className="hidden md:flex items-center rounded-md border border-border p-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRailOpen((open) => !open)}
-                aria-label={t('navigation.sessions')}
-                title={t('navigation.sessions')}
-                className={cn('h-7 w-7', railOpen && 'bg-accent text-foreground')}
-              >
-                <PanelLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRightPanelOpen((open) => !open)}
-                aria-label={t('navigation.detail')}
-                title={t('navigation.detail')}
-                className={cn('h-7 w-7', rightPanelOpen && 'bg-accent text-foreground')}
-              >
-                <PanelRight className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRightPanelOpen((open) => !open)}
+              aria-label={t('navigation.detail')}
+              title={t('navigation.detail')}
+              className={cn('h-8 w-8', rightPanelOpen && 'bg-accent text-foreground')}
+            >
+              <PanelRight className="h-4 w-4" />
+            </Button>
             <Header.EditableTitle
               value={session?.title || t('session.card.untitled')}
               onChange={handleSessionTitleUpdate}
@@ -684,6 +672,16 @@ export function SessionDetail() {
             <div className="flex items-center gap-1">
               <PendingActionsGroup />
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRailOpen((open) => !open)}
+              aria-label={t('navigation.sessions')}
+              title={t('navigation.sessions')}
+              className={cn('h-8 w-8', railOpen && 'bg-accent text-foreground')}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
             <ContextUsageIndicator
               opcodeUrl={opcodeUrl}
               sessionID={sessionId}
@@ -700,28 +698,41 @@ export function SessionDetail() {
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0">
-        {isDesktop && opcodeUrl && railOpen && (
+      <div className="relative flex flex-1 min-h-0">
+        {opcodeUrl && railOpen && (
           <>
+            {!isDesktop && (
+              <button
+                type="button"
+                aria-label={t('navigation.close')}
+                onClick={() => setRailOpen(false)}
+                className="fixed inset-0 z-30 bg-black/40 md:hidden"
+              />
+            )}
             <aside
-              className="hidden md:flex shrink-0 flex-col min-h-0 border-r border-border overflow-hidden"
-              style={{ width: railWidth }}
+              className="absolute inset-y-0 left-0 z-40 flex w-[82%] max-w-xs shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-xl md:static md:z-auto md:w-auto md:max-w-none md:bg-transparent md:shadow-none"
+              style={isDesktop ? { width: railWidth } : undefined}
             >
               <div className="min-h-0 flex-1 overflow-hidden">
                 <SessionList
                   opcodeUrl={opcodeUrl}
                   directory={repoDirectory}
                   activeSessionID={sessionId || undefined}
-                  onSelectSession={(sessionID) => navigate(`/repos/${repoId}/sessions/${sessionID}${sessionRouteSuffix}`)}
+                  onSelectSession={(sessionID) => {
+                    navigate(`/repos/${repoId}/sessions/${sessionID}${sessionRouteSuffix}`)
+                    if (!isDesktop) setRailOpen(false)
+                  }}
                 />
               </div>
             </aside>
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              onMouseDown={startRailResize}
-              className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
-            />
+            {isDesktop && (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                onMouseDown={startRailResize}
+                className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
+              />
+            )}
           </>
         )}
         <div className="relative flex-1 overflow-hidden flex flex-col">
@@ -841,17 +852,27 @@ export function SessionDetail() {
           </div>
         )}
         </div>
-        {isDesktop && rightPanelOpen && (
+        {rightPanelOpen && (
           <>
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            onMouseDown={startPanelResize}
-            className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
-          />
+          {isDesktop && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onMouseDown={startPanelResize}
+              className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
+            />
+          )}
+          {!isDesktop && (
+            <button
+              type="button"
+              aria-label={t('navigation.close')}
+              onClick={() => setRightPanelOpen(false)}
+              className="fixed inset-0 z-30 bg-black/40 md:hidden"
+            />
+          )}
           <aside
-            className="hidden md:flex shrink-0 flex-col min-h-0 border-l border-border overflow-hidden"
-            style={{ width: panelWidth }}
+            className="absolute inset-y-0 right-0 z-40 flex w-[88%] max-w-md shrink-0 flex-col overflow-hidden border-l border-border bg-card shadow-xl md:static md:z-auto md:w-auto md:max-w-none md:bg-transparent md:shadow-none"
+            style={isDesktop ? { width: panelWidth } : undefined}
           >
             <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2 py-1.5 scrollbar-thin">
               {panelTabs.map((tab) => (
