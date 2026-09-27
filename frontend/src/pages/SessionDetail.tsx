@@ -15,9 +15,7 @@ import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
 import { FileTreeExplorer } from "@/components/file-browser/FileTreeExplorer";
 import { FilePreview } from "@/components/file-browser/FilePreview";
 import { FileDiffView } from "@/components/file-browser/FileDiffView";
-import { WorktreeTabs } from "@/components/repo/WorktreeTabs";
-import { useRepoSiblings, useCreateRepoWorkspace } from "@/hooks/useRepoSiblings";
-import { useWorktreeTab } from "@/hooks/useWorktreeTab";
+import { resolvePreviewFile } from "@/components/file-browser/resolve-preview-file";
 import type { FileInfo } from "@/types/files";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -109,19 +107,17 @@ export function SessionDetail() {
   })
   const [rightPanelOpen, setRightPanelOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(true)
+  const [panelWidth, setPanelWidth] = useState(() => {
+    const stored = Number(localStorage.getItem('ocm.chatPanelWidth'))
+    return Number.isFinite(stored) && stored >= 280 && stored <= 720 ? stored : 384
+  })
   const [reviewFile, setReviewFile] = useState<{ path: string; staged: boolean } | null>(null)
-  const { data: siblings } = useRepoSiblings(repoId)
-  const { activeTab: worktreeTab, setActiveTab: setWorktreeTab } = useWorktreeTab()
-  const createWorkspace = useCreateRepoWorkspace(repoId)
 
-  const switchWorktreeTab = useCallback((value: 'repo' | 'workspaces') => {
-    setWorktreeTab(value)
-    navigate(value === 'workspaces' ? `/repos/${repoId}?repoTab=workspaces` : `/repos/${repoId}`)
-  }, [navigate, repoId, setWorktreeTab])
-
-  const handleCreateWorkspace = useCallback(() => {
-    void createWorkspace.mutateAsync().then(() => navigate(`/repos/${repoId}?repoTab=workspaces`))
-  }, [createWorkspace, navigate, repoId])
+  const handleSelectPanelFile = useCallback(async (file: FileInfo) => {
+    setPanelFile(file)
+    const resolved = await resolvePreviewFile(file)
+    if (!file.isDirectory) setPanelFile(resolved)
+  }, [])
   const [rightTab, setRightTab] = useState<'files' | 'info' | 'review'>('files')
   const [panelFile, setPanelFile] = useState<FileInfo | null>(null)
 
@@ -143,6 +139,25 @@ export function SessionDetail() {
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
   }, [railWidth])
+
+  useEffect(() => {
+    localStorage.setItem('ocm.chatPanelWidth', String(panelWidth))
+  }, [panelWidth])
+
+  const startPanelResize = useCallback((event: React.MouseEvent) => {
+    event.preventDefault()
+    const startX = event.clientX
+    const startWidth = panelWidth
+    const onMove = (moveEvent: MouseEvent) => {
+      setPanelWidth(Math.min(720, Math.max(280, startWidth - (moveEvent.clientX - startX))))
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [panelWidth])
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>();
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasPromptContent, setHasPromptContent] = useState(false);
@@ -607,15 +622,6 @@ export function SessionDetail() {
               className="hidden md:flex shrink-0 flex-col min-h-0 border-r border-border overflow-hidden"
               style={{ width: railWidth }}
             >
-              {!isAssistantSession && (
-                <WorktreeTabs
-                  workspaces={siblings ?? []}
-                  value={worktreeTab}
-                  onValueChange={switchWorktreeTab}
-                  baseLabel={repo?.currentBranch || repo?.branch || 'main'}
-                  onCreateWorkspace={handleCreateWorkspace}
-                />
-              )}
               <div className="min-h-0 flex-1 overflow-hidden">
                 <SessionList
                   opcodeUrl={opcodeUrl}
@@ -744,7 +750,17 @@ export function SessionDetail() {
         )}
         </div>
         {isDesktop && rightPanelOpen && (
-          <aside className="hidden md:flex w-96 shrink-0 flex-col min-h-0 border-l border-border overflow-hidden">
+          <>
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onMouseDown={startPanelResize}
+            className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
+          />
+          <aside
+            className="hidden md:flex shrink-0 flex-col min-h-0 border-l border-border overflow-hidden"
+            style={{ width: panelWidth }}
+          >
             <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
               <Button variant={rightTab === 'files' ? 'secondary' : 'ghost'} size="sm" className="h-7 gap-1 px-2" onClick={() => setRightTab('files')}>
                 <Folder className="h-3.5 w-3.5" />
@@ -768,7 +784,7 @@ export function SessionDetail() {
                   <FileTreeExplorer
                     rootPath={repoDirectory ?? ''}
                     selectedPath={panelFile?.path}
-                    onSelectFile={setPanelFile}
+                    onSelectFile={handleSelectPanelFile}
                     className="w-1/2 border-r border-border"
                   />
                   <div className="w-1/2 overflow-y-auto">
@@ -815,6 +831,7 @@ export function SessionDetail() {
               )}
             </div>
           </aside>
+          </>
         )}
       </div>
 
