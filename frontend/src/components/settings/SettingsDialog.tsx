@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { GeneralSettings } from '@/components/settings/GeneralSettings'
 import { GitSettings } from '@/components/settings/GitSettings'
 import { KeyboardShortcuts } from '@/components/settings/KeyboardShortcuts'
@@ -56,7 +55,6 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {}) {
   const { isOpen, close, activeTab, setActiveTab } = useSettingsDialog()
-  const navigate = useNavigate()
   const auth = useOptionalAuth()
   const user = auth?.user ?? null
   const { t } = useI18n()
@@ -154,15 +152,17 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
          <div className="hidden sm:flex sm:h-full sm:min-h-0 sm:flex-col">
            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-background px-4">
              <h2 className="text-lg font-semibold text-foreground">{t('settings.title')}</h2>
-             <Button
-               variant="ghost"
-               size="icon"
-               onClick={() => (variant === 'page' ? navigate('/') : close())}
-               aria-label="Close"
-               className="text-muted-foreground hover:text-foreground"
-             >
-               <X className="w-4 h-4" />
-             </Button>
+             {variant !== 'page' && (
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 onClick={close}
+                 aria-label="Close"
+                 className="text-muted-foreground hover:text-foreground"
+               >
+                 <X className="w-4 h-4" />
+               </Button>
+             )}
            </div>
           <Tabs
             defaultValue="account"
@@ -223,16 +223,18 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                  {mobileView === 'menu' ? t('settings.title') : menuItems.find(item => item.id === mobileView)?.label}
                </h2>
              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => (variant === 'page' ? navigate('/') : close())}
-                aria-label="Close"
-                className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex-shrink-0"
-              >
-               <X className="w-6 h-6" />
-             </Button>
-           </div>
+               {variant !== 'page' && (
+                 <Button
+                   variant="ghost"
+                   size="icon"
+                   onClick={close}
+                   aria-label="Close"
+                   className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex-shrink-0"
+                 >
+                  <X className="w-6 h-6" />
+                 </Button>
+               )}
+             </div>
 
              <div className={`@container flex-1 min-h-0 p-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] ${mobileView === 'logs' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
              {mobileView === 'menu' && (

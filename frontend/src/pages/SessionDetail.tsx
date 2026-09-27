@@ -766,7 +766,7 @@ export function SessionDetail() {
               {rightTab === 'files' && (
                 <div className="flex h-full min-h-0">
                   <FileTreeExplorer
-                    rootPath={repoId === 0 ? '' : (workspaceBasePath ?? '')}
+                    rootPath={repoDirectory ?? ''}
                     selectedPath={panelFile?.path}
                     onSelectFile={setPanelFile}
                     className="w-1/2 border-r border-border"

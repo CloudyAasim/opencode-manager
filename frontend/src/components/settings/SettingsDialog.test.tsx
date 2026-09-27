@@ -382,4 +382,25 @@ describe('SettingsDialog', () => {
 
     expect(screen.getByTestId('settings-open')).toBeInTheDocument()
   })
+
+  it('renders the page variant without a close button', () => {
+    render(
+      <MemoryRouter>
+        <SettingsDialog variant="page" />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('tab', { name: 'Account' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Close')).not.toBeInTheDocument()
+  })
+
+  it('keeps the close button for the overlay dialog variant', () => {
+    render(
+      <MemoryRouter initialEntries={['/?settings=open']}>
+        <SettingsDialog />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getAllByLabelText('Close').length).toBeGreaterThan(0)
+  })
 })

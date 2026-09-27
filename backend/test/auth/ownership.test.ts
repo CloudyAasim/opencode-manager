@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import path from 'node:path'
 import type { Database } from 'bun:sqlite'
 import { createTestDb } from '../helpers/assistant-workspace'
-import { getReposPath, getUserWorkspacePath, getWorkspacePath } from '@opencode-manager/shared/config/env'
+import { getReposPath, getUserSettingPath, getUserWorkspacePath, getWorkspacePath } from '@opencode-manager/shared/config/env'
 import { accessibleRepoIds, canAccessOwner, canAccessRepo, canAccessRepoOwner, principalFrom, resolveAccessRoots } from '../../src/auth/ownership'
+import { isWithinRoots } from '../../src/auth/access-scope'
 
 function insertRepo(db: Database, id: number, userId: string | null): void {
   db.prepare(
@@ -77,6 +78,13 @@ describe('ownership helpers', () => {
     expect(roots).toContain(path.resolve(path.join(getReposPath(), 'r1')))
     expect(roots).toContain(path.resolve(path.join(getReposPath(), 'r3')))
     expect(roots).not.toContain(path.resolve(path.join(getReposPath(), 'r2')))
+  })
+
+  it('includes the per-user setting root so the sandboxed assistant stays reachable', () => {
+    const roots = resolveAccessRoots(db, alice)
+    expect(roots).toContain(path.resolve(getUserSettingPath('alice')))
+    expect(isWithinRoots(path.join(getUserSettingPath('alice'), 'assistant'), roots)).toBe(true)
+    expect(isWithinRoots(path.join(getUserSettingPath('bob'), 'assistant'), roots)).toBe(false)
   })
 
   it('gives administrators the whole workspace root', () => {

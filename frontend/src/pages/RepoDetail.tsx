@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ResetPermissionsDialog } from "@/components/repo/ResetPermissionsDialog";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
 import { getRepoDisplayName } from "@/lib/utils";
+import { projectSessionPath } from "@/lib/project-session-path";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { useI18n } from '@/lib/i18n'
 
@@ -116,12 +117,7 @@ export function RepoDetail() {
 
   useEffect(() => {
     if (!latestSessionId) return;
-    const suffix = repoId === 0
-      ? '?assistant=1'
-      : activeTab === 'workspaces'
-        ? '?repoTab=workspaces'
-        : '';
-    navigate(`/repos/${repoId}/sessions/${latestSessionId}${suffix}`, { replace: true });
+    navigate(projectSessionPath(repoId, latestSessionId, activeTab), { replace: true });
   }, [latestSessionId, navigate, repoId, activeTab]);
 
   const createSessionMutation = useCreateSession(opcodeUrl, composerDirectory, (session) => {
