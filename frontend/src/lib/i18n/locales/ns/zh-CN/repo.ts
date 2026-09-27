@@ -4,6 +4,13 @@ export const repo = {
   allSchedules: '所有定时任务',
   openFiles: '打开文件',
   selectSessionHint: '从左侧选择会话，或新建一个会话开始。',
+  info: {
+    directory: '目录',
+    changes: '改动',
+    recentCommits: '最近提交',
+    noCommits: '还没有提交',
+  },
+  assistantHint: '在你的专属助手工作区中对话',
   workspaceRoot: '工作区根目录',
   back: '返回',
   cancel: '取消',

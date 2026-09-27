@@ -5,7 +5,7 @@ import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/components/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/components/message/PromptInput";
 import { FloatingTTSButton } from '@/components/message/FloatingTTSButton'
-import { X, CornerUpLeft, PanelLeft, PanelRight, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info } from "lucide-react";
+import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info } from "lucide-react";
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/components/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
@@ -16,6 +16,8 @@ import { FileTreeExplorer } from "@/components/file-browser/FileTreeExplorer";
 import { FilePreview } from "@/components/file-browser/FilePreview";
 import { FileDiffView } from "@/components/file-browser/FileDiffView";
 import { resolvePreviewFile } from "@/components/file-browser/resolve-preview-file";
+import { ProjectInfoPanel } from "@/components/repo/ProjectInfoPanel";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { FileInfo } from "@/types/files";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -707,27 +709,37 @@ export function SessionDetail() {
                   onMinimize={() => handleMinimizeQuestion(currentQuestion)}
                 />
               )}
-              <div className="mb-1.5 flex items-center gap-1 overflow-x-auto scrollbar-thin">
+              <div className="mb-1.5 flex items-center gap-1">
                 <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate('/files')}>
                   <Folder className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t('navigation.files')}</span>
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSourceControlOpen(true)}>
-                  <GitPullRequest className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t('navigation.sourceControl')}</span>
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate(`/repos/${repoId}/schedules`)}>
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t('navigation.schedules')}</span>
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setMcpDialogOpen(true)}>
-                  <Plug className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t('navigation.mcp')}</span>
                 </Button>
                 <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSkillsDialogOpen(true)}>
                   <Sparkles className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t('navigation.skills')}</span>
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" aria-label={t('navigation.more')}>
+                      <Plus className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">{t('navigation.more')}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setSourceControlOpen(true)}>
+                      <GitPullRequest className="h-4 w-4 mr-2" />
+                      {t('navigation.sourceControl')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/repos/${repoId}/schedules`)}>
+                      <CalendarClock className="h-4 w-4 mr-2" />
+                      {t('navigation.schedules')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setMcpDialogOpen(true)}>
+                      <Plug className="h-4 w-4 mr-2" />
+                      {t('navigation.mcp')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <SessionSendErrorBanner sessionId={sessionId} isConnected={isConnected} isReconnecting={isReconnecting} />
               <PromptInput
@@ -814,20 +826,12 @@ export function SessionDetail() {
                 </div>
               )}
               {rightTab === 'info' && (
-                <div className="h-full space-y-3 overflow-y-auto p-4 text-sm">
-                  <div>
-                    <div className="text-xs text-muted-foreground">{t('navigation.repo')}</div>
-                    <div className="font-medium">{workspaceDisplayName}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">{t('repo.workspaceRoot')}</div>
-                    <div className="break-all font-mono text-xs">{repoDirectory ?? '-'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Branch</div>
-                    <div className="font-mono text-xs">{repo?.currentBranch || repo?.branch || 'main'}</div>
-                  </div>
-                </div>
+                <ProjectInfoPanel
+                  repoId={repoId}
+                  name={workspaceDisplayName}
+                  directory={repoDirectory}
+                  branch={repo?.currentBranch || repo?.branch}
+                />
               )}
             </div>
           </aside>

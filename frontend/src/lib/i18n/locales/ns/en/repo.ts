@@ -4,6 +4,13 @@ export const repo = {
   allSchedules: 'All Schedules',
   openFiles: 'Open files',
   selectSessionHint: 'Select a session on the left, or start a new one.',
+  info: {
+    directory: 'Directory',
+    changes: 'Changes',
+    recentCommits: 'Recent commits',
+    noCommits: 'No commits yet',
+  },
+  assistantHint: 'Chat with your dedicated assistant workspace',
   workspaceRoot: 'Workspace Root',
   back: 'Back',
   cancel: 'Cancel',
