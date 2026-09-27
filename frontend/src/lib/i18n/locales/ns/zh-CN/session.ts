@@ -41,6 +41,8 @@ export const session = {
     loading: '加载中…',
     reconnecting: '重新连接中…',
     disconnected: '已断开',
+    label: '上下文',
+    tooltip: '已用 {{tokens}} tokens · 占模型上下文 {{percent}}%',
   },
   permission: {
     title: '权限请求',

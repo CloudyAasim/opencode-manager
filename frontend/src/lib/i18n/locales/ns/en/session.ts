@@ -41,6 +41,8 @@ export const session = {
     loading: 'Loading...',
     reconnecting: 'Reconnecting...',
     disconnected: 'Disconnected',
+    label: 'Context',
+    tooltip: '{{tokens}} tokens used · {{percent}}% of the model context',
   },
   permission: {
     title: 'Permission Request',

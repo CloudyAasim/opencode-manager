@@ -37,6 +37,8 @@ export const navigation = {
   moreCount: '+{{count}} more',
   pendingQuestions: 'Pending questions',
   question: 'Question',
+  add: 'Add panel',
+  remove: 'Remove panel',
   tapToView: 'Tap to view',
   workspaceRoot: 'Workspace Root',
 }

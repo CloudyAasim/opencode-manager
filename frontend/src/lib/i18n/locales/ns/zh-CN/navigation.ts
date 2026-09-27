@@ -37,6 +37,8 @@ export const navigation = {
   moreCount: '另有 {{count}} 条',
   pendingQuestions: '待回答的问题',
   question: '问题',
+  add: '添加面板',
+  remove: '移除面板',
   tapToView: '点击查看',
   workspaceRoot: '工作区根目录',
 }

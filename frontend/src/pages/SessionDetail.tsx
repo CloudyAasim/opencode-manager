@@ -5,7 +5,7 @@ import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/components/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/components/message/PromptInput";
 import { FloatingTTSButton } from '@/components/message/FloatingTTSButton'
-import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info } from "lucide-react";
+import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare } from "lucide-react";
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/components/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
@@ -18,6 +18,7 @@ import { FileDiffView } from "@/components/file-browser/FileDiffView";
 import { resolvePreviewFile } from "@/components/file-browser/resolve-preview-file";
 import { ProjectInfoPanel } from "@/components/repo/ProjectInfoPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { TerminalView } from "@/components/terminal/TerminalView";
 import type { FileInfo } from "@/types/files";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import type { MessageWithParts } from "@/api/types";
 import { getMessagesContentVersion } from "./sessionContentVersion";
 import { showToast } from "@/lib/toast";
 import { getRepoDisplayName } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { RepoMcpDialog } from "@/components/repo/RepoMcpDialog";
 import { ResetPermissionsDialog } from "@/components/repo/ResetPermissionsDialog";
 import { RepoLspDialog } from "@/components/repo/RepoLspDialog";
@@ -61,6 +63,39 @@ import { useDesktop } from "@/hooks/useDesktop";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/components/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
+
+type PanelTab = 'files' | 'review' | 'info' | 'terminal'
+const ALL_PANEL_TABS: PanelTab[] = ['files', 'review', 'info', 'terminal']
+const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
+  files: 'navigation.files',
+  review: 'navigation.sourceControl',
+  info: 'navigation.detail',
+  terminal: 'navigation.terminal',
+}
+
+function readPanelTabs(): PanelTab[] {
+  try {
+    const raw = localStorage.getItem('ocm.chatPanelTabs')
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown
+      if (Array.isArray(parsed)) {
+        const valid = parsed.filter((tab): tab is PanelTab => (ALL_PANEL_TABS as string[]).includes(tab as string))
+        if (valid.length > 0) return valid
+      }
+    }
+  } catch {
+    // ignore malformed storage
+  }
+  return ['files', 'review', 'info']
+}
+
+function PanelTabIcon({ tab }: { tab: PanelTab }) {
+  const cls = 'h-3.5 w-3.5'
+  if (tab === 'review') return <GitPullRequest className={cls} />
+  if (tab === 'info') return <Info className={cls} />
+  if (tab === 'terminal') return <TerminalSquare className={cls} />
+  return <Folder className={cls} />
+}
 
 const compareMessageIds = (id1: string, id2: string): number => {
   const num1 = parseInt(id1, 10)
@@ -120,8 +155,52 @@ export function SessionDetail() {
     const resolved = await resolvePreviewFile(file)
     if (!file.isDirectory) setPanelFile(resolved)
   }, [])
-  const [rightTab, setRightTab] = useState<'files' | 'info' | 'review'>('files')
+  const [panelTabs, setPanelTabs] = useState<PanelTab[]>(() => readPanelTabs())
+  const [rightTab, setRightTab] = useState<PanelTab>('files')
   const [panelFile, setPanelFile] = useState<FileInfo | null>(null)
+  const [treeWidth, setTreeWidth] = useState(() => {
+    const stored = Number(localStorage.getItem('ocm.fileTreeWidth'))
+    return Number.isFinite(stored) && stored >= 25 && stored <= 75 ? stored : 50
+  })
+  const filesPanelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    localStorage.setItem('ocm.chatPanelTabs', JSON.stringify(panelTabs))
+  }, [panelTabs])
+
+  useEffect(() => {
+    if (!panelTabs.includes(rightTab)) setRightTab(panelTabs[0])
+  }, [panelTabs, rightTab])
+
+  useEffect(() => {
+    localStorage.setItem('ocm.fileTreeWidth', String(treeWidth))
+  }, [treeWidth])
+
+  const removePanelTab = useCallback((tab: PanelTab) => {
+    setPanelTabs((tabs) => (tabs.length > 1 ? tabs.filter((existing) => existing !== tab) : tabs))
+  }, [])
+
+  const addPanelTab = useCallback((tab: PanelTab) => {
+    setPanelTabs((tabs) => (tabs.includes(tab) ? tabs : [...tabs, tab]))
+    setRightTab(tab)
+  }, [])
+
+  const startTreeResize = useCallback((event: React.MouseEvent) => {
+    event.preventDefault()
+    const container = filesPanelRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const onMove = (moveEvent: MouseEvent) => {
+      const percentage = ((moveEvent.clientX - rect.left) / rect.width) * 100
+      setTreeWidth(Math.min(75, Math.max(25, percentage)))
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [])
 
   useEffect(() => {
     localStorage.setItem('ocm.sessionRailWidth', String(railWidth))
@@ -573,25 +652,38 @@ export function SessionDetail() {
             ) : (
               <Header.BackButton to={sessionBackPath} className="text-xs sm:text-sm" />
             )}
+            <div className="hidden md:flex items-center rounded-md border border-border p-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setRailOpen((open) => !open)}
+                aria-label={t('navigation.sessions')}
+                title={t('navigation.sessions')}
+                className={cn('h-7 w-7', railOpen && 'bg-accent text-foreground')}
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setRightPanelOpen((open) => !open)}
+                aria-label={t('navigation.detail')}
+                title={t('navigation.detail')}
+                className={cn('h-7 w-7', rightPanelOpen && 'bg-accent text-foreground')}
+              >
+                <PanelRight className="h-4 w-4" />
+              </Button>
+            </div>
             <Header.EditableTitle
               value={session?.title || t('session.card.untitled')}
               onChange={handleSessionTitleUpdate}
               subtitle={<span className="text-primary">{workspaceDisplayName}</span>}
             />
           </div>
-          <Header.Actions className="gap-2 sm:gap-4">
+          <Header.Actions className="gap-2 sm:gap-3">
             <div className="flex items-center gap-1">
               <PendingActionsGroup />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setRailOpen((open) => !open)}
-              aria-label={t('navigation.sessions')}
-              className="hidden md:inline-flex text-muted-foreground hover:text-foreground"
-            >
-              <PanelLeft className="w-5 h-5" />
-            </Button>
             <ContextUsageIndicator
               opcodeUrl={opcodeUrl}
               sessionID={sessionId}
@@ -599,15 +691,6 @@ export function SessionDetail() {
               isConnected={isConnected}
               isReconnecting={isReconnecting}
             />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setRightPanelOpen((open) => !open)}
-              aria-label={t('navigation.detail')}
-              className="hidden md:inline-flex text-muted-foreground hover:text-foreground"
-            >
-              <PanelRight className="w-5 h-5" />
-            </Button>
             <SessionMoreButton />
           </Header.Actions>
         </Header>
@@ -773,33 +856,67 @@ export function SessionDetail() {
             className="hidden md:flex shrink-0 flex-col min-h-0 border-l border-border overflow-hidden"
             style={{ width: panelWidth }}
           >
-            <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
-              <Button variant={rightTab === 'files' ? 'secondary' : 'ghost'} size="sm" className="h-7 gap-1 px-2" onClick={() => setRightTab('files')}>
-                <Folder className="h-3.5 w-3.5" />
-                {t('navigation.files')}
-              </Button>
-              <Button variant={rightTab === 'review' ? 'secondary' : 'ghost'} size="sm" className="h-7 gap-1 px-2" onClick={() => setRightTab('review')}>
-                <GitPullRequest className="h-3.5 w-3.5" />
-                {t('navigation.sourceControl')}
-              </Button>
-              <Button variant={rightTab === 'info' ? 'secondary' : 'ghost'} size="sm" className="h-7 gap-1 px-2" onClick={() => setRightTab('info')}>
-                <Info className="h-3.5 w-3.5" />
-                {t('navigation.detail')}
-              </Button>
-              <Button variant="ghost" size="icon" className="ml-auto h-7 w-7" onClick={() => setRightPanelOpen(false)} aria-label={t('navigation.close')}>
+            <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2 py-1.5 scrollbar-thin">
+              {panelTabs.map((tab) => (
+                <div key={tab} className="group flex shrink-0 items-center">
+                  <Button
+                    variant={rightTab === tab ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={cn('h-7 gap-1 px-2', panelTabs.length > 1 && 'rounded-r-none')}
+                    onClick={() => setRightTab(tab)}
+                  >
+                    <PanelTabIcon tab={tab} />
+                    {t(PANEL_TAB_LABEL_KEY[tab])}
+                  </Button>
+                  {panelTabs.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePanelTab(tab)}
+                      aria-label={t('navigation.remove')}
+                      className="h-7 rounded-r-md px-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label={t('navigation.add')} title={t('navigation.add')}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {ALL_PANEL_TABS.filter((tab) => !panelTabs.includes(tab)).map((tab) => (
+                    <DropdownMenuItem key={tab} onClick={() => addPanelTab(tab)}>
+                      <span className="mr-2"><PanelTabIcon tab={tab} /></span>
+                      {t(PANEL_TAB_LABEL_KEY[tab])}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="ghost" size="icon" className="ml-auto h-7 w-7 shrink-0" onClick={() => setRightPanelOpen(false)} aria-label={t('navigation.close')}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
             <div className="min-h-0 flex-1 overflow-hidden">
               {rightTab === 'files' && (
-                <div className="flex h-full min-h-0">
-                  <FileTreeExplorer
-                    rootPath={repoDirectory ?? ''}
-                    selectedPath={panelFile?.path}
-                    onSelectFile={handleSelectPanelFile}
-                    className="w-1/2 border-r border-border"
+                <div ref={filesPanelRef} className="flex h-full min-h-0">
+                  <div className="min-h-0 overflow-hidden" style={{ width: `${treeWidth}%` }}>
+                    <FileTreeExplorer
+                      rootPath={repoDirectory ?? ''}
+                      selectedPath={panelFile?.path}
+                      onSelectFile={handleSelectPanelFile}
+                      className="h-full"
+                    />
+                  </div>
+                  <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    onMouseDown={startTreeResize}
+                    className="w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
                   />
-                  <div className="w-1/2 overflow-y-auto">
+                  <div className="min-h-0 flex-1 overflow-y-auto">
                     {panelFile && !panelFile.isDirectory ? (
                       <FilePreview key={panelFile.path} file={panelFile} />
                     ) : (
@@ -832,6 +949,11 @@ export function SessionDetail() {
                   directory={repoDirectory}
                   branch={repo?.currentBranch || repo?.branch}
                 />
+              )}
+              {rightTab === 'terminal' && (
+                <div className="h-full min-h-0">
+                  <TerminalView className="h-full" />
+                </div>
               )}
             </div>
           </aside>

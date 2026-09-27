@@ -39,10 +39,21 @@ export function ContextUsageIndicator({ opcodeUrl, sessionID, directory, isConne
     ? `${totalTokens.toLocaleString()} (${Math.round(usagePercentage || 0)}%)`
     : totalTokens.toLocaleString()
 
+  const tooltip = contextLimit
+    ? t('session.contextUsage.tooltip', {
+        tokens: totalTokens.toLocaleString(),
+        percent: Math.round(usagePercentage || 0),
+      })
+    : tokenText
+
   return (
-    <div className="flex items-center gap-2">
-      <span className={`text-xs font-medium whitespace-nowrap ${getUsageTextColor(usagePercentage || 0)}`}>
-        {tokenText}
+    <div
+      className="flex items-center gap-1.5 rounded-full border border-border bg-card px-2 py-0.5"
+      title={tooltip}
+    >
+      <span className="text-[11px] text-muted-foreground">{t('session.contextUsage.label')}</span>
+      <span className={`text-[11px] font-medium whitespace-nowrap ${getUsageTextColor(usagePercentage || 0)}`}>
+        {contextLimit ? `${Math.round(usagePercentage || 0)}%` : tokenText}
       </span>
     </div>
   )
