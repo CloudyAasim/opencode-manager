@@ -143,7 +143,11 @@ export function SessionDetail() {
     return Number.isFinite(stored) && stored >= 220 && stored <= 560 ? stored : 288
   })
   const [rightPanelOpen, setRightPanelOpen] = useState(false)
-  const [railOpen, setRailOpen] = useState(true)
+  const [railOpen, setRailOpen] = useState(() =>
+    typeof window === 'undefined' || typeof window.matchMedia !== 'function'
+      ? true
+      : window.matchMedia('(min-width: 768px)').matches,
+  )
   const [panelWidth, setPanelWidth] = useState(() => {
     const stored = Number(localStorage.getItem('ocm.chatPanelWidth'))
     return Number.isFinite(stored) && stored >= 280 && stored <= 720 ? stored : 384
@@ -706,7 +710,7 @@ export function SessionDetail() {
                 type="button"
                 aria-label={t('navigation.close')}
                 onClick={() => setRailOpen(false)}
-                className="fixed inset-0 z-30 bg-black/40 md:hidden"
+                className="absolute inset-0 z-30 bg-black/40 md:hidden"
               />
             )}
             <aside
@@ -867,7 +871,7 @@ export function SessionDetail() {
               type="button"
               aria-label={t('navigation.close')}
               onClick={() => setRightPanelOpen(false)}
-              className="fixed inset-0 z-30 bg-black/40 md:hidden"
+              className="absolute inset-0 z-30 bg-black/40 md:hidden"
             />
           )}
           <aside
