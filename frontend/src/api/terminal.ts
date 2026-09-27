@@ -43,7 +43,7 @@ export const terminalApi = {
     return data.sessions
   },
 
-  createSession: async (dimensions: { cols: number; rows: number }): Promise<TerminalSessionInfo> => {
+  createSession: async (dimensions: { cols: number; rows: number; cwd?: string }): Promise<TerminalSessionInfo> => {
     const data = await fetchWrapper<{ session: TerminalSessionInfo }>(`${BASE}/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

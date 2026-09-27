@@ -37,6 +37,7 @@ def build_shell_argv(shell: str) -> list:
         sys.stderr.write("terminal-pty: sandbox script not found; running without workspace isolation\n")
         return [shell, "-i"]
 
+    sandbox_cwd = os.environ.get("OCM_PTY_SANDBOX_CWD") or "/workspace"
     return [
         "unshare",
         "--user",
@@ -49,6 +50,7 @@ def build_shell_argv(shell: str) -> list:
         script,
         shell,
         bind,
+        sandbox_cwd,
         "-i",
     ]
 

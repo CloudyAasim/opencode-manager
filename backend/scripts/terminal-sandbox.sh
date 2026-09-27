@@ -23,7 +23,8 @@ if [ -z "$WORKSPACE" ]; then
   echo "terminal-sandbox: missing workspace directory" >&2
   exit 64
 fi
-shift 2
+SANDBOX_CWD="${3:-/workspace}"
+shift 3
 
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
@@ -51,5 +52,6 @@ mount --bind "$WORKSPACE" "$ROOT/workspace"
 
 export HOME=/workspace
 export PWD=/workspace
+export OCM_SANDBOX_CWD="$SANDBOX_CWD"
 
-exec chroot "$ROOT" /bin/sh -c 'cd /workspace 2>/dev/null || true; exec "$0" "$@"' "$SHELL_BIN" "$@"
+exec chroot "$ROOT" /bin/sh -c 'cd "${OCM_SANDBOX_CWD:-/workspace}" 2>/dev/null || cd /workspace 2>/dev/null || true; exec "$0" "$@"' "$SHELL_BIN" "$@"

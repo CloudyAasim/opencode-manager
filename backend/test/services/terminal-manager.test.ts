@@ -87,7 +87,7 @@ describe('TerminalManager', () => {
     const session = manager.create(actor, { cols: 80, rows: 24 })
 
     expect(spawner.spawnOptions).toEqual([
-      { shell: '/bin/bash', cwd: '/workspace', cols: 80, rows: 24, isolateWorkspace: '/workspace' },
+      { shell: '/bin/bash', cwd: '/workspace', cols: 80, rows: 24, isolateWorkspace: '/workspace', sandboxCwd: '/workspace' },
     ])
     expect(session.dimensions).toEqual({ cols: 80, rows: 24 })
     expect(manager.list(actor)).toHaveLength(1)
@@ -111,6 +111,32 @@ describe('TerminalManager', () => {
     manager.create(actor, {})
 
     expect(spawner.spawnOptions[0]?.isolateWorkspace).toBeUndefined()
+  })
+
+  it('starts a sandboxed terminal in the requested project directory', () => {
+    manager.create(actor, { cwd: '/workspace/repos/demo' })
+
+    const options = spawner.spawnOptions[0]
+    expect(options?.cwd).toBe('/workspace/repos/demo')
+    expect(options?.isolateWorkspace).toBe('/workspace')
+    expect(options?.sandboxCwd).toBe('/workspace/repos/demo')
+  })
+
+  it('falls back to the terminal home when the requested directory is outside it', () => {
+    manager.create(actor, { cwd: '/etc' })
+
+    const options = spawner.spawnOptions[0]
+    expect(options?.cwd).toBe('/workspace')
+    expect(options?.sandboxCwd).toBe('/workspace')
+  })
+
+  it('lets an admin start in any workspace directory without a sandbox', () => {
+    manager.create({ ...actor, role: 'admin' }, { cwd: '/workspace/repos/demo' })
+
+    const options = spawner.spawnOptions[0]
+    expect(options?.cwd).toBe('/workspace/repos/demo')
+    expect(options?.isolateWorkspace).toBeUndefined()
+    expect(options?.sandboxCwd).toBeUndefined()
   })
 
   it('clamps requested dimensions to the configured defaults on bad input', () => {

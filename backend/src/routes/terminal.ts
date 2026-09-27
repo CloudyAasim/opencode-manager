@@ -18,6 +18,7 @@ const MAX_INPUT_LENGTH = 64 * 1024
 const createSessionSchema = z.object({
   cols: z.number().int().min(20).max(500).optional(),
   rows: z.number().int().min(5).max(300).optional(),
+  cwd: z.string().min(1).max(4096).optional(),
 })
 
 const inputSchema = z.object({

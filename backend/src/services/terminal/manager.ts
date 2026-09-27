@@ -1,10 +1,11 @@
 import type { Database } from 'bun:sqlite'
 import { randomUUID } from 'node:crypto'
+import path from 'node:path'
 import { ENV } from '@opencode-manager/shared/config/env'
 import { logger } from '../../utils/logger'
 import { createPtySpawner, type PtySpawner } from './pty'
 import { TerminalSession } from './session'
-import { resolveUserTerminalHome } from './home'
+import { isInsideDirectory, resolveUserTerminalHome } from './home'
 
 export type TerminalErrorCode =
   | 'TERMINAL_DISABLED'
@@ -122,7 +123,7 @@ export class TerminalManager {
       .map((session) => this.toSummary(session))
   }
 
-  create(actor: TerminalActor, options: { cols?: number; rows?: number }): TerminalSession {
+  create(actor: TerminalActor, options: { cols?: number; rows?: number; cwd?: string }): TerminalSession {
     if (!this.isEnabled()) throw new TerminalError('TERMINAL_DISABLED')
     if (!this.spawner.available()) throw new TerminalError('TERMINAL_UNAVAILABLE')
 
@@ -137,8 +138,14 @@ export class TerminalManager {
     const cols = clampDimension(options.cols, ENV.TERMINAL.COLS)
     const rows = clampDimension(options.rows, ENV.TERMINAL.ROWS)
     const id = randomUUID()
-    const cwd = resolveUserTerminalHome(actor.id, actor.username)
-    const isolateWorkspace = ENV.TERMINAL.ISOLATE && actor.role !== 'admin' ? cwd : undefined
+    const home = resolveUserTerminalHome(actor.id, actor.username)
+    const allowedRoot = actor.role === 'admin' ? path.resolve(ENV.TERMINAL.CWD) : home
+    const requestedCwd = options.cwd ? path.resolve(options.cwd) : null
+    const cwd = requestedCwd && isInsideDirectory(allowedRoot, requestedCwd) ? requestedCwd : home
+    const isolateWorkspace = ENV.TERMINAL.ISOLATE && actor.role !== 'admin' ? home : undefined
+    const sandboxCwd = isolateWorkspace
+      ? path.posix.join('/workspace', path.relative(home, cwd).split(path.sep).join('/'))
+      : undefined
 
     const pty = this.spawner.spawn({
       shell: ENV.TERMINAL.SHELL,
@@ -146,6 +153,7 @@ export class TerminalManager {
       cols,
       rows,
       isolateWorkspace,
+      sandboxCwd,
     })
 
     const session = new TerminalSession(

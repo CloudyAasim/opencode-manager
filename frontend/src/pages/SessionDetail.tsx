@@ -725,7 +725,7 @@ export function SessionDetail() {
           </>
         )}
         <div className="relative flex-1 overflow-hidden flex flex-col">
-        <div key={sessionId} data-testid="session-message-scroll" ref={messageContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]" style={{ paddingBottom: promptOverlayHeight + inputBottomOffset + PROMPT_OVERLAY_CLEARANCE_PX }}>
+        <div key={sessionId} data-testid="session-message-scroll" ref={messageContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-subtle [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]" style={{ paddingBottom: promptOverlayHeight + inputBottomOffset + PROMPT_OVERLAY_CLEARANCE_PX }}>
           {repoLoading || sessionLoading || messagesLoading ? (
             <MessageSkeleton />
           ) : opcodeUrl && sessionDirectory ? (
@@ -754,21 +754,6 @@ export function SessionDetail() {
                     messageId={latestPlayableAssistant.message.info.id}
                     content={latestPlayableAssistant.text}
                   />
-                )}
-                {hasPromptContent && !isSessionActive && (
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onTouchEnd={(e) => {
-                      e.preventDefault()
-                      handleClearPrompt()
-                    }}
-                    onClick={handleClearPrompt}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-xs transition-colors"
-                    aria-label={t('session.header.clear')}
-                  >
-                    <X className="w-5 h-5" />
-                    <span className="text-sm font-medium hidden sm:inline">{t('session.header.clear')}</span>
-                  </button>
                 )}
               </div>
               {leaderActive && (
@@ -823,6 +808,18 @@ export function SessionDetail() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {hasPromptContent && !isSessionActive && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearPrompt}
+                    className="h-7 shrink-0 gap-1 px-2 text-destructive hover:bg-destructive/10"
+                    aria-label={t('session.header.clear')}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{t('session.header.clear')}</span>
+                  </Button>
+                )}
               </div>
               <SessionSendErrorBanner sessionId={sessionId} isConnected={isConnected} isReconnecting={isReconnecting} />
               <PromptInput
@@ -952,7 +949,7 @@ export function SessionDetail() {
               )}
               {rightTab === 'terminal' && (
                 <div className="h-full min-h-0">
-                  <TerminalView className="h-full" />
+                  <TerminalView className="h-full" cwd={repoDirectory} />
                 </div>
               )}
             </div>

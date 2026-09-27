@@ -37,7 +37,7 @@ function createTheme() {
       }
 }
 
-export function TerminalView({ className }: { className?: string }) {
+export function TerminalView({ className, cwd }: { className?: string; cwd?: string }) {
   const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -188,7 +188,7 @@ export function TerminalView({ className }: { className?: string }) {
 
     const start = async () => {
       try {
-        const session = await terminalApi.createSession({ cols: term.cols || 120, rows: term.rows || 30 })
+        const session = await terminalApi.createSession({ cols: term.cols || 120, rows: term.rows || 30, ...(cwd ? { cwd } : {}) })
         if (disposedRef.current) {
           void terminalApi.close(session.id).catch(() => {})
           return
@@ -221,7 +221,7 @@ export function TerminalView({ className }: { className?: string }) {
       termRef.current = null
       fitRef.current = null
     }
-  }, [restartKey, writeNotice])
+  }, [restartKey, writeNotice, cwd])
 
   const handleReconnect = () => {
     setRestartKey((key) => key + 1)
