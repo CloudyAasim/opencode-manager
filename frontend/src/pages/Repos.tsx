@@ -47,23 +47,15 @@ export function Repos() {
         <button
           type="button"
           onClick={() => navigate('/assistant')}
-          className="relative mb-3 w-full cursor-pointer overflow-hidden rounded-xl border border-border bg-card text-left transition-all duration-200 active:scale-[0.98] hover:border-blue-500/50 hover:bg-accent/50 hover:shadow-md"
+          className="mb-4 flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-card-hover"
         >
-          <div className="p-1.5">
-            <div className="mb-1 flex items-start gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <h3 className="truncate text-base font-semibold text-foreground">{t('navigation.assistant')}</h3>
-                <span className="h-2 w-2 shrink-0 rounded-full bg-green-500" />
-              </div>
-              <Bot className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                <Bot className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{t('repo.assistantHint')}</span>
-              </span>
-            </div>
-          </div>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            <Bot className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-foreground">{t('navigation.assistant')}</span>
+            <span className="block truncate text-xs text-muted-foreground">{t('repo.assistantHint')}</span>
+          </span>
         </button>
         <RepoList />
       </div>
