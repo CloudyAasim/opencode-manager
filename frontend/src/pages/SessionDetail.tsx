@@ -616,28 +616,6 @@ export function SessionDetail() {
                   onCreateWorkspace={handleCreateWorkspace}
                 />
               )}
-              <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2 py-1.5 scrollbar-thin">
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate('/files')}>
-                  <Folder className="h-3.5 w-3.5" />
-                  {t('navigation.files')}
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSourceControlOpen(true)}>
-                  <GitPullRequest className="h-3.5 w-3.5" />
-                  {t('navigation.sourceControl')}
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate(`/repos/${repoId}/schedules`)}>
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  {t('navigation.schedules')}
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setMcpDialogOpen(true)}>
-                  <Plug className="h-3.5 w-3.5" />
-                  {t('navigation.mcp')}
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSkillsDialogOpen(true)}>
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {t('navigation.skills')}
-                </Button>
-              </div>
               <div className="min-h-0 flex-1 overflow-hidden">
                 <SessionList
                   opcodeUrl={opcodeUrl}
@@ -723,6 +701,28 @@ export function SessionDetail() {
                   onMinimize={() => handleMinimizeQuestion(currentQuestion)}
                 />
               )}
+              <div className="mb-1.5 flex items-center gap-1 overflow-x-auto scrollbar-thin">
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate('/files')}>
+                  <Folder className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t('navigation.files')}</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSourceControlOpen(true)}>
+                  <GitPullRequest className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t('navigation.sourceControl')}</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate(`/repos/${repoId}/schedules`)}>
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t('navigation.schedules')}</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setMcpDialogOpen(true)}>
+                  <Plug className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t('navigation.mcp')}</span>
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSkillsDialogOpen(true)}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t('navigation.skills')}</span>
+                </Button>
+              </div>
               <SessionSendErrorBanner sessionId={sessionId} isConnected={isConnected} isReconnecting={isReconnecting} />
               <PromptInput
                 ref={promptInputRef}

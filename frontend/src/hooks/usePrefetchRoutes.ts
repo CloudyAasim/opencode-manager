@@ -5,10 +5,12 @@ type PrefetchLoader = () => Promise<unknown>
 const AUTHENTICATED_ROUTES: PrefetchLoader[] = [
   () => import('../pages/Repos'),
   () => import('../pages/RepoDetail'),
+  () => import('../pages/SessionDetail'),
+  () => import('../pages/AssistantRedirect'),
+  () => import('../pages/Files'),
+  () => import('../pages/Settings'),
   () => import('../pages/Schedules'),
   () => import('../pages/GlobalSchedules'),
-  () => import('../pages/AssistantRedirect'),
-  () => import('../pages/SessionDetail'),
 ]
 
 const ADMIN_ROUTES: PrefetchLoader[] = [
@@ -43,20 +45,9 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
       if (isAdmin) warm(ADMIN_ROUTES)
     }
 
-    const requestIdle = (globalThis as {
-      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
-    }).requestIdleCallback
-
-    if (typeof requestIdle === 'function') {
-      const handle = requestIdle(warmAll, { timeout: 4000 })
-      return () => {
-        cancelled = true
-        const cancelIdle = (globalThis as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback
-        if (typeof cancelIdle === 'function') cancelIdle(handle)
-      }
-    }
-
-    const timer = setTimeout(warmAll, 2000)
+    // Warm the static, non-sensitive UI chunks right after sign-in so route
+    // changes are served from the local cache instead of the network.
+    const timer = setTimeout(warmAll, 250)
     return () => {
       cancelled = true
       clearTimeout(timer)

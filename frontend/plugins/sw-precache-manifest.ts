@@ -17,6 +17,8 @@ const ROUTE_CHUNK_NAMES = new Set([
   "Repos",
   "RepoDetail",
   "SessionDetail",
+  "Files",
+  "Settings",
   "Schedules",
   "GlobalSchedules",
   "Terminal",
