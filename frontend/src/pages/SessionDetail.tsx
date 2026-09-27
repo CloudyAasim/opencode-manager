@@ -710,11 +710,11 @@ export function SessionDetail() {
                 type="button"
                 aria-label={t('navigation.close')}
                 onClick={() => setRailOpen(false)}
-                className="absolute inset-0 z-30 bg-black/40 md:hidden"
+                className="absolute inset-0 z-30 bg-black/40 transition-opacity duration-200 md:hidden"
               />
             )}
             <aside
-              className="absolute inset-y-0 left-0 z-40 flex w-[82%] max-w-xs shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-xl md:static md:z-auto md:w-auto md:max-w-none md:bg-transparent md:shadow-none"
+              className="absolute inset-y-0 left-0 z-40 flex w-[82%] max-w-xs shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-auto md:max-w-none md:bg-transparent md:shadow-none"
               style={isDesktop ? { width: railWidth } : undefined}
             >
               <div className="min-h-0 flex-1 overflow-hidden">
@@ -871,11 +871,11 @@ export function SessionDetail() {
               type="button"
               aria-label={t('navigation.close')}
               onClick={() => setRightPanelOpen(false)}
-              className="absolute inset-0 z-30 bg-black/40 md:hidden"
+              className="absolute inset-0 z-30 bg-black/40 transition-opacity duration-200 md:hidden"
             />
           )}
           <aside
-            className="absolute inset-y-0 right-0 z-40 flex w-[88%] max-w-md shrink-0 flex-col overflow-hidden border-l border-border bg-card shadow-xl md:static md:z-auto md:w-auto md:max-w-none md:bg-transparent md:shadow-none"
+            className="absolute inset-x-0 bottom-0 z-40 flex max-h-[78vh] shrink-0 flex-col overflow-hidden rounded-t-xl border-t border-border bg-card shadow-[0_-12px_32px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out md:inset-y-0 md:right-0 md:left-auto md:z-auto md:max-h-none md:w-auto md:rounded-none md:border-l md:border-t-0 md:bg-transparent md:shadow-none"
             style={isDesktop ? { width: panelWidth } : undefined}
           >
             <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2 py-1.5 scrollbar-thin">
