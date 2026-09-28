@@ -21,11 +21,6 @@ export interface NavModelOptions {
   terminalAllowed?: boolean
 }
 
-/**
- * The global rail is intentionally fixed: 项目 / 助手 / 文件 / 终端 / 设置.
- * Project tooling (Files, Source Control, Schedules, MCP, Skills) lives inside a
- * project, not in the global navigation.
- */
 export function buildNavModel(options: NavModelOptions = {}): NavModel {
   const showTerminal = Boolean(options.isAdmin || options.terminalAllowed)
   const items: MoreDrawerItem[] = [

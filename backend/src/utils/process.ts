@@ -30,7 +30,6 @@ export async function executeCommand(
     
     const effectiveEnv = { ...process.env, ...options.env }
     
-    // Log key git-related environment variables
     if (command === 'git') {
       logger.info(`executeCommand: ${args.join(' ')}`)
       logger.info(`  GIT_ASKPASS: ${effectiveEnv.GIT_ASKPASS || '(not set)'}`)

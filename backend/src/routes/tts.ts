@@ -133,17 +133,13 @@ async function fetchAvailableVoices(endpoint: string, apiKey: string): Promise<s
         type VoiceItem = { id?: string; name?: string; voice?: string }
         const data = await response.json() as { data?: VoiceItem[]; voices?: string[] } | (string | VoiceItem)[]
         
-        // Handle different response formats
         if ('data' in data && Array.isArray(data.data)) {
-          // OpenAI-style format: { data: [{ name: "alloy" }, ...] }
           return data.data
             .filter((voice) => voice.id || voice.name)
             .map((voice) => (voice.id || voice.name)!)
         } else if ('voices' in data && Array.isArray(data.voices)) {
-          // Kokoro-style format: { "voices": ["af_alloy", "af_aoede", ...] }
           return data.voices.filter((v): v is string => typeof v === 'string')
         } else if (Array.isArray(data)) {
-          // Simple array format: ["alloy", "echo", ...] or [{ voice: "alloy" }, ...]
           return data.map((item) => {
             if (typeof item === 'string') return item
             return item.name || item.voice || item.id
@@ -296,7 +292,6 @@ export function createTTSRoutes(db: Database) {
         logger.error(`TTS API error: ${response.status} - ${errorText}`)
         const status = response.status >= 400 && response.status < 600 ? response.status as 400 | 500 : 500
         
-        // Try to parse error details for better frontend display
         let errorDetails = errorText
         try {
           const errorJson = JSON.parse(errorText)
@@ -308,7 +303,7 @@ export function createTTSRoutes(db: Database) {
             errorDetails = errorJson.message
           }
         } catch {
-          // Use raw error text if parsing fails
+        void 0
         }
         
         return c.json({ 

@@ -108,7 +108,7 @@ export function McpOAuthDialog({
           setStep('error')
         }
       } catch {
-        // ignore
+      void 0
       }
     }, 1500)
   }, [handleSuccess, stopAllPolling, t])
@@ -124,7 +124,7 @@ export function McpOAuthDialog({
           handleSuccess()
         }
       } catch {
-        // ignore
+      void 0
       }
     }, 2000)
   }, [onCheckStatus, handleSuccess])

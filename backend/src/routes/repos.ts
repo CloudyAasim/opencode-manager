@@ -53,7 +53,6 @@ export function createRepoRoutes(
     const raw = c.req.param('id')
     const id = Number(raw)
     if (!raw || !Number.isFinite(id)) {
-      // Static single-segment routes like /discover, /order, /git-status-batch.
       await next()
       return
     }

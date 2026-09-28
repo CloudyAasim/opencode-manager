@@ -29,13 +29,6 @@ function getAppliedMigrations(db: Database): Map<number, string> {
   return new Map(rows.map(r => [r.version, r.name]))
 }
 
-/**
- * Surfaces version-number collisions where a recorded migration's name differs
- * from the code migration registered under the same version. The runner keys on
- * version number alone, so a reused version silently skips the real migration
- * (e.g. an ADD COLUMN), producing later runtime errors that are hard to trace.
- * This converts that silent skip into a loud, actionable warning.
- */
 function warnOnVersionNameMismatch(applied: Map<number, string>, migrations: Migration[]): void {
   for (const migration of migrations) {
     const recordedName = applied.get(migration.version)

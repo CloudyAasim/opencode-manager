@@ -20,7 +20,6 @@ export class PromptTemplateServiceError extends Error {
 function assertEditable(ownerId: string | null | undefined, principal: Principal | null): void {
   if (ownerId === undefined) throw new PromptTemplateServiceError('Template not found', 404)
   if (principal?.role === 'admin') return
-  // Built-in (shared) templates and other users' templates are read-only.
   if (ownerId === null || ownerId !== principal?.id) {
     throw new PromptTemplateServiceError('Forbidden', 403)
   }

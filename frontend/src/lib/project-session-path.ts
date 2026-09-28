@@ -1,10 +1,5 @@
 export type WorktreeTabValue = 'repo' | 'workspaces'
 
-/**
- * Route for a project's session. Repository 0 is the Assistant, whose sessions
- * must carry the `assistant=1` flag so the session page resolves the per-user
- * assistant workspace; workspace worktrees carry `repoTab=workspaces`.
- */
 export function projectSessionPath(
   repoId: number,
   sessionId: string,

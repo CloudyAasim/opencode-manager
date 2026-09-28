@@ -86,7 +86,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
     try {
       fit.fit()
     } catch {
-      // container not measurable yet
+    void 0
     }
     termRef.current = term
     fitRef.current = fit
@@ -147,7 +147,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
           const ready = JSON.parse((event as MessageEvent).data) as { session?: { cwd?: string } }
           if (ready.session?.cwd) setSessionCwd(ready.session.cwd)
         } catch {
-          // ignore malformed ready payload
+        void 0
         }
         setStatus('ready')
       })
@@ -158,7 +158,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
           if (chunk.seq > lastSeqRef.current) lastSeqRef.current = chunk.seq
           term.write(chunk.data)
         } catch {
-          // ignore malformed frames
+        void 0
         }
       })
 
@@ -170,7 +170,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
         try {
           info = JSON.parse((event as MessageEvent).data) as { code: number | null; reason: string }
         } catch {
-          // keep defaults
+        void 0
         }
         setExitInfo(info)
         setStatus('closed')

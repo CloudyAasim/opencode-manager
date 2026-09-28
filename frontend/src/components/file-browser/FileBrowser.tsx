@@ -250,7 +250,6 @@ useEffect(() => {
       return
     }
     
-    // Fetch the full file content when selecting a file
     setLoading(true)
     try {
       const response = await fetch(getFileApiUrl(file.path))
@@ -262,7 +261,6 @@ useEffect(() => {
       setSelectedFile(fullFileData)
       onFileSelect?.(fullFileData)
       
-      // On mobile, open preview in modal
       if (isMobile) {
         setIsPreviewModalOpen(true)
         onPreviewStateChange?.(true)

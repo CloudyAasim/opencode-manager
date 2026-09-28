@@ -1018,7 +1018,7 @@ export async function removeWorktree(baseRepoPath: string, worktreePath: string,
   try {
     await executeCommand(['git', '-C', baseRepoPath, 'worktree', 'remove', '--force', worktreePath], env ? { env } : undefined)
   } catch {
-    // fall through to prune + rm
+    void 0
   } finally {
     await executeCommand(['git', '-C', baseRepoPath, 'worktree', 'prune'], env ? { env } : undefined).catch(swallow)
   }
@@ -1223,22 +1223,11 @@ export async function getSiblingRepos(
       projectID: string
     }>>('/experimental/workspace', { directory: target.fullPath })
 
-    // Normalize paths so a workspace pointing at a real repo directory can never
-    // be exposed as deletable. Deleting an OpenCode workspace recursively removes
-    // its directory, so the current repo directory and all known managed repo
-    // directories must be excluded regardless of trailing slashes or symlinks.
-    // Workspaces that are git main checkouts (not linked worktrees) are also
-    // excluded so the project's origin/main repository can never be surfaced
-    // as deletable.
     const knownDirectories = new Set(repoSiblings.map((repo) => canonicalPathSync(path.resolve(repo.fullPath))))
     const targetDirectory = canonicalPathSync(path.resolve(target.fullPath))
     const reposRoot = canonicalPathSync(path.resolve(reposBase()))
     const scheduleWorktreeRoot = canonicalPathSync(path.resolve(getScheduleWorktreesPath()))
 
-    // Schedule runs may create their isolated worktree via the OpenCode workspace
-    // API, which places it outside getScheduleWorktreesPath(). Exclude any live
-    // run's workspace/worktree so an in-progress run is never surfaced as a
-    // deletable Sibling during the window it exists.
     const activeRuns = listActiveScheduleRunWorkspaces(database)
     const activeRunWorkspaceIds = new Set(activeRuns.map((run) => run.workspaceId).filter((id): id is string => id !== null))
     const activeRunDirectories = new Set(

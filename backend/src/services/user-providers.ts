@@ -47,7 +47,7 @@ async function listConfigDirectories(username: string): Promise<string[]> {
       if (entry.isDirectory()) directories.push(path.join(reposRoot(username), entry.name))
     }
   } catch {
-    // no repos directory yet
+  void 0
   }
   return directories
 }
@@ -67,11 +67,6 @@ async function upsertProvider(configPath: string, providerId: string, apiKey: st
   await writeConfig(configPath, { ...config, provider: providers })
 }
 
-/**
- * Provider credentials are stored per user across every OpenCode config their
- * sessions read (workspace root, assistant workspace and each of their repos),
- * so one account can never read or overwrite another account's providers.
- */
 export class UserProviderService {
   async list(username: string): Promise<string[]> {
     const config = await readConfig(configPathIn(settingRoot(username)))

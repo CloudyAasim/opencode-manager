@@ -95,7 +95,7 @@ export function createSTTRoutes(db: Database) {
             errorDetails = errorJson.message
           }
         } catch {
-          // Use raw error text if parsing fails
+        void 0
         }
 
         return c.json({

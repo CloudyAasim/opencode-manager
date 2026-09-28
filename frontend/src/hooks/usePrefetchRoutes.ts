@@ -45,8 +45,6 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
       if (isAdmin) warm(ADMIN_ROUTES)
     }
 
-    // Warm the static, non-sensitive UI chunks right after sign-in so route
-    // changes are served from the local cache instead of the network.
     const timer = setTimeout(warmAll, 250)
     return () => {
       cancelled = true

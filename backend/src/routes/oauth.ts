@@ -149,7 +149,6 @@ export function createOAuthRoutes(openCodeClient: OpenCodeClient, openCodeSuperv
 
       const data = await response.json()
       
-      // The OpenCode server returns the format we need directly
       return c.json({ providers: data })
     } catch (error) {
       logger.error('Provider auth methods error:', error)

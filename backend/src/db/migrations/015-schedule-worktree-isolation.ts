@@ -33,7 +33,6 @@ const migration: Migration = {
   },
 
   down(db) {
-    // Rebuild schedule_jobs without branch
     const jobColumns = db.prepare('PRAGMA table_info(schedule_jobs)').all() as ColumnInfo[]
     const hasBranch = jobColumns.some((c) => c.name === 'branch')
 
@@ -79,7 +78,6 @@ const migration: Migration = {
       db.run('CREATE INDEX IF NOT EXISTS idx_schedule_jobs_next_run ON schedule_jobs(enabled, next_run_at)')
     }
 
-    // Rebuild schedule_runs without run_branch, commit_hash, worktree_path
     const runColumns = db.prepare('PRAGMA table_info(schedule_runs)').all() as ColumnInfo[]
     const hasRunBranch = runColumns.some((c) => c.name === 'run_branch')
     const hasCommitHash = runColumns.some((c) => c.name === 'commit_hash')

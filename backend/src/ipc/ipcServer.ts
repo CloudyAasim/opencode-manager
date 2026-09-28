@@ -101,7 +101,7 @@ export async function createIPCServer(context?: string): Promise<IPCServer> {
     try {
       await fs.unlink(ipcHandlePath)
     } catch {
-      /* socket file may not exist */
+    void 0
     }
   }
 

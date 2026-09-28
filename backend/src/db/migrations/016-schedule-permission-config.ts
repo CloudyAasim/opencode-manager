@@ -19,8 +19,6 @@ const migration: Migration = {
 
   down(_db) {
     void _db
-    // no-op: SQLite drop-column requires table rebuild; column is nullable so
-    // leaving it in place is safe for rollback scenarios.
   },
 }
 

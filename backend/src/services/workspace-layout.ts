@@ -11,7 +11,7 @@ async function moveIfMissing(from: string, to: string): Promise<void> {
     await fs.access(to)
     return
   } catch {
-    // target does not exist; move below
+  void 0
   }
   try {
     await fs.rename(from, to)
@@ -20,11 +20,6 @@ async function moveIfMissing(from: string, to: string): Promise<void> {
   }
 }
 
-/**
- * Moves any pre-existing `users/<username>/*` content into the split layout:
- * `workspace/` for projects and files, `setting/` for configuration and the
- * assistant workspace. Idempotent and safe to run on every start.
- */
 export async function migrateUserWorkspaceLayout(): Promise<void> {
   const usersRoot = getUsersWorkspacePath()
   let usernames: string[]

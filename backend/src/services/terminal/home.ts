@@ -33,7 +33,7 @@ export function resolveUserTerminalHome(userId: string, username?: string | null
     try {
       chmodSync(home, 0o700)
     } catch {
-      // best effort: some filesystems do not support chmod
+    void 0
     }
     return home
   } catch {

@@ -1,11 +1,5 @@
 import { ENV } from '@opencode-manager/shared/config/env'
 
-/**
- * Headers that a trusted reverse proxy is expected to set to the real client
- * address. `x-real-ip` is preferred because Caddy (and most proxies) overwrite
- * it with the direct peer, whereas `x-forwarded-for` may be appended to a
- * client-supplied value. Only consulted when AUTH_TRUST_PROXY=true.
- */
 const TRUSTED_IP_HEADERS = ['x-real-ip', 'cf-connecting-ip', 'x-forwarded-for'] as const
 
 type HeaderReader = {

@@ -379,12 +379,10 @@ export function RepoList() {
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedRepos.has(id))
     
     if (allVisibleSelected) {
-      // Unselect only the visible repos, keep hidden ones
       const newSelected = new Set(selectedRepos)
       visibleIds.forEach(id => newSelected.delete(id))
       setSelectedRepos(newSelected)
     } else {
-      // Add all visible repos to existing selection (preserves hidden selections)
       const newSelected = new Set(selectedRepos)
       visibleIds.forEach(id => newSelected.add(id))
       setSelectedRepos(newSelected)

@@ -646,7 +646,6 @@ Retrieve the user's full settings, including all preferences.
     notifications?: { enabled: boolean; ... },
     repoOrder?: number[],
     repoSortMode: 'recent' | 'manual' | 'name',
-    // ... other safe preferences
   },
   updatedAt: number
 }

@@ -42,13 +42,6 @@ export function STTSettings() {
   const { preferences, updateSettings } = useSettings()
   const { startRecording, stopRecording, abortRecording, isRecording, isProcessing, transcript, interimTranscript, error: sttError, isExternalProvider } = useSTT()
 
-  const saveStatus = useDebouncedFormAutoSave<STTFormValues>({
-    watchedValues: [watchEnabled, watchProvider, watchLanguage, watchEndpoint, watchApiKey, watchModel],
-    getValues,
-    onSave: (formData) => updateSettings({ stt: formData }),
-    isDirty,
-    isValid,
-  })
   const [isTesting, setIsTesting] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'failed'>('idle')
@@ -76,6 +69,14 @@ export function STTSettings() {
   const watchEndpoint = form.watch('endpoint')
   const watchApiKey = form.watch('apiKey')
   const watchModel = form.watch('model')
+
+  const saveStatus = useDebouncedFormAutoSave<STTFormValues>({
+    watchedValues: [watchEnabled, watchProvider, watchLanguage, watchEndpoint, watchApiKey, watchModel],
+    getValues,
+    onSave: (formData) => updateSettings({ stt: formData }),
+    isDirty,
+    isValid,
+  })
 
   const fetchModels = useCallback(async (forceRefresh = false) => {
     if (!watchEndpoint) return
@@ -166,7 +167,6 @@ export function STTSettings() {
     }
   }, [preferences?.stt, reset])
 
-  // auto-save is handled by useDebouncedFormAutoSave above
 
   const canTestBuiltin = watchEnabled && watchProvider === 'builtin' && isWebSpeechAvailable
   const canTestExternal = watchEnabled && watchProvider === 'external' && watchEndpoint

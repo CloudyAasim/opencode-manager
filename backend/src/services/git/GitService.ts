@@ -271,9 +271,6 @@ export class GitService {
         return ''
       }
 
-      // `git restore --staged` needs a commit to resolve against. A freshly
-      // initialized repository has an unborn HEAD, so fall back to removing the
-      // entries from the index instead.
       const args = (await hasCommit(repoPath, env))
         ? ['git', '-C', repoPath, 'restore', '--staged', '--', ...paths]
         : ['git', '-C', repoPath, 'rm', '--cached', '--quiet', '--ignore-unmatch', '-r', '--', ...paths]

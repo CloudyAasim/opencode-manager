@@ -185,7 +185,7 @@ export class TerminalSession {
       try {
         listener(exit)
       } catch {
-        // listener errors must not break the session teardown
+      void 0
       }
     }
     this.exitListeners.clear()

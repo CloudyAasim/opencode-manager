@@ -40,7 +40,6 @@ const ttsFormSchema = z.object({
 }).superRefine((data, ctx) => {
   if (!data.enabled) return
   
-  // External provider specific validation
   if (data.provider === 'external') {
     if (!data.apiKey || data.apiKey.trim().length === 0) {
       ctx.addIssue({
@@ -58,7 +57,6 @@ const ttsFormSchema = z.object({
     }
   }
   
-  // Voice requirement depends on provider
   if (!data.voice || data.voice.trim().length === 0) {
     if (data.provider === 'builtin') {
       ctx.addIssue({
@@ -89,7 +87,6 @@ export function TTSSettings() {
   
   const { reset, formState: { isDirty, isValid }, getValues } = form
   
-  // Fetch available models and voices for external provider
   const { data: modelsData, isLoading: isLoadingModels, refetch: refetchModels } = useTTSModels(
     undefined,
     true
@@ -113,11 +110,8 @@ export function TTSSettings() {
   const watchModel = form.watch('model')
   const watchSpeed = form.watch('speed')
   
-  // Check builtin Web Speech API support
   const hasWebSpeechSupport = isWebSpeechSupported()
   
-  // Determine if test button should be enabled
-  // With auto-save, we allow testing as long as settings are valid (no need to wait for save)
   const canTest = (() => {
     if (!watchEnabled) return false
     
@@ -128,7 +122,6 @@ export function TTSSettings() {
     }
   })()
   
-  // Load browser voices when provider is builtin
   useEffect(() => {
     if (watchProvider === 'builtin' && watchEnabled) {
       setIsCheckingBuiltin(true)
@@ -337,7 +330,6 @@ export function TTSSettings() {
                             {...field}
                             onChange={(e) => {
                               field.onChange(e)
-                              // Auto-save will handle debounced save
                             }}
                           />
                         </FormControl>
@@ -363,7 +355,6 @@ export function TTSSettings() {
                             {...field}
                             onChange={(e) => {
                               field.onChange(e)
-                              // Auto-save will handle debounced save
                             }}
                           />
                         </FormControl>

@@ -116,8 +116,6 @@ function formatStartupError(stderrOutput: string, fallback: string): string {
   return `OpenCode config validation failed: ${summary}${remainder}`
 }
 
-// Helper getters to ensure values are computed at runtime (not module load time)
-// This allows proper mocking in tests
 const getOpenCodeServerDirectory = () => getWorkspacePath()
 const getOpenCodeServerPort = () => ENV.OPENCODE.PORT
 const getOpenCodeServerHost = () => ENV.OPENCODE.HOST
@@ -259,7 +257,7 @@ export function resolveOpenCodeExecutable(): string | null {
       accessSync(candidate, constants.X_OK)
       return candidate
     } catch {
-      // try the next candidate
+    void 0
     }
   }
   return null
@@ -316,10 +314,6 @@ class OpenCodeServerManager {
     return OpenCodeServerManager.instance
   }
 
-  /**
-   * Test-only method to reset the singleton instance.
-   * Should only be used in test setup/teardown.
-   */
   static resetInstance(): void {
     const instance = OpenCodeServerManager.instance
     if (instance) {

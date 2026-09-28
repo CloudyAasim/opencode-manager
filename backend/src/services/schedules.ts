@@ -511,11 +511,6 @@ export class ScheduleService {
     }
   }
 
-  /**
-   * Removes any schedule_jobs and schedule_runs whose repo_id (or job_id for
-   * runs) no longer exists in the repos / schedule_jobs table.  Safe to call
-   * on every startup — no-op when there are no orphans.
-   */
   cleanupOrphanedSchedules(): { orphanedJobs: number; orphanedRuns: number } {
     const result = cleanupOrphanedSchedules(this.db)
     if (result.orphanedJobs > 0 || result.orphanedRuns > 0) {
@@ -538,11 +533,6 @@ export class ScheduleService {
     return run
   }
 
-  /**
-   * Clears a job's run history: deletes every finished run's row plus its git
-   * run branch and any leftover worktree. A run currently in progress is left
-   * untouched (its row and live worktree are skipped).
-   */
   async clearRunHistory(repoId: number, jobId: number): Promise<{ cleared: number }> {
     const repo = this.assertRepo(repoId)
     this.assertJob(repoId, jobId)
@@ -557,10 +547,6 @@ export class ScheduleService {
     return { cleared }
   }
 
-  /**
-   * Deletes a single finished run plus its git run branch and any leftover
-   * worktree. A run in progress must be cancelled first.
-   */
   async deleteRun(repoId: number, jobId: number, runId: number): Promise<void> {
     const repo = this.assertRepo(repoId)
     this.assertJob(repoId, jobId)
@@ -603,7 +589,6 @@ export class ScheduleService {
     })
 
     try {
-      // Prepare worktree for isolated runs
       const wt = await this.worktreeManager.prepare(repo, job, run.id)
       const runDirectory = wt?.directory ?? repo.fullPath
       if (wt) {
@@ -691,7 +676,6 @@ export class ScheduleService {
         logger.error(`Failed to update job state for job ${jobId}:`, updateError)
       }
 
-      // Teardown worktree if one was created before the error
       await this.teardownWorktree(repoId, jobId, run.id, job, repo)
 
       if (!failedRun) {
@@ -1121,11 +1105,6 @@ export class ScheduleService {
     }
   }
 
-  /**
-   * An assistant message completing is not the end of a run: a multi-step agent
-   * settles one message per tool call. Only a session that has gone idle has
-   * finished, and only then is the final message guaranteed to carry its parts.
-   */
   private async readAssistantOutcome(directory: string, sessionId: string): Promise<AssistantOutcome> {
     const sessionStatus = (await this.getSessionStatuses(directory))[sessionId]
     if (sessionStatus && sessionStatus.type !== 'idle') {
@@ -1276,9 +1255,6 @@ export class ScheduleRunner {
       }
     })
 
-    // Clean up any schedule records whose repo no longer exists.  This handles
-    // leftovers from before foreign-key enforcement was enabled, and guards
-    // against edge cases where a repo row was removed outside the normal flow.
     this.scheduleService.cleanupOrphanedSchedules()
 
     await this.scheduleService.recoverRunningRuns()

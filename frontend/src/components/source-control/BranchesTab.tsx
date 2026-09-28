@@ -80,7 +80,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
       setIsCreating(false)
       refetch()
     } catch {
-      // Error handled by mutation
+    void 0
     }
   }
 

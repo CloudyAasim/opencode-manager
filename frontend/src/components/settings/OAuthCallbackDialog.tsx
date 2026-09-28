@@ -69,7 +69,6 @@ export function OAuthCallbackDialog({
 
   const isAutoMethod = authResponse.method === 'auto'
 
-  // Extract device/user code from instructions (e.g., "Enter code: 596A-E304")
   const codeMatch = authResponse.instructions.match(/(?:Enter code|User code|Device code)[:\s]+([A-Z0-9-]+)/i)
   const deviceCode = codeMatch ? codeMatch[1] : ''
 

@@ -125,7 +125,6 @@ export function createRepoGitRoutes(database: Database, gitAuthService: GitAuthS
     }
   })
 
-  // Add new endpoint for full diff details
   app.get('/:id/git/diff-full', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))

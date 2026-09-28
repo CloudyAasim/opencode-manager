@@ -69,17 +69,14 @@ export async function getFile(userPath: string): Promise<FileInfo> {
   logger.info(`Getting file for path: ${userPath} -> ${validatedPath}`)
   
   try {
-    // Check if path exists
     const exists = await fileExists(validatedPath)
     if (!exists) {
       throw new NotFoundError('Path does not exist')
     }
     
-    // Get file stats
     const stats = await getFileStats(validatedPath)
     
     if (stats.isDirectory) {
-      // It's a directory - list contents
       const entries = await listDirectory(validatedPath)
       const children: FileInfo[] = []
       
@@ -108,7 +105,6 @@ export async function getFile(userPath: string): Promise<FileInfo> {
         workspaceRoot: fileBase(),
       }
     } else {
-      // It's a file - get content
       let content = ''
       const mimeType = getMimeType(validatedPath)
       
@@ -218,13 +214,10 @@ export async function renameOrMoveFile(userPath: string, body: { newPath: string
   const oldValidatedPath = validatePath(userPath)
   const newValidatedPath = validatePath(body.newPath)
   
-  // Create parent directory if needed
   await mkdirSafe(path.dirname(newValidatedPath))
   
-  // Move/rename file
   await fs.rename(oldValidatedPath, newValidatedPath)
   
-  // Get stats of new file
   const stats = await getFileStats(newValidatedPath)
   
   return {

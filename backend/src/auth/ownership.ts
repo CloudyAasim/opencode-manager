@@ -18,11 +18,6 @@ export function principalIsAdmin(principal: Principal | null): boolean {
   return principal?.role === 'admin'
 }
 
-/**
- * A NULL/undefined owner marks system/shared data (for example the Assistant
- * repository), which every authenticated user may access. Administrators may
- * access everything.
- */
 export function canAccessOwner(ownerId: string | null | undefined, principal: Principal | null): boolean {
   if (!principal) return false
   if (principal.role === 'admin') return true

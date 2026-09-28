@@ -37,18 +37,14 @@ const migration: Migration = {
     const owner = firstUserId(db)
     if (!owner) return
 
-    // Existing repos and pins belonged to the single pre-multi-tenant user.
     db.prepare('UPDATE repos SET user_id = ? WHERE user_id IS NULL').run(owner)
     db.prepare('UPDATE session_pins SET user_id = ? WHERE user_id IS NULL').run(owner)
 
-    // The shared 'default' preferences row (git credentials, keys) becomes the
-    // first administrator's row, unless that admin already has one.
     const ownerHasPrefs = db.prepare('SELECT 1 FROM user_preferences WHERE user_id = ?').get(owner)
     if (!ownerHasPrefs) {
       db.prepare('UPDATE user_preferences SET user_id = ? WHERE user_id = ?').run(owner, 'default')
     }
 
-    // prompt_templates stay NULL on purpose: the built-in library is shared.
   },
 
   down(db) {

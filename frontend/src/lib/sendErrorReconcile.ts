@@ -15,15 +15,6 @@ const hasUserMessageText = (messages: MessageWithParts[], prompt: string): boole
   return messages.some((message) => getUserMessageText(message) === expected)
 }
 
-/**
- * Strict backstop for clearing stale send state when a prompt is confirmed delivered.
- *
- * The SSE `message.updated` handler is the realtime authority and clears send errors
- * unconditionally because it only receives message metadata (text parts stream in
- * separately). This helper runs against a fully fetched message list — where text parts
- * are present — and clears only when the failed/queued prompt text actually appears,
- * recovering sessions whose confirming SSE events were missed (e.g. backgrounded tab).
- */
 export const reconcileConfirmedPrompt = (sessionID: string, messages: MessageWithParts[]): void => {
   const sendErrorStore = useSendErrorStore.getState()
   const sendError = sendErrorStore.getError(sessionID)

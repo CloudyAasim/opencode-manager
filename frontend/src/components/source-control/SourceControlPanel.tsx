@@ -84,7 +84,7 @@ export function SourceControlPanel({
       setGitError(null)
       await action()
     } catch {
-      // error already handled by useGit's onError -> handleGitError
+    void 0
     }
   }
 

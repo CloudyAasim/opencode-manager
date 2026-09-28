@@ -151,7 +151,7 @@ class ChildProcessPty implements PtyProcess {
       try {
         child.kill('SIGKILL')
       } catch {
-        // process already gone
+      void 0
       }
     }, 2000)
     killTimer.unref?.()
@@ -174,12 +174,12 @@ class ChildProcessPty implements PtyProcess {
     try {
       control?.write(`${JSON.stringify({ type: 'close' })}\n`)
     } catch {
-      // ignore closed pipe
+    void 0
     }
     try {
       this.child.kill('SIGTERM')
     } catch {
-      // ignore
+    void 0
     }
   }
 

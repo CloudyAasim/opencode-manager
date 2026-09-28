@@ -138,11 +138,6 @@ export function getErrorMessage(error: OpenCodeError | undefined | null): string
   return parsed ? `${parsed.title}: ${parsed.message}` : ''
 }
 
-/**
- * Extracts a human-readable message from a Manager REST API error, handling
- * both {@link FetchError} and axios-style `{ response: { data } }` shapes,
- * including OpenCode config validation issues.
- */
 export function getOpenCodeApiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof FetchError) {
     let message = error.detail || error.message || fallback

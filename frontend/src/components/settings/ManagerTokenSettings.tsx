@@ -29,7 +29,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // clipboard may be unavailable; user can copy manually from the input
+    void 0
     }
   }
 

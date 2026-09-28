@@ -8,12 +8,6 @@ import { getOpenCodeApiErrorMessage } from '@/lib/opencode-errors'
 const RESTART_TOAST_ID = 'opencode-restart'
 const UPGRADE_TOAST_ID = 'upgrade-opencode'
 
-/**
- * Centralizes OpenCode server restart/upgrade actions shared by the settings
- * surfaces. A restart always routes through `POST /opencode-restart`, which
- * aborts and resumes in-flight sessions; `requestRestart` first checks for
- * active sessions and opens a confirmation dialog when any would be interrupted.
- */
 export function useOpenCodeServerActions() {
   const queryClient = useQueryClient()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -76,7 +70,7 @@ export function useOpenCodeServerActions() {
         return
       }
     } catch {
-      // Fall through to an immediate restart when the active-session probe fails.
+    void 0
     }
     await performRestart()
   }

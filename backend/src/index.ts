@@ -84,11 +84,6 @@ const DB_PATH = getDatabasePath()
 
 const app = new Hono()
 
-/**
- * Route prefixes reachable from custom WebViews whose origin is not a
- * trusted web origin (e.g. "null" for file://). These routes authenticate via
- * Bearer/CF-Access headers rather than cookies, so any origin may be reflected.
- */
 const REFLECT_ANY_ORIGIN_PREFIXES = ['/api/opencode-proxy/', '/api/internal/']
 
 app.use('/*', createSecurityHeadersMiddleware())

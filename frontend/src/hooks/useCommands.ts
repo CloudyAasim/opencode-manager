@@ -15,7 +15,6 @@ function rankCommandMatch(command: CommandType, searchTerm: string): number {
   return 2
 }
 
-// Built-in OpenCode commands
 const BUILTIN_COMMANDS: CommandType[] = [
   {
     name: 'help',

@@ -22,7 +22,6 @@ type LspStatus = LspStatusResponse[number]
 
 type LegacySession = SessionListResponse[number]
 
-/** Pre-v1.16.0 session shape returned by /api/session */
 type SessionV2InfoV1 = {
   id: string
   parentID?: string
@@ -33,7 +32,6 @@ type SessionV2InfoV1 = {
   path?: unknown
 }
 
-/** v1.16.0+ session shape returned by /api/session */
 type SessionV2InfoV2 = {
   id: string
   parentID?: string
@@ -51,7 +49,6 @@ type SessionV2InfoV2 = {
 type SessionV2Info = SessionV2InfoV1 | SessionV2InfoV2
 type SessionPageCursor = { previous?: string; next?: string }
 
-/** Response from /api/session — may be old (items) or new (data) format */
 type SessionPageResponse = {
   data?: SessionV2InfoV2[]
   items?: SessionV2InfoV1[]

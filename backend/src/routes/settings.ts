@@ -297,9 +297,6 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
   const app = new Hono()
   const settingsService = new SettingsService(db)
 
-  // Preferences are always scoped to the authenticated user; the legacy
-  // ?userId= query parameter is ignored so users cannot read or write another
-  // tenant's preferences (git credentials, keys, and general settings).
   const currentUserId = (c: unknown): string => {
     const ctx = c as { get?: (key: string) => { id?: string } | undefined }
     return ctx.get?.('user')?.id ?? 'default'
@@ -406,7 +403,6 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
     }
   })
 
-  // OpenCode Config routes
   app.route('/opencode-config', createOpenCodeConfigRoutes(settingsService, openCodeClient))
 
   app.post('/opencode-restart', async (c) => {
@@ -809,7 +805,6 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
     }
   })
 
-  // Custom Commands routes
   app.get('/custom-commands', async (c) => {
     try {
       const userId = currentUserId(c)
@@ -1377,7 +1372,6 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
     }
   })
 
-  // MCP directory-aware endpoints
   app.post('/mcp/:name/connectdirectory', async (c) => {
     try {
       const serverName = c.req.param('name')

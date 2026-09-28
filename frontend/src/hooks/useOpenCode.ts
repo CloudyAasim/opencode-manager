@@ -657,7 +657,7 @@ export const useAbortSession = (
           await client.abortSession(targetSessionID);
           stopRetrying();
         } catch {
-          // Will retry on next interval
+        void 0
         }
       };
 
@@ -769,7 +769,7 @@ export const useConfig = (opcodeUrl: string | null | undefined, directory?: stri
       return client.getConfig()
     },
     enabled: !!client,
-    staleTime: 0,
+    staleTime: 60000,
     refetchOnWindowFocus: true,
   });
 };

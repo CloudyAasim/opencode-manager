@@ -228,7 +228,7 @@ async function getProvidersFromOpenCodeServer(directory?: string): Promise<Provi
       return { providers, connected: response.connected || [], default: response.default || {} };
     }
   } catch {
-    // Silently return empty providers on failure - graceful degradation
+  void 0
   }
 
   return { providers: [], connected: [], default: {} };
@@ -310,7 +310,6 @@ async function getConfiguredProviders(connectedIds: Set<string>, config?: OpenCo
 
     return result;
   } catch {
-    // Silently return empty providers on failure - graceful degradation
     return [];
   }
 }

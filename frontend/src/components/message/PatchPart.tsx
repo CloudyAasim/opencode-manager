@@ -39,7 +39,7 @@ export function PatchPart({ part, onFileClick }: PatchPartProps) {
       <div className="bg-card px-3 py-2 space-y-1">
         {displayedFiles.map((file) => (
           <div
-            key={file.path}
+            key={file}
             className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
             onClick={() => onFileClick?.(file)}
           >

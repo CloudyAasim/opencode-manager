@@ -23,7 +23,7 @@ export function detectLocale(): SupportedLocale {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY)
     if (stored && isSupportedLocale(stored)) return stored
   } catch {
-    // localStorage unavailable (SSR / restricted browser)
+  void 0
   }
 
   if (typeof navigator !== 'undefined') {
@@ -65,7 +65,7 @@ export function setLocale(locale: SupportedLocale): void {
   try {
     localStorage.setItem(LOCALE_STORAGE_KEY, locale)
   } catch {
-    // ignore storage failures
+  void 0
   }
   void i18n.changeLanguage(locale)
   if (typeof document !== 'undefined') {

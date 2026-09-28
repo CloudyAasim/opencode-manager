@@ -1,13 +1,5 @@
 import type { MessageWithParts } from "@/api/types";
 
-/**
- * Cheap bounded hash for a string value.
- *
- * Combines length with the character codes of the first 128 chars so that
- * same-length strings ("pending" → "running", "foo" → "bar") produce
- * different hash values.  The iteration is capped at 128 characters so
- * the cost is bounded even for very long tool outputs.
- */
 function hashString(s: string): number {
   let h = s.length;
   const max = Math.min(s.length, 128);
@@ -18,13 +10,6 @@ function hashString(s: string): number {
   return h;
 }
 
-/**
- * Computes a version number that changes when message content changes.
- *
- * Used to trigger autoscroll on streamed deltas. This function avoids
- * expensive operations like JSON.stringify so it can be called on every
- * render without impacting performance.
- */
 export function getMessagesContentVersion(messages?: MessageWithParts[]): number {
   if (!messages) return 0;
   return messages.reduce((sum, message) => {

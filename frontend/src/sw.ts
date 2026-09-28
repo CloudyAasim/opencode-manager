@@ -1,4 +1,3 @@
-/// <reference lib="webworker" />
 
 import type { PushNotificationPayload } from "@opencode-manager/shared/types";
 
