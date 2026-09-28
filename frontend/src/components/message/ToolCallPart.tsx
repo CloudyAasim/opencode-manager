@@ -115,7 +115,10 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
     typeof displayCommand === 'string' &&
     userBashCommands.has(displayCommand)
   const isTodoTool = part.tool === 'todowrite' || part.tool === 'todoread'
-  const [expanded, setExpanded] = useState(isUserBashCommand || isTodoTool || (preferences?.expandToolCalls ?? false))
+  const defaultExpanded = isUserBashCommand || isTodoTool || (preferences?.expandToolCalls ?? false)
+  const [userToggled, setUserToggled] = useState<boolean | null>(null)
+  const expanded = userToggled ?? defaultExpanded
+  const setExpanded = (next: boolean) => setUserToggled(next)
 
   const pendingPermission = getPermissionForCallID(part.callID, part.sessionID)
   const isWaitingPermission = part.state.status === 'running' && !!pendingPermission
