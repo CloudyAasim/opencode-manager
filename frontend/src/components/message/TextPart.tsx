@@ -3,7 +3,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
-import mermaid from 'mermaid'
 import { Maximize2, X, AlertCircle } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
 import type { components } from '@/api/opencode-types'
@@ -21,6 +20,17 @@ interface MermaidBlockProps {
   code: string
 }
 
+
+type MermaidApi = typeof import('mermaid')['default']
+
+let mermaidModule: Promise<MermaidApi> | null = null
+
+function loadMermaid(): Promise<MermaidApi> {
+  if (!mermaidModule) {
+    mermaidModule = import('mermaid').then((mod) => mod.default)
+  }
+  return mermaidModule
+}
 function MermaidBlock({ code }: MermaidBlockProps) {
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -31,15 +41,22 @@ function MermaidBlock({ code }: MermaidBlockProps) {
   const renderAttempt = React.useRef(0)
 
   useEffect(() => {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: theme === 'dark' ? 'dark' : 'default',
-      securityLevel: 'loose',
-      fontFamily: 'inherit',
-      flowchart: {
-        htmlLabels: false,
-      },
+    let cancelled = false
+    void loadMermaid().then((api) => {
+      if (cancelled) return
+      api.initialize({
+        startOnLoad: false,
+        theme: theme === 'dark' ? 'dark' : 'default',
+        securityLevel: 'loose',
+        fontFamily: 'inherit',
+        flowchart: {
+          htmlLabels: false,
+        },
+      })
     })
+    return () => {
+      cancelled = true
+    }
   }, [theme])
 
   const renderDiagram = useCallback(async () => {
@@ -49,7 +66,8 @@ function MermaidBlock({ code }: MermaidBlockProps) {
     try {
       setError(null)
       const id = `mermaid-${uniqueId}-${currentAttempt}`
-      const result = await mermaid.render(id, code.trim())
+      const api = await loadMermaid()
+      const result = await api.render(id, code.trim())
       if (currentAttempt === renderAttempt.current && result?.svg) {
         setSvg(result.svg)
       }

@@ -25,6 +25,7 @@ const ROUTE_CHUNK_NAMES = new Set([
   "AssistantRedirect",
 ]);
 const SMALL_ASSET_LIMIT_BYTES = 128 * 1024;
+const ENTRY_ASSET_LIMIT_BYTES = 400 * 1024;
 
 async function collectFiles(dir: string, base = dir): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -71,7 +72,10 @@ export function swPrecacheManifest(): Plugin {
         if (PRECACHE_ROOT_FILES.includes(relativePath)) return true;
         if (!url.startsWith("/assets/")) return false;
         if (url.endsWith(".css")) return true;
-        if (entryAssets.has(url)) return true;
+        if (entryAssets.has(url)) {
+          const info = await stat(path.join(outDir, relativePath));
+          return info.size <= ENTRY_ASSET_LIMIT_BYTES;
+        }
 
         const baseName = path.basename(relativePath);
         if (!baseName.endsWith(".js")) return false;
