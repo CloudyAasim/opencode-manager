@@ -81,3 +81,25 @@ export function repoNotFoundResponse(c: { json: (body: { error: string }, status
 export function serviceErrorToResponse(c: { json: (body: unknown, status: number) => Response }, error: ServiceError): Response {
   return c.json({ error: error.message }, error.statusCode)
 }
+
+
+export class SkillNotFoundError extends NotFoundError {
+  constructor(name: string, scope: string) {
+    super(`Skill "${name}" not found in ${scope} scope`)
+    this.name = 'SkillNotFoundError'
+  }
+}
+
+export class SkillAlreadyExistsError extends ConflictError {
+  constructor(name: string, scope: string) {
+    super(`Skill "${name}" already exists in ${scope} scope`)
+    this.name = 'SkillAlreadyExistsError'
+  }
+}
+
+export class RepositoryAlreadyExistsError extends ConflictError {
+  constructor(name: string) {
+    super(`A repository named '${name}' already exists in the workspace. Please remove it first or use a different source directory.`)
+    this.name = 'RepositoryAlreadyExistsError'
+  }
+}

@@ -11,7 +11,7 @@ import { ensureDirectoryExists, fileExists, readFileContent, writeFileContent, d
 import type { OpenCodeClient } from './opencode/client'
 import { logger } from '../utils/logger'
 import { githubFetchJson, githubFetchBinary, type GithubFetchFn } from '../utils/github'
-import { RepositoryNotFoundError } from '../utils/errors'
+import { RepositoryNotFoundError, SkillNotFoundError, SkillAlreadyExistsError, ValidationError } from '../utils/errors'
 import { mkdirSafe } from '../utils/fs-safe'
 
 interface OpenCodeSkillInfo {
@@ -39,7 +39,7 @@ function getSkillTargetRoot(db: Database, scope: SkillScope, repoId?: number): s
     return getGlobalSkillsPath()
   }
   if (repoId === undefined) {
-    throw new Error('repoId is required for project-scoped skills')
+    throw new ValidationError('repoId is required for project-scoped skills')
   }
   const repo = getRepoById(db, repoId)
   if (!repo) {
@@ -50,11 +50,11 @@ function getSkillTargetRoot(db: Database, scope: SkillScope, repoId?: number): s
 
 function parseSkillMarkdown(content: string): { name: string; description: string; body: string } {
   if (!content.startsWith('---\n')) {
-    throw new Error('Skill markdown must start with a frontmatter block')
+    throw new ValidationError('Skill markdown must start with a frontmatter block')
   }
   const endIndex = content.indexOf('\n---\n', 4)
   if (endIndex === -1) {
-    throw new Error('Skill markdown must have a closing frontmatter delimiter')
+    throw new ValidationError('Skill markdown must have a closing frontmatter delimiter')
   }
   const frontmatterBlock = content.substring(4, endIndex)
   const body = content.substring(endIndex + 5)
@@ -88,10 +88,10 @@ function prepareSingleSkillFiles(files: SkillInstallFile[]): PreparedSkillFiles 
   }))
   const skillMdFiles = normalized.filter(f => path.basename(f.relativePath) === 'SKILL.md')
   if (skillMdFiles.length === 0) {
-    throw new Error('Skill source must contain SKILL.md')
+    throw new ValidationError('Skill source must contain SKILL.md')
   }
   if (skillMdFiles.length > 1) {
-    throw new Error('Only one skill can be installed at a time')
+    throw new ValidationError('Only one skill can be installed at a time')
   }
   const skillMd = skillMdFiles[0]!
   const skillDir = path.dirname(skillMd.relativePath)
@@ -106,7 +106,7 @@ function prepareSingleSkillFiles(files: SkillInstallFile[]): PreparedSkillFiles 
   for (const f of strippedFiles) {
     const checkPath = normalizeUploadRelativePath(f.relativePath)
     if (checkPath.startsWith('..')) {
-      throw new Error(`File "${f.relativePath}" escapes the skill directory`)
+      throw new ValidationError(`File "${f.relativePath}" escapes the skill directory`)
     }
   }
   const filesInstalled = strippedFiles.map(f => f.relativePath)
@@ -134,7 +134,7 @@ async function installSkillFiles(
   const existingTarget = targetDirExists || targetSkillExists
 
   if (existingTarget && input.overwrite !== true) {
-    throw new Error(`Skill "${prepared.skillName}" already exists in ${input.scope} scope`)
+    throw new SkillAlreadyExistsError(prepared.skillName, input.scope)
   }
 
   await mkdirSafe(targetRoot)
@@ -202,16 +202,16 @@ function parseGithubTreeUrl(url: string): GithubTreeSource {
   try {
     parsed = new URL(url)
   } catch {
-    throw new Error('Invalid GitHub tree URL')
+    throw new ValidationError('Invalid GitHub tree URL')
   }
 
   if (parsed.protocol !== 'https:' || parsed.host !== 'github.com') {
-    throw new Error('Invalid GitHub tree URL: only https://github.com is supported')
+    throw new ValidationError('Invalid GitHub tree URL: only https://github.com is supported')
   }
 
   const segments = parsed.pathname.split('/').filter(Boolean)
   if (segments.length < 4 || segments[2] !== 'tree') {
-    throw new Error('Invalid GitHub tree URL: must be a tree URL (github.com/owner/repo/tree/ref/path)')
+    throw new ValidationError('Invalid GitHub tree URL: must be a tree URL (github.com/owner/repo/tree/ref/path)')
   }
 
   const owner = segments[0]!
@@ -220,7 +220,7 @@ function parseGithubTreeUrl(url: string): GithubTreeSource {
   const path = segments.slice(4).join('/')
 
   if (!path) {
-    throw new Error('Invalid GitHub tree URL: path is required')
+    throw new ValidationError('Invalid GitHub tree URL: path is required')
   }
 
   return { owner, repo, ref, path }
@@ -241,12 +241,12 @@ async function fetchGithubSkillFiles(
   if (!Array.isArray(data)) {
     const entry = data as GithubContentEntry
     if (entry.name !== 'SKILL.md') {
-      throw new Error('GitHub tree URL must point to a skill folder containing SKILL.md')
+      throw new ValidationError('GitHub tree URL must point to a skill folder containing SKILL.md')
     }
     const buffer = await githubFetchBinary(entry.download_url!, {}, fetchFn)
     const content = Buffer.from(buffer)
     if (content.length > FILE_LIMITS.MAX_UPLOAD_SIZE_BYTES) {
-      throw new Error('Skill files exceed maximum upload size')
+      throw new ValidationError('Skill files exceed maximum upload size')
     }
     return [{ relativePath: 'SKILL.md', content }]
   }
@@ -268,7 +268,7 @@ async function fetchGithubSkillFiles(
   const collected = await collectFileEntries(data as GithubContentEntry[])
 
   if (collected.length > MAX_FILES) {
-    throw new Error(`Skill contains too many files (max ${MAX_FILES})`)
+    throw new ValidationError(`Skill contains too many files (max ${MAX_FILES})`)
   }
 
   const files = await Promise.all(
@@ -283,11 +283,11 @@ async function fetchGithubSkillFiles(
 
   const totalBytes = files.reduce((sum, file) => sum + file.content.length, 0)
   if (totalBytes > FILE_LIMITS.MAX_UPLOAD_SIZE_BYTES) {
-    throw new Error('Skill files exceed maximum upload size')
+    throw new ValidationError('Skill files exceed maximum upload size')
   }
 
   if (files.length === 0) {
-    throw new Error('GitHub tree URL contains no downloadable files')
+    throw new ValidationError('GitHub tree URL contains no downloadable files')
   }
 
   return files
@@ -369,7 +369,7 @@ export async function migrateGlobalSkills(): Promise<void> {
 
 function validateSkillName(name: string): void {
   if (!SKILL_NAME_REGEX.test(name)) {
-    throw new Error('Invalid skill name. Must be lowercase alphanumeric with hyphens only.')
+    throw new ValidationError('Invalid skill name. Must be lowercase alphanumeric with hyphens only.')
   }
 }
 
@@ -568,7 +568,7 @@ export async function getSkill(
     (scope === 'global' || s.repoId === repoId),
   )
   if (!match) {
-    throw new Error(`Skill "${name}" not found in ${scope} scope`)
+    throw new SkillNotFoundError(name, scope)
   }
   return match
 }
@@ -583,7 +583,7 @@ export async function createSkill(
   const exists = await fileExists(skillPath)
 
   if (exists) {
-    throw new Error(`Skill "${name}" already exists in ${scope} scope`)
+    throw new SkillAlreadyExistsError(name, scope)
   }
 
   await ensureDirectoryExists(path.dirname(skillPath))
@@ -615,7 +615,7 @@ export async function updateSkill(
   const exists = await fileExists(skillPath)
 
   if (!exists) {
-    throw new Error(`Skill "${name}" not found in ${scope} scope`)
+    throw new SkillNotFoundError(name, scope)
   }
 
   const existing = await getSkill(db, openCodeClient, name, scope, repoId)
@@ -647,7 +647,7 @@ export async function deleteSkill(
   const exists = await fileExists(skillPath)
 
   if (!exists) {
-    throw new Error(`Skill "${name}" not found in ${scope} scope`)
+    throw new SkillNotFoundError(name, scope)
   }
 
   await deletePath(path.dirname(skillPath))

@@ -959,7 +959,7 @@ describe('GitService', () => {
     it('throws error when repository not found', async () => {
       getRepoByIdMock.mockReturnValue(null)
 
-      await expect(service.discardChanges(1, ['file.ts'], false, database)).rejects.toThrow('Repository not found')
+      await expect(service.discardChanges(1, ['file.ts'], false, database)).rejects.toThrow(/Repository.*not found/)
     })
 
     it('logs and throws error on git command failure', async () => {
@@ -1172,7 +1172,7 @@ describe('GitService', () => {
     it('throws error when repository not found', async () => {
       getRepoByIdMock.mockReturnValue(null)
 
-      await expect(service.getCommitDetails(1, 'abc123', database)).rejects.toThrow('Repository not found')
+      await expect(service.getCommitDetails(1, 'abc123', database)).rejects.toThrow(/Repository.*not found/)
     })
 
     it('marks unpushed commits correctly', async () => {
@@ -1292,7 +1292,7 @@ index abc123..def456 100644
     it('throws error when repository not found', async () => {
       getRepoByIdMock.mockReturnValue(null)
 
-      await expect(service.getCommitDiff(1, 'abc123', 'file.ts', database)).rejects.toThrow('Repository not found')
+      await expect(service.getCommitDiff(1, 'abc123', 'file.ts', database)).rejects.toThrow(/Repository.*not found/)
     })
 
     it('handles deleted files in commit', async () => {

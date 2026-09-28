@@ -1,4 +1,5 @@
 import { GitAuthService } from '../git-auth'
+import { RepositoryNotFoundError, NotFoundError } from '../../utils/errors'
 import { executeCommand } from '../../utils/process'
 import { logger } from '../../utils/logger'
 import { getErrorMessage } from '../../utils/error-utils'
@@ -32,7 +33,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found`)
+        throw new NotFoundError('Repository not found')
       }
 
       const repoPath = repo.fullPath
@@ -63,7 +64,7 @@ export class GitService {
   async getFileDiff(repoId: number, filePath: string, database: Database, options?: GitDiffOptions & { includeStaged?: boolean }): Promise<FileDiffResponse> {
     const repo = getRepoById(database, repoId)
     if (!repo) {
-      throw new Error(`Repository not found: ${repoId}`)
+      throw new RepositoryNotFoundError(repoId)
     }
 
     const repoPath = path.resolve(repo.fullPath)
@@ -98,7 +99,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found: ${repoId}`)
+        throw new RepositoryNotFoundError(repoId)
       }
 
       const repoPath = path.resolve(repo.fullPath)
@@ -152,7 +153,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found: ${repoId}`)
+        throw new RepositoryNotFoundError(repoId)
       }
 
       const repoPath = path.resolve(repo.fullPath)
@@ -203,7 +204,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found`)
+        throw new NotFoundError('Repository not found')
       }
 
       const repoPath = repo.fullPath
@@ -236,7 +237,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found`)
+        throw new NotFoundError('Repository not found')
       }
 
       const repoPath = repo.fullPath
@@ -260,7 +261,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found`)
+        throw new NotFoundError('Repository not found')
       }
 
       const repoPath = repo.fullPath
@@ -289,7 +290,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found`)
+        throw new NotFoundError('Repository not found')
       }
 
       const repoPath = repo.fullPath
@@ -445,7 +446,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found: ${repoId}`)
+        throw new RepositoryNotFoundError(repoId)
       }
 
       const repoPath = path.resolve(repo.fullPath)
@@ -499,7 +500,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found: ${repoId}`)
+        throw new RepositoryNotFoundError(repoId)
       }
 
       const repoPath = path.resolve(repo.fullPath)
@@ -564,7 +565,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found`)
+        throw new NotFoundError('Repository not found')
       }
 
       const repoPath = repo.fullPath
@@ -649,7 +650,7 @@ export class GitService {
   async getBranches(repoId: number, database: Database): Promise<GitBranch[]> {
     const repo = getRepoById(database, repoId)
     if (!repo) {
-      throw new Error(`Repository not found`)
+      throw new NotFoundError('Repository not found')
     }
 
     const fullPath = path.resolve(repo.fullPath)
@@ -726,7 +727,7 @@ export class GitService {
     try {
       const repo = getRepoById(database, repoId)
       if (!repo) {
-        throw new Error(`Repository not found`)
+        throw new NotFoundError('Repository not found')
       }
 
       const fullPath = path.resolve(repo.fullPath)
@@ -745,7 +746,7 @@ export class GitService {
   async createBranch(repoId: number, branchName: string, database: Database): Promise<string> {
     const repo = getRepoById(database, repoId)
     if (!repo) {
-      throw new Error(`Repository not found`)
+      throw new NotFoundError('Repository not found')
     }
 
     const fullPath = path.resolve(repo.fullPath)
@@ -759,7 +760,7 @@ export class GitService {
   async switchBranch(repoId: number, branchName: string, database: Database): Promise<string> {
     const repo = getRepoById(database, repoId)
     if (!repo) {
-      throw new Error(`Repository not found`)
+      throw new NotFoundError('Repository not found')
     }
 
     const fullPath = path.resolve(repo.fullPath)
