@@ -4,40 +4,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { swPrecacheManifest } from "./plugins/sw-precache-manifest";
 
-const VENDOR_CHUNKS: Record<string, string> = {
-  react: "vendor-react",
-  "react-dom": "vendor-react",
-  "react-router-dom": "vendor-react",
-  "react-router": "vendor-react",
-  "react-hook-form": "vendor-react",
-  "@tanstack": "vendor-react",
-  zustand: "vendor-react",
-  i18next: "vendor-react",
-  "react-i18next": "vendor-react",
-};
-
-const LAZY_CHUNKS = new Set(["mermaid"]);
-
-const LIB_CHUNKS: Record<string, string> = {
-  katex: "lib-katex",
-  cytoscape: "lib-graph",
-  "cytoscape-cose-bilkent": "lib-graph",
-  d3: "lib-graph",
-  "d3-force": "lib-graph",
-  "@xterm": "lib-terminal",
-  xterm: "lib-terminal",
-  "@monaco-editor": "lib-editor",
-  "monaco-editor": "lib-editor",
-  "highlight.js": "lib-highlight",
-  shiki: "lib-highlight",
-  "diff": "lib-diff",
-  "js-yaml": "lib-yaml",
-  "gray-matter": "lib-yaml",
-  "file-saver": "lib-io",
-  "jszip": "lib-io",
-  "tar": "lib-io",
-};
-
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, ".."), "");
   const backendPort = env.PORT || 5001;
@@ -77,15 +43,6 @@ export default defineConfig(({ mode }) => {
               return "manifest.json";
             }
             return "assets/[name]-[hash][extname]";
-          },
-          manualChunks(id) {
-            if (!id.includes("node_modules")) return undefined;
-            const match = /node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(@[^/]+|[^/]+)/.exec(id);
-            const pkg = match?.[1] ?? "";
-            if (VENDOR_CHUNKS[pkg]) return VENDOR_CHUNKS[pkg];
-            if (LAZY_CHUNKS.has(pkg)) return undefined;
-            if (LIB_CHUNKS[pkg]) return LIB_CHUNKS[pkg];
-            return "vendor";
           },
         },
       },
