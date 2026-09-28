@@ -296,8 +296,8 @@ export function GitSettings() {
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-border">
-                     {gitCredentials.map((cred, index) => (
-                       <tr key={index} className="hover:bg-accent/30 transition-colors">
+                     {gitCredentials.map((cred) => (
+                       <tr key={cred.id ?? `${cred.type}:${cred.host}:${cred.name}`} className="hover:bg-accent/30 transition-colors">
                          <td className="px-3 py-2">
                            <div>
                              <span className="font-medium">{cred.name || t('settingsPanels.git.unnamed')}</span>

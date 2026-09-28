@@ -300,7 +300,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                   </Button>
                 </div>
                 {environment.map((env, index) => (
-                  <div key={index} className="flex gap-2">
+                  <div key={env.key || env.value || index} className="flex gap-2">
                     <Input
                       value={env.key}
                       onChange={(e) => handleUpdateEnvironmentVar(index, 'key', e.target.value)}

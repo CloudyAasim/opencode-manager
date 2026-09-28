@@ -170,7 +170,7 @@ export function OAuthAuthorizeDialog({
             const canSubmitPrompts = visiblePrompts.every((prompt) => methodInputs[prompt.key]?.trim())
             
             return (
-              <div key={index} className="space-y-3">
+              <div key={method.id ?? method.name ?? index} className="space-y-3">
                 <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <Button
                     onClick={() => handleMethodSelection(index)}
