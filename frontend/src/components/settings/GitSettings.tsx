@@ -319,7 +319,7 @@ export function GitSettings() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 w-7 p-0"
-                                onClick={(e) => handleEditClick(e, index)}
+                                onClick={(e) => handleEditClick(e, gitCredentials.indexOf(cred))}
                                 disabled={isSaving}
                                 title={t('settingsPanels.git.edit')}
                               >
@@ -330,7 +330,7 @@ export function GitSettings() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                onClick={(e) => handleDeleteClick(e, index)}
+                                onClick={(e) => handleDeleteClick(e, gitCredentials.indexOf(cred))}
                                 disabled={isSaving}
                                 title={t('settingsPanels.git.delete')}
                               >

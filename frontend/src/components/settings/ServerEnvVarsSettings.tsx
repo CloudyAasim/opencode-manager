@@ -125,7 +125,7 @@ export function ServerEnvVarsSettings() {
           const isBlocked = blockedSet.has(envVar.key.trim())
 
           return (
-            <div key={`${env.key}:${env.value}`} className="flex gap-2 items-center">
+            <div key={`${envVar.key}:${envVar.value}:${index}`} className="flex gap-2 items-center">
               <div className="flex-1 flex gap-2">
                 <Input
                   value={envVar.key}
