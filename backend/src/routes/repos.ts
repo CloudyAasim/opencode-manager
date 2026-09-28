@@ -12,6 +12,7 @@ import * as archiveService from '../services/archive'
 import { SettingsService } from '../services/settings'
 import type { OpenCodeClient } from '../services/opencode/client'
 import { logger } from '../utils/logger'
+import { repoNotFoundResponse } from '../utils/errors'
 import { getErrorMessage, getStatusCode } from '../utils/error-utils'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
 import { createRepoGitRoutes } from './repo-git'
@@ -194,7 +195,7 @@ app.get('/', async (c) => {
       const repo: Repo | null = resolveRepo(database, id, currentPrincipal(c))
 
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
       
       const currentBranch = id === ASSISTANT_REPO_ID ? undefined : await repoService.getCurrentBranch(repo, gitAuthService.getGitEnvironment())
@@ -229,7 +230,7 @@ app.get('/', async (c) => {
       const repo = getRepoById(database, id)
       
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
       
       updateLastAccessed(database, id)
@@ -247,7 +248,7 @@ app.get('/', async (c) => {
       const repo = getRepoById(database, id)
 
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
 
       const body = await c.req.json()
@@ -280,7 +281,7 @@ app.get('/', async (c) => {
       }
       const repo = getRepoById(database, id)
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
       const body = await c.req.json()
       const parsed = UpdateRepoRequestSchema.safeParse(body)
@@ -303,7 +304,7 @@ app.get('/', async (c) => {
       if (Number.isNaN(id)) return c.json({ error: 'Invalid repo id' }, 400)
 
       const repo = getRepoById(database, id)
-      if (!repo || repo.cloneStatus !== 'ready') return c.json({ error: 'Repo not found' }, 404)
+      if (!repo || repo.cloneStatus !== 'ready') return repoNotFoundResponse(c)
 
       const workspaceId = c.req.param('workspaceId')
       if (!workspaceId.startsWith('wrk')) return c.json({ error: 'Invalid workspace id' }, 400)
@@ -331,7 +332,7 @@ app.get('/', async (c) => {
       if (Number.isNaN(id)) return c.json({ error: 'Invalid repo id' }, 400)
 
       const repo = getRepoById(database, id)
-      if (!repo || repo.cloneStatus !== 'ready') return c.json({ error: 'Repo not found' }, 404)
+      if (!repo || repo.cloneStatus !== 'ready') return repoNotFoundResponse(c)
 
       const response = await openCodeClient.forward({
         method: 'POST',
@@ -371,7 +372,7 @@ app.get('/', async (c) => {
       const repo = getRepoById(database, id)
       
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
       
       scheduleService.prepareRepoDelete(id)
@@ -404,7 +405,7 @@ app.get('/', async (c) => {
       const repo = getRepoById(database, id)
       
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
       
       const body = await c.req.json()
@@ -432,7 +433,7 @@ app.get('/', async (c) => {
       const repo = getRepoById(database, id)
       
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
       
       const body = await c.req.json()
@@ -460,7 +461,7 @@ app.get('/', async (c) => {
       const repo = getRepoById(database, id)
 
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
 
       const repoPath = repo.fullPath
@@ -507,7 +508,7 @@ app.get('/', async (c) => {
       const repo = getRepoById(database, id)
       
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
 
       if (!repo.fullPath) {
@@ -541,7 +542,7 @@ app.get('/', async (c) => {
       const repo: Repo | null = resolveRepo(database, id, currentPrincipal(c))
 
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
 
       const username = currentPrincipal(c)?.username
@@ -562,7 +563,7 @@ app.get('/', async (c) => {
       const repo: Repo | null = resolveRepo(database, id, currentPrincipal(c))
 
       if (!repo) {
-        return c.json({ error: 'Repo not found' }, 404)
+        return repoNotFoundResponse(c)
       }
 
       const body = await c.req.json().catch(() => ({}))

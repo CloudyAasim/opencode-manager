@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite'
 import type { Repo, CreateRepoInput } from '../types/repo'
 import { getReposPath } from '@opencode-manager/shared/config/env'
 import { ASSISTANT_REPO_ID, ASSISTANT_REPO_PATH, getRepoDisplayName } from '@opencode-manager/shared/utils'
+import { RepositoryNotFoundError } from '../utils/errors'
 import { getErrorMessage } from '../utils/error-utils'
 import path from 'path'
 
@@ -296,7 +297,7 @@ export function updateRepoStatus(db: Database, id: number, cloneStatus: Repo['cl
   const stmt = db.prepare('UPDATE repos SET clone_status = ? WHERE id = ?')
   const result = stmt.run(cloneStatus, id)
   if (result.changes === 0) {
-    throw new Error(`Repository with id ${id} not found`)
+    throw new RepositoryNotFoundError(id)
   }
 }
 
@@ -304,7 +305,7 @@ export function updateLastPulled(db: Database, id: number): void {
   const stmt = db.prepare('UPDATE repos SET last_pulled = ? WHERE id = ?')
   const result = stmt.run(Date.now(), id)
   if (result.changes === 0) {
-    throw new Error(`Repository with id ${id} not found`)
+    throw new RepositoryNotFoundError(id)
   }
 }
 
@@ -312,7 +313,7 @@ export function updateLastAccessed(db: Database, id: number): void {
   const stmt = db.prepare('UPDATE repos SET last_accessed_at = ? WHERE id = ?')
   const result = stmt.run(Date.now(), id)
   if (result.changes === 0) {
-    throw new Error(`Repository with id ${id} not found`)
+    throw new RepositoryNotFoundError(id)
   }
 }
 
@@ -320,7 +321,7 @@ export function updateRepoBranch(db: Database, id: number, branch: string): void
   const stmt = db.prepare('UPDATE repos SET branch = ? WHERE id = ?')
   const result = stmt.run(branch, id)
   if (result.changes === 0) {
-    throw new Error(`Repository with id ${id} not found`)
+    throw new RepositoryNotFoundError(id)
   }
 }
 
@@ -328,7 +329,7 @@ export function updateRepoName(db: Database, id: number, name: string | null): v
   const stmt = db.prepare('UPDATE repos SET name = ? WHERE id = ?')
   const result = stmt.run(name, id)
   if (result.changes === 0) {
-    throw new Error(`Repository with id ${id} not found`)
+    throw new RepositoryNotFoundError(id)
   }
 }
 

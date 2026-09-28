@@ -11,6 +11,7 @@ import { ensureDirectoryExists, fileExists, readFileContent, writeFileContent, d
 import type { OpenCodeClient } from './opencode/client'
 import { logger } from '../utils/logger'
 import { githubFetchJson, githubFetchBinary, type GithubFetchFn } from '../utils/github'
+import { RepositoryNotFoundError } from '../utils/errors'
 import { mkdirSafe } from '../utils/fs-safe'
 
 interface OpenCodeSkillInfo {
@@ -42,7 +43,7 @@ function getSkillTargetRoot(db: Database, scope: SkillScope, repoId?: number): s
   }
   const repo = getRepoById(db, repoId)
   if (!repo) {
-    throw new Error(`Repository with id ${repoId} not found`)
+    throw new RepositoryNotFoundError(repoId)
   }
   return getProjectSkillsPath(repo)
 }
@@ -522,7 +523,7 @@ export async function listManagedSkills(
       : allRepos
 
     if (repoId && targetRepos.length === 0) {
-      throw new Error(`Repository with id ${repoId} not found`)
+      throw new RepositoryNotFoundError(repoId)
     }
 
     const directories = targetRepos.length > 0
