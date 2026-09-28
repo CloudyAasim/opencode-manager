@@ -46,6 +46,8 @@ export function PendingActionBadge({
       variant="ghost"
       size="icon"
       onClick={onClick}
+      aria-label={t('ui.pendingActionBadge.title', { count, label })}
+      title={t('ui.pendingActionBadge.title', { count, label })}
       className={cn(
         'relative h-8 w-8 transition-all duration-200',
         styles.bg,
@@ -53,7 +55,6 @@ export function PendingActionBadge({
         styles.text,
         className
       )}
-      title={t('ui.pendingActionBadge.title', { count, label })}
     >
       <Icon className="w-4 h-4" />
       <span

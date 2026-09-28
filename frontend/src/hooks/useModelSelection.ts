@@ -63,8 +63,8 @@ export function useModelSelection(
       queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], state)
       queryClient.invalidateQueries({ queryKey: [...modelStateQueryKey, opcodeUrl, directory] })
     },
-    onError: (error) => {
-      console.error('Failed to sync recent model to backend', error)
+    onError: () => {
+      void 0
     },
   })
 
@@ -75,8 +75,8 @@ export function useModelSelection(
       queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], state)
       queryClient.invalidateQueries({ queryKey: [...modelStateQueryKey, opcodeUrl, directory] })
     },
-    onError: (error) => {
-      console.error('Failed to toggle favorite model on backend', error)
+    onError: () => {
+      void 0
     },
   })
 
@@ -103,12 +103,11 @@ export function useModelSelection(
       queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], state)
       queryClient.invalidateQueries({ queryKey: [...modelStateQueryKey, opcodeUrl, directory] })
     },
-    onError: (error, _removedModel, context) => {
+    onError: (_error, _removedModel, context) => {
       if (context?.previousState) {
         syncModelState(context.previousState)
         queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], context.previousState)
       }
-      console.error('Failed to remove recent model on backend', error)
     },
   })
 

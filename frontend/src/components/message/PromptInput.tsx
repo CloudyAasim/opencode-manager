@@ -793,18 +793,18 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
             dataUrl,
           }
           setImageAttachments((prev) => [...prev, attachment])
-        } catch (innerError) {
-          console.error('Error inside onloadend:', innerError)
+        } catch {
+          void 0
         }
       }
-      
+
       reader.onerror = () => {
-        console.error('FileReader error:', reader.error?.message)
+        void 0
       }
-      
+
       reader.readAsDataURL(file)
-    } catch (error) {
-      console.error('Error reading file:', error)
+    } catch {
+      void 0
     }
   }
 
@@ -854,15 +854,15 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
                 const blob = await item.getType(type)
                 const file = new File([blob], `pasted-${Date.now()}.${type.split('/')[1]}`, { type })
                 addFileAttachment(file)
-              } catch (err) {
-                console.error('Failed to read clipboard item type:', err)
+              } catch {
+                void 0
               }
             }
           }
         }
         return
-      } catch (error) {
-        console.error('Clipboard read failed on iOS:', error)
+      } catch {
+        void 0
       }
     }
 

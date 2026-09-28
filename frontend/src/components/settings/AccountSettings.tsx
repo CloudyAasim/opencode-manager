@@ -325,6 +325,8 @@ export function AccountSettings() {
                         className="h-8 w-8 ml-2 flex-shrink-0"
                         onClick={() => handleDeletePasskey(pk.id)}
                         disabled={deletePasskeyMutation.isPending}
+                        aria-label={t('common.delete')}
+                        title={t('common.delete')}
                       >
                         {deletePasskeyMutation.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />

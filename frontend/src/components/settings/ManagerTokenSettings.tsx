@@ -81,6 +81,8 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
           type="button"
           onClick={handleCopy}
           disabled={!token}
+          aria-label={t('settingsPanels.managerToken.copy')}
+          title={t('settingsPanels.managerToken.copy')}
         >
           {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
         </Button>
@@ -90,6 +92,8 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
           type="button"
           onClick={handleRotate}
           disabled={rotate.isPending || isLoading}
+          aria-label={t('settingsPanels.managerToken.rotate')}
+          title={t('settingsPanels.managerToken.rotate')}
         >
           <RefreshCw className={`h-4 w-4 ${rotate.isPending ? 'animate-spin' : ''}`} />
         </Button>

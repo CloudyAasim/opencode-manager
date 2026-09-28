@@ -29,6 +29,7 @@ type SettingsView = 'menu' | SettingsContentTab
 
 function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => void }) {
   const [authSectionsOpen, setAuthSectionsOpen] = useState(true)
+  const { t } = useI18n()
   const toggleAuthSections = useCallback(() => setAuthSectionsOpen((open) => !open), [])
 
   return (
@@ -36,8 +37,8 @@ function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => 
       <div className="group/opencode-settings space-y-4" data-opencode-settings>
         <ServerHealthStatus onOpenVersionDialog={onOpenVersionDialog} />
         <OpenCodeConfigManager />
-        <section className="space-y-4 border-t border-border pt-4" aria-label="Server maintenance">
-          <h2 className="text-lg font-semibold">Server maintenance</h2>
+        <section className="space-y-4 border-t border-border pt-4" aria-label={t('settingsPanels.server.maintenance')}>
+          <h2 className="text-lg font-semibold">{t('settingsPanels.server.maintenance')}</h2>
           <div className="grid grid-cols-1 items-start gap-x-6 gap-y-4 @min-[1000px]:grid-cols-2">
             <OpenCodeServerAuthSettings isOpen={authSectionsOpen} onToggle={toggleAuthSections} />
             <ManagerTokenSettings isOpen={authSectionsOpen} onToggle={toggleAuthSections} />
@@ -157,7 +158,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                  variant="ghost"
                  size="icon"
                  onClick={close}
-                 aria-label="Close"
+                 aria-label={t('common.close')}
                  className="text-muted-foreground hover:text-foreground"
                >
                  <X className="w-4 h-4" />
@@ -228,7 +229,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                    variant="ghost"
                    size="icon"
                    onClick={close}
-                   aria-label="Close"
+                   aria-label={t('common.close')}
                    className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex-shrink-0"
                  >
                   <X className="w-6 h-6" />
@@ -299,7 +300,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
         onPointerDownOutside={(e) => e.preventDefault()}
         data-settings-dialog
       >
-        <DialogTitle className="sr-only">Settings</DialogTitle>
+        <DialogTitle className="sr-only">{t('navigation.settings')}</DialogTitle>
         {content}
       </DialogContent>
       <VersionSelectDialog

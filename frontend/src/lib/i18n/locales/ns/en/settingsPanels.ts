@@ -895,6 +895,11 @@ export const settingsPanels = {
     loading: 'Loading...',
     rotateWarning:
       'Rotating will invalidate the existing token. Any plugin or client using it must be updated. Click Rotate again to confirm.',
+    copy: 'Copy token',
+    rotate: 'Rotate token',
+  },
+  server: {
+    maintenance: 'Server maintenance',
   },
   serverEnv: {
     title: 'Server Environment Variables',

@@ -63,6 +63,19 @@ import { useDesktop } from "@/hooks/useDesktop";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/components/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
+import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
+import {
+  SESSION_RAIL_WIDTH_MIN,
+  SESSION_RAIL_WIDTH_MAX,
+  SESSION_RAIL_WIDTH_DEFAULT,
+  CHAT_PANEL_WIDTH_MIN,
+  CHAT_PANEL_WIDTH_MAX,
+  CHAT_PANEL_WIDTH_DEFAULT,
+  FILE_TREE_WIDTH_MIN,
+  FILE_TREE_WIDTH_MAX,
+  FILE_TREE_WIDTH_DEFAULT,
+} from "@/lib/repo-constants";
 
 type PanelTab = 'files' | 'review' | 'info' | 'terminal'
 const ALL_PANEL_TABS: PanelTab[] = ['files', 'review', 'info', 'terminal']
@@ -75,7 +88,7 @@ const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
 
 function readPanelTabs(): PanelTab[] {
   try {
-    const raw = localStorage.getItem('ocm.chatPanelTabs')
+    const raw = window.localStorage.getItem(STORAGE_KEYS.chatPanelTabs)
     if (raw) {
       const parsed = JSON.parse(raw) as unknown
       if (Array.isArray(parsed)) {
@@ -84,7 +97,7 @@ function readPanelTabs(): PanelTab[] {
       }
     }
   } catch {
-    // ignore malformed storage
+    void 0
   }
   return ['files', 'review', 'info']
 }
@@ -138,9 +151,11 @@ export function SessionDetail() {
   const [skillsDialogOpen, setSkillsDialogOpen] = useDialogParam('skills');
   const [sourceControlOpen, setSourceControlOpen] = useDialogParam('sourceControl');
   const [resetPermissionsOpen, setResetPermissionsOpen] = useDialogParam('resetPermissions');
-  const [railWidth, setRailWidth] = useState(() => {
-    const stored = Number(localStorage.getItem('ocm.sessionRailWidth'))
-    return Number.isFinite(stored) && stored >= 220 && stored <= 560 ? stored : 288
+  const [railWidth, setRailWidth] = usePersistentNumberState({
+    storageKey: STORAGE_KEYS.sessionRailWidth,
+    defaultValue: SESSION_RAIL_WIDTH_DEFAULT,
+    min: SESSION_RAIL_WIDTH_MIN,
+    max: SESSION_RAIL_WIDTH_MAX,
   })
   const [rightPanelOpen, setRightPanelOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(() =>
@@ -148,9 +163,11 @@ export function SessionDetail() {
       ? true
       : window.matchMedia('(min-width: 768px)').matches,
   )
-  const [panelWidth, setPanelWidth] = useState(() => {
-    const stored = Number(localStorage.getItem('ocm.chatPanelWidth'))
-    return Number.isFinite(stored) && stored >= 280 && stored <= 720 ? stored : 384
+  const [panelWidth, setPanelWidth] = usePersistentNumberState({
+    storageKey: STORAGE_KEYS.chatPanelWidth,
+    defaultValue: CHAT_PANEL_WIDTH_DEFAULT,
+    min: CHAT_PANEL_WIDTH_MIN,
+    max: CHAT_PANEL_WIDTH_MAX,
   })
   const [reviewFile, setReviewFile] = useState<{ path: string; staged: boolean } | null>(null)
 
@@ -162,23 +179,25 @@ export function SessionDetail() {
   const [panelTabs, setPanelTabs] = useState<PanelTab[]>(() => readPanelTabs())
   const [rightTab, setRightTab] = useState<PanelTab>('files')
   const [panelFile, setPanelFile] = useState<FileInfo | null>(null)
-  const [treeWidth, setTreeWidth] = useState(() => {
-    const stored = Number(localStorage.getItem('ocm.fileTreeWidth'))
-    return Number.isFinite(stored) && stored >= 25 && stored <= 75 ? stored : 50
+  const [treeWidth, setTreeWidth] = usePersistentNumberState({
+    storageKey: STORAGE_KEYS.fileTreeWidth,
+    defaultValue: FILE_TREE_WIDTH_DEFAULT,
+    min: FILE_TREE_WIDTH_MIN,
+    max: FILE_TREE_WIDTH_MAX,
   })
   const filesPanelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    localStorage.setItem('ocm.chatPanelTabs', JSON.stringify(panelTabs))
+    try {
+      window.localStorage.setItem(STORAGE_KEYS.chatPanelTabs, JSON.stringify(panelTabs))
+    } catch {
+      void 0
+    }
   }, [panelTabs])
 
   useEffect(() => {
     if (!panelTabs.includes(rightTab)) setRightTab(panelTabs[0])
   }, [panelTabs, rightTab])
-
-  useEffect(() => {
-    localStorage.setItem('ocm.fileTreeWidth', String(treeWidth))
-  }, [treeWidth])
 
   const removePanelTab = useCallback((tab: PanelTab) => {
     setPanelTabs((tabs) => (tabs.length > 1 ? tabs.filter((existing) => existing !== tab) : tabs))
@@ -196,7 +215,7 @@ export function SessionDetail() {
     const rect = container.getBoundingClientRect()
     const onMove = (moveEvent: MouseEvent) => {
       const percentage = ((moveEvent.clientX - rect.left) / rect.width) * 100
-      setTreeWidth(Math.min(75, Math.max(25, percentage)))
+      setTreeWidth(percentage)
     }
     const onUp = () => {
       window.removeEventListener('mousemove', onMove)
@@ -204,18 +223,14 @@ export function SessionDetail() {
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem('ocm.sessionRailWidth', String(railWidth))
-  }, [railWidth])
+  }, [setTreeWidth])
 
   const startRailResize = useCallback((event: React.MouseEvent) => {
     event.preventDefault()
     const startX = event.clientX
     const startWidth = railWidth
     const onMove = (moveEvent: MouseEvent) => {
-      setRailWidth(Math.min(560, Math.max(220, startWidth + moveEvent.clientX - startX)))
+      setRailWidth(startWidth + moveEvent.clientX - startX)
     }
     const onUp = () => {
       window.removeEventListener('mousemove', onMove)
@@ -223,18 +238,14 @@ export function SessionDetail() {
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [railWidth])
-
-  useEffect(() => {
-    localStorage.setItem('ocm.chatPanelWidth', String(panelWidth))
-  }, [panelWidth])
+  }, [railWidth, setRailWidth])
 
   const startPanelResize = useCallback((event: React.MouseEvent) => {
     event.preventDefault()
     const startX = event.clientX
     const startWidth = panelWidth
     const onMove = (moveEvent: MouseEvent) => {
-      setPanelWidth(Math.min(720, Math.max(280, startWidth - (moveEvent.clientX - startX))))
+      setPanelWidth(startWidth - (moveEvent.clientX - startX))
     }
     const onUp = () => {
       window.removeEventListener('mousemove', onMove)
@@ -242,7 +253,7 @@ export function SessionDetail() {
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [panelWidth])
+  }, [panelWidth, setPanelWidth])
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>();
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasPromptContent, setHasPromptContent] = useState(false);

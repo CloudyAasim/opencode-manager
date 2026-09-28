@@ -276,6 +276,8 @@ export function NotificationSettings() {
                       size="icon"
                       className="text-muted-foreground hover:text-destructive flex-shrink-0"
                       onClick={() => removeDevice(sub.id)}
+                      aria-label={t('common.delete')}
+                      title={t('common.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

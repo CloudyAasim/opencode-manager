@@ -319,6 +319,8 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                         variant="outline"
                         size="icon"
                         onClick={() => handleRemoveEnvironmentVar(index)}
+                        aria-label={t('common.delete')}
+                        title={t('common.delete')}
                       >
                         x
                       </Button>

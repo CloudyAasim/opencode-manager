@@ -870,6 +870,11 @@ export const settingsPanels = {
     loading: '加载中...',
     rotateWarning:
       '轮换将使用现有令牌失效。任何使用它的插件或客户端都必须更新。再次点击轮换以确认。',
+    copy: '复制令牌',
+    rotate: '轮换令牌',
+  },
+  server: {
+    maintenance: '服务器维护',
   },
   serverEnv: {
     title: '服务器环境变量',

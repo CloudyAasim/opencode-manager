@@ -145,6 +145,8 @@ export function ServerEnvVarsSettings() {
                 variant="ghost"
                 size="icon"
                 onClick={() => handleRemove(index)}
+                aria-label={t('common.delete')}
+                title={t('common.delete')}
                 className="shrink-0"
               >
                 <Trash2 className="h-4 w-4" />

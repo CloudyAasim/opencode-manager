@@ -45,9 +45,8 @@ export function ApiKeyDialog({
       await providerCredentialsApi.set(provider.id, apiKey.trim());
       setApiKey("");
       onSuccess();
-    } catch (err) {
+    } catch {
       setError(t('misc.apiKey.saveFailed'));
-      console.error("Failed to set API key:", err);
     } finally {
       setIsSubmitting(false);
     }

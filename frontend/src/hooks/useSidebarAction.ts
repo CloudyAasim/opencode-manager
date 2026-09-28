@@ -10,7 +10,7 @@ const handlerCounts = new Map<SidebarActionKey, number>()
 
 export function emitSidebarAction(action: SidebarActionKey) {
   if (!handlerCounts.get(action)) {
-    console.warn(`Sidebar action "${action}" was dispatched but no mounted page handles it`)
+    void 0
   }
   window.dispatchEvent(new CustomEvent(SIDEBAR_ACTION_EVENT, { detail: { action } }))
 }

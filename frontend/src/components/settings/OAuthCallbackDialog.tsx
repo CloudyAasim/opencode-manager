@@ -51,7 +51,6 @@ export function OAuthCallbackDialog({
       onSuccess()
     } catch (err) {
       setError(mapOAuthError(err, 'callback'))
-      console.error('OAuth callback error:', err)
     } finally {
       setIsLoading(false)
       setLoadingMessage('')

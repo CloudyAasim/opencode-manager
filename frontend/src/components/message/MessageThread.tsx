@@ -398,8 +398,8 @@ export const MessageThread = memo(function MessageThread({
             ? parsed as Todo[]
             : parsed?.todos ? parsed.todos as Todo[]
             : []
-        } catch (_) {
-          console.warn('Failed to parse todo output:', _)
+        } catch {
+          todos = []
         }
       }
 

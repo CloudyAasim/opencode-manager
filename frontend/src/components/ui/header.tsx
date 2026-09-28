@@ -56,6 +56,7 @@ function HeaderEditableTitle({ value, onChange, subtitle, className }: HeaderEdi
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(value);
   const isMobile = useMobile();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!isEditing) {
@@ -123,6 +124,8 @@ function HeaderEditableTitle({ value, onChange, subtitle, className }: HeaderEdi
             size="icon"
             className="h-7 w-7 rounded-l-none border border-l-0 border-border hover:bg-accent flex-shrink-0 mt-0"
             onClick={() => setEditTitle("")}
+            aria-label={t('common.cancel')}
+            title={t('common.cancel')}
           >
             <X className="w-3.5 h-3.5" />
           </Button>

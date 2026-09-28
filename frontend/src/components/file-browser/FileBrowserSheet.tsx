@@ -147,6 +147,8 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
                       variant="ghost"
                       size="icon"
                       className="text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"
+                      aria-label={t('repo.download.label')}
+                      title={t('repo.download.label')}
                     >
                       <Download className="w-5 h-5" />
                     </Button>
@@ -168,6 +170,8 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
+                  aria-label={t('common.close')}
+                  title={t('common.close')}
                   className="text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"
                 >
                   <X className="w-5 h-5" />

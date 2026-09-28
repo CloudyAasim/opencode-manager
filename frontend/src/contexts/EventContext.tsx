@@ -461,10 +461,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         reconcilePermissionsForDirectory(directory, pendingPermissions ?? [])
         const pendingQuestions = await client.listPendingQuestions()
         reconcileQuestionsForDirectory(directory, pendingQuestions ?? [])
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.warn(`Failed to fetch pending actions for ${directory}:`, error)
-        }
+      } catch {
+        void 0
       }
     }
   }, [reconcilePermissionsForDirectory, reconcileQuestionsForDirectory])

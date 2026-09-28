@@ -110,6 +110,8 @@ export function RepoListControls({
             variant="ghost"
             size="icon"
             onClick={onClearSelection}
+            aria-label={t('common.close')}
+            title={t('common.close')}
             className="shrink-0 size-9 ml-auto text-destructive hover:text-destructive"
           >
             <X className="w-4 h-4" />

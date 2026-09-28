@@ -7,6 +7,7 @@ import { saveFileFromUrl } from '@/lib/download'
 import { VirtualizedTextView, type VirtualizedTextViewHandle } from '@/components/ui/virtualized-text-view'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { useI18n } from '@/lib/i18n'
+import { showToast } from '@/lib/toast'
 
 
 const VIRTUALIZATION_THRESHOLD_BYTES = 50_000
@@ -145,7 +146,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       const event = new CustomEvent('editModeChange', { detail: { isEditing: true } })
       window.dispatchEvent(event)
     } catch (err) {
-      console.error('Failed to load content for editing:', err)
+      showToast.error('编辑加载失败', { description: err instanceof Error ? err.message : String(err) })
     }
   }
 
@@ -160,7 +161,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       const editEvent = new CustomEvent('editModeChange', { detail: { isEditing: false } })
       window.dispatchEvent(editEvent)
     } catch (err) {
-      console.error('Failed to save file:', err)
+      showToast.error('保存失败', { description: err instanceof Error ? err.message : String(err) })
     } finally {
       setIsSaving(false)
     }
@@ -194,7 +195,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
     try {
       await saveFileContent(content)
     } catch (err) {
-      console.error('Failed to save markdown checkbox change:', err)
+      showToast.error('保存失败', { description: err instanceof Error ? err.message : String(err) })
     } finally {
       setIsSaving(false)
     }

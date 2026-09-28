@@ -27,6 +27,7 @@ type PromptTemplateCardProps = {
 }
 
 export function PromptTemplateCard({ template, selected = false, onApply, onEdit, onDelete }: PromptTemplateCardProps) {
+  const { t } = useI18n()
   const cardClassName = `w-full rounded-xl border-2 p-4 text-left transition-all ${
     selected
       ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
@@ -72,6 +73,8 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
           size="icon"
           className="h-6 w-6"
           onClick={(e) => { e.stopPropagation(); onEdit(template) }}
+          aria-label={t('common.edit')}
+          title={t('common.edit')}
         >
           <Pencil className="h-3 w-3" />
         </Button>
@@ -81,6 +84,8 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
           size="icon"
           className="h-6 w-6 text-destructive hover:text-destructive"
           onClick={(e) => { e.stopPropagation(); onDelete(template.id) }}
+          aria-label={t('common.delete')}
+          title={t('common.delete')}
         >
           <Trash2 className="h-3 w-3" />
         </Button>

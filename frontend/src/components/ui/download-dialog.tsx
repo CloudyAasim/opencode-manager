@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Download, Loader2, Archive, Folder } from 'lucide-react'
 import { getIgnoredPaths } from '@/api/files'
 import { useI18n } from '@/lib/i18n'
+import { showToast } from '@/lib/toast'
 
 interface DownloadDialogProps {
   open: boolean
@@ -92,7 +93,7 @@ export function DownloadDialog({
       const includePaths = Array.from(selectedPaths).filter(p => p !== '.git/')
       await onDownload({ includeGit, includePaths })
     } catch (error) {
-      console.error('Download failed:', error)
+      showToast.error('下载失败', { description: error instanceof Error ? error.message : String(error) })
     } finally {
       setIsDownloading(false)
       onOpenChange(false)
