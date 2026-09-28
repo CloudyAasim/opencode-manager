@@ -2091,6 +2091,52 @@ describe('OpenCodeServerManager - checkHealth', () => {
     expect(timeout).toHaveBeenCalledWith(ENV.TIMEOUTS.HEALTH_CHECK_TIMEOUT_MS)
   })
 
+  it('caps a single probe so a hung request cannot consume the whole startup budget', async () => {
+    const { opencodeServerManager } = await import('../../src/services/opencode-single-server')
+    const { createStubOpenCodeClient } = await import('../helpers/stub-opencode-client')
+
+    const timeouts: number[] = []
+    const realTimeout = AbortSignal.timeout
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockImplementation(((ms?: number) => {
+      if (typeof ms === 'number') timeouts.push(ms)
+      return realTimeout(ms ?? 0)
+    }) as typeof AbortSignal.timeout)
+
+    const forward = vi.fn(async () => new Response(JSON.stringify({ error: 'not yet' }), { status: 503 }))
+    opencodeServerManager.setOpenCodeClient(createStubOpenCodeClient({ forward }))
+
+    const start = Date.now()
+    const healthy = await (opencodeServerManager as unknown as { waitForHealth(ms: number): Promise<boolean> }).waitForHealth(3000)
+    const elapsed = Date.now() - start
+    timeoutSpy.mockRestore()
+
+    expect(healthy).toBe(false)
+    expect(forward.mock.calls.length).toBeGreaterThan(1)
+    expect(elapsed).toBeLessThan(9000)
+    expect(timeouts.length).toBeGreaterThan(1)
+    for (const ms of timeouts) {
+      expect(ms).toBeGreaterThan(0)
+      expect(ms).toBeLessThanOrEqual(3000)
+    }
+  }, 15000)
+
+  it('reports the real probe failure so a hung request is distinguishable from a refused one', async () => {
+    const { opencodeServerManager } = await import('../../src/services/opencode-single-server')
+    const { createStubOpenCodeClient } = await import('../helpers/stub-opencode-client')
+
+    opencodeServerManager.setOpenCodeClient(
+      createStubOpenCodeClient({
+        forward: vi.fn(async () => {
+          throw new TypeError('Unable to connect. Is the computer able to access the url?')
+        }),
+      }),
+    )
+
+    expect(await opencodeServerManager.checkHealth()).toBe(false)
+    const recorded = (opencodeServerManager as unknown as { lastHealthProbeError: string | null }).lastHealthProbeError
+    expect(recorded).toBe('TypeError: Unable to connect. Is the computer able to access the url?')
+  }, 10000)
+
   it('returns false when the upstream times out and aborts the upstream fetch', async () => {
     const { opencodeServerManager } = await import('../../src/services/opencode-single-server')
     const { createStubOpenCodeClient } = await import('../helpers/stub-opencode-client')

@@ -278,6 +278,7 @@ class OpenCodeServerManager {
   private openCodeClient: OpenCodeClient | null = null
   private lifecycleInitialized: boolean = false
   private markerRefreshTimer: ReturnType<typeof setInterval> | null = null
+  private lastHealthProbeError: string | null = null
 
   private constructor() {}
 
@@ -643,7 +644,8 @@ class OpenCodeServerManager {
     const healthTimeoutMs = configuredPluginCount > 0 ? 120000 : 30000
     const healthy = await this.waitForHealth(healthTimeoutMs)
     if (!healthy) {
-      const fallback = `Server failed to become healthy after ${Math.round(healthTimeoutMs / 1000)}s${stderrOutput ? `. Last error: ${stderrOutput.slice(-500)}` : ''}`
+      const probeDetail = this.lastHealthProbeError ? ` Last health probe failed with ${this.lastHealthProbeError}.` : ''
+      const fallback = `Server failed to become healthy after ${Math.round(healthTimeoutMs / 1000)}s.${probeDetail}${stderrOutput ? ` Last error: ${stderrOutput.slice(-500)}` : ''}`
       this.lastStartupError = formatStartupError(stderrOutput, fallback)
       if (configuredPluginCount > 0 && retryAfterPluginInstall) {
         logger.warn(`OpenCode server did not become healthy after installing ${configuredPluginCount} configured plugin(s); restarting once`)
@@ -986,7 +988,7 @@ class OpenCodeServerManager {
     await this.initializeOpencodeBinDirectory()
   }
 
-  async checkHealth(): Promise<boolean> {
+  async checkHealth(timeoutMs: number = ENV.TIMEOUTS.HEALTH_CHECK_TIMEOUT_MS): Promise<boolean> {
     if (!this.openCodeClient) {
       return false
     }
@@ -994,10 +996,12 @@ class OpenCodeServerManager {
       const response = await this.openCodeClient.forward({
         method: 'GET',
         path: '/global/health',
-        signal: AbortSignal.timeout(ENV.TIMEOUTS.HEALTH_CHECK_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       })
+      this.lastHealthProbeError = null
       return response.ok
-    } catch {
+    } catch (error) {
+      this.lastHealthProbeError = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
       return false
     }
   }
@@ -1235,8 +1239,15 @@ class OpenCodeServerManager {
   private async waitForHealth(timeoutMs: number): Promise<boolean> {
     const start = Date.now()
     while (Date.now() - start < timeoutMs) {
-      if (await this.checkHealth()) {
+      const remaining = timeoutMs - (Date.now() - start)
+      if (remaining <= 0) break
+      if (await this.checkHealth(Math.min(remaining, ENV.TIMEOUTS.HEALTH_CHECK_PROBE_TIMEOUT_MS))) {
         return true
+      }
+      if (this.serverPid !== null && !this.processExists(this.serverPid)) {
+        throw new ServiceUnavailableError(
+          `OpenCode server process ${this.serverPid} exited while waiting for it to become healthy`
+        )
       }
       await new Promise(r => setTimeout(r, 500))
     }
