@@ -1228,8 +1228,7 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
     lastAddedTranscriptRef.current = ''
     setIsTogglingRecording(false)
     setLocalMode(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only run on sessionID change to avoid clearing transcript when recording state changes
-  }, [sessionID])
+  }, [sessionID, isRecording, abortRecording, clearSTT, resetVoiceGestureState, setIsTogglingRecording, setLocalMode])
 
   
 

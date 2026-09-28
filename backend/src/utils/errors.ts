@@ -103,3 +103,11 @@ export class RepositoryAlreadyExistsError extends ConflictError {
     this.name = 'RepositoryAlreadyExistsError'
   }
 }
+
+export class ServiceUnavailableError extends ServiceError {
+  readonly statusCode = 503
+  constructor(message: string) {
+    super(message)
+    this.name = 'ServiceUnavailableError'
+  }
+}

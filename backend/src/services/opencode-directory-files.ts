@@ -1,4 +1,5 @@
 import path from 'path'
+import { NotFoundError, ValidationError } from '../utils/errors'
 import { promises as fs } from 'fs'
 import { getWorkspacePath } from '@opencode-manager/shared/config/env'
 import { normalizeUploadRelativePath, resolveWithinDirectory } from './file-operations'
@@ -74,7 +75,7 @@ export async function installOpenCodeDirectoryFiles(
   })
 
   if (preparedFiles.length === 0) {
-    throw new Error(`No markdown ${kind} files found`)
+    throw new NotFoundError(`No markdown ${kind} files found`)
   }
 
   const targets = preparedFiles.map(file => ({
@@ -112,7 +113,7 @@ export async function listOpenCodeDirectoryFiles(kind: OpenCodeDirectoryFileKind
 function resolveDirectoryFilePath(kind: OpenCodeDirectoryFileKind, relativePath: string): string {
   const normalized = normalizeUploadRelativePath(relativePath, { collapseEmptySegments: true })
   if (!normalized.toLowerCase().endsWith('.md')) {
-    throw new Error(`Path must reference a markdown file: "${relativePath}"`)
+    throw new ValidationError(`Path must reference a markdown file: "${relativePath}"`)
   }
   return resolveWithinDirectory(getOpenCodeDirectoryRoot(kind), normalized, `${kind} directory`)
 }

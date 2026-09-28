@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'child_process'
+import { ValidationError } from '../../utils/errors'
 import { existsSync, mkdtempSync, readdirSync, statSync } from 'fs'
 import * as fsp from 'fs/promises'
 import { createReadStream } from 'fs'
@@ -8,6 +9,7 @@ import { pipeline } from 'stream/promises'
 import { randomUUID } from 'crypto'
 import { getReposPath } from '@opencode-manager/shared/config/env'
 import { mkdirSafe, mkdirSyncSafe } from '../../utils/fs-safe'
+import { swallow } from '../../utils/swallow'
 
 export const MIRROR_CHUNK_SIZE = 8 * 1024 * 1024
 const STALE_UPLOAD_MS = 24 * 60 * 60 * 1000
@@ -70,7 +72,7 @@ export async function readUploadMeta(uploadId: string): Promise<UploadMeta | nul
 }
 
 export async function deleteUploadSession(uploadId: string): Promise<void> {
-  await fsp.rm(getUploadDir(uploadId), { recursive: true, force: true }).catch(() => {})
+  await fsp.rm(getUploadDir(uploadId), { recursive: true, force: true }).catch(swallow)
 }
 
 export async function sweepStaleUploadSessions(now = Date.now(), ttlMs = STALE_UPLOAD_MS): Promise<void> {
@@ -103,12 +105,12 @@ function isStdinClosedError(error: unknown): boolean {
 
 export async function extractPartsToStaging(uploadId: string, totalParts: number, gzip: boolean): Promise<ExtractResult> {
   if (!isValidTotalParts(totalParts)) {
-    throw new Error(TOTAL_PARTS_INVALID_MESSAGE)
+    throw new ValidationError(TOTAL_PARTS_INVALID_MESSAGE)
   }
 
   for (let i = 0; i < totalParts; i++) {
     if (!existsSync(getPartPath(uploadId, i))) {
-      throw new Error(`missing part ${i} for upload ${uploadId}`)
+      throw new ValidationError(`missing part ${i} for upload ${uploadId}`)
     }
   }
 
@@ -127,7 +129,7 @@ export async function extractPartsToStaging(uploadId: string, totalParts: number
     child.on('close', (code) => resolve(code))
     child.on('error', reject)
   })
-  tarDone.catch(() => {})
+  tarDone.catch(swallow)
 
   let writeError: unknown = null
   const partStreams = Readable.from(
@@ -147,7 +149,7 @@ export async function extractPartsToStaging(uploadId: string, totalParts: number
 
   if (writeError && !isStdinClosedError(writeError)) {
     if (!child.killed) child.kill('SIGKILL')
-    await fsp.rm(staging, { recursive: true, force: true }).catch(() => {})
+    await fsp.rm(staging, { recursive: true, force: true }).catch(swallow)
     throw writeError
   }
 
@@ -155,8 +157,8 @@ export async function extractPartsToStaging(uploadId: string, totalParts: number
 
   if (exitCode !== 0) {
     const stderr = Buffer.concat(stderrChunks).toString('utf-8').trim()
-    await fsp.rm(staging, { recursive: true, force: true }).catch(() => {})
-    throw new Error(`tar exited with code ${exitCode}${stderr ? `: ${stderr}` : ''}`)
+    await fsp.rm(staging, { recursive: true, force: true }).catch(swallow)
+    throw new ValidationError(`tar exited with code ${exitCode}${stderr ? `: ${stderr}` : ''}`)
   }
 
   let extractedRoot = staging
@@ -190,7 +192,7 @@ export async function atomicSwapIntoPlace(extractedRoot: string, fullPath: strin
     await fsp.rename(extractedRoot, fullPath)
   } catch (err) {
     if (backupDir) {
-      await fsp.rename(backupDir, fullPath).catch(() => {})
+      await fsp.rename(backupDir, fullPath).catch(swallow)
     }
     throw err
   }
@@ -216,19 +218,19 @@ export async function carryOverIgnoredFiles(backupDir: string | undefined, fullP
     const dest = join(fullPath, clean)
     if (!existsSync(src) || existsSync(dest)) continue
     await mkdirSafe(dirname(dest))
-    await fsp.rename(src, dest).catch(() => {})
+    await fsp.rename(src, dest).catch(swallow)
   }
 }
 
 export async function discardBackup(backupDir: string | undefined): Promise<void> {
   if (!backupDir) return
-  await fsp.rm(backupDir, { recursive: true, force: true }).catch(() => {})
+  await fsp.rm(backupDir, { recursive: true, force: true }).catch(swallow)
 }
 
 export async function restoreBackup(fullPath: string, backupDir: string | undefined): Promise<void> {
   if (!backupDir) return
   if (existsSync(fullPath)) {
-    await fsp.rm(fullPath, { recursive: true, force: true }).catch(() => {})
+    await fsp.rm(fullPath, { recursive: true, force: true }).catch(swallow)
   }
-  await fsp.rename(backupDir, fullPath).catch(() => {})
+  await fsp.rename(backupDir, fullPath).catch(swallow)
 }

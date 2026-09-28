@@ -366,7 +366,7 @@ export function FileDiffView({
           <div className="border-t border-border/30">
             {diffLines.map((line, index) => (
               <DiffLineComponent
-                key={index}
+                key={`diff-${index}`}
                 line={line}
                 showLineNumbers={!isMobile}
                 onLineClick={

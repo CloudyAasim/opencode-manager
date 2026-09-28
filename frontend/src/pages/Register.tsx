@@ -30,7 +30,7 @@ function createRegisterSchema(nameMin: string, emailInvalid: string, passwordMin
 export function Register() {
   const { signUpWithEmail } = useAuth()
   const { config } = useLoaderData() as { config: AuthConfig }
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -41,8 +41,7 @@ export function Register() {
       t('register.passwordMin'),
       t('register.passwordsDoNotMatch'),
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [locale, t],
+    [t],
   )
 
   const {

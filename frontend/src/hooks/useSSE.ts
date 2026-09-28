@@ -58,8 +58,7 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
   }, [directory])
   const directoryKey = directoriesList.join('|')
   const primaryDirectory = directoriesList[0]
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const directorySet = useMemo(() => new Set(directoriesList), [directoryKey])
+  const directorySet = useMemo(() => new Set(directoriesList), [directoriesList])
   const client = useOpenCodeClient(opcodeUrl, primaryDirectory)
   const queryClient = useQueryClient()
   const mountedRef = useRef(true)

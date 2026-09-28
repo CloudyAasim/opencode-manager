@@ -1,3 +1,4 @@
+import { STORAGE_KEYS } from '@/lib/storage-keys'
 import i18n from 'i18next'
 import { initReactI18next, useTranslation } from 'react-i18next'
 import { en } from './locales/en'
@@ -6,7 +7,7 @@ import { zhCN } from './locales/zh-CN'
 export const SUPPORTED_LOCALES = ['en', 'zh-CN'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
-export const LOCALE_STORAGE_KEY = 'ocm.locale'
+export const LOCALE_STORAGE_KEY = STORAGE_KEYS.locale
 
 export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: 'English',

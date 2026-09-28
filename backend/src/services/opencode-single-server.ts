@@ -35,6 +35,7 @@ import { installManagedPlugins } from './opencode/plugin-registry'
 import { resolveProcessIdentityProvider } from './opencode/process-identity'
 import { CredentialProvider } from './credential-provider'
 import { mkdirSafe, writeFileAtomic } from '../utils/fs-safe'
+import { ServiceUnavailableError } from '../utils/errors'
 import { createProcessLogForwarder } from '../utils/log-buffer'
 
 
@@ -368,7 +369,7 @@ class OpenCodeServerManager {
       const msg = `OPENCODE_HOST=${openCodeServerHost} exposes the OpenCode server externally but no password is configured. Set OPENCODE_SERVER_PASSWORD env var or configure a password via Settings → OpenCode → Server Auth.`
       this.lastStartupError = msg
       logger.error(msg)
-      throw new Error(msg)
+      throw new ServiceUnavailableError(msg)
     }
 
     let credentialProvider: CredentialProvider | null = null
@@ -616,7 +617,7 @@ class OpenCodeServerManager {
             this.lastStartupError = message
             logger.error(message)
             await this.stop(true)
-            throw new Error(message)
+            throw new ServiceUnavailableError(message)
           }
           try {
             const processGroup = await readProcessGroupIdWithRetry(this.serverPid)
@@ -636,7 +637,7 @@ class OpenCodeServerManager {
             this.lastStartupError = message
             logger.error(message)
             await this.stop(true)
-            throw new Error(message)
+            throw new ServiceUnavailableError(message)
           }
           this.startChildStateMarkerRefresh()
         }
@@ -657,7 +658,7 @@ class OpenCodeServerManager {
         await this.start(false, true)
         return
       }
-      throw new Error('OpenCode server failed to become healthy')
+      throw new ServiceUnavailableError('OpenCode server failed to become healthy')
     }
 
     if (replacingExistingServer) {
@@ -669,7 +670,7 @@ class OpenCodeServerManager {
         this.lastStartupError = message
         logger.error(message)
         await this.stop(true)
-        throw new Error(message)
+        throw new ServiceUnavailableError(message)
       }
       if (this.serverPid === null || !portOwners.some((proc) => proc.pid === this.serverPid)) {
         const owners = portOwners.length > 0 ? `; port ${openCodeServerPort} is owned by PID(s) ${portOwners.map((proc) => proc.pid).join(', ')}` : `; no process owns port ${openCodeServerPort}`
@@ -677,7 +678,7 @@ class OpenCodeServerManager {
         this.lastStartupError = message
         logger.error(message)
         await this.stop(true)
-        throw new Error(message)
+        throw new ServiceUnavailableError(message)
       }
     }
 
@@ -806,7 +807,7 @@ class OpenCodeServerManager {
           logger.info('OpenCode bin directory initialized successfully')
         } catch (error) {
           logger.error('bun init failed:', error)
-          throw new Error(`bun init failed: ${error}`)
+          throw new ServiceUnavailableError(`bun init failed: ${error instanceof Error ? error.message : String(error)}`)
         }
       }
 
@@ -1074,7 +1075,7 @@ class OpenCodeServerManager {
       const message = `${context} (PID ${pid}${groupTarget !== null ? `, process group ${groupTarget}` : ''}) ${failurePhrase}`
       this.lastStartupError = message
       logger.error(message)
-      throw new Error(message)
+      throw new ServiceUnavailableError(message)
     }
   }
 
@@ -1097,7 +1098,7 @@ class OpenCodeServerManager {
       const message = `Failed to terminate the existing OpenCode server process(es) on port ${getOpenCodeServerPort()}: PID(s) ${survivors.join(', ')} still own the port or retain live process-group members; refusing to spawn a new server`
       this.lastStartupError = message
       logger.error(message)
-      throw new Error(message)
+      throw new ServiceUnavailableError(message)
     }
   }
 
@@ -1140,7 +1141,7 @@ class OpenCodeServerManager {
         const message = `Previous OpenCode server process (PID ${marker.pid}) has exited but process group ${marker.pgid} still exists and cannot be proven to belong to it; refusing to signal an unverified process group before starting the server`
         this.lastStartupError = message
         logger.error(message)
-        throw new Error(message)
+        throw new ServiceUnavailableError(message)
       }
     }
     const pidAlive = target.pidAttested
@@ -1183,7 +1184,7 @@ class OpenCodeServerManager {
           const message = `Previous OpenCode server leader (PID ${marker.pid}) has exited but process group ${marker.pgid} still exists and cannot be proven to belong to it; refusing to replace the child state marker while live processes may survive`
           this.lastStartupError = message
           logger.error(message)
-          throw new Error(message)
+          throw new ServiceUnavailableError(message)
         }
         logger.warn(
           `Previous OpenCode server leader (PID ${marker.pid}) has exited; terminating its attested process group ${marker.pgid} so host-executed descendants do not survive`,
@@ -1257,7 +1258,7 @@ class OpenCodeServerManager {
       if (status === 1) {
         return []
       }
-      throw new Error(`lsof failed to inspect port ${port}: ${error instanceof Error ? error.message : String(error)}`)
+      throw new ServiceUnavailableError(`lsof failed to inspect port ${port}: ${error instanceof Error ? error.message : String(error)}`)
     }
     if (output === '') {
       return []

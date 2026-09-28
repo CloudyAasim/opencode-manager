@@ -26,14 +26,13 @@ function createSetupSchema(nameMin: string, emailInvalid: string, passwordMin: s
 export function Setup() {
   const { signUpWithEmail } = useAuth()
   const { config } = useLoaderData() as { config: AuthConfig }
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const setupSchema = useMemo(
     () => createSetupSchema(t('register.nameMin'), t('auth.emailInvalid'), t('register.passwordMin')),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [locale, t],
+    [t],
   )
 
   const {

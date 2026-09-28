@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { NotFoundError } from '../utils/errors'
 import path from 'path'
 import type { Database } from 'bun:sqlite'
 import { getScheduleWorktreesPath } from '@opencode-manager/shared/config/env'
@@ -14,6 +15,7 @@ import { executeCommand } from '../utils/process'
 import { resolveDefaultBranch, createWorktreeSafely, removeWorktree } from './repo'
 import { logger } from '../utils/logger'
 import { mkdirSyncSafe } from '../utils/fs-safe'
+import { swallow } from '../utils/swallow'
 
 export interface ScheduleWorktreeContext {
   directory: string
@@ -70,12 +72,12 @@ export class ScheduleWorktreeManager {
     try {
       const env = await this.buildGitEnv(repo, sshSetup, true)
 
-      await executeCommand(['git', '-C', repo.fullPath, 'fetch', '--prune', 'origin'], { env }).catch(() => {})
+      await executeCommand(['git', '-C', repo.fullPath, 'fetch', '--prune', 'origin'], { env }).catch(swallow)
 
       const base = job.branch?.trim() || (await resolveDefaultBranch(repo.fullPath, env))
       const baseRef = await this.resolveBaseRef(repo.fullPath, base, env)
       if (!baseRef) {
-        throw new Error(`Base branch "${base}" was not found in this repository. Choose an existing branch in the schedule settings.`)
+        throw new NotFoundError(`Base branch "${base}" was not found in this repository. Choose an existing branch in the schedule settings.`)
       }
 
       const runBranch = `schedule/${job.id}/run-${runId}`
@@ -95,7 +97,7 @@ export class ScheduleWorktreeManager {
         await executeCommand(['git', '-C', workspaceDirectory, 'checkout', '-B', runBranch, baseRef], { env })
 
         if (!existsSync(workspaceDirectory)) {
-          throw new Error(`OpenCode workspace directory was not created at: ${workspaceDirectory}`)
+          throw new NotFoundError(`OpenCode workspace directory was not created at: ${workspaceDirectory}`)
         }
 
         return {
@@ -112,7 +114,7 @@ export class ScheduleWorktreeManager {
             method: 'DELETE',
             path: `/experimental/workspace/${encodeURIComponent(createdWorkspace.id)}`,
             directory: repo.fullPath,
-          }).catch(() => {})
+          }).catch(swallow)
         }
         // Fall through to raw git path
       }
@@ -123,7 +125,7 @@ export class ScheduleWorktreeManager {
       await createWorktreeSafely(repo.fullPath, worktreePath, runBranch, env, baseRef)
 
       if (!existsSync(worktreePath)) {
-        throw new Error(`Worktree directory was not created at: ${worktreePath}`)
+        throw new NotFoundError(`Worktree directory was not created at: ${worktreePath}`)
       }
 
       return { directory: worktreePath, worktreePath, runBranch, workspaceId: null }
@@ -169,7 +171,7 @@ export class ScheduleWorktreeManager {
       }
 
       // Detach HEAD to protect the run branch from accidental pushes
-      await executeCommand(['git', '-C', run.worktreePath, 'checkout', '--detach'], { env }).catch(() => {})
+      await executeCommand(['git', '-C', run.worktreePath, 'checkout', '--detach'], { env }).catch(swallow)
 
       return { commitHash }
     } catch (error) {
@@ -182,7 +184,7 @@ export class ScheduleWorktreeManager {
       } catch (error) {
         logger.error(`Failed to remove worktree ${run.worktreePath}:`, error)
         // Best-effort fallback
-        await removeWorktree(repo.fullPath, run.worktreePath, env).catch(() => {})
+        await removeWorktree(repo.fullPath, run.worktreePath, env).catch(swallow)
       }
 
       // Branch reconciliation: ensure the run branch survives teardown
@@ -190,7 +192,7 @@ export class ScheduleWorktreeManager {
         try {
           if (!commitHash) {
             // No changes: remove the empty run branch
-            await executeCommand(['git', '-C', repo.fullPath, 'branch', '-D', run.runBranch], env ? { env } : undefined).catch(() => {})
+            await executeCommand(['git', '-C', repo.fullPath, 'branch', '-D', run.runBranch], env ? { env } : undefined).catch(swallow)
           } else if (run.workspaceId) {
             // Only the workspace API teardown can remove the run branch; the raw
             // git fallback leaves it intact, so verify/restore only matters here.
@@ -234,7 +236,7 @@ export class ScheduleWorktreeManager {
           await this.deleteWorkspaceOrFallback(repo, artifact, env)
         } catch {
           if (artifact.worktreePath) {
-            await removeWorktree(repo.fullPath, artifact.worktreePath, env).catch(() => {})
+            await removeWorktree(repo.fullPath, artifact.worktreePath, env).catch(swallow)
           }
         }
       }),
@@ -242,7 +244,7 @@ export class ScheduleWorktreeManager {
 
     const branches = artifacts.map((a) => a.runBranch).filter((b): b is string => b !== null && b.length > 0)
     if (branches.length > 0) {
-      await executeCommand(['git', '-C', repo.fullPath, 'branch', '-D', ...branches], { env }).catch(() => {})
+      await executeCommand(['git', '-C', repo.fullPath, 'branch', '-D', ...branches], { env }).catch(swallow)
     }
   }
 

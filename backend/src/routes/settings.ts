@@ -25,6 +25,7 @@ import {
   type SkillScope,
 } from '@opencode-manager/shared'
 import { logger } from '../utils/logger'
+import { ValidationError, UpstreamUnavailableError, ServiceUnavailableError } from '../utils/errors'
 import { canEditServerEnv } from '../utils/server-env-policy'
 import {
   discoverModelsCached,
@@ -193,7 +194,7 @@ const SKILL_INSTALL_ERROR_STATUS: ReadonlyArray<readonly [string, 400 | 404 | 40
 function parseOptionalRepoId(value: string | undefined): number | undefined {
   if (value === undefined) return undefined
   const parsed = parseInt(value, 10)
-  if (isNaN(parsed)) throw new Error('Invalid repoId')
+  if (isNaN(parsed)) throw new ValidationError('Invalid repoId')
   return parsed
 }
 
@@ -338,7 +339,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
             if (cred.type === 'ssh' && cred.sshPrivateKey) {
               const validation = await validateSSHPrivateKey(cred.sshPrivateKey)
               if (!validation.valid) {
-                throw new Error(`Invalid SSH key for credential '${cred.name}': ${validation.error}`)
+                throw new ValidationError(`Invalid SSH key for credential '${cred.name}': ${validation.error}`)
               }
 
               const result: GitCredential = {
@@ -590,7 +591,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
       if (timedOut) {
         logger.warn('OpenCode upgrade timed out after 90 seconds')
-        throw new Error('Upgrade command timed out after 90 seconds')
+        throw new ServiceUnavailableError('Upgrade command timed out after 90 seconds')
       }
 
       const newVersion = await opencodeServerManager.fetchVersion()
@@ -681,7 +682,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
       })
       
       if (!response.ok) {
-        throw new Error(`GitHub API returned ${response.status}`)
+        throw new UpstreamUnavailableError(`GitHub API returned ${response.status}`)
       }
       
       const releases = await response.json() as Array<{
@@ -728,7 +729,7 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
       const versionWithoutPrefix = version.replace(/^v/, '')
       if (!isValidVersion(versionWithoutPrefix)) {
-        throw new Error('Invalid version format. Must be in MAJOR.MINOR.PATCH format (e.g., 1.2.27)')
+        throw new ValidationError('Invalid version format. Must be in MAJOR.MINOR.PATCH format (e.g., 1.2.27)')
       }
 
       logger.info(`Installing OpenCode version: ${version}`)
@@ -745,14 +746,14 @@ export function createSettingsRoutes(db: Database, gitAuthService: GitAuthServic
 
       if (timedOut) {
         logger.warn('OpenCode version install timed out after 90 seconds')
-        throw new Error('Version install command timed out after 90 seconds')
+        throw new ServiceUnavailableError('Version install command timed out after 90 seconds')
       }
 
       const newVersion = await opencodeServerManager.fetchVersion()
       logger.info(`New OpenCode version: ${newVersion}`)
 
       if (newVersion !== versionWithoutPrefix) {
-        throw new Error(`OpenCode version install did not result in the requested version ${versionWithoutPrefix}; detected ${newVersion ?? 'unknown'}`)
+        throw new ServiceUnavailableError(`OpenCode version install did not result in the requested version ${versionWithoutPrefix}; detected ${newVersion ?? 'unknown'}`)
       }
 
       opencodeServerManager.clearStartupError()

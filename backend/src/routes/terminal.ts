@@ -11,6 +11,7 @@ import { encodeSSEFrame } from '../utils/sse-frame'
 import { getTrustedClientIp } from '../utils/client-ip'
 import { logger } from '../utils/logger'
 import { getErrorMessage } from '../utils/error-utils'
+import { swallow } from '../utils/swallow'
 
 const HEARTBEAT_INTERVAL_MS = 20_000
 const MAX_INPUT_LENGTH = 64 * 1024
@@ -159,7 +160,7 @@ export function createTerminalRoutes(manager: TerminalManager) {
       const send = (event: string, data: unknown) => {
         chain = chain
           .then(() => writer.write(encodeSSEFrame(event, JSON.stringify(data))))
-          .catch(() => {})
+          .catch(swallow)
       }
 
       const heartbeat = setInterval(() => {

@@ -3,9 +3,10 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { randomBytes } from 'crypto'
 import { executeCommand } from './process'
+import { swallow } from './swallow'
 
 async function removeFile(filePath: string): Promise<void> {
-  await fs.unlink(filePath).catch(() => {})
+  await fs.unlink(filePath).catch(swallow)
 }
 
 export async function validateSSHPrivateKey(key: string): Promise<{ valid: boolean; hasPassphrase: boolean; error?: string }> {

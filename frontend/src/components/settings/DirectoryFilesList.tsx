@@ -27,7 +27,9 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
   const { isFetching: isLoadingContent } = useQuery({
     queryKey: ['opencode-directory-file', kind, editingFile?.relativePath],
     queryFn: async () => {
-      const result = await settingsApi.getOpenCodeDirectoryFile(kind, editingFile!.relativePath)
+      const path = editingFile?.relativePath
+      if (!path) throw new Error('No file selected')
+      const result = await settingsApi.getOpenCodeDirectoryFile(kind, path)
       setContent(result.content)
       return result
     },
@@ -37,12 +39,11 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
   })
 
   const updateMutation = useMutation({
-    mutationFn: () =>
-      settingsApi.updateOpenCodeDirectoryFile({
-        kind,
-        relativePath: editingFile!.relativePath,
-        content,
-      }),
+    mutationFn: () => {
+      const path = editingFile?.relativePath
+      if (!path) throw new Error('No file selected')
+      return settingsApi.updateOpenCodeDirectoryFile({ kind, relativePath: path, content })
+    },
     onSuccess: () => {
       invalidateConfigCaches(queryClient)
       toast.success(t('settingsPanels.directoryFiles.fileSaved'))
@@ -54,7 +55,11 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: () => settingsApi.deleteOpenCodeDirectoryFile(kind, deletingFile!.relativePath),
+    mutationFn: () => {
+      const path = deletingFile?.relativePath
+      if (!path) throw new Error('No file selected')
+      return settingsApi.deleteOpenCodeDirectoryFile(kind, path)
+    },
     onSuccess: () => {
       invalidateConfigCaches(queryClient)
       toast.success(t('settingsPanels.directoryFiles.fileDeleted'))

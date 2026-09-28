@@ -534,7 +534,7 @@ useEffect(() => {
                 </p>
                 <div className="max-h-32 overflow-y-auto rounded border border-destructive/20 bg-destructive/5 p-2">
                   {uploadProgress.errors.map((error, index) => (
-                    <p key={index} className="text-xs text-destructive break-all">
+                    <p key={`${index}-${error}`} className="text-xs text-destructive break-all">
                       {error}
                     </p>
                   ))}

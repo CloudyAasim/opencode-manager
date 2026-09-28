@@ -14,6 +14,7 @@ import { isGitHubHttpsUrl } from '../utils/git-auth'
 import path from 'path'
 import { parseSSHHost } from '../utils/ssh-key-manager'
 import { getErrorMessage } from '../utils/error-utils'
+import { RepositoryAlreadyExistsError, ValidationError, NotFoundError, ConflictError } from '../utils/errors'
 import { sseAggregator } from './sse-aggregator'
 import { resolveProjectId, isGitMainCheckout } from './project-id-resolver'
 import { listRepos } from '../db/queries'
@@ -21,6 +22,7 @@ import { listActiveScheduleRunWorkspaces } from '../db/schedules'
 import { SettingsService } from './settings'
 import type { OpenCodeClient } from './opencode/client'
 import { canonicalPathSync, mkdirSafe } from '../utils/fs-safe'
+import { swallow } from '../utils/swallow'
 
 const GIT_CLONE_TIMEOUT = 300000
 const DEFAULT_DISCOVERY_MAX_DEPTH = 4
@@ -173,7 +175,7 @@ async function createWorkspaceLink(alias: string, sourcePath: string): Promise<v
   const available = await isWorkspaceAliasAvailable(alias, sourcePath)
 
   if (!available) {
-    throw new Error(`A repository named '${alias}' already exists in the workspace. Please remove it first or use a different source directory.`)
+    throw new RepositoryAlreadyExistsError(alias)
   }
 
   if (await pathExists(aliasPath)) {
@@ -258,12 +260,12 @@ async function registerExistingLocalRepo(
 
   const exists = await pathExists(normalizedSourcePath)
   if (!exists) {
-    throw new Error(`No such file or directory: '${normalizedSourcePath}'`)
+    throw new NotFoundError(`No such file or directory: '${normalizedSourcePath}'`)
   }
 
   const isGitRepo = await isValidGitRepo(normalizedSourcePath, env)
   if (!isGitRepo) {
-    throw new Error(`Directory exists but is not a valid Git repository. Use folder discovery to scan nested repositories.`)
+    throw new ValidationError(`Directory exists but is not a valid Git repository. Use folder discovery to scan nested repositories.`)
   }
 
   if (branch) {
@@ -323,7 +325,7 @@ export async function discoverLocalRepos(
   })
 
   if (!rootStats.isDirectory()) {
-    throw new Error(`Path is not a directory: '${normalizedRootPath}'`)
+    throw new ValidationError(`Path is not a directory: '${normalizedRootPath}'`)
   }
 
   const repoPaths: string[] = []
@@ -552,7 +554,7 @@ export async function initLocalRepo(
       .catch(() => false)
     
     if (!isGitRepo) {
-      throw new Error(`Git initialization failed - directory exists but is not a valid git repository`)
+      throw new ValidationError(`Git initialization failed - directory exists but is not a valid git repository`)
     }
     
     updateRepoStatus(database, repo.id, 'ready')
@@ -659,7 +661,7 @@ export async function cloneRepo(
       const worktreeVerified = existsSync(worktreePath)
       
       if (!worktreeVerified) {
-        throw new Error(`Worktree directory was not created at: ${worktreePath}`)
+        throw new NotFoundError(`Worktree directory was not created at: ${worktreePath}`)
       }
       
       logger.info(`Worktree verified at: ${worktreePath}`)
@@ -687,7 +689,7 @@ export async function cloneRepo(
       } catch (error: unknown) {
         if (getErrorMessage(error).includes('destination path') && getErrorMessage(error).includes('already exists')) {
           logger.error(`Clone failed: directory still exists after cleanup attempt`)
-          throw new Error(`Workspace directory ${worktreeDirName} already exists. Please delete it manually or contact support.`)
+          throw new ConflictError(`Workspace directory ${worktreeDirName} already exists. Please delete it manually or contact support.`)
         }
         
         if (branch && (getErrorMessage(error).includes('Remote branch') || getErrorMessage(error).includes('not found'))) {
@@ -801,7 +803,7 @@ export async function cloneRepo(
       } catch (error: unknown) {
         if (getErrorMessage(error).includes('destination path') && getErrorMessage(error).includes('already exists')) {
           logger.error(`Clone failed: directory still exists after cleanup attempt`)
-          throw new Error(`Workspace directory ${worktreeDirName} already exists. Please delete it manually or contact support.`)
+          throw new ConflictError(`Workspace directory ${worktreeDirName} already exists. Please delete it manually or contact support.`)
         }
         
         if (branch && (getErrorMessage(error).includes('Remote branch') || getErrorMessage(error).includes('not found'))) {
@@ -857,7 +859,7 @@ export async function switchBranch(
 ): Promise<void> {
   const repo = getRepoById(database, repoId)
   if (!repo) {
-    throw new Error(`Repo not found: ${repoId}`)
+    throw new NotFoundError(`Repo not found: ${repoId}`)
   }
   
   try {
@@ -887,7 +889,7 @@ export async function switchBranch(
 export async function createBranch(database: Database, gitAuthService: GitAuthService, repoId: number, branch: string): Promise<void> {
   const repo = getRepoById(database, repoId)
   if (!repo) {
-    throw new Error(`Repo not found: ${repoId}`)
+    throw new NotFoundError(`Repo not found: ${repoId}`)
   }
   
   try {
@@ -917,7 +919,7 @@ export async function pullRepo(
 ): Promise<void> {
   const repo = getRepoById(database, repoId)
   if (!repo) {
-    throw new Error(`Repo not found: ${repoId}`)
+    throw new NotFoundError(`Repo not found: ${repoId}`)
   }
   
   if (repo.isLocal) {
@@ -942,7 +944,7 @@ export async function pullRepo(
 export async function deleteRepoFiles(database: Database, repoId: number): Promise<void> {
   const repo = getRepoById(database, repoId)
   if (!repo) {
-    throw new Error(`Repo not found: ${repoId}`)
+    throw new NotFoundError(`Repo not found: ${repoId}`)
   }
 
   const fullPath = path.resolve(reposBase(), repo.localPath)
@@ -1018,9 +1020,9 @@ export async function removeWorktree(baseRepoPath: string, worktreePath: string,
   } catch {
     // fall through to prune + rm
   } finally {
-    await executeCommand(['git', '-C', baseRepoPath, 'worktree', 'prune'], env ? { env } : undefined).catch(() => {})
+    await executeCommand(['git', '-C', baseRepoPath, 'worktree', 'prune'], env ? { env } : undefined).catch(swallow)
   }
-  await executeCommand(['rm', '-rf', worktreePath]).catch(() => {})
+  await executeCommand(['rm', '-rf', worktreePath]).catch(swallow)
 }
 
 export async function createWorktreeSafely(baseRepoPath: string, worktreePath: string, branch: string, env: Record<string, string>, baseBranch?: string): Promise<void> {
@@ -1032,7 +1034,7 @@ export async function createWorktreeSafely(baseRepoPath: string, worktreePath: s
       .catch(() => executeCommand(['git', '-C', baseRepoPath, 'checkout', 'main'], { env }))
   }
 
-  await executeCommand(['git', '-C', baseRepoPath, 'worktree', 'prune'], { env }).catch(() => {})
+  await executeCommand(['git', '-C', baseRepoPath, 'worktree', 'prune'], { env }).catch(swallow)
 
   let branchExists = false
   try {
@@ -1073,16 +1075,16 @@ export async function planMirrorTarget(database: Database, repo: Repo, branch: s
 
   if (existing) {
     if (existing.branch !== branch) {
-      throw new Error(`Mirror target '${localPath}' is occupied by repo ${existing.id} registered for branch '${existing.branch ?? 'none'}' instead of '${branch}'`)
+      throw new ConflictError(`Mirror target '${localPath}' is occupied by repo ${existing.id} registered for branch '${existing.branch ?? 'none'}' instead of '${branch}'`)
     }
 
     if (!existsSync(existing.fullPath)) {
-      throw new Error(`Repo ${existing.id} for branch '${branch}' is missing its worktree directory at '${existing.fullPath}'`)
+      throw new NotFoundError(`Repo ${existing.id} for branch '${branch}' is missing its worktree directory at '${existing.fullPath}'`)
     }
 
     const checkedOutBranch = await safeGetCurrentBranch(existing.fullPath, {})
     if (checkedOutBranch !== branch) {
-      throw new Error(`Repo ${existing.id} for branch '${branch}' has branch '${checkedOutBranch ?? 'none'}' checked out at '${existing.fullPath}'`)
+      throw new ConflictError(`Repo ${existing.id} for branch '${branch}' has branch '${checkedOutBranch ?? 'none'}' checked out at '${existing.fullPath}'`)
     }
 
     return { kind: 'existing', repo: existing, currentBranch }
@@ -1103,7 +1105,7 @@ export async function ensureMirrorTarget(database: Database, repo: Repo, branch:
       : { isLocal: true, localPath: plan.localPath, sourcePath: plan.fullPath, branch, defaultBranch: branch, cloneStatus: 'ready', clonedAt: Date.now(), isWorktree: true, userId: repo.userId ?? null })
 
     if (worktreeRepo.localPath !== plan.localPath) {
-      throw new Error(`branch ${branch} is already registered as repo ${worktreeRepo.id} at ${worktreeRepo.fullPath}`)
+      throw new ConflictError(`branch ${branch} is already registered as repo ${worktreeRepo.id} at ${worktreeRepo.fullPath}`)
     }
 
     return { repo: worktreeRepo, created: true }

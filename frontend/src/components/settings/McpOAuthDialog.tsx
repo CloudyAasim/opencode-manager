@@ -168,7 +168,7 @@ export function McpOAuthDialog({
     }
 
     initAuth()
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, resetState, onStartAuth, t])
 
   useEffect(() => {
     return () => {

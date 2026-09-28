@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useDebouncedFormAutoSave } from '@/hooks/useDebouncedFormAutoSave'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -77,7 +77,7 @@ export function STTSettings() {
   const watchApiKey = form.watch('apiKey')
   const watchModel = form.watch('model')
 
-  const fetchModels = async (forceRefresh = false) => {
+  const fetchModels = useCallback(async (forceRefresh = false) => {
     if (!watchEndpoint) return
 
     setIsLoadingModels(true)
@@ -93,7 +93,7 @@ export function STTSettings() {
     } finally {
       setIsLoadingModels(false)
     }
-  }
+  }, [watchEndpoint, watchModel, setValue])
 
   useEffect(() => {
     if (watchProvider === 'external' && watchEndpoint) {
@@ -102,8 +102,7 @@ export function STTSettings() {
       }, 500)
       return () => clearTimeout(timer)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchProvider, watchEndpoint])
+  }, [watchProvider, watchEndpoint, fetchModels])
 
   const handleTest = async () => {
     if (isTesting || isRecording) {
@@ -151,7 +150,7 @@ export function STTSettings() {
 
   useEffect(() => {
     if (preferences?.stt) {
-      const sttPrefs = preferences.stt as typeof preferences.stt & { model?: string; availableModels?: string[] }
+      const sttPrefs = preferences.stt
       reset({
         enabled: sttPrefs.enabled ?? DEFAULT_STT_CONFIG.enabled,
         provider: sttPrefs.provider ?? DEFAULT_STT_CONFIG.provider,
@@ -165,8 +164,7 @@ export function STTSettings() {
         setAvailableModels(sttPrefs.availableModels)
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preferences?.stt])
+  }, [preferences?.stt, reset])
 
   // auto-save is handled by useDebouncedFormAutoSave above
 

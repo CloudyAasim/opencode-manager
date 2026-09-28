@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import { NotFoundError, ValidationError } from '../utils/errors'
 import path from 'path'
 import { createReadStream } from 'fs'
 import { createInterface } from 'readline'
@@ -48,12 +49,12 @@ export async function getRawFileContent(userPath: string): Promise<Buffer> {
   try {
     const exists = await fileExists(validatedPath)
     if (!exists) {
-      throw new Error('File does not exist')
+      throw new NotFoundError('File does not exist')
     }
     
     const stats = await getFileStats(validatedPath)
     if (stats.isDirectory) {
-      throw new Error('Path is a directory')
+      throw new ValidationError('Path is a directory')
     }
     
     return await fs.readFile(validatedPath)
@@ -71,7 +72,7 @@ export async function getFile(userPath: string): Promise<FileInfo> {
     // Check if path exists
     const exists = await fileExists(validatedPath)
     if (!exists) {
-      throw new Error('Path does not exist')
+      throw new NotFoundError('Path does not exist')
     }
     
     // Get file stats
@@ -144,12 +145,12 @@ export async function getFile(userPath: string): Promise<FileInfo> {
 
 export async function uploadFile(userPath: string, file: File, relativePath?: string): Promise<FileUploadResult> {
   if (file.size > FILE_LIMITS.MAX_UPLOAD_SIZE_BYTES) {
-    throw new Error('File too large')
+    throw new ValidationError('File too large')
   }
   
   const mimeType = (file.type || getMimeType(file.name)) as AllowedMimeType
   if (!ALLOWED_MIME_TYPES.includes(mimeType) && !mimeType.startsWith('text/')) {
-    throw new Error('File type not allowed')
+    throw new ValidationError('File type not allowed')
   }
   
   const validatedBasePath = validatePath(userPath)

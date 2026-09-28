@@ -1,4 +1,5 @@
 import path from 'path'
+import { ValidationError } from '../utils/errors'
 import { createHash } from 'node:crypto'
 import type { Repo } from '@opencode-manager/shared/types'
 import type {
@@ -44,7 +45,7 @@ export function getAssistantModeDirectory(username?: string | null): string {
   const resolvedAssistantDir = path.resolve(assistantDir)
 
   if (!resolvedAssistantDir.startsWith(resolvedReposRoot)) {
-    throw new Error('Assistant mode directory must be within repos root')
+    throw new ValidationError('Assistant mode directory must be within repos root')
   }
 
   return resolvedAssistantDir
@@ -882,7 +883,7 @@ export function buildAssistantOpenCodeConfig(): OpenCodeConfigInput {
 
   const result = OpenCodeConfigSchema.safeParse(config)
   if (!result.success) {
-    throw new Error(`Generated OpenCode config is invalid: ${result.error.message}`)
+    throw new ValidationError(`Generated OpenCode config is invalid: ${result.error.message}`)
   }
 
   return config

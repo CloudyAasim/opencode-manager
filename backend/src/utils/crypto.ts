@@ -1,4 +1,5 @@
 import { scryptSync, createCipheriv, createDecipheriv, randomBytes } from 'crypto'
+import { ValidationError } from './errors'
 import { ENV } from '@opencode-manager/shared/config/env'
 
 const ENCRYPTION_KEY_SALT = Buffer.from('opencode-ssh-key-salt-v1', 'utf8')
@@ -8,7 +9,7 @@ const KEY_LENGTH = 32
 function deriveKey(): Buffer {
   const secret = ENV.AUTH.SECRET
   if (!secret) {
-    throw new Error('AUTH_SECRET must be configured for encryption')
+    throw new ValidationError('AUTH_SECRET must be configured for encryption')
   }
   return scryptSync(secret, ENCRYPTION_KEY_SALT, KEY_LENGTH)
 }
@@ -31,7 +32,7 @@ export function decryptSecret(encrypted: string): string {
   const combined = Buffer.from(encrypted, 'base64')
   
   if (combined.length < IV_LENGTH + 16) {
-    throw new Error('Invalid encrypted data format')
+    throw new ValidationError('Invalid encrypted data format')
   }
   
   const iv = combined.slice(0, IV_LENGTH)

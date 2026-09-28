@@ -6,7 +6,10 @@ export function useLSPStatus(opcodeUrl: string | null | undefined, directory?: s
 
   return useQuery({
     queryKey: ['opencode', 'lsp', opcodeUrl, directory],
-    queryFn: () => client!.getLSPStatus(),
+    queryFn: () => {
+      if (!client) throw new Error('Missing client')
+      return client.getLSPStatus()
+    },
     enabled: !!client,
     refetchInterval: 60000,
     staleTime: 10000,

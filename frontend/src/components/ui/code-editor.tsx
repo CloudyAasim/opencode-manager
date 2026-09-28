@@ -258,7 +258,7 @@ export const CodeEditor = forwardRef<HTMLTextAreaElement, CodeEditorProps>(funct
       >
         {lines.map((line, index) => (
           <EditorRow
-            key={index}
+            key={`line-${index}`}
             line={line}
             lineNumber={index + 1}
             isActiveLine={activeLine === index + 1}

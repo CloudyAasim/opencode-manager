@@ -25,7 +25,7 @@ function createLoginSchema(emailInvalid: string, passwordRequired: string) {
 export function Login() {
   const { signInWithEmail, signInWithProvider, signInWithPasskey } = useAuth()
   const { config } = useLoaderData() as { config: AuthConfig }
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
@@ -33,8 +33,7 @@ export function Login() {
 
   const loginSchema = useMemo(
     () => createLoginSchema(t('auth.emailInvalid'), t('auth.passwordRequired')),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [locale, t],
+    [t],
   )
 
   const {

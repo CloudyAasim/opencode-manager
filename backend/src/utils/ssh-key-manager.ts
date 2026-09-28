@@ -5,6 +5,8 @@ import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 import { getWorkspacePath } from '@opencode-manager/shared/config/env'
 import { mkdirSafe } from './fs-safe'
+import { swallow } from './swallow'
+import { ValidationError } from './errors'
 
 const SSH_KEYS_DIR = join(getWorkspacePath(), '.ssh-keys')
 
@@ -57,15 +59,15 @@ export async function writeTemporarySSHKey(keyContent: string, identifier: strin
   const keyPath = join(SSH_KEYS_DIR, fileName)
 
   if (!keyPath.startsWith(SSH_KEYS_DIR)) {
-    throw new Error('Invalid key path')
+    throw new ValidationError('Invalid key path')
   }
 
   await fs.writeFile(keyPath, keyContent.trim() + '\n', { mode: 0o600 })
   
   const isValid = await validateSSHKey(keyPath)
   if (!isValid) {
-    await fs.unlink(keyPath).catch(() => {})
-    throw new Error('Invalid SSH key format')
+    await fs.unlink(keyPath).catch(swallow)
+    throw new ValidationError('Invalid SSH key format')
   }
   
   return keyPath
@@ -73,7 +75,7 @@ export async function writeTemporarySSHKey(keyContent: string, identifier: strin
 
 export async function cleanupSSHKey(keyPath: string): Promise<void> {
   try {
-    await fs.unlink(keyPath).catch(() => {})
+    await fs.unlink(keyPath).catch(swallow)
   } catch {
   }
 }
@@ -110,15 +112,15 @@ export async function writePersistentSSHKey(keyContent: string, identifier: stri
   const keyPath = join(SSH_KEYS_DIR, fileName)
 
   if (!keyPath.startsWith(SSH_KEYS_DIR)) {
-    throw new Error('Invalid key path')
+    throw new ValidationError('Invalid key path')
   }
 
   await fs.writeFile(keyPath, keyContent.trim() + '\n', { mode: 0o600 })
 
   const isValid = await validateSSHKey(keyPath)
   if (!isValid) {
-    await fs.unlink(keyPath).catch(() => {})
-    throw new Error('Invalid SSH key format')
+    await fs.unlink(keyPath).catch(swallow)
+    throw new ValidationError('Invalid SSH key format')
   }
 
   return keyPath
@@ -183,7 +185,7 @@ export async function cleanupPersistentSSHKeys(): Promise<void> {
     const persistentFiles = files.filter(f => f.startsWith('persistent-'))
 
     await Promise.all(
-      persistentFiles.map(f => fs.unlink(join(SSH_KEYS_DIR, f)).catch(() => {}))
+      persistentFiles.map(f => fs.unlink(join(SSH_KEYS_DIR, f)).catch(swallow))
     )
   } catch {
   }

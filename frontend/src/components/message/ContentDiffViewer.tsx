@@ -116,7 +116,7 @@ export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
 
           return (
             <div
-              key={index}
+              key={`diff-${index}`}
               className={cn(
                 'flex font-mono text-xs',
                 isAdd && 'bg-green-500/10',

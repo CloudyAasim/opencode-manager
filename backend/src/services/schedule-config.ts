@@ -1,4 +1,5 @@
 import { Cron } from 'croner'
+import { ValidationError } from '../utils/errors'
 import type {
   CreateScheduleJobRequest,
   ScheduleJob,
@@ -32,7 +33,7 @@ function validateTimeZone(timezone: string): string {
     new Intl.DateTimeFormat('en-US', { timeZone: timezone })
     return timezone
   } catch {
-    throw new Error(`Invalid timezone: ${timezone}`)
+    throw new ValidationError(`Invalid timezone: ${timezone}`)
   }
 }
 
@@ -40,7 +41,7 @@ function getCronNextRunAt(cronExpression: string, timezone: string, currentDate:
   const cron = new Cron(cronExpression, { timezone })
   const next = cron.nextRun(new Date(currentDate))
   if (!next) {
-    throw new Error(`Cron expression "${cronExpression}" has no upcoming run`)
+    throw new ValidationError(`Cron expression "${cronExpression}" has no upcoming run`)
   }
   return next.getTime()
 }
@@ -76,14 +77,14 @@ export function computeNextRunAtForJob(job: ScheduleJob, currentDate: number): n
 
   if (job.scheduleMode === 'cron') {
     if (!job.cronExpression) {
-      throw new Error('Cron expression is required for cron schedules')
+      throw new ValidationError('Cron expression is required for cron schedules')
     }
 
     return getCronNextRunAt(job.cronExpression, job.timezone || DEFAULT_CRON_TIMEZONE, currentDate)
   }
 
   if (!job.intervalMinutes) {
-    throw new Error('Interval minutes are required for interval schedules')
+    throw new ValidationError('Interval minutes are required for interval schedules')
   }
 
   return currentDate + job.intervalMinutes * 60_000

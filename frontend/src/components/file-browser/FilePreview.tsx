@@ -310,7 +310,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               const isHighlighted = highlightedLine === lineNum
               return (
                 <div 
-                  key={index}
+                  key={`line-${index}`}
                   className={`flex transition-colors duration-300 ${isHighlighted ? 'bg-yellow-500/30' : ''}`}
                   style={{ minHeight: '20px', lineHeight: '20px' }}
                 >

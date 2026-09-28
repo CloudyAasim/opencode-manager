@@ -134,7 +134,10 @@ export const useSession = (opcodeUrl: string | null | undefined, sessionID: stri
 
   return useQuery({
     queryKey: ["opencode", "session", opcodeUrl, sessionID, directory],
-    queryFn: () => client!.getSession(sessionID!),
+    queryFn: () => {
+      if (!client || !sessionID) throw new Error('Missing client or sessionID')
+      return client.getSession(sessionID)
+    },
     enabled: !!client && !!sessionID,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
@@ -149,8 +152,9 @@ export const useMessages = (opcodeUrl: string | null | undefined, sessionID: str
   return useQuery({
     queryKey: messagesQueryKey(opcodeUrl, sessionID, directory),
     queryFn: async () => {
-      const response = await client!.listMessages(sessionID!)
-      reconcileConfirmedPrompt(sessionID!, response as MessageWithParts[])
+      if (!client || !sessionID) throw new Error('Missing client or sessionID')
+      const response = await client.listMessages(sessionID)
+      reconcileConfirmedPrompt(sessionID, response as MessageWithParts[])
       return response as MessageWithParts[]
     },
     enabled: !!client && !!sessionID,
@@ -760,7 +764,10 @@ export const useConfig = (opcodeUrl: string | null | undefined, directory?: stri
 
   return useQuery({
     queryKey: ["opencode", "config", opcodeUrl, directory],
-    queryFn: () => client!.getConfig(),
+    queryFn: () => {
+      if (!client) throw new Error('Missing client')
+      return client.getConfig()
+    },
     enabled: !!client,
     staleTime: 0,
     refetchOnWindowFocus: true,
@@ -772,7 +779,10 @@ export const useAgents = (opcodeUrl: string | null | undefined, directory?: stri
 
   return useQuery({
     queryKey: ["opencode", "agents", opcodeUrl, directory],
-    queryFn: () => client!.listAgents(),
+    queryFn: () => {
+      if (!client) throw new Error('Missing client')
+      return client.listAgents()
+    },
     enabled: !!client,
   });
 };

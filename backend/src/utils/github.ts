@@ -1,3 +1,5 @@
+import { UpstreamUnavailableError } from './errors'
+
 export type GithubFetchFn = (url: string | URL | Request, init?: RequestInit) => Promise<Response>
 
 interface GithubRequestOptions {
@@ -27,7 +29,7 @@ export async function githubFetchJson<T = unknown>(
 ): Promise<T> {
   const response = await githubFetch(url, options, fetchFn)
   if (!response.ok) {
-    throw new Error(`GitHub request failed with status ${response.status}`)
+    throw new UpstreamUnavailableError(`GitHub request failed with status ${response.status}`)
   }
   return response.json() as Promise<T>
 }
@@ -39,7 +41,7 @@ export async function githubFetchBinary(
 ): Promise<ArrayBuffer> {
   const response = await githubFetch(url, options, fetchFn)
   if (!response.ok) {
-    throw new Error(`GitHub request failed with status ${response.status}`)
+    throw new UpstreamUnavailableError(`GitHub request failed with status ${response.status}`)
   }
   return response.arrayBuffer()
 }

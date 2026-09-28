@@ -1,4 +1,5 @@
 import type { IPCServer } from '../ipc/ipcServer'
+import { ServiceUnavailableError, ForbiddenError } from '../utils/errors'
 import type { Database } from 'bun:sqlite'
 import { AskpassHandler } from '../ipc/askpassHandler'
 import { SSHHostKeyHandler } from '../ipc/sshHostKeyHandler'
@@ -106,7 +107,7 @@ export class GitAuthService {
         await this.setupSSHKey(sshCredentials[0])
       } catch (error) {
         logger.error(`Failed to setup SSH key for ${sshHost}:`, error)
-        throw new Error(`Failed to setup SSH authentication: ${error}`)
+        throw new ServiceUnavailableError(`Failed to setup SSH authentication: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
 
@@ -116,13 +117,13 @@ export class GitAuthService {
         await this.autoAcceptHostKey(normalizedUrl)
       } catch (error) {
         await this.cleanupSSHKey()
-        throw new Error(`Failed to auto-accept SSH host key for ${sshHost}: ${(error as Error).message}`)
+        throw new ServiceUnavailableError(`Failed to auto-accept SSH host key for ${sshHost}: ${(error as Error).message}`)
       }
     } else {
       const verified = await this.verifyHostKeyBeforeOperation(normalizedUrl)
       if (!verified) {
         await this.cleanupSSHKey()
-        throw new Error('SSH host key verification failed or was rejected by user')
+        throw new ForbiddenError('SSH host key verification failed or was rejected by user')
       }
     }
 

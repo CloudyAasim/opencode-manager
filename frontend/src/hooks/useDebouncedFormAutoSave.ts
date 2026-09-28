@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -29,6 +29,15 @@ export function useDebouncedFormAutoSave<T>({
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSavedRef = useRef<T | null>(null)
+
+  const scheduleFeedbackReset = useCallback(() => {
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current)
+    }
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setStatus('idle')
+    }, feedbackDuration)
+  }, [feedbackDuration])
 
   useEffect(() => {
     if (!enabled || !isDirty || !isValid) {
@@ -71,7 +80,7 @@ export function useDebouncedFormAutoSave<T>({
     return () => {
       clearTimeout(timer)
     }
-  }, [watchedValues, isDirty, isValid, enabled, delay, getValues, onSave, skipIfUnchanged])
+  }, [watchedValues, isDirty, isValid, enabled, delay, getValues, onSave, skipIfUnchanged, scheduleFeedbackReset])
 
   useEffect(() => {
     return () => {
@@ -79,15 +88,6 @@ export function useDebouncedFormAutoSave<T>({
       if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current)
     }
   }, [])
-
-  function scheduleFeedbackReset() {
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current)
-    }
-    feedbackTimeoutRef.current = setTimeout(() => {
-      setStatus('idle')
-    }, feedbackDuration)
-  }
 
   return status
 }

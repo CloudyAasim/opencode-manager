@@ -1,5 +1,5 @@
 import { GitAuthService } from '../git-auth'
-import { RepositoryNotFoundError, NotFoundError } from '../../utils/errors'
+import { RepositoryNotFoundError, NotFoundError, ValidationError } from '../../utils/errors'
 import { executeCommand } from '../../utils/process'
 import { logger } from '../../utils/logger'
 import { getErrorMessage } from '../../utils/error-utils'
@@ -584,7 +584,7 @@ export class GitService {
   async push(repoId: number, options: { setUpstream?: boolean }, database: Database): Promise<string> {
     const repo = getRepoById(database, repoId)
     if (!repo) {
-      throw new Error('Repository not found')
+      throw new NotFoundError('Repository not found')
     }
 
     const fullPath = path.resolve(repo.fullPath)
@@ -614,7 +614,7 @@ export class GitService {
   async fetch(repoId: number, database: Database): Promise<string> {
     const repo = getRepoById(database, repoId)
     if (!repo) {
-      throw new Error('Repository not found')
+      throw new NotFoundError('Repository not found')
     }
 
     const fullPath = path.resolve(repo.fullPath)
@@ -632,7 +632,7 @@ export class GitService {
   async pull(repoId: number, database: Database): Promise<string> {
     const repo = getRepoById(database, repoId)
     if (!repo) {
-      throw new Error('Repository not found')
+      throw new NotFoundError('Repository not found')
     }
 
     const fullPath = path.resolve(repo.fullPath)
@@ -1013,7 +1013,7 @@ export class GitService {
     }
 
     if (!branchName) {
-      throw new Error('Unable to detect current branch. Ensure you are on a branch before pushing with --set-upstream.')
+      throw new ValidationError('Unable to detect current branch. Ensure you are on a branch before pushing with --set-upstream.')
     }
 
     const args = ['git', '-C', fullPath, 'push', '--set-upstream', 'origin', branchName]

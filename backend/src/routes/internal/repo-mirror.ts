@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { ValidationError, ConflictError } from '../../utils/errors'
 import type { Database } from 'bun:sqlite'
 import { spawn } from 'child_process'
 import { copyFileSync, createReadStream, createWriteStream, existsSync } from 'fs'
@@ -44,6 +45,7 @@ interface BeginBody {
   branch?: string
   force?: boolean
 }
+import { swallow } from '../../utils/swallow'
 
 interface CommitBody {
   uploadId: string
@@ -93,7 +95,7 @@ async function createMirrorPatch(fullPath: string): Promise<string> {
     await gitRaw(fullPath, ['add', '-N', '--', ...untracked], env)
     return gitRaw(fullPath, ['diff', '--binary', 'HEAD', '--'], env)
   } finally {
-    await fsp.rm(tempIndexDir, { recursive: true, force: true }).catch(() => {})
+    await fsp.rm(tempIndexDir, { recursive: true, force: true }).catch(swallow)
   }
 }
 
@@ -148,12 +150,12 @@ async function importBundle(fullPath: string, bundlePath: string, branch: string
     let targetSha: string | undefined
     if (branch) {
       const incomingSha = incoming.get(branch)
-      if (!incomingSha) throw new Error(`incoming bundle has no branch '${branch}'`)
+      if (!incomingSha) throw new ValidationError(`incoming bundle has no branch '${branch}'`)
       if (locked.has(branch)) {
-        throw new Error(`branch '${branch}' is checked out in another worktree; release it there before pushing`)
+        throw new ConflictError(`branch '${branch}' is checked out in another worktree; release it there before pushing`)
       }
       if (requireCurrentBranch && actualBranch !== branch) {
-        throw new Error(`repo is on branch '${actualBranch ?? 'detached HEAD'}' but the bundle targets '${branch}'`)
+        throw new ConflictError(`repo is on branch '${actualBranch ?? 'detached HEAD'}' but the bundle targets '${branch}'`)
       }
       targetSha = incomingSha
       if (actualBranch !== branch) {
@@ -184,7 +186,7 @@ async function importBundle(fullPath: string, bundlePath: string, branch: string
     const syncRefsOut = await gitRaw(fullPath, ['for-each-ref', '--format=%(refname)', 'refs/remotes/ocm-sync']).catch(() => '')
     const deletes = syncRefsOut.split('\n').map((l) => l.trim()).filter(Boolean).map((ref) => `delete ${ref}\n`)
     if (deletes.length > 0) {
-      await gitRaw(fullPath, ['update-ref', '--stdin'], process.env, deletes.join('')).catch(() => {})
+      await gitRaw(fullPath, ['update-ref', '--stdin'], process.env, deletes.join('')).catch(swallow)
     }
   }
 }
@@ -295,7 +297,7 @@ export function createInternalRepoMirrorRoutes(db: Database) {
       return c.json({ index, size: stat.size })
     } catch (error) {
       logger.error(`mirror part ${index} upload failed:`, error)
-      await fsp.rm(partPath, { force: true }).catch(() => {})
+      await fsp.rm(partPath, { force: true }).catch(swallow)
       return c.json({ error: getErrorMessage(error) }, 500)
     }
   })
@@ -333,7 +335,7 @@ export function createInternalRepoMirrorRoutes(db: Database) {
       await carryOverIgnoredFiles(backupDir, meta.fullPath)
       await discardBackup(backupDir)
       backupDir = undefined
-      await fsp.rm(staging, { recursive: true, force: true }).catch(() => {})
+      await fsp.rm(staging, { recursive: true, force: true }).catch(swallow)
       staging = undefined
       await deleteUploadSession(uploadId)
 
@@ -351,7 +353,7 @@ export function createInternalRepoMirrorRoutes(db: Database) {
         try { deleteRepo(db, meta.createdRepoId) } catch { /* ignore */ }
       }
       if (staging) {
-        await fsp.rm(staging, { recursive: true, force: true }).catch(() => {})
+        await fsp.rm(staging, { recursive: true, force: true }).catch(swallow)
       }
       await deleteUploadSession(uploadId)
       return c.json({ error: getErrorMessage(error) }, 500)
@@ -380,14 +382,14 @@ export function createInternalRepoMirrorRoutes(db: Database) {
       bundlePath = await createBundle(repo.fullPath)
       const stream = createReadStream(bundlePath)
       stream.on('close', () => {
-        if (bundlePath) fsp.rm(join(bundlePath, '..'), { recursive: true, force: true }).catch(() => {})
+        if (bundlePath) fsp.rm(join(bundlePath, '..'), { recursive: true, force: true }).catch(swallow)
       })
       return new Response(Readable.toWeb(stream) as ReadableStream, {
         headers: { 'Content-Type': 'application/octet-stream' },
       })
     } catch (error) {
       logger.error('mirror bundle download failed:', error)
-      if (bundlePath) await fsp.rm(join(bundlePath, '..'), { recursive: true, force: true }).catch(() => {})
+      if (bundlePath) await fsp.rm(join(bundlePath, '..'), { recursive: true, force: true }).catch(swallow)
       return c.json({ error: getErrorMessage(error) }, 500)
     }
   })
@@ -434,7 +436,7 @@ export function createInternalRepoMirrorRoutes(db: Database) {
       logger.error('mirror bundle upload failed:', error)
       return c.json({ error: getErrorMessage(error) }, 409)
     } finally {
-      await fsp.rm(bundleDir, { recursive: true, force: true }).catch(() => {})
+      await fsp.rm(bundleDir, { recursive: true, force: true }).catch(swallow)
     }
   })
 
@@ -635,13 +637,13 @@ export function createInternalRepoMirrorRoutes(db: Database) {
         child.stdout.on('end', () => {
           controller.close()
           if (ignoreFile) {
-            fsp.rm(ignoreFile, { recursive: true, force: true }).catch(() => {})
+            fsp.rm(ignoreFile, { recursive: true, force: true }).catch(swallow)
           }
         })
         child.stdout.on('error', (err: Error) => {
           controller.error(err)
           if (ignoreFile) {
-            fsp.rm(ignoreFile, { recursive: true, force: true }).catch(() => {})
+            fsp.rm(ignoreFile, { recursive: true, force: true }).catch(swallow)
           }
         })
       },

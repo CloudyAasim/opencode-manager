@@ -176,7 +176,7 @@ export class WebSpeechSynthesizer {
       if (options.voice) {
         const voice = this.findVoice(options.voice);
         if (voice) {
-          utterance.voice = this.synthesis!.getVoices().find(
+          utterance.voice = this.synthesis?.getVoices().find(
             (v) => v.voiceURI === voice.voiceURI
           ) || null;
         }

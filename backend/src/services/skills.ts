@@ -13,6 +13,7 @@ import { logger } from '../utils/logger'
 import { githubFetchJson, githubFetchBinary, type GithubFetchFn } from '../utils/github'
 import { RepositoryNotFoundError, SkillNotFoundError, SkillAlreadyExistsError, ValidationError } from '../utils/errors'
 import { mkdirSafe } from '../utils/fs-safe'
+import { swallow } from '../utils/swallow'
 
 interface OpenCodeSkillInfo {
   name: string
@@ -170,7 +171,7 @@ async function installSkillFiles(
       filesInstalled: prepared.filesInstalled,
     }
   } catch (error) {
-    await fs.rm(stagingDir, { recursive: true, force: true }).catch(() => {})
+    await fs.rm(stagingDir, { recursive: true, force: true }).catch(swallow)
     throw error
   }
 }
