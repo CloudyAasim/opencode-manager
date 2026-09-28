@@ -12,6 +12,7 @@ import { invalidateSkillCaches } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
 import type { SkillFileInfo, CreateSkillRequest, UpdateSkillRequest, SkillScope } from '@opencode-manager/shared'
 import { toast } from 'sonner'
+import { showErrorToast } from '@/lib/error-toast'
 
 interface SkillsEditorProps {
   managedSkills?: SkillFileInfo[]
@@ -34,7 +35,7 @@ export function SkillsEditor({ managedSkills = [] }: SkillsEditorProps) {
       setDialogOpen(false)
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : t('settingsPanels.skillsEditor.createFailed'))
+      showErrorToast(error, t('settingsPanels.skillsEditor.createFailed'))
     },
   })
 
@@ -48,7 +49,7 @@ export function SkillsEditor({ managedSkills = [] }: SkillsEditorProps) {
       setEditingSkill(null)
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : t('settingsPanels.skillsEditor.updateFailed'))
+      showErrorToast(error, t('settingsPanels.skillsEditor.updateFailed'))
     },
   })
 

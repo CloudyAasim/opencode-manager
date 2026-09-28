@@ -12,6 +12,7 @@ import {
 import { settingsApi } from '@/api/settings'
 import { invalidateConfigCaches } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
+import { showErrorToast } from '@/lib/error-toast'
 
 const DIRECTORY_INPUT_PROPS = {
   webkitdirectory: '',
@@ -58,7 +59,7 @@ export function UploadFolderButton({ kind }: UploadFolderButtonProps) {
       invalidateConfigCaches(queryClient)
       toast.success(t('settingsPanels.uploadFolder.uploaded', { count: result.filesInstalled.length, noun }))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('settingsPanels.uploadFolder.uploadFailed', { kind }))
+      showErrorToast(error, t('settingsPanels.uploadFolder.uploadFailed', { kind }))
     } finally {
       setIsUploading(false)
     }

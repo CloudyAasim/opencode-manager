@@ -11,6 +11,7 @@ import { settingsApi } from '@/api/settings'
 import { invalidateConfigCaches } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
 import type { OpenCodeDirectoryFileInfo } from '@/api/types/settings'
+import { showErrorToast } from '@/lib/error-toast'
 
 interface DirectoryFilesListProps {
   kind: 'agents' | 'commands'
@@ -50,7 +51,7 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
       setEditingFile(null)
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : t('settingsPanels.directoryFiles.fileSaveFailed'))
+      showErrorToast(error, t('settingsPanels.directoryFiles.fileSaveFailed'))
     },
   })
 
@@ -66,7 +67,7 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
       setDeletingFile(null)
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : t('settingsPanels.directoryFiles.fileDeleteFailed'))
+      showErrorToast(error, t('settingsPanels.directoryFiles.fileDeleteFailed'))
     },
   })
 

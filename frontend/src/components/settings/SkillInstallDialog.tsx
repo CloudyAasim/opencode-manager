@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { useI18n } from '@/lib/i18n'
 import type { SkillScope } from '@opencode-manager/shared'
 import type { Repo } from '@/api/types'
+import { showErrorToast } from '@/lib/error-toast'
 
 interface SkillInstallDialogProps {
   open: boolean
@@ -79,7 +80,7 @@ export function SkillInstallDialog({ open, onOpenChange, onInstalled }: SkillIns
         setOverwrite(true)
         return
       }
-      toast.error(error instanceof Error ? error.message : t('settingsPanels.skillInstall.toastInstallFailed'))
+      showErrorToast(error, t('settingsPanels.skillInstall.toastInstallFailed'))
     },
   })
 
