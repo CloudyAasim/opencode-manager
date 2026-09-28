@@ -23,6 +23,7 @@ import migration021 from './021-terminal-audit'
 import migration022 from './022-tenant-ownership'
 import migration023 from './023-user-username'
 import migration024 from './024-repo-source-path-backfill'
+import migration025 from './025-schedule-run-status-index'
 
 export const allMigrations: Migration[] = [
   migration001,
@@ -49,4 +50,5 @@ export const allMigrations: Migration[] = [
   migration022,
   migration023,
   migration024,
+  migration025,
 ]
