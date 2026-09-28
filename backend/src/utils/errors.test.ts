@@ -8,6 +8,10 @@ import {
   UnauthorizedError,
   UnprocessableError,
   UpstreamUnavailableError,
+  ServiceUnavailableError,
+  SkillNotFoundError,
+  SkillAlreadyExistsError,
+  RepositoryAlreadyExistsError,
   isServiceError,
   statusCodeFor,
   serviceErrorToResponse,
@@ -23,6 +27,35 @@ describe('ServiceError hierarchy', () => {
     expect(new ConflictError('x').statusCode).toBe(409)
     expect(new UnprocessableError('x').statusCode).toBe(422)
     expect(new UpstreamUnavailableError('x').statusCode).toBe(502)
+    expect(new ServiceUnavailableError('x').statusCode).toBe(503)
+  })
+
+  it('carries a readable message and the right base class', () => {
+    const missing = new SkillNotFoundError('deploy', 'project')
+    expect(missing).toBeInstanceOf(NotFoundError)
+    expect(missing.statusCode).toBe(404)
+    expect(missing.message).toBe('Skill "deploy" not found in project scope')
+
+    const duplicate = new SkillAlreadyExistsError('deploy', 'global')
+    expect(duplicate).toBeInstanceOf(ConflictError)
+    expect(duplicate.statusCode).toBe(409)
+    expect(duplicate.message).toBe('Skill "deploy" already exists in global scope')
+
+    const repo = new RepositoryAlreadyExistsError('my-repo')
+    expect(repo).toBeInstanceOf(ConflictError)
+    expect(repo.statusCode).toBe(409)
+    expect(repo.message).toContain("A repository named 'my-repo' already exists")
+  })
+
+  it('defaults unauthorized and forbidden to a generic message', () => {
+    expect(new UnauthorizedError().message).toBe('Unauthorized')
+    expect(new ForbiddenError().message).toBe('Forbidden')
+  })
+
+  it('keeps the subclass name on the error instance', () => {
+    expect(new ValidationError('x').name).toBe('ValidationError')
+    expect(new RepositoryNotFoundError(7).name).toBe('RepositoryNotFoundError')
+    expect(new SkillNotFoundError('a', 'b').name).toBe('SkillNotFoundError')
   })
 
   it('RepositoryNotFoundError carries a useful message and 404 status', () => {

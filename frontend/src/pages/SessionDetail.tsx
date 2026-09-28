@@ -64,6 +64,7 @@ import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/components/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
+import { usePersistentJSONState } from "@/hooks/usePersistentJSONState";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import {
   SESSION_RAIL_WIDTH_MIN,
@@ -87,20 +88,12 @@ const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
   terminal: 'navigation.terminal',
 }
 
-function readPanelTabs(): PanelTab[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEYS.chatPanelTabs)
-    if (raw) {
-      const parsed = JSON.parse(raw) as unknown
-      if (Array.isArray(parsed)) {
-        const valid = parsed.filter((tab): tab is PanelTab => (ALL_PANEL_TABS as string[]).includes(tab as string))
-        if (valid.length > 0) return valid
-      }
-    }
-  } catch {
-    void 0
-  }
-  return ['files', 'review', 'info']
+const DEFAULT_PANEL_TABS: PanelTab[] = ['files', 'review', 'info']
+
+function isPanelTabs(value: unknown): value is PanelTab[] {
+  if (!Array.isArray(value)) return false
+  const valid = value.filter((tab): tab is PanelTab => (ALL_PANEL_TABS as string[]).includes(tab as string))
+  return valid.length > 0 && valid.length === value.length
 }
 
 function PanelTabIcon({ tab }: { tab: PanelTab }) {
@@ -177,7 +170,11 @@ export function SessionDetail() {
     const resolved = await resolvePreviewFile(file)
     if (!file.isDirectory) setPanelFile(resolved)
   }, [])
-  const [panelTabs, setPanelTabs] = useState<PanelTab[]>(() => readPanelTabs())
+  const [panelTabs, setPanelTabs] = usePersistentJSONState<PanelTab[]>({
+    storageKey: STORAGE_KEYS.chatPanelTabs,
+    defaultValue: DEFAULT_PANEL_TABS,
+    validate: isPanelTabs,
+  })
   const [rightTab, setRightTab] = useState<PanelTab>('files')
   const [panelFile, setPanelFile] = useState<FileInfo | null>(null)
   const [treeWidth, setTreeWidth] = usePersistentNumberState({
@@ -189,25 +186,17 @@ export function SessionDetail() {
   const filesPanelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEYS.chatPanelTabs, JSON.stringify(panelTabs))
-    } catch {
-      void 0
-    }
-  }, [panelTabs])
-
-  useEffect(() => {
     if (!panelTabs.includes(rightTab)) setRightTab(panelTabs[0])
   }, [panelTabs, rightTab])
 
   const removePanelTab = useCallback((tab: PanelTab) => {
     setPanelTabs((tabs) => (tabs.length > 1 ? tabs.filter((existing) => existing !== tab) : tabs))
-  }, [])
+  }, [setPanelTabs])
 
   const addPanelTab = useCallback((tab: PanelTab) => {
     setPanelTabs((tabs) => (tabs.includes(tab) ? tabs : [...tabs, tab]))
     setRightTab(tab)
-  }, [])
+  }, [setPanelTabs])
 
   const startTreeResize = useCallback((event: React.MouseEvent) => {
     event.preventDefault()

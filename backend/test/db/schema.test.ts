@@ -35,4 +35,21 @@ describe('initializeDatabase', () => {
     const fileContents = await readFile(dbPath, 'utf-8')
     expect(fileContents.length).toBeGreaterThan(0)
   })
+
+  it('indexes schedule_runs by status for the running-runs polls', async () => {
+    const db = initializeDatabase(dbPath)
+
+    const indexes = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'schedule_runs'")
+      .all() as Array<{ name: string }>
+
+    expect(indexes.map(index => index.name)).toContain('idx_schedule_runs_status')
+
+    const plan = db
+      .prepare("EXPLAIN QUERY PLAN SELECT * FROM schedule_runs WHERE status = 'running' ORDER BY started_at ASC LIMIT 100")
+      .all() as Array<{ detail: string }>
+
+    expect(plan.map(step => step.detail).join(' ')).toContain('idx_schedule_runs_status')
+  })
+
 })
