@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
+import { useDebouncedFormAutoSave } from '@/hooks/useDebouncedFormAutoSave'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -80,10 +81,6 @@ export function TTSSettings() {
   const [browserVoices, setBrowserVoices] = useState<string[]>([])
   const [isCheckingBuiltin, setIsCheckingBuiltin] = useState(false)
   
-  // Auto-save state
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastSavedDataRef = useRef<TTSFormValues | null>(null)
   
   const form = useForm<TTSFormValues>({
     resolver: zodResolver(ttsFormSchema),
@@ -170,7 +167,6 @@ export function TTSSettings() {
     }
   }
   
-  // Load preferences into form
   useEffect(() => {
     if (preferences?.tts) {
       reset({
@@ -183,53 +179,17 @@ export function TTSSettings() {
         model: preferences.tts.model ?? DEFAULT_TTS_CONFIG.model,
         speed: preferences.tts.speed ?? DEFAULT_TTS_CONFIG.speed,
       })
-      lastSavedDataRef.current = preferences.tts
-      setSaveStatus('idle')
     }
   }, [preferences?.tts, reset])
   
-  // Auto-save on change with debouncing
-  useEffect(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-    }
-    
-    if (!isDirty) {
-      setSaveStatus('idle')
-      return
-    }
-    
-    if (!isValid) {
-      setSaveStatus('idle')
-      return
-    }
-    
-    setSaveStatus('saving')
-    
-    saveTimeoutRef.current = setTimeout(() => {
-      const formData = getValues()
-      
-      if (lastSavedDataRef.current && JSON.stringify(formData) === JSON.stringify(lastSavedDataRef.current)) {
-        setSaveStatus('idle')
-        return
-      }
-      
-      updateSettings({ tts: formData })
-      lastSavedDataRef.current = formData
-      setSaveStatus('saved')
-      
-      setTimeout(() => {
-        setSaveStatus('idle')
-      }, 1500)
-      
-    }, 800)
-    
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
-    }
-  }, [watchEnabled, watchProvider, watchApiKey, watchEndpoint, watchVoice, watchModel, watchSpeed, isValid, isDirty, getValues, updateSettings])
+  const saveStatus = useDebouncedFormAutoSave<TTSFormValues>({
+    watchedValues: [watchEnabled, watchProvider, watchApiKey, watchEndpoint, watchVoice, watchModel, watchSpeed],
+    getValues,
+    onSave: (formData) => updateSettings({ tts: formData }),
+    isDirty,
+    isValid,
+    skipIfUnchanged: true,
+  })
   
   const handleTest = () => {
     const formData = getValues()

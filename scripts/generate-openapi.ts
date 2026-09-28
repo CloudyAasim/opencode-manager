@@ -24,7 +24,7 @@ async function generateOpenAPISpec() {
     }
     
     const spec = await response.json()
-    const outputPath = join(__dirname, '../frontend/src/api/opencode-spec.json')
+    const outputPath = join(__dirname, 'opencode-spec.json')
     
     await writeFile(outputPath, JSON.stringify(spec, null, 2))
     console.log(`✅ OpenAPI spec saved to ${outputPath}`)

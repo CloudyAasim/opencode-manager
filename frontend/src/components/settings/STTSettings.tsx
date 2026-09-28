@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDebouncedFormAutoSave } from '@/hooks/useDebouncedFormAutoSave'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -41,7 +42,13 @@ export function STTSettings() {
   const { preferences, updateSettings } = useSettings()
   const { startRecording, stopRecording, abortRecording, isRecording, isProcessing, transcript, interimTranscript, error: sttError, isExternalProvider } = useSTT()
 
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const saveStatus = useDebouncedFormAutoSave<STTFormValues>({
+    watchedValues: [watchEnabled, watchProvider, watchLanguage, watchEndpoint, watchApiKey, watchModel],
+    getValues,
+    onSave: (formData) => updateSettings({ stt: formData }),
+    isDirty,
+    isValid,
+  })
   const [isTesting, setIsTesting] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'failed'>('idle')
@@ -161,18 +168,7 @@ export function STTSettings() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferences?.stt])
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isDirty && isValid) {
-        const formData = getValues()
-        updateSettings({ stt: formData })
-        setSaveStatus('saved')
-        setTimeout(() => setSaveStatus('idle'), 1500)
-      }
-    }, 800)
-
-    return () => clearTimeout(timer)
-  }, [watchEnabled, watchProvider, watchLanguage, watchEndpoint, watchApiKey, watchModel, isDirty, isValid, getValues, updateSettings])
+  // auto-save is handled by useDebouncedFormAutoSave above
 
   const canTestBuiltin = watchEnabled && watchProvider === 'builtin' && isWebSpeechAvailable
   const canTestExternal = watchEnabled && watchProvider === 'external' && watchEndpoint
