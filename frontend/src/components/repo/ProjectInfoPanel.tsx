@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GitBranch, GitCommitHorizontal } from 'lucide-react'
 import { fetchGitLog, fetchGitStatus } from '@/api/git'
 import { useI18n } from '@/lib/i18n'
+import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
 
 export interface ProjectInfoPanelProps {
   repoId: number
@@ -32,7 +33,7 @@ export function ProjectInfoPanel({ repoId, name, directory, branch }: ProjectInf
 
   const commits = log?.commits ?? []
   const changeCount = status?.files.length ?? 0
-  const branchLabel = status?.branch || branch || 'main'
+  const branchLabel = status?.branch || branch || DEFAULT_REPO_BRANCH
 
   return (
     <div className="h-full space-y-4 overflow-y-auto p-4 text-sm">

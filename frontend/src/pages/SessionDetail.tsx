@@ -75,6 +75,7 @@ import {
   FILE_TREE_WIDTH_MIN,
   FILE_TREE_WIDTH_MAX,
   FILE_TREE_WIDTH_DEFAULT,
+  DEFAULT_REPO_BRANCH,
 } from "@/lib/repo-constants";
 
 type PanelTab = 'files' | 'review' | 'info' | 'terminal'
@@ -1052,7 +1053,7 @@ export function SessionDetail() {
         repoId={repoId}
         isOpen={sourceControlOpen}
         onClose={() => setSourceControlOpen(false)}
-        currentBranch={repo?.currentBranch || repo?.branch || "main"}
+        currentBranch={repo?.currentBranch || repo?.branch || DEFAULT_REPO_BRANCH}
         repoName={workspaceDisplayName}
       />
 

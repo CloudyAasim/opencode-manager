@@ -87,26 +87,31 @@ function optimisticallyErrorToolPart(
       
       const updatedData = currentData.map(msgWithParts => {
         if (msgWithParts.info.id !== messageID) return msgWithParts
-        
-        const targetPart = msgWithParts.parts.find(p => 
-          p.type === 'tool' && 
-          'callID' in p && 
-          p.callID === callID && 
-          'state' in p && 
-          p.state && 
-          typeof p.state === 'object' && 
-          'status' in p.state && 
-          (p.state as { status?: string }).status === 'running'
+
+        const targetPart = msgWithParts.parts.find((p): p is Extract<Part, { type: 'tool' }> & {
+          callID: string
+          state: Extract<Part, { type: 'tool' }>['state'] & {
+            status: 'running'
+            input: Record<string, unknown>
+            time: { start: number }
+          }
+        } =>
+          p.type === 'tool' &&
+          'callID' in p &&
+          p.callID === callID &&
+          'state' in p &&
+          p.state?.status === 'running'
         )
         if (!targetPart) {
           return msgWithParts
         }
-        
-        const targetPartAny = targetPart as unknown as { state: { status: string; input?: string; time: { start: number } } }
-        const targetState = targetPartAny.state
-        
+
+        const targetState = targetPart.state
+        const targetId = targetPart.id
+
         const updatedParts = msgWithParts.parts.map(p => {
-          if (p.id !== targetPart.id) return p
+          if (p.id !== targetId) return p
+          if (p.type !== 'tool') return p
           return {
             ...p,
             state: {
@@ -120,7 +125,7 @@ function optimisticallyErrorToolPart(
             },
           }
         })
-        
+
         return {
           ...msgWithParts,
           parts: updatedParts,

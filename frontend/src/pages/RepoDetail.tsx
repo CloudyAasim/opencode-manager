@@ -27,6 +27,7 @@ import { getRepoDisplayName } from "@/lib/utils";
 import { projectSessionPath } from "@/lib/project-session-path";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { useI18n } from '@/lib/i18n'
+import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
 
 export function RepoDetail() {
   const { t } = useI18n();
@@ -198,7 +199,7 @@ export function RepoDetail() {
   const repoName = repoId === 0 ? t('misc.assistant.title') : getRepoDisplayName(repo);
   const branchToDisplay = repo.currentBranch || repo.branch;
   const displayName = branchToDisplay ? `${repoName} (${branchToDisplay})` : repoName;
-  const currentBranch = repo.currentBranch || repo.branch || "main";
+  const currentBranch = repo.currentBranch || repo.branch || DEFAULT_REPO_BRANCH;
   const isWorktree = repo.isWorktree || false;
 
   return (

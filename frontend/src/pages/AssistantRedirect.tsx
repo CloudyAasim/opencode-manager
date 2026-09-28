@@ -17,6 +17,7 @@ import { SourceControlPanel } from "@/components/source-control"
 import { ResetPermissionsDialog } from "@/components/repo/ResetPermissionsDialog"
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup"
 import { useI18n } from "@/lib/i18n"
+import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
 import { Plus } from "lucide-react"
 
 export function AssistantRedirect() {
@@ -107,7 +108,7 @@ export function AssistantRedirect() {
               repoId={repoId}
             />
           )}
-          <SourceControlPanel repoId={repoId} isOpen={sourceControlOpen} onClose={() => setSourceControlOpen(false)} currentBranch={repo?.currentBranch || repo?.branch || "main"} repoName={t('misc.assistant.repoName')} />
+          <SourceControlPanel repoId={repoId} isOpen={sourceControlOpen} onClose={() => setSourceControlOpen(false)} currentBranch={repo?.currentBranch || repo?.branch || DEFAULT_REPO_BRANCH} repoName={t('misc.assistant.repoName')} />
           <ResetPermissionsDialog open={resetPermissionsOpen} onOpenChange={setResetPermissionsOpen} repoId={repoId} />
         </>
       )}

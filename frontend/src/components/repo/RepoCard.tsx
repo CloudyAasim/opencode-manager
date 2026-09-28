@@ -5,6 +5,7 @@ import { getRepoDisplayName } from "@/lib/utils";
 import type { GitStatusResponse } from "@/types/git"
 import { RepoRowActions } from "./RepoRowActions"
 import { useI18n } from '@/lib/i18n'
+import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
 
 interface RepoCardProps {
   repo: {
@@ -117,7 +118,7 @@ export function RepoCard({
                 <>
                   <span className={`flex items-center gap-1 shrink-0 ${repo.isWorktree ? 'text-purple-400' : ''}`}>
                     <GitBranch className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate max-w-[80px]">{branchToDisplay || "main"}</span>
+                    <span className="truncate max-w-[80px]">{branchToDisplay || DEFAULT_REPO_BRANCH}</span>
                   </span>
                   {isDirty && (
                     <span className="flex items-center gap-1 text-primary shrink-0">
