@@ -13,9 +13,9 @@ async function openSessionPage(page: Page) {
 }
 
 async function openRightPanel(page: Page) {
-  await expect(page.getByRole('button', { name: /detail/i }).first()).toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('button', { name: /detail|详情/i }).first()).toBeVisible({ timeout: 15000 })
   if (await panelSeparator(page).count() === 0) {
-    await page.getByRole('button', { name: /detail/i }).first().click()
+    await page.getByRole('button', { name: /detail|详情/i }).first().click()
   }
   await expect(panelSeparator(page)).toHaveCount(1)
 }

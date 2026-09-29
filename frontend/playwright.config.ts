@@ -24,6 +24,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
+    locale: 'en-US',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: executablePath ? { executablePath, args: ['--no-sandbox'] } : { args: ['--no-sandbox'] },

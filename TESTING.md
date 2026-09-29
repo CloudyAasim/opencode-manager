@@ -111,6 +111,7 @@ await installApiMocks(page, {
 ### 写新用例的约定
 
 - 用 `expect(locator).toContainText(...)` / `toHaveURL(...)` 这类**自动重试**的断言，不要用固定 `waitForTimeout` 后再断言——后者在不同机器上会随机失败。
+- **不要用只匹配单一语言的可访问名**。界面有中英两套文案（`lib/i18n`），`getByRole('button', { name: /detail/i })` 在中文环境下匹配不到「详情」。config 里固定了 `locale: 'en-US'` 保证可重复，但选择器仍应写成 `/detail|详情/i` 这类双语正则——线上验证时曾因这一点误判「按钮不存在」。
 - 页面刚加载完时读取 `innerText()` 很容易读到中间态。让断言自己等。
 - 拖拽类用例用 `page.mouse.move / down / move / up`。
 - 需要断言「没有跳转到错误的 URL」时，监听 `framenavigated` 收集 URL 再筛选，比事后取 `page.url()` 可靠。
