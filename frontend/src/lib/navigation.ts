@@ -10,15 +10,11 @@ export function isAssistantPath(pathname: string): boolean {
   return pathname === '/assistant' || /^\/repos\/[^/]+\/assistant$/.test(pathname);
 }
 
-export function getSessionListPath(repoId: string | number, isAssistantSession: boolean, tab?: string): string {
+export function getSessionListPath(isAssistantSession: boolean): string {
   if (isAssistantSession) {
     return getAssistantSessionListPath();
   }
-  const base = `/repos/${String(repoId)}`;
-  if (tab && tab !== 'repo') {
-    return `${base}?repoTab=${tab}`;
-  }
-  return base;
+  return '/';
 }
 
 function isSafeInternalPath(path: string): boolean {
@@ -44,11 +40,10 @@ export function getSwipeBackTarget(pathname: string, search = ''): string | null
   const match = pathname.match(sessionDetailRegex);
 
   if (match) {
-    const repoId = match[1];
+    void match;
     const params = new URLSearchParams(search);
     const isAssistant = params.get('assistant') === '1';
-    const tab = params.get('repoTab') ?? undefined;
-    return getSessionListPath(repoId, isAssistant, tab);
+    return getSessionListPath(isAssistant);
   }
 
   if (isAssistantPath(pathname)) {

@@ -554,9 +554,8 @@ export function SessionDetail() {
   }, [opcodeUrl, sessionId, sessionDirectory, navigate, repoId, sessionRouteSuffix, t]);
 
   const handleCloseSession = useCallback(() => {
-    const tab = new URLSearchParams(location.search).get('repoTab') ?? undefined;
-    navigate(getSessionListPath(repoId, isAssistantSession, tab))
-  }, [navigate, repoId, isAssistantSession, location.search])
+    navigate(getSessionListPath(isAssistantSession))
+  }, [navigate, isAssistantSession])
 
   const { leaderActive } = useKeyboardShortcuts({
     openModelDialog: () => {
@@ -682,11 +681,10 @@ export function SessionDetail() {
   }
 
   if (sessionQueryError instanceof FetchError && sessionQueryError.statusCode === 404) {
-    const listTab = new URLSearchParams(location.search).get('repoTab') ?? undefined;
     return (
       <SessionRouteFallback
         message={t('session.route.sessionNotFound')}
-        backTo={getSessionListPath(repoId, isAssistantSession, listTab)}
+        backTo={getSessionListPath(isAssistantSession)}
         backLabel={t('session.route.backToSessions')}
       />
     );
@@ -695,8 +693,7 @@ export function SessionDetail() {
   const workspaceDisplayName = isAssistantSession || !repo
     ? t('session.header.assistant')
     : getRepoDisplayName(repo);
-  const tabFromUrl = new URLSearchParams(location.search).get('repoTab') ?? undefined;
-  const sessionBackPath = getSessionListPath(repoId, isAssistantSession, tabFromUrl);
+  const sessionBackPath = getSessionListPath(isAssistantSession);
 
   return (
     <div

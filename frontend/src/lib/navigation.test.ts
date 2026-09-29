@@ -36,27 +36,16 @@ describe('isAssistantPath', () => {
 });
 
 describe('getSessionListPath', () => {
-  it('returns repo path for non-assistant sessions', () => {
-    expect(getSessionListPath(42, false)).toBe('/repos/42');
-    expect(getSessionListPath('123', false)).toBe('/repos/123');
+  it('sends a non-assistant session back to the project list', () => {
+    expect(getSessionListPath(false)).toBe('/');
   });
 
-  it('returns assistant session list path for assistant sessions', () => {
-    expect(getSessionListPath(42, true)).toBe('/assistant');
-    expect(getSessionListPath('123', true)).toBe('/assistant');
+  it('sends an assistant session back to the assistant list', () => {
+    expect(getSessionListPath(true)).toBe('/assistant');
   });
 
-  it('includes tab param when tab is workspaces', () => {
-    expect(getSessionListPath(42, false, 'workspaces')).toBe('/repos/42?repoTab=workspaces');
-  });
-
-  it('omits tab param for repo/default tab', () => {
-    expect(getSessionListPath(42, false, 'repo')).toBe('/repos/42');
-    expect(getSessionListPath(42, false, undefined)).toBe('/repos/42');
-  });
-
-  it('ignores tab param for assistant sessions', () => {
-    expect(getSessionListPath(42, true, 'workspaces')).toBe('/assistant');
+  it('never points back at /repos/:id, which is a redirect and would loop', () => {
+    expect(getSessionListPath(false)).not.toMatch(/^\/repos\//);
   });
 });
 
@@ -77,9 +66,9 @@ describe('return target helpers', () => {
 
 describe('getSwipeBackTarget', () => {
   describe('session detail routes', () => {
-    it('returns repo path for normal session detail', () => {
-      expect(getSwipeBackTarget('/repos/42/sessions/abc', '')).toBe('/repos/42');
-      expect(getSwipeBackTarget('/repos/123/sessions/xyz-789', '')).toBe('/repos/123');
+    it('returns the project list for a normal session', () => {
+      expect(getSwipeBackTarget('/repos/42/sessions/abc', '')).toBe('/');
+      expect(getSwipeBackTarget('/repos/123/sessions/xyz-789', '')).toBe('/');
     });
 
     it('returns assistant session list path for assistant session detail with assistant=1', () => {
@@ -91,13 +80,13 @@ describe('getSwipeBackTarget', () => {
       );
     });
 
-    it('returns repo path when assistant param is not 1', () => {
-      expect(getSwipeBackTarget('/repos/42/sessions/abc', '?assistant=0')).toBe('/repos/42');
-      expect(getSwipeBackTarget('/repos/42/sessions/abc', '?other=value')).toBe('/repos/42');
+    it('returns the project list when assistant param is not 1', () => {
+      expect(getSwipeBackTarget('/repos/42/sessions/abc', '?assistant=0')).toBe('/');
+      expect(getSwipeBackTarget('/repos/42/sessions/abc', '?other=value')).toBe('/');
     });
 
-    it('preserves tab param in back target', () => {
-      expect(getSwipeBackTarget('/repos/42/sessions/abc', '?repoTab=workspaces')).toBe('/repos/42?repoTab=workspaces');
+    it('ignores the tab param and never routes back into /repos/:id', () => {
+      expect(getSwipeBackTarget('/repos/42/sessions/abc', '?repoTab=workspaces')).toBe('/');
       expect(getSwipeBackTarget('/repos/42/sessions/abc', '?repoTab=workspaces&assistant=1')).toBe(
         '/assistant'
       );
