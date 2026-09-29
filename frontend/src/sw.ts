@@ -19,8 +19,9 @@ const APP_SHELL_CACHE = `app-shell-${BUILD_HASH}`;
 const RUNTIME_CACHE = `runtime-${BUILD_HASH}`;
 const APP_SHELL_URL = "/index.html";
 const MANAGED_CACHE_PREFIXES = ["app-shell-", "runtime-", "offline-assets-"];
-const DEFERRED_BATCH_SIZE = 6;
-const DEFERRED_BATCH_PAUSE_MS = 400;
+const DEFERRED_BATCH_SIZE = 3;
+const DEFERRED_BATCH_PAUSE_MS = 1500;
+const DEFERRED_START_DELAY_MS = 20000;
 
 async function cacheInBatches(cache: Cache, urls: string[]): Promise<void> {
   for (let index = 0; index < urls.length; index += DEFERRED_BATCH_SIZE) {
@@ -33,6 +34,12 @@ async function cacheInBatches(cache: Cache, urls: string[]): Promise<void> {
     );
     await new Promise((resolve) => setTimeout(resolve, DEFERRED_BATCH_PAUSE_MS));
   }
+}
+
+function scheduleDeferredCaching(cache: Cache, urls: string[]): void {
+  setTimeout(() => {
+    void cacheInBatches(cache, urls);
+  }, DEFERRED_START_DELAY_MS);
 }
 
 worker.addEventListener("install", (event) => {
@@ -74,7 +81,7 @@ worker.addEventListener("activate", (event) => {
       const deferred = PRECACHE_URLS.filter((url) => !SHELL_URLS.includes(url));
       if (deferred.length > 0) {
         const cache = await caches.open(APP_SHELL_CACHE);
-        void cacheInBatches(cache, deferred);
+        scheduleDeferredCaching(cache, deferred);
       }
     }),
   );
