@@ -44,7 +44,15 @@ export default defineConfig([
   },
   // Special rules for test files
   {
-    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', 'vitest.config.ts'],
+    files: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      'vitest.config.ts',
+      'playwright.config.ts',
+      'e2e/**/*.ts',
+    ],
     languageOptions: {
       parserOptions: {
         tsconfigRootDir: import.meta.dirname,

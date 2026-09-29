@@ -35,7 +35,7 @@ export function getOpenCodeInstallMethod(): string {
   return 'curl'
 }
 
-export async function restartOpenCodeSafe(openCodeSupervisor: OpenCodeSupervisor | undefined, context: string): Promise<void> {
+async function restartOpenCodeSafe(openCodeSupervisor: OpenCodeSupervisor | undefined, context: string): Promise<void> {
   try {
     await restartOpenCode(openCodeSupervisor)
     logger.info(`Restarted OpenCode server after ${context}`)
@@ -44,7 +44,7 @@ export async function restartOpenCodeSafe(openCodeSupervisor: OpenCodeSupervisor
   }
 }
 
-export async function dispatchSkillReload(
+async function dispatchSkillReload(
   db: Database,
   openCodeClient: OpenCodeClient,
   openCodeSupervisor: OpenCodeSupervisor | undefined,
