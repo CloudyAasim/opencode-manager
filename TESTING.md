@@ -157,6 +157,12 @@ pnpm --filter backend exec vitest run test/routes   # 单个目录
 
 `test/routes/settings.test.ts` 的超时相关用例偶发不稳定（含真实 `setTimeout` 与进程信号），重跑即可确认。
 
+### 后端测试的两个坑
+
+**`vi.mock('fs')` 会同时拦截 `node:fs`。** vitest 把两者视为同一模块，所以在 mock 工厂里没列出的导出（如 `mkdirSync`）会报 `No "mkdirSync" export is defined on the "fs" mock`。不要靠真实文件系统副作用写后端测试——像 `settings.test.ts` 那样把 `writeTemporarySSHKey` / `cleanupSSHKey` 这类 IO stub 掉，保留纯逻辑（`parseSSHHost`）的真实实现。
+
+**不要依赖 `/tmp` 下预先存在的目录。** 这类测试会变成一个薛定谔用例：上一次运行留下的目录决定这次是绿是红。用 `mkdtemp` 自建，或干脆不碰磁盘。
+
 ## 什么时候必须补哪一层
 
 | 改动 | 至少补 |
