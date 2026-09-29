@@ -76,38 +76,45 @@ try {
     }
   })
 
-  const routes = ['/login', '/register']
-  for (const route of routes) {
-    pageErrors.length = 0
-    badResponses.length = 0
-    await page.goto(`http://127.0.0.1:${PORT}${route}`, { waitUntil: 'networkidle', timeout: 30000 })
-    await page.waitForTimeout(500)
+  const viewports = [
+    { name: 'desktop', width: 1280, height: 800 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]
 
-    const rootLength = await page.evaluate(() => document.getElementById('root')?.innerHTML.length ?? -1)
-    const visible = await page.evaluate(() => document.body.innerText.trim().length)
+  for (const { name, width, height } of viewports) {
+    for (const route of ['/login', '/register']) {
+      pageErrors.length = 0
+      badResponses.length = 0
+      await page.setViewportSize({ width, height })
+      await page.goto(`http://127.0.0.1:${PORT}${route}`, { waitUntil: 'networkidle', timeout: 30000 })
+      await page.waitForTimeout(500)
 
-    if (rootLength <= 0 || visible === 0) {
-      console.error(`FAIL ${route}: app did not mount (root=${rootLength}, text=${visible})`)
-      pageErrors.forEach((message) => console.error(`  pageerror: ${message}`))
-      exitCode = 1
-      continue
+      const rootLength = await page.evaluate(() => document.getElementById('root')?.innerHTML.length ?? -1)
+      const visible = await page.evaluate(() => document.body.innerText.trim().length)
+
+      if (rootLength <= 0 || visible === 0) {
+        console.error(`FAIL ${name} ${route}: app did not mount (root=${rootLength}, text=${visible})`)
+        pageErrors.forEach((message) => console.error(`  pageerror: ${message}`))
+        exitCode = 1
+        continue
+      }
+      if (pageErrors.length > 0) {
+        console.error(`FAIL ${name} ${route}: uncaught page error`)
+        pageErrors.forEach((message) => console.error(`  ${message}`))
+        exitCode = 1
+        continue
+      }
+
+      const assetErrors = badResponses.filter((entry) => entry.includes('/assets/'))
+      if (assetErrors.length > 0) {
+        console.error(`FAIL ${name} ${route}: asset request failed`)
+        assetErrors.forEach((entry) => console.error(`  ${entry}`))
+        exitCode = 1
+        continue
+      }
+
+      console.log(`ok ${name} ${route} (root=${rootLength})`)
     }
-    if (pageErrors.length > 0) {
-      console.error(`FAIL ${route}: uncaught page error`)
-      pageErrors.forEach((message) => console.error(`  ${message}`))
-      exitCode = 1
-      continue
-    }
-
-    const assetErrors = badResponses.filter((entry) => entry.includes('/assets/'))
-    if (assetErrors.length > 0) {
-      console.error(`FAIL ${route}: asset request failed`)
-      assetErrors.forEach((entry) => console.error(`  ${entry}`))
-      exitCode = 1
-      continue
-    }
-
-    console.log(`ok ${route} (root=${rootLength})`)
   }
 } finally {
   await browser?.close()

@@ -1,17 +1,16 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter, RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { useEffect, useRef, useCallback } from 'react'
+import { Suspense, lazy, useEffect, useRef, useCallback } from 'react'
 import { Toaster } from 'sonner'
 import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
-import { MobileTabBar } from '@/components/navigation/MobileTabBar'
 import { MobileSheetHost } from '@/components/navigation/MobileSheetHost'
 import { RouteErrorBoundary } from '@/components/ui/route-error-boundary'
-import { DesktopSidebar } from '@/components/navigation/DesktopSidebar'
 import { useTheme } from './hooks/useTheme'
 import { useRightEdgeSwipe, useSwipeBack } from './hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
+import { useDesktop } from './hooks/useDesktop'
 import { TTSProvider } from './contexts/TTSContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { EventProvider, usePermissions, useEventContext } from '@/contexts/EventContext'
@@ -24,6 +23,13 @@ import { onNotificationClick } from '@/lib/serviceWorker'
 import { useAuth } from '@/hooks/useAuth'
 import { useServerHealth } from '@/hooks/useServerHealth'
 import { usePrefetchRoutes } from '@/hooks/usePrefetchRoutes'
+
+const DesktopSidebar = lazy(() =>
+  import('@/components/navigation/DesktopSidebar').then((m) => ({ default: m.DesktopSidebar })),
+)
+const MobileTabBar = lazy(() =>
+  import('@/components/navigation/MobileTabBar').then((m) => ({ default: m.MobileTabBar })),
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,6 +98,7 @@ function AppShell() {
   const location = useLocation()
   const rootRef = useRef<HTMLDivElement>(null)
   const { openSheet, open } = useMobileTabBar()
+  const isDesktop = useDesktop()
   useTheme()
 
   const swipeNav = useSwipeNavigation()
@@ -160,12 +167,20 @@ function AppShell() {
     <AuthProvider>
       <EventProvider>
         <div ref={rootRef} className="flex h-dvh w-full min-w-0">
-          <DesktopSidebar />
+          {isDesktop && (
+            <Suspense fallback={null}>
+              <DesktopSidebar />
+            </Suspense>
+          )}
           <main className="flex-1 min-w-0 min-h-0 flex flex-col">
             <Outlet />
           </main>
         </div>
-        <MobileTabBar />
+        {!isDesktop && (
+          <Suspense fallback={null}>
+            <MobileTabBar />
+          </Suspense>
+        )}
         <MobileSheetHost />
         <PermissionDialogWrapper />
         <SSHHostKeyDialogWrapper />
