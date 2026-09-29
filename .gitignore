@@ -25,3 +25,7 @@ temp/
 __pycache__/
 *.pyc
 
+
+frontend/e2e-results/
+frontend/playwright-report/
+frontend/test-results/

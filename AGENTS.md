@@ -7,6 +7,9 @@
 - `pnpm dev:frontend` - Frontend only: `pnpm --filter frontend dev`
 - `pnpm build` - Build both backend and frontend
 - `pnpm test` - Run backend tests: `pnpm --filter backend test` (vitest)
+- `pnpm --filter frontend test:e2e` - End-to-end tests (Playwright, real browser). See TESTING.md
+- `pnpm --filter frontend smoke:render` - Build-artifact render check. See TESTING.md
+- See TESTING.md for which layer to use and how to write new tests
 - `cd backend && vitest <filename>` - Run single test file
 - `cd backend && vitest --ui` - Test UI with coverage
 - `cd backend && vitest --coverage` - Coverage report (80% threshold)

@@ -27,6 +27,7 @@ import { useSession, useAbortSession, useUpdateSession, useMessages, useCreateSe
 import { useRepoActivity } from "@/hooks/useRepoActivity";
 import { useRepoSiblings, useCreateRepoWorkspace, useDeleteRepoWorkspaces } from "@/hooks/useRepoSiblings";
 import { useWorktreeTab } from "@/hooks/useWorktreeTab";
+import { SessionRouteFallback } from "@/components/session/SessionRouteFallback";
 import { WorktreeTabs } from "@/components/repo/WorktreeTabs";
 import { WorkspaceManager } from "@/components/repo/WorkspaceManager";
 import { CreateWorkspaceDialog } from "@/components/repo/CreateWorkspaceDialog";
@@ -119,18 +120,6 @@ const compareMessageIds = (id1: string, id2: string): number => {
 
 const PENDING_ACTION_SYNC_INTERVAL_MS = 30000
 const PROMPT_OVERLAY_CLEARANCE_PX = 16
-
-function SessionRouteFallback({ message, backTo, backLabel }: { message: string; backTo: string; backLabel: string }) {
-  const navigate = useNavigate();
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <span className="text-muted-foreground">{message}</span>
-        <Button variant="outline" size="sm" onClick={() => navigate(backTo)}>{backLabel}</Button>
-      </div>
-    </div>
-  );
-}
 
 export function SessionDetail() {
   const { t } = useI18n();
@@ -236,19 +225,36 @@ export function SessionDetail() {
     window.addEventListener('mouseup', onUp)
   }, [railWidth, setRailWidth])
 
-  const startPanelResize = useCallback((event: React.MouseEvent) => {
+  const startPanelResize = useCallback((event: React.MouseEvent | React.TouchEvent) => {
     event.preventDefault()
-    const startX = event.clientX
+    const startX = 'touches' in event ? event.touches[0]?.clientX ?? 0 : event.clientX
     const startWidth = panelWidth
-    const onMove = (moveEvent: MouseEvent) => {
-      setPanelWidth(startWidth - (moveEvent.clientX - startX))
+    const onMove = (moveEvent: MouseEvent | TouchEvent) => {
+      const currentX = 'touches' in moveEvent
+        ? moveEvent.touches[0]?.clientX ?? startX
+        : (moveEvent as MouseEvent).clientX
+      setPanelWidth(startWidth - (currentX - startX))
     }
     const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mousemove', onMove as EventListener)
       window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('touchmove', onMove as EventListener)
+      window.removeEventListener('touchend', onUp)
     }
-    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mousemove', onMove as EventListener)
     window.addEventListener('mouseup', onUp)
+    window.addEventListener('touchmove', onMove as EventListener, { passive: false })
+    window.addEventListener('touchend', onUp)
+  }, [panelWidth, setPanelWidth])
+
+  const handlePanelResizeKey = useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      setPanelWidth(panelWidth + 16)
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      setPanelWidth(panelWidth - 16)
+    }
   }, [panelWidth, setPanelWidth])
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>();
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -927,8 +933,13 @@ export function SessionDetail() {
             <div
               role="separator"
               aria-orientation="vertical"
+              aria-label={t('navigation.resizePanel')}
+              tabIndex={0}
               onMouseDown={startPanelResize}
-              className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
+              onTouchStart={startPanelResize}
+              onKeyDown={handlePanelResizeKey}
+              className="absolute inset-y-0 z-20 hidden w-2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/40 md:block"
+              style={{ right: panelWidth }}
             />
           )}
           {!isDesktop && (

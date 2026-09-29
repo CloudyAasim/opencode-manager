@@ -120,6 +120,7 @@ export const useSessionsAcrossDirectories = (
   return {
     data: query.data?.pages.flatMap((page) => page.items) ?? [],
     isLoading: query.isLoading,
+    isFetched: query.isFetched,
     isError: query.isError,
     fetchNextPage: query.fetchNextPage,
     hasNextPage: query.hasNextPage,
@@ -142,7 +143,8 @@ export const useSession = (opcodeUrl: string | null | undefined, sessionID: stri
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 15000,
-    retry: (failureCount, error) => !(error instanceof FetchError && error.statusCode === 404) && failureCount < 3,
+    retry: (failureCount) => failureCount < 4,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 };
 

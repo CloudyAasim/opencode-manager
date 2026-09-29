@@ -54,10 +54,11 @@ describe('RepoDetail redirect', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getRepo.mockResolvedValue(readyRepo)
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isFetched: true })
   })
 
   it('redirects to the most recent session without rendering the project UI', async () => {
-    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [{ id: 'ses_abc' }] })
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [{ id: 'ses_abc' }], isFetched: true })
 
     renderAt()
 
@@ -68,7 +69,7 @@ describe('RepoDetail redirect', () => {
   })
 
   it('creates a session when the repo has none and redirects to it', async () => {
-    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [] })
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isFetched: true })
     mocks.createSessionMutate.mockImplementation((_vars: unknown, opts: { onSuccess: (s: { id: string }) => void }) => {
       opts.onSuccess({ id: 'ses_new' })
     })
@@ -84,7 +85,7 @@ describe('RepoDetail redirect', () => {
   })
 
   it('waits for the session list before deciding to create one', async () => {
-    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isLoading: true })
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isFetched: false })
 
     renderAt()
 
@@ -93,7 +94,7 @@ describe('RepoDetail redirect', () => {
     })
     expect(mocks.createSessionMutate).not.toHaveBeenCalled()
 
-    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [{ id: 'ses_late' }], isLoading: false })
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [{ id: 'ses_late' }], isFetched: true })
     rerenderRoutes()
 
     await waitFor(() => {
@@ -103,7 +104,7 @@ describe('RepoDetail redirect', () => {
   })
 
   it('does not navigate to an undefined session when creation returns no id', async () => {
-    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isLoading: false })
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isFetched: true })
     mocks.createSessionMutate.mockImplementation((_vars: unknown, opts: { onSuccess: (s: { id?: string }) => void }) => {
       opts.onSuccess({})
     })
@@ -119,7 +120,7 @@ describe('RepoDetail redirect', () => {
 
   it('does not create a session while the repo is still cloning', async () => {
     mocks.getRepo.mockResolvedValue({ ...readyRepo, cloneStatus: 'cloning' })
-    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [] })
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isFetched: true })
 
     renderAt()
 
