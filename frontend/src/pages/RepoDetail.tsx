@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
@@ -32,6 +32,8 @@ export function RepoDetail() {
   const latestSessionId = existingSessions[0]?.id
 
   const createSessionMutation = useCreateSession(opcodeUrl, repo?.fullPath)
+  const createSessionRef = useRef(createSessionMutation)
+  createSessionRef.current = createSessionMutation
 
   useEffect(() => {
     if (repoLoading) return
@@ -39,14 +41,14 @@ export function RepoDetail() {
       navigate(projectSessionPath(repoId, latestSessionId, activeTab), { replace: true })
       return
     }
-    if (repo && repo.cloneStatus === 'ready' && !createSessionMutation.isPending) {
-      createSessionMutation.mutate({}, {
+    if (repo && repo.cloneStatus === 'ready' && !createSessionRef.current.isPending) {
+      createSessionRef.current.mutate({}, {
         onSuccess: (session) => {
           navigate(projectSessionPath(repoId, session.id, activeTab), { replace: true })
         },
       })
     }
-  }, [repoLoading, latestSessionId, repo, repoId, activeTab, navigate, createSessionMutation, opcodeUrl])
+  }, [repoLoading, latestSessionId, repo, repoId, activeTab, navigate])
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
