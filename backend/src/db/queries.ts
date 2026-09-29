@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import type { Repo, CreateRepoInput } from '../types/repo'
 import { getReposPath } from '@opencode-manager/shared/config/env'
 import { ASSISTANT_REPO_ID, ASSISTANT_REPO_PATH, getRepoDisplayName } from '@opencode-manager/shared/utils'
-import { RepositoryNotFoundError } from '../utils/errors'
+import { RepositoryNotFoundError, ServiceUnavailableError } from '../utils/errors'
 import { getErrorMessage } from '../utils/error-utils'
 import path from 'path'
 
@@ -168,7 +168,7 @@ export function ensureAssistantRepo(db: Database): Repo {
 
   const repo = getRepoById(db, ASSISTANT_REPO_ID)
   if (!repo) {
-    throw new Error('Failed to sync Assistant repository')
+    throw new ServiceUnavailableError('Failed to sync Assistant repository')
   }
 
   return repo
@@ -209,7 +209,7 @@ export function createRepo(db: Database, repo: CreateRepoInput): Repo {
     
     const newRepo = getRepoById(db, Number(result.lastInsertRowid))
     if (!newRepo) {
-      throw new Error(`Failed to retrieve newly created repo with id ${result.lastInsertRowid}`)
+      throw new ServiceUnavailableError(`Failed to retrieve newly created repo with id ${result.lastInsertRowid}`)
     }
     return newRepo
   } catch (error: unknown) {
@@ -226,10 +226,10 @@ export function createRepo(db: Database, repo: CreateRepoInput): Repo {
       }
       
       const identifier = repo.isLocal ? `path '${normalizedPath}'` : `url '${repo.repoUrl}' branch '${repo.branch || 'default'}'`
-      throw new Error(`Repository with ${identifier} already exists but could not be retrieved. This may indicate database corruption.`)
+      throw new ServiceUnavailableError(`Repository with ${identifier} already exists but could not be retrieved. This may indicate database corruption.`)
     }
     
-    throw new Error(`Failed to create repository: ${errorMessage}`)
+    throw new ServiceUnavailableError(`Failed to create repository: ${errorMessage}`)
   }
 }
 

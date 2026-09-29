@@ -1,3 +1,4 @@
+import { ValidationError } from '../utils/errors'
 import os from 'os'
 import path from 'path'
 import { existsSync } from 'node:fs'
@@ -184,7 +185,7 @@ async function importOpenCodeConfigFromSources(sourcePaths: string[], settingsSe
     const name = isOpenCodeConfigSourceName(basename) ? basename : DEFAULT_OPENCODE_CONFIG_SOURCE_NAME
     const rawContent = await readFileContent(sourcePath)
     if (!parseOpenCodeConfigContent(rawContent).isValid) {
-      throw new Error('Importable OpenCode config is invalid')
+      throw new ValidationError('Importable OpenCode config is invalid')
     }
     return { name, path: path.join(configDir, name), rawContent }
   }))

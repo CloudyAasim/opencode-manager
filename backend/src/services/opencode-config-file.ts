@@ -1,3 +1,4 @@
+import { ValidationError } from '../utils/errors'
 import { createHash } from 'crypto'
 import { readFile, readdir, rm, stat } from 'fs/promises'
 import path from 'path'
@@ -141,7 +142,7 @@ function getOpenCodeConfigSourcePath(name: OpenCodeConfigSourceName): string {
 
 function assertOpenCodeConfigSourceName(value: string): OpenCodeConfigSourceName {
   if (!isOpenCodeConfigSourceName(value)) {
-    throw new Error(`Unsupported OpenCode config source: ${value}`)
+    throw new ValidationError(`Unsupported OpenCode config source: ${value}`)
   }
   return value
 }

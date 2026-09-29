@@ -1,3 +1,4 @@
+import { ServiceUnavailableError } from '../utils/errors'
 import { isDeepStrictEqual } from 'node:util'
 import type {
   OpenCodeConfigFile,
@@ -49,7 +50,7 @@ export async function seedOpenCodeConfigFile(): Promise<OpenCodeConfigFile> {
   return withOpenCodeConfigLock(async () => {
     const config = await restoreOpenCodeConfigSnapshot(buildOpenCodeConfigSeedSnapshot())
     if (!config) {
-      throw new Error('Failed to seed OpenCode config')
+      throw new ServiceUnavailableError('Failed to seed OpenCode config')
     }
     return config
   })

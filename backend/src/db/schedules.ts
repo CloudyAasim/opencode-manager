@@ -1,3 +1,4 @@
+import { ServiceUnavailableError } from '../utils/errors'
 import type { Database } from 'bun:sqlite'
 import {
   ScheduleJobSchema,
@@ -205,7 +206,7 @@ export function createScheduleJob(db: Database, repoId: number, input: ScheduleJ
 
   const job = getScheduleJobById(db, repoId, Number(result.lastInsertRowid))
   if (!job) {
-    throw new Error('Failed to load created schedule job')
+    throw new ServiceUnavailableError('Failed to load created schedule job')
   }
   return job
 }
@@ -353,7 +354,7 @@ export function createScheduleRun(
 
   const run = getScheduleRunById(db, input.repoId, input.jobId, Number(result.lastInsertRowid))
   if (!run) {
-    throw new Error('Failed to load created schedule run')
+    throw new ServiceUnavailableError('Failed to load created schedule run')
   }
   return run
 }

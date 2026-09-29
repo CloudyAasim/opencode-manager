@@ -1,5 +1,5 @@
 import { GitAuthService } from '../git-auth'
-import { RepositoryNotFoundError, NotFoundError, ValidationError } from '../../utils/errors'
+import { NotFoundError, RepositoryNotFoundError, ServiceUnavailableError, ValidationError } from '../../utils/errors'
 import { executeCommand } from '../../utils/process'
 import { logger } from '../../utils/logger'
 import { getErrorMessage } from '../../utils/error-utils'
@@ -145,7 +145,7 @@ export class GitService {
       }))
     } catch (error: unknown) {
       logger.error(`Failed to get git log for repo ${repoId}:`, error)
-      throw new Error(`Failed to get git log: ${getErrorMessage(error)}`)
+      throw new ServiceUnavailableError(`Failed to get git log: ${getErrorMessage(error)}`)
     }
   }
 
@@ -191,7 +191,7 @@ export class GitService {
       }
     } catch (error: unknown) {
       logger.error(`Failed to get commit ${hash} for repo ${repoId}:`, error)
-      throw new Error(`Failed to get commit: ${getErrorMessage(error)}`)
+      throw new ServiceUnavailableError(`Failed to get commit: ${getErrorMessage(error)}`)
     }
   }
 
@@ -489,7 +489,7 @@ export class GitService {
       }
     } catch (error: unknown) {
       logger.error(`Failed to get commit details for repo ${repoId}:`, error)
-      throw new Error(`Failed to get commit details: ${getErrorMessage(error)}`)
+      throw new ServiceUnavailableError(`Failed to get commit details: ${getErrorMessage(error)}`)
     }
   }
 
@@ -512,7 +512,7 @@ export class GitService {
       return this.parseDiffOutput(diff, status, filePath)
     } catch (error: unknown) {
       logger.error(`Failed to get commit diff for repo ${repoId}:`, error)
-      throw new Error(`Failed to get commit diff: ${getErrorMessage(error)}`)
+      throw new ServiceUnavailableError(`Failed to get commit diff: ${getErrorMessage(error)}`)
     }
   }
 
@@ -926,7 +926,7 @@ export class GitService {
       return this.parseDiffOutput(diff, 'modified', filePath)
     } catch (error) {
       logger.warn(`Failed to get diff for tracked file ${filePath}:`, error)
-      throw new Error(`Failed to get file diff: ${error instanceof Error ? error.message : String(error)}`)
+      throw new ServiceUnavailableError(`Failed to get file diff: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 

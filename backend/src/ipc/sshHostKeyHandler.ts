@@ -1,3 +1,4 @@
+import { ValidationError } from '../utils/errors'
 import * as path from 'path'
 import * as fs from 'fs/promises'
 import * as crypto from 'crypto'
@@ -129,7 +130,7 @@ export class SSHHostKeyHandler implements IPCHandler {
       }
     }
 
-    throw new Error('No valid host keys found')
+    throw new ValidationError('No valid host keys found')
   }
 
   async handle(request: unknown): Promise<unknown> {

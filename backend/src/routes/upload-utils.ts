@@ -1,3 +1,4 @@
+import { ValidationError } from '../utils/errors'
 import { InstallSkillUploadManifestEntrySchema, type InstallSkillUploadManifestEntry } from '@opencode-manager/shared'
 
 export class UploadValidationError extends Error {}
@@ -32,7 +33,7 @@ export async function readUploadedManifestFiles(
     manifest.map(async (entry) => {
       const file = formData[entry.fieldName]
       if (!file || !(file instanceof File)) {
-        throw new Error(`Field "${entry.fieldName}" is not a valid file`)
+        throw new ValidationError(`Field "${entry.fieldName}" is not a valid file`)
       }
       const content = Buffer.from(await file.arrayBuffer())
       return { relativePath: entry.relativePath, content }

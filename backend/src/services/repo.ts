@@ -14,7 +14,7 @@ import { isGitHubHttpsUrl } from '../utils/git-auth'
 import path from 'path'
 import { parseSSHHost } from '../utils/ssh-key-manager'
 import { getErrorMessage } from '../utils/error-utils'
-import { RepositoryAlreadyExistsError, ValidationError, NotFoundError, ConflictError } from '../utils/errors'
+import { ConflictError, NotFoundError, RepositoryAlreadyExistsError, ServiceUnavailableError, ValidationError } from '../utils/errors'
 import { sseAggregator } from './sse-aggregator'
 import { resolveProjectId, isGitMainCheckout } from './project-id-resolver'
 import { listRepos } from '../db/queries'
@@ -676,11 +676,11 @@ export async function cloneRepo(
           rmSync(path.join(path.resolve(reposBase()), worktreeDirName), { recursive: true, force: true })
           const verifyRemoved = !existsSync(path.join(path.resolve(reposBase()), worktreeDirName))
           if (!verifyRemoved) {
-            throw new Error(`Failed to remove existing directory: ${worktreeDirName}`)
+            throw new ServiceUnavailableError(`Failed to remove existing directory: ${worktreeDirName}`)
           }
         } catch (cleanupError: unknown) {
           logger.error(`Failed to clean up existing directory: ${worktreeDirName}`, cleanupError)
-          throw new Error(`Cannot clone: directory ${worktreeDirName} exists and could not be removed`)
+          throw new ConflictError(`Cannot clone: directory ${worktreeDirName} exists and could not be removed`)
         }
       }
       
@@ -786,11 +786,11 @@ export async function cloneRepo(
           rmSync(path.join(reposBase(), worktreeDirName), { recursive: true, force: true })
           const verifyRemoved = !existsSync(path.join(reposBase(), worktreeDirName))
           if (!verifyRemoved) {
-            throw new Error(`Failed to remove existing directory: ${worktreeDirName}`)
+            throw new ServiceUnavailableError(`Failed to remove existing directory: ${worktreeDirName}`)
           }
         } catch (cleanupError: unknown) {
           logger.error(`Failed to clean up existing directory: ${worktreeDirName}`, cleanupError)
-          throw new Error(`Cannot clone: directory ${worktreeDirName} exists and could not be removed`)
+          throw new ConflictError(`Cannot clone: directory ${worktreeDirName} exists and could not be removed`)
         }
       }
     

@@ -1,3 +1,4 @@
+import { ServiceUnavailableError } from '../../utils/errors'
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
@@ -66,7 +67,7 @@ export class NodePtySpawner implements PtySpawner {
   spawn(options: PtySpawnOptions): PtyProcess {
     const bridge = resolveBridgePath()
     if (!bridge) {
-      throw new Error('TERMINAL_BRIDGE_MISSING')
+      throw new ServiceUnavailableError('TERMINAL_BRIDGE_MISSING')
     }
 
     const child = spawn('python3', [bridge], {

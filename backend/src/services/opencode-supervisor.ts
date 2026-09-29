@@ -1,3 +1,4 @@
+import { NotFoundError } from '../utils/errors'
 import type { SettingsService } from './settings'
 import { logger } from '../utils/logger'
 import { ENV } from '@opencode-manager/shared/config/env'
@@ -315,7 +316,7 @@ export class OpenCodeSupervisor {
     await archiveBrokenOpenCodeConfigFile()
     const restored = await restoreLastKnownGoodOpenCodeConfig(this.settingsService)
     if (!restored) {
-      throw new Error('No last known good config available')
+      throw new NotFoundError('No last known good config available')
     }
 
     await this.openCodeServerManager.restart()

@@ -1,3 +1,4 @@
+import { NotFoundError } from '../utils/errors'
 import type { OpenCodeClient } from './opencode/client'
 
 interface OpenCodeConfigResponse {
@@ -117,5 +118,5 @@ export async function resolveOpenCodeModel(
     }
   }
 
-  throw new Error('No configured OpenCode models are available')
+  throw new NotFoundError('No configured OpenCode models are available')
 }
