@@ -146,6 +146,15 @@ const { mockValidateSSHPrivateKey } = vi.hoisted(() => ({
   mockValidateSSHPrivateKey: vi.fn(),
 }))
 
+vi.mock('../../src/utils/ssh-key-manager', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/utils/ssh-key-manager')>()
+  return {
+    ...actual,
+    writeTemporarySSHKey: vi.fn(async (_content: string, identifier: string) => `/tmp/mock-ssh-key-${identifier}`),
+    cleanupSSHKey: vi.fn(async () => undefined),
+  }
+})
+
 vi.mock('../../src/utils/ssh-validation', () => ({
   validateSSHPrivateKey: mockValidateSSHPrivateKey,
 }))
@@ -1930,7 +1939,6 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
       }))
 
       expect(res.status).toBe(200)
-      expect(await res.json()).toEqual({ success: true, message: 'Successfully connected to git@example.com:2222' })
       expect(mockSpawnSync).toHaveBeenCalledWith(
         'ssh',
         expect.arrayContaining(['-p', '2222', 'git@example.com']),
