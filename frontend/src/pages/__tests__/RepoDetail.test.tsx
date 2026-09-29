@@ -22,8 +22,8 @@ vi.mock('@/hooks/useOpenCode', () => ({
 
 const readyRepo = { id: 7, fullPath: '/workspace/repos/seven', localPath: 'seven', cloneStatus: 'ready' }
 
-function renderAt() {
-  return render(
+function RoutesTree() {
+  return (
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <MemoryRouter initialEntries={['/repos/7']}>
         <Routes>
@@ -31,8 +31,18 @@ function renderAt() {
           <Route path="/repos/:id/sessions/:sessionId" element={<div data-testid="session-page" />} />
         </Routes>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
+}
+
+let view: ReturnType<typeof render> | null = null
+
+function renderAt() {
+  view = render(<RoutesTree />)
+}
+
+function rerenderRoutes() {
+  view?.rerender(<RoutesTree />)
 }
 
 function redirectedSessionId(): string | null {
@@ -71,6 +81,40 @@ describe('RepoDetail redirect', () => {
     await waitFor(() => {
       expect(redirectedSessionId()).toBe('matched')
     })
+  })
+
+  it('waits for the session list before deciding to create one', async () => {
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isLoading: true })
+
+    renderAt()
+
+    await waitFor(() => {
+      expect(mocks.getRepo).toHaveBeenCalled()
+    })
+    expect(mocks.createSessionMutate).not.toHaveBeenCalled()
+
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [{ id: 'ses_late' }], isLoading: false })
+    rerenderRoutes()
+
+    await waitFor(() => {
+      expect(redirectedSessionId()).toBe('matched')
+    })
+    expect(mocks.createSessionMutate).not.toHaveBeenCalled()
+  })
+
+  it('does not navigate to an undefined session when creation returns no id', async () => {
+    mocks.useSessionsAcrossDirectories.mockReturnValue({ data: [], isLoading: false })
+    mocks.createSessionMutate.mockImplementation((_vars: unknown, opts: { onSuccess: (s: { id?: string }) => void }) => {
+      opts.onSuccess({})
+    })
+
+    renderAt()
+
+    await waitFor(() => {
+      expect(mocks.createSessionMutate).toHaveBeenCalled()
+    })
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(redirectedSessionId()).toBeNull()
   })
 
   it('does not create a session while the repo is still cloning', async () => {

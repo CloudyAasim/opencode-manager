@@ -24,7 +24,7 @@ export function RepoDetail() {
   })
 
   const opcodeUrl = OPENCODE_API_ENDPOINT
-  const { data: existingSessions } = useSessionsAcrossDirectories(
+  const { data: existingSessions, isLoading: sessionsLoading } = useSessionsAcrossDirectories(
     opcodeUrl,
     repo?.fullPath ? [repo.fullPath] : [],
     { limit: 25 },
@@ -36,7 +36,7 @@ export function RepoDetail() {
   createSessionRef.current = createSessionMutation
 
   useEffect(() => {
-    if (repoLoading) return
+    if (repoLoading || sessionsLoading) return
     if (latestSessionId) {
       navigate(projectSessionPath(repoId, latestSessionId, activeTab), { replace: true })
       return
@@ -44,11 +44,12 @@ export function RepoDetail() {
     if (repo && repo.cloneStatus === 'ready' && !createSessionRef.current.isPending) {
       createSessionRef.current.mutate({}, {
         onSuccess: (session) => {
+          if (!session?.id) return
           navigate(projectSessionPath(repoId, session.id, activeTab), { replace: true })
         },
       })
     }
-  }, [repoLoading, latestSessionId, repo, repoId, activeTab, navigate])
+  }, [repoLoading, sessionsLoading, latestSessionId, repo, repoId, activeTab, navigate])
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
