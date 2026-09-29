@@ -35,7 +35,8 @@
     "docker:down": "docker-compose down",
     "docker:reset": "docker-compose down -v",
     "docker:logs": "docker-compose logs -f",
-    "docker:restart": "docker-compose restart"
+    "docker:restart": "docker-compose restart",
+    "smoke:render": "pnpm --filter frontend smoke:render"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

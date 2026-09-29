@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "smoke:render": "node scripts/smoke-render.mjs"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.4.17",
@@ -75,6 +76,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
     "vite": "^7.1.7",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "playwright-core": "1.49.1"
   }
 }

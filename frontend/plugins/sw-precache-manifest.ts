@@ -62,8 +62,11 @@ export function swPrecacheManifest(): Plugin {
       }
 
       const indexHtml = await readFile(path.join(outDir, "index.html"), "utf-8");
-      const entryAssets = new Set(
-        Array.from(indexHtml.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g), (match) => match[1])
+      const entryScripts = new Set(
+        Array.from(indexHtml.matchAll(/<script[^>]*src="(\/assets\/[^"]+)"/g), (match) => match[1])
+      );
+      const preloadedAssets = new Set(
+        Array.from(indexHtml.matchAll(/<link[^>]*href="(\/assets\/[^"]+)"/g), (match) => match[1])
       );
 
       const shouldPrecache = async (relativePath: string): Promise<boolean> => {
@@ -71,8 +74,9 @@ export function swPrecacheManifest(): Plugin {
         if (url === `/${SW_FILENAME}` || url.endsWith(".map")) return false;
         if (PRECACHE_ROOT_FILES.includes(relativePath)) return true;
         if (!url.startsWith("/assets/")) return false;
+        if (entryScripts.has(url)) return true;
         if (url.endsWith(".css")) return true;
-        if (entryAssets.has(url)) {
+        if (preloadedAssets.has(url)) {
           const info = await stat(path.join(outDir, relativePath));
           return info.size <= ENTRY_ASSET_LIMIT_BYTES;
         }

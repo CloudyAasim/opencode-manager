@@ -58,7 +58,7 @@ describe('MobileSheetHost', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders RepoQuickSwitchSheet when mobileTab=repos', () => {
+  it('renders RepoQuickSwitchSheet when mobileTab=repos', async () => {
     vi.mocked(useMobileTabBar).mockReturnValue({
       openSheet: 'repos',
       open: vi.fn(),
@@ -69,10 +69,10 @@ describe('MobileSheetHost', () => {
         <MobileSheetHost />
       </MemoryRouter>,
     )
-    expect(screen.getByTestId('repo-quick-switch-sheet')).toBeInTheDocument()
+    expect(await screen.findByTestId('repo-quick-switch-sheet')).toBeInTheDocument()
   })
 
-  it('renders FileBrowserSheet with correct props when mobileTab=files', () => {
+  it('renders FileBrowserSheet with correct props when mobileTab=files', async () => {
     vi.mocked(useMobileTabBar).mockReturnValue({
       openSheet: 'files',
       open: vi.fn(),
@@ -83,13 +83,13 @@ describe('MobileSheetHost', () => {
         <MobileSheetHost />
       </MemoryRouter>,
     )
-    const sheet = screen.getByTestId('file-browser-sheet')
+    const sheet = await screen.findByTestId('file-browser-sheet')
     expect(sheet).toBeInTheDocument()
     expect(sheet.getAttribute('data-base-path')).toBe('')
     expect(sheet.getAttribute('data-repo-name')).toBe('Workspace Root')
   })
 
-  it('renders NotificationsSheet when mobileTab=notifications', () => {
+  it('renders NotificationsSheet when mobileTab=notifications', async () => {
     vi.mocked(useMobileTabBar).mockReturnValue({
       openSheet: 'notifications',
       open: vi.fn(),
@@ -100,10 +100,10 @@ describe('MobileSheetHost', () => {
         <MobileSheetHost />
       </MemoryRouter>,
     )
-    expect(screen.getByTestId('notifications-sheet')).toBeInTheDocument()
+    expect(await screen.findByTestId('notifications-sheet')).toBeInTheDocument()
   })
 
-  it('renders MoreDrawer when mobileTab=more', () => {
+  it('renders MoreDrawer when mobileTab=more', async () => {
     vi.mocked(useMobileTabBar).mockReturnValue({
       openSheet: 'more',
       open: vi.fn(),
@@ -114,10 +114,10 @@ describe('MobileSheetHost', () => {
         <MobileSheetHost />
       </MemoryRouter>,
     )
-    expect(screen.getByTestId('more-drawer')).toBeInTheDocument()
+    expect(await screen.findByTestId('more-drawer')).toBeInTheDocument()
   })
 
-  it('closes sheet when onClose is called', () => {
+  it('closes sheet when onClose is called', async () => {
     const mockClose = vi.fn()
     vi.mocked(useMobileTabBar).mockReturnValue({
       openSheet: 'repos',
@@ -129,6 +129,6 @@ describe('MobileSheetHost', () => {
         <MobileSheetHost />
       </MemoryRouter>,
     )
-    expect(screen.getByTestId('repo-quick-switch-sheet')).toBeInTheDocument()
+    expect(await screen.findByTestId('repo-quick-switch-sheet')).toBeInTheDocument()
   })
 })
