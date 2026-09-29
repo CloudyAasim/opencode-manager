@@ -16,7 +16,7 @@
     "build:cli": "pnpm --filter @opencode-manager/ocm-cli build",
     "build:backend": "pnpm --filter backend build",
     "build:frontend": "pnpm --filter frontend build",
-    "typecheck": "pnpm run typecheck:cli && pnpm run typecheck:frontend && pnpm run typecheck:backend",
+    "typecheck": "pnpm run typecheck:cli && pnpm run typecheck:frontend && pnpm run typecheck:backend && pnpm run typecheck:e2e",
     "typecheck:cli": "pnpm --filter @opencode-manager/ocm-cli typecheck",
     "typecheck:frontend": "pnpm --filter frontend typecheck",
     "typecheck:backend": "pnpm --filter backend typecheck",
@@ -36,7 +36,8 @@
     "docker:reset": "docker-compose down -v",
     "docker:logs": "docker-compose logs -f",
     "docker:restart": "docker-compose restart",
-    "smoke:render": "pnpm --filter frontend smoke:render"
+    "smoke:render": "pnpm --filter frontend smoke:render",
+    "typecheck:e2e": "pnpm --filter frontend typecheck:e2e"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

@@ -13,7 +13,8 @@
     "smoke:render": "node scripts/smoke-render.mjs",
     "test:e2e": "playwright test",
     "test:e2e:desktop": "playwright test --project=desktop",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "typecheck:e2e": "tsc -p tsconfig.e2e.json --noEmit"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.4.17",
