@@ -69,31 +69,35 @@ export function swPrecacheManifest(): Plugin {
         Array.from(indexHtml.matchAll(/<link[^>]*href="(\/assets\/[^"]+)"/g), (match) => match[1])
       );
 
-      const shouldPrecache = async (relativePath: string): Promise<boolean> => {
+      const shouldPrecache = async (relativePath: string): Promise<"shell" | "deferred" | false> => {
         const url = toUrl(relativePath);
         if (url === `/${SW_FILENAME}` || url.endsWith(".map")) return false;
-        if (PRECACHE_ROOT_FILES.includes(relativePath)) return true;
+        if (PRECACHE_ROOT_FILES.includes(relativePath)) return "shell";
         if (!url.startsWith("/assets/")) return false;
-        if (entryScripts.has(url)) return true;
-        if (url.endsWith(".css")) return true;
+        if (entryScripts.has(url)) return "shell";
+        if (url.endsWith(".css")) return "shell";
         if (preloadedAssets.has(url)) {
           const info = await stat(path.join(outDir, relativePath));
-          return info.size <= ENTRY_ASSET_LIMIT_BYTES;
+          return info.size <= ENTRY_ASSET_LIMIT_BYTES ? "shell" : "deferred";
         }
 
         const baseName = path.basename(relativePath);
         if (!baseName.endsWith(".js")) return false;
         const chunkName = baseName.split("-")[0];
-        if (ROUTE_CHUNK_NAMES.has(chunkName)) return true;
+        if (ROUTE_CHUNK_NAMES.has(chunkName)) return "deferred";
         const info = await stat(path.join(outDir, relativePath));
-        return info.size <= SMALL_ASSET_LIMIT_BYTES;
+        return info.size <= SMALL_ASSET_LIMIT_BYTES ? "deferred" : false;
       };
 
       const relativePaths = (await collectFiles(outDir)).sort();
-      const selected: string[] = [];
+      const shell: string[] = [];
+      const deferred: string[] = [];
       for (const relativePath of relativePaths) {
-        if (await shouldPrecache(relativePath)) selected.push(relativePath);
+        const tier = await shouldPrecache(relativePath);
+        if (tier === "shell") shell.push(relativePath);
+        else if (tier === "deferred") deferred.push(relativePath);
       }
+      const selected = [...shell, ...deferred];
 
       const hash = createHash("sha256");
       const urls: string[] = [];
@@ -112,7 +116,8 @@ export function swPrecacheManifest(): Plugin {
       const buildHash = hash.digest("hex").slice(0, 16);
       const header =
         `self.__SW_BUILD_HASH__=${JSON.stringify(buildHash)};` +
-        `self.__SW_PRECACHE__=${JSON.stringify(urls)};\n`;
+        `self.__SW_PRECACHE__=${JSON.stringify(urls)};` +
+        `self.__SW_SHELL__=${JSON.stringify(shell.map(toUrl))};\n`;
 
       await writeFile(swPath, header + swSource);
     },

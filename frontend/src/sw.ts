@@ -6,20 +6,45 @@ const worker = self as unknown as ServiceWorkerGlobalScope & typeof globalThis;
 interface SwBuildGlobals {
   __SW_BUILD_HASH__?: string;
   __SW_PRECACHE__?: string[];
+  __SW_SHELL__?: string[];
 }
 
 const buildGlobals = worker as unknown as SwBuildGlobals;
 
 const BUILD_HASH = buildGlobals.__SW_BUILD_HASH__ ?? "dev";
 const PRECACHE_URLS = buildGlobals.__SW_PRECACHE__ ?? [];
+const SHELL_URLS = buildGlobals.__SW_SHELL__ ?? PRECACHE_URLS;
 
 const APP_SHELL_CACHE = `app-shell-${BUILD_HASH}`;
 const RUNTIME_CACHE = `runtime-${BUILD_HASH}`;
 const APP_SHELL_URL = "/index.html";
 const MANAGED_CACHE_PREFIXES = ["app-shell-", "runtime-", "offline-assets-"];
+const DEFERRED_BATCH_SIZE = 6;
+
+async function cacheInBatches(cache: Cache, urls: string[]): Promise<void> {
+  for (let index = 0; index < urls.length; index += DEFERRED_BATCH_SIZE) {
+    const batch = urls.slice(index, index + DEFERRED_BATCH_SIZE);
+    await Promise.allSettled(
+      batch.map(async (url) => {
+        const response = await fetch(url, { cache: "reload" });
+        if (response.ok) await cache.put(url, response);
+      }),
+    );
+  }
+}
 
 worker.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(APP_SHELL_CACHE).then((cache) => cache.addAll(PRECACHE_URLS)));
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(APP_SHELL_CACHE);
+      await Promise.allSettled(
+        SHELL_URLS.map(async (url) => {
+          const response = await fetch(url, { cache: "reload" });
+          if (response.ok) await cache.put(url, response);
+        }),
+      );
+    })(),
+  );
   worker.skipWaiting();
 });
 
@@ -37,13 +62,18 @@ worker.addEventListener("activate", (event) => {
       await Promise.all(stale.map((name) => caches.delete(name)));
       await worker.clients.claim();
 
-      if (!isUpdate) return;
-
-      const clients = await worker.clients.matchAll({ type: "window" });
-      for (const client of clients) {
-        client.postMessage({ type: "SW_UPDATED" });
+      if (isUpdate) {
+        const clients = await worker.clients.matchAll({ type: "window" });
+        for (const client of clients) {
+          client.postMessage({ type: "SW_UPDATED" });
+        }
       }
-    })
+
+      const deferred = PRECACHE_URLS.filter((url) => !SHELL_URLS.includes(url));
+      if (deferred.length === 0) return;
+      const cache = await caches.open(APP_SHELL_CACHE);
+      await cacheInBatches(cache, deferred);
+    }),
   );
 });
 

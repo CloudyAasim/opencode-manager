@@ -34,6 +34,7 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
     if (!isAuthenticated || typeof window === 'undefined' || shouldSkipPrefetch()) return
 
     let cancelled = false
+    let idleHandle: number | undefined
     const warm = (loaders: PrefetchLoader[]) => {
       for (const load of loaders) {
         if (cancelled) return
@@ -41,11 +42,23 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
       }
     }
     const warmAll = () => {
+      if (cancelled) return
       warm(AUTHENTICATED_ROUTES)
       if (isAdmin) warm(ADMIN_ROUTES)
     }
 
-    const timer = setTimeout(warmAll, 250)
+    // Only warm the other routes once the browser is idle, so the critical
+    // chunks for what the user actually opened are never queued behind ~70
+    // speculative requests competing for the same connection.
+    if (typeof window.requestIdleCallback === 'function') {
+      idleHandle = window.requestIdleCallback(warmAll, { timeout: 3000 })
+      return () => {
+        cancelled = true
+        if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
+      }
+    }
+
+    const timer = setTimeout(warmAll, 1500)
     return () => {
       cancelled = true
       clearTimeout(timer)
