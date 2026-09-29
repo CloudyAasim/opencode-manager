@@ -1,424 +1,56 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { getRepo, workspaceLabel } from "@/api/repos";
-import { SessionList } from "@/components/session/SessionList";
-import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
-import { Header } from "@/components/ui/header";
-import { RepoMcpDialog } from "@/components/repo/RepoMcpDialog";
-import { RepoSkillsDialog } from "@/components/repo/RepoSkillsDialog";
-import { SourceControlPanel } from "@/components/source-control";
-import { useCreateSession, useSessionsAcrossDirectories } from "@/hooks/useOpenCode";
-import { useRepoActivity } from "@/hooks/useRepoActivity";
-import { useCreateRepoWorkspace, useDeleteRepoWorkspaces, useRepoSiblings } from "@/hooks/useRepoSiblings";
-import { useSSE } from "@/hooks/useSSE";
-import { useDialogParam } from "@/hooks/useDialogParam";
-import { useWorktreeTab } from "@/hooks/useWorktreeTab";
-import { WorktreeTabs } from "@/components/repo/WorktreeTabs";
-import { WorkspaceManager } from "@/components/repo/WorkspaceManager";
-import { OPENCODE_API_ENDPOINT } from "@/config";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { GitBranch, Plus, Loader2, Layers, Folder, GitCommitHorizontal, CalendarClock, Plug, Sparkles, MessageSquare } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ResetPermissionsDialog } from "@/components/repo/ResetPermissionsDialog";
-import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
-import { getRepoDisplayName } from "@/lib/utils";
-import { projectSessionPath } from "@/lib/project-session-path";
-import { useSidebarAction } from "@/hooks/useSidebarAction";
+import { useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
+import { getRepo } from '@/api/repos'
+import { useSessionsAcrossDirectories } from '@/hooks/useOpenCode'
+import { useCreateSession } from '@/hooks/useOpenCode'
+import { OPENCODE_API_ENDPOINT } from '@/config'
+import { projectSessionPath } from '@/lib/project-session-path'
 import { useI18n } from '@/lib/i18n'
-import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
+import { useWorktreeTab } from '@/hooks/useWorktreeTab'
 
 export function RepoDetail() {
-  const { t } = useI18n();
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const repoId = Number(id) || 0;
-  const [fileBrowserOpen, setFileBrowserOpen] = useDialogParam('files');
-  const [mcpDialogOpen, setMcpDialogOpen] = useDialogParam('mcp');
-  const [skillsDialogOpen, setSkillsDialogOpen] = useDialogParam('skills');
-  const [sourceControlOpen, setSourceControlOpen] = useDialogParam('sourceControl');
-  const [resetPermissionsOpen, setResetPermissionsOpen] = useDialogParam('resetPermissions');
-  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
-  const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
-  const [activeWorkspaceDirectory, setActiveWorkspaceDirectory] = useState<string | undefined>();
-  const { activeTab, setActiveTab } = useWorktreeTab();
+  const { t } = useI18n()
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const repoId = Number(id) || 0
+  const { activeTab } = useWorktreeTab()
 
   const { data: repo, isLoading: repoLoading } = useQuery({
-    queryKey: ["repo", repoId],
+    queryKey: ['repo', repoId],
     queryFn: () => getRepo(repoId),
     enabled: id !== undefined && id !== '',
-  });
+  })
 
-  useRepoActivity(repoId, Boolean(repo));
+  const opcodeUrl = OPENCODE_API_ENDPOINT
+  const { data: existingSessions } = useSessionsAcrossDirectories(
+    opcodeUrl,
+    repo?.fullPath ? [repo.fullPath] : [],
+    { limit: 25 },
+  )
+  const latestSessionId = existingSessions[0]?.id
 
-  const { data: siblings } = useRepoSiblings(repoId);
-  const deleteWorkspaces = useDeleteRepoWorkspaces(repoId);
-  const createWorkspace = useCreateRepoWorkspace(repoId);
-
-  const opcodeUrl = OPENCODE_API_ENDPOINT;
-
-  const workspaceSiblings = useMemo(
-    () => (siblings ?? []).filter((sibling) => !!sibling.workspaceId && !!sibling.fullPath),
-    [siblings],
-  );
-
-  const workspaceDirectories = useMemo(
-    () => workspaceSiblings.map((sibling) => sibling.fullPath).filter(Boolean),
-    [workspaceSiblings],
-  );
-
-  const baseDirectory = repo?.fullPath;
-  const subscriptionDirectories = useMemo(() => {
-    const set = new Set<string>();
-    if (baseDirectory) set.add(baseDirectory);
-    workspaceDirectories.forEach((dir) => set.add(dir));
-    return Array.from(set);
-  }, [baseDirectory, workspaceDirectories]);
+  const createSessionMutation = useCreateSession(opcodeUrl, repo?.fullPath)
 
   useEffect(() => {
-    if (workspaceDirectories.length === 0) {
-      setActiveWorkspaceDirectory(undefined);
-      return;
+    if (repoLoading) return
+    if (latestSessionId) {
+      navigate(projectSessionPath(repoId, latestSessionId, activeTab), { replace: true })
+      return
     }
-
-    setActiveWorkspaceDirectory((current) => (
-      current && workspaceDirectories.includes(current) ? current : workspaceDirectories[0]
-    ));
-  }, [workspaceDirectories]);
-
-  const workspaceComposerDirectory = activeWorkspaceDirectory ?? workspaceDirectories[0];
-  const sessionListDirectories = activeTab === 'workspaces' ? workspaceDirectories : (baseDirectory ? [baseDirectory] : []);
-  const composerDirectory = activeTab === 'workspaces' ? workspaceComposerDirectory : baseDirectory;
-
-  const directoryLabels = useMemo(() => {
-    const labels: Record<string, string> = {};
-    workspaceSiblings.forEach((sibling) => {
-      if (sibling.fullPath) {
-        labels[sibling.fullPath] = workspaceLabel(sibling);
-      }
-    });
-    return labels;
-  }, [workspaceSiblings]);
-
-  const activeWorkspaceLabel = activeWorkspaceDirectory ? directoryLabels[activeWorkspaceDirectory] : undefined;
-
-  useSSE(opcodeUrl, subscriptionDirectories);
-
-  const sessionUrl = useCallback(
-    (sessionId: string) => {
-      const base = `/repos/${repoId}/sessions/${sessionId}`;
-      return activeTab === 'workspaces' ? `${base}?repoTab=workspaces` : base;
-    },
-    [repoId, activeTab],
-  );
-
-  const { data: existingSessions } = useSessionsAcrossDirectories(opcodeUrl, sessionListDirectories, { limit: 25 });
-  const latestSessionId = existingSessions[0]?.id;
-
-  useEffect(() => {
-    if (!latestSessionId) return;
-    navigate(projectSessionPath(repoId, latestSessionId, activeTab), { replace: true });
-  }, [latestSessionId, navigate, repoId, activeTab]);
-
-  const createSessionMutation = useCreateSession(opcodeUrl, composerDirectory, (session) => {
-    navigate(sessionUrl(session.id));
-  });
-
-  const handleCreateSession = async (options?: {
-    agentSlug?: string;
-    promptSlug?: string;
-  }) => {
-    if (activeTab === 'workspaces' && !workspaceComposerDirectory) {
-      setCreateWorkspaceOpen(true);
-      return;
+    if (repo && repo.cloneStatus === 'ready' && !createSessionMutation.isPending) {
+      createSessionMutation.mutate({}, {
+        onSuccess: (session) => {
+          navigate(projectSessionPath(repoId, session.id, activeTab), { replace: true })
+        },
+      })
     }
-
-    await createSessionMutation.mutateAsync({
-      agent: options?.agentSlug,
-    });
-  };
-
-  const handleCreateWorkspace = async () => {
-    const workspace = await createWorkspace.mutateAsync();
-    if (workspace.directory) {
-      setActiveWorkspaceDirectory(workspace.directory);
-    }
-    setActiveTab('workspaces');
-    setCreateWorkspaceOpen(false);
-  };
-
-  const handleOpenWorkspaceSelector = () => {
-    if (workspaceSiblings.length === 0) {
-      setCreateWorkspaceOpen(true);
-      return;
-    }
-    setActiveTab('workspaces');
-    setWorkspaceSelectorOpen(true);
-  };
-
-  const handleSelectSession = (sessionId: string) => {
-    navigate(sessionUrl(sessionId));
-  };
-
-  useSidebarAction('new-session', () => {
-    handleCreateSession();
-  });
-
-  if (repoLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!repo) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <p className="text-muted-foreground">
-          {t('repo.notFound')}
-        </p>
-      </div>
-    );
-  }
-  
-  if (repo.cloneStatus !== 'ready') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">
-            {repo.cloneStatus === 'cloning' ? t('repo.cloningRepository') : t('repo.notReady')}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const repoName = repoId === 0 ? t('misc.assistant.title') : getRepoDisplayName(repo);
-  const branchToDisplay = repo.currentBranch || repo.branch;
-  const displayName = branchToDisplay ? `${repoName} (${branchToDisplay})` : repoName;
-  const currentBranch = repo.currentBranch || repo.branch || DEFAULT_REPO_BRANCH;
-  const isWorktree = repo.isWorktree || false;
+  }, [repoLoading, latestSessionId, repo, repoId, activeTab, navigate, createSessionMutation, opcodeUrl])
 
   return (
-    <div
-      className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0"
-    >
-      <Header>
-        <Header.BackButton to="/" />
-        <div className="flex items-center gap-2 min-w-0">
-          <Header.Title>{repoName}</Header.Title>
-          {isWorktree ? (
-            <Badge className="text-xs px-1.5 sm:px-2.5 py-0.5 bg-primary-soft text-primary border-primary/30" title={t('repo.worktree')}>
-              <GitBranch className="h-3 w-3 sm:mr-1" />
-              <span className="hidden sm:inline">{t('repo.worktreeTab', { branch: currentBranch })}</span>
-            </Badge>
-          ) : null}
-        </div>
-        <Header.Actions>
-          <div className="flex items-center gap-1">
-            <PendingActionsGroup />
-          </div>
-          <Button
-            onClick={() => handleCreateSession()}
-            disabled={!opcodeUrl || createSessionMutation.isPending}
-            size="sm"
-            className="sm:hidden h-10 w-10 p-0 bg-primary hover:bg-primary-hover text-primary-foreground transition-all duration-200 hover:scale-105"
-          >
-            <Plus className="w-5 h-5" />
-          </Button>
-        </Header.Actions>
-      </Header>
-
-      <WorktreeTabs
-        workspaces={workspaceSiblings}
-        value={activeTab}
-        onValueChange={setActiveTab}
-        baseLabel={currentBranch}
-        activeWorkspaceLabel={activeWorkspaceLabel}
-        onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
-        onWorkspaceMenu={handleOpenWorkspaceSelector}
-      />
-
-      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-border px-3 py-2 scrollbar-thin">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 shrink-0"
-          onClick={() => navigate('/files')}
-        >
-          <Folder className="h-4 w-4" />
-          {t('navigation.files')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 shrink-0"
-          onClick={() => setSourceControlOpen(true)}
-        >
-          <GitCommitHorizontal className="h-4 w-4" />
-          {t('navigation.sourceControl')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 shrink-0"
-          onClick={() => navigate(`/repos/${repoId}/schedules`)}
-        >
-          <CalendarClock className="h-4 w-4" />
-          {t('navigation.schedules')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 shrink-0"
-          onClick={() => setMcpDialogOpen(true)}
-        >
-          <Plug className="h-4 w-4" />
-          {t('navigation.mcp')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 shrink-0"
-          onClick={() => setSkillsDialogOpen(true)}
-        >
-          <Sparkles className="h-4 w-4" />
-          {t('navigation.skills')}
-        </Button>
-      </div>
-
-      <WorkspaceManager
-        open={workspaceSelectorOpen}
-        onOpenChange={setWorkspaceSelectorOpen}
-        workspaces={workspaceSiblings}
-        activeWorkspaceDirectory={activeWorkspaceDirectory}
-        onActiveWorkspaceChange={setActiveWorkspaceDirectory}
-        onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
-        onDelete={(workspaceIds) => deleteWorkspaces.mutate(workspaceIds)}
-        isDeleting={deleteWorkspaces.isPending}
-      />
-
-      <div className="flex flex-1 min-h-0">
-        {opcodeUrl && sessionListDirectories.length > 0 && (
-          <aside className="w-full md:w-72 md:shrink-0 md:border-r md:border-border min-h-0 flex flex-col overflow-hidden">
-            <SessionList
-              opcodeUrl={opcodeUrl}
-              directories={sessionListDirectories}
-              directoryLabels={activeTab === 'workspaces' ? directoryLabels : undefined}
-              createDirectory={activeTab === 'workspaces' ? workspaceComposerDirectory : baseDirectory}
-              onSelectSession={handleSelectSession}
-            />
-          </aside>
-        )}
-        <div className="hidden md:flex flex-1 min-h-0 flex-col items-center justify-center gap-3 p-6 text-center">
-          <MessageSquare className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">{t('repo.selectSessionHint')}</p>
-          <Button
-            onClick={() => handleCreateSession()}
-            disabled={!opcodeUrl || createSessionMutation.isPending}
-            size="sm"
-            className="bg-primary hover:bg-primary-hover text-primary-foreground"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            {t('navigation.newSession')}
-          </Button>
-        </div>
-      </div>
-
-      <CreateWorkspaceDialog
-        open={createWorkspaceOpen}
-        onOpenChange={setCreateWorkspaceOpen}
-        onCreate={handleCreateWorkspace}
-        isCreating={createWorkspace.isPending}
-      />
-
-      <FileBrowserSheet
-        isOpen={fileBrowserOpen}
-        onClose={() => setFileBrowserOpen(false)}
-        basePath={repo.localPath}
-        repoName={displayName}
-        repoId={repoId}
-        allowNavigateAboveBase={true}
-      />
-
-      <RepoMcpDialog
-        open={mcpDialogOpen}
-        onOpenChange={setMcpDialogOpen}
-        directory={composerDirectory}
-      />
-
-      <RepoSkillsDialog
-        open={skillsDialogOpen}
-        onOpenChange={setSkillsDialogOpen}
-        repoId={repoId}
-      />
-
-      <SourceControlPanel
-        repoId={repoId}
-        isOpen={sourceControlOpen}
-        onClose={() => setSourceControlOpen(false)}
-        currentBranch={currentBranch}
-        repoName={repoName}
-      />
-
-      <ResetPermissionsDialog
-        open={resetPermissionsOpen}
-        onOpenChange={setResetPermissionsOpen}
-        repoId={repoId}
-      />
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" aria-label={t('repo.loading')} />
     </div>
-  );
-}
-
-interface CreateWorkspaceDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCreate: () => Promise<void>;
-  isCreating: boolean;
-}
-
-function CreateWorkspaceDialog({ open, onOpenChange, onCreate, isCreating }: CreateWorkspaceDialogProps) {
-  const { t } = useI18n();
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-primary" />
-            {t('repo.createWorkspace')}
-          </DialogTitle>
-          <DialogDescription>
-            {t('repo.createWorkspaceDescription')}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
-          <div className="flex items-center gap-2 font-medium">
-            <GitBranch className="h-4 w-4 text-primary" />
-            {t('repo.worktree')}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t('repo.createWorkspaceHint')}
-          </p>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
-            {t('repo.cancel')}
-          </Button>
-          <Button onClick={() => { void onCreate(); }} disabled={isCreating} className="bg-primary hover:bg-primary-hover text-primary-foreground">
-            {isCreating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {t('repo.creating')}
-              </>
-            ) : (
-              t('repo.createWorkspace')
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  )
 }

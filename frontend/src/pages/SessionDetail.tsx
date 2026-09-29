@@ -25,6 +25,12 @@ import { Button } from "@/components/ui/button";
 import { ContextUsageIndicator } from "@/components/session/ContextUsageIndicator";
 import { useSession, useAbortSession, useUpdateSession, useMessages, useCreateSession } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
+import { useRepoSiblings, useCreateRepoWorkspace, useDeleteRepoWorkspaces } from "@/hooks/useRepoSiblings";
+import { useWorktreeTab } from "@/hooks/useWorktreeTab";
+import { WorktreeTabs } from "@/components/repo/WorktreeTabs";
+import { WorkspaceManager } from "@/components/repo/WorkspaceManager";
+import { CreateWorkspaceDialog } from "@/components/repo/CreateWorkspaceDialog";
+import { workspaceLabel } from "@/api/repos";
 import { OPENCODE_API_ENDPOINT } from "@/config";
 import { useSSE } from "@/hooks/useSSE";
 import { useUIState } from "@/stores/uiStateStore";
@@ -280,6 +286,64 @@ export function SessionDetail() {
   });
 
   useRepoActivity(repoId, Boolean(repo));
+
+  const { activeTab, setActiveTab } = useWorktreeTab();
+  const { data: siblings } = useRepoSiblings(repoId);
+  const createWorkspace = useCreateRepoWorkspace(repoId);
+  const deleteWorkspaces = useDeleteRepoWorkspaces(repoId);
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
+  const [activeWorkspaceDirectory, setActiveWorkspaceDirectory] = useState<string | undefined>();
+
+  const workspaceSiblings = useMemo(
+    () => (siblings ?? []).filter((sibling) => !!sibling.workspaceId && !!sibling.fullPath),
+    [siblings],
+  );
+
+  const workspaceDirectories = useMemo(
+    () => workspaceSiblings.map((sibling) => sibling.fullPath).filter(Boolean),
+    [workspaceSiblings],
+  );
+
+  const directoryLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    workspaceSiblings.forEach((sibling) => {
+      if (sibling.fullPath) {
+        labels[sibling.fullPath] = workspaceLabel(sibling);
+      }
+    });
+    return labels;
+  }, [workspaceSiblings]);
+
+  useEffect(() => {
+    if (workspaceDirectories.length === 0) {
+      setActiveWorkspaceDirectory(undefined);
+      return;
+    }
+    setActiveWorkspaceDirectory((current) => (
+      current && workspaceDirectories.includes(current) ? current : workspaceDirectories[0]
+    ));
+  }, [workspaceDirectories]);
+
+  const handleCreateWorkspace = useCallback(async () => {
+    const workspace = await createWorkspace.mutateAsync();
+    if (workspace.directory) {
+      setActiveWorkspaceDirectory(workspace.directory);
+    }
+    setActiveTab('workspaces');
+    setCreateWorkspaceOpen(false);
+  }, [createWorkspace, setActiveTab]);
+
+  const handleOpenWorkspaceSelector = useCallback(() => {
+    if (workspaceSiblings.length === 0) {
+      setCreateWorkspaceOpen(true);
+      return;
+    }
+    setActiveTab('workspaces');
+    setWorkspaceSelectorOpen(true);
+  }, [workspaceSiblings.length, setActiveTab]);
+
+  const currentBranch = repo?.currentBranch || repo?.branch || DEFAULT_REPO_BRANCH;
 
   const opcodeUrl = OPENCODE_API_ENDPOINT;
   
@@ -1042,7 +1106,7 @@ export function SessionDetail() {
         repoId={repoId}
         isOpen={sourceControlOpen}
         onClose={() => setSourceControlOpen(false)}
-        currentBranch={repo?.currentBranch || repo?.branch || DEFAULT_REPO_BRANCH}
+        currentBranch={currentBranch}
         repoName={workspaceDisplayName}
       />
 
@@ -1051,6 +1115,40 @@ export function SessionDetail() {
         onOpenChange={setResetPermissionsOpen}
         repoId={repoId}
       />
+
+      {!isAssistantSession && (
+        <>
+          <WorktreeTabs
+            workspaces={workspaceSiblings}
+            value={activeTab}
+            onValueChange={setActiveTab}
+            baseLabel={currentBranch}
+            activeWorkspaceLabel={
+              activeWorkspaceDirectory ? directoryLabels[activeWorkspaceDirectory] : undefined
+            }
+            onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
+            onWorkspaceMenu={handleOpenWorkspaceSelector}
+          />
+
+          <WorkspaceManager
+            open={workspaceSelectorOpen}
+            onOpenChange={setWorkspaceSelectorOpen}
+            workspaces={workspaceSiblings}
+            activeWorkspaceDirectory={activeWorkspaceDirectory}
+            onActiveWorkspaceChange={setActiveWorkspaceDirectory}
+            onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
+            onDelete={(workspaceIds) => deleteWorkspaces.mutate(workspaceIds)}
+            isDeleting={deleteWorkspaces.isPending}
+          />
+
+          <CreateWorkspaceDialog
+            open={createWorkspaceOpen}
+            onOpenChange={setCreateWorkspaceOpen}
+            onCreate={handleCreateWorkspace}
+            isCreating={createWorkspace.isPending}
+          />
+        </>
+      )}
     </div>
   );
 }
