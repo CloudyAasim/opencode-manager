@@ -133,14 +133,15 @@ describe('MobileTabBar', () => {
     expect(screen.getByText('Projects')).toBeInTheDocument()
     expect(screen.getByText('Files')).toBeInTheDocument()
     expect(screen.getByText('Assistant')).toBeInTheDocument()
-    expect(screen.getByText('More')).toBeInTheDocument()
+    expect(screen.getByText('Terminal')).toBeInTheDocument()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
   it('renders tab bar on /schedules path', () => {
     vi.mocked(useMobile).mockReturnValue(true)
     renderTabBar(['/schedules'])
     expect(screen.getByText('Projects')).toBeInTheDocument()
-    expect(screen.getByText('More')).toBeInTheDocument()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
   it('Projects tab is active when pathname is / and no sheet is open', () => {
@@ -185,17 +186,18 @@ describe('MobileTabBar', () => {
     expect(secondProjectsButton).toBeInTheDocument()
   })
 
-  it('does not render tab bar on SessionDetail path /repos/:id/sessions/:sid', () => {
+  it('keeps the tab bar on SessionDetail so navigation does not vanish', () => {
     vi.mocked(useMobile).mockReturnValue(true)
     const queryClient = new QueryClient()
-    const { container } = render(
+    render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/repos/1/sessions/abc']}>
           <MobileTabBar />
         </MemoryRouter>
       </QueryClientProvider>,
     )
-    expect(container.firstChild).toBeNull()
+    expect(screen.getByText('Projects')).toBeInTheDocument()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
 })

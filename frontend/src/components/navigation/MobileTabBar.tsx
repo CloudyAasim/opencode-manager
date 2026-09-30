@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { FolderGit2, FolderOpen, CalendarClock, Menu, Info, History, Bot } from 'lucide-react'
+import { FolderGit2, FolderOpen, CalendarClock, TerminalSquare, Settings, Info, History, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useMobile } from '@/hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
@@ -21,7 +21,6 @@ interface TabDef {
 interface GlobalTabsArgs {
   pathname: string
   openSheet: ReturnType<typeof useMobileTabBar>['openSheet']
-  open: ReturnType<typeof useMobileTabBar>['open']
   close: ReturnType<typeof useMobileTabBar>['close']
   navigate: ReturnType<typeof useNavigate>
 }
@@ -57,11 +56,11 @@ function getMobileTabRouteState(pathname: string): MobileTabRouteState {
     case 'schedules':
       return { mode: 'schedule', isInsideRepo: true, repoId }
     default:
-      return { mode: 'hidden', isInsideRepo: false, repoId }
+      return { mode: 'global', isInsideRepo: true, repoId }
   }
 }
 
-function buildGlobalTabs({ pathname, openSheet, open, close, navigate }: GlobalTabsArgs): TabDef[] {
+function buildGlobalTabs({ pathname, openSheet, close, navigate }: GlobalTabsArgs): TabDef[] {
   const handleFilesClick = () => {
     close()
     navigate('/files')
@@ -98,12 +97,20 @@ function buildGlobalTabs({ pathname, openSheet, open, close, navigate }: GlobalT
       active: isAssistantPath(pathname) && !openSheet,
     },
     {
-      key: 'more',
-      label: 'More',
-      labelKey: 'navigation.more',
-      icon: Menu,
-      onClick: () => open('more'),
-      active: openSheet === 'more',
+      key: 'terminal',
+      label: 'Terminal',
+      labelKey: 'navigation.terminal',
+      icon: TerminalSquare,
+      onClick: () => { close(); navigate('/terminal') },
+      active: pathname === '/terminal' && !openSheet,
+    },
+    {
+      key: 'settings',
+      label: 'Settings',
+      labelKey: 'navigation.settings',
+      icon: Settings,
+      onClick: () => { close(); navigate('/settings') },
+      active: pathname === '/settings' && !openSheet,
     },
   ]
 }
@@ -177,7 +184,7 @@ const TabBarRow = memo(function TabBarRow({ tabs }: TabBarRowProps) {
 export const MobileTabBar = memo(function MobileTabBar() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { openSheet, open, close } = useMobileTabBar()
+  const { openSheet, close } = useMobileTabBar()
   const { scheduleTab, setScheduleTab } = useScheduleUrlState()
   const isMobile = useMobile()
   const routeState = useMemo(() => getMobileTabRouteState(pathname), [pathname])
@@ -188,7 +195,6 @@ export const MobileTabBar = memo(function MobileTabBar() {
       : buildGlobalTabs({
         pathname,
         openSheet,
-        open,
         close,
         navigate,
       })),
@@ -198,7 +204,6 @@ export const MobileTabBar = memo(function MobileTabBar() {
       setScheduleTab,
       pathname,
       openSheet,
-      open,
       close,
       navigate,
     ],

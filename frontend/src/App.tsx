@@ -189,7 +189,8 @@ function AppShell() {
         <VersionNotifier />
         <PwaUpdatePrompt />
         <Toaster
-          position="bottom-right"
+          position={isDesktop ? 'bottom-right' : 'top-center'}
+          offset={isDesktop ? undefined : '64px'}
           expand={false}
           richColors
           closeButton

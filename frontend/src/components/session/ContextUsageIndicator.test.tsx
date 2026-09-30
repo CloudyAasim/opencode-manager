@@ -3,8 +3,10 @@ import { render, screen } from '@testing-library/react'
 import { ContextUsageIndicator } from './ContextUsageIndicator'
 
 const useContextUsage = vi.hoisted(() => vi.fn())
+const useMediaQuery = vi.hoisted(() => vi.fn(() => true))
 
 vi.mock('@/hooks/useContextUsage', () => ({ useContextUsage }))
+vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery }))
 
 function usage(overrides: Record<string, unknown> = {}) {
   return {
@@ -18,6 +20,7 @@ function usage(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   useContextUsage.mockReset()
+  useMediaQuery.mockReturnValue(true)
 })
 
 describe('ContextUsageIndicator', () => {
@@ -51,5 +54,29 @@ describe('ContextUsageIndicator', () => {
     )
 
     expect(screen.getByText('Disconnected')).toBeInTheDocument()
+  })
+
+  it('collapses to a bare dot on narrow viewports while reconnecting', () => {
+    useMediaQuery.mockReturnValue(false)
+    useContextUsage.mockReturnValue(usage())
+
+    render(
+      <ContextUsageIndicator opcodeUrl="http://x" sessionID="s1" isConnected isReconnecting />,
+    )
+
+    expect(screen.getByLabelText(/reconnect/i)).toBeInTheDocument()
+    expect(screen.queryByText(/reconnect/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps the percentage but drops the label on narrow viewports', () => {
+    useMediaQuery.mockReturnValue(false)
+    useContextUsage.mockReturnValue(usage())
+
+    render(
+      <ContextUsageIndicator opcodeUrl="http://x" sessionID="s1" isConnected isReconnecting={false} />,
+    )
+
+    expect(screen.getByLabelText(/12,345/)).toBeInTheDocument()
+    expect(screen.getByText('42%')).toBeInTheDocument()
   })
 })

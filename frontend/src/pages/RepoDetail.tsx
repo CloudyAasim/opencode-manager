@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
 import { getRepo } from '@/api/repos'
 import { OPENCODE_API_ENDPOINT } from '@/config'
 import { projectSessionPath } from '@/lib/project-session-path'
@@ -96,8 +95,26 @@ export function RepoDetail() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" aria-label={t('repo.loading')} />
+    <div className="flex h-dvh max-h-dvh flex-col bg-background">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
+        <div className="h-7 w-7 shrink-0 animate-pulse rounded-md bg-muted" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="h-3 w-28 animate-pulse rounded bg-muted" />
+          <div className="h-2.5 w-16 animate-pulse rounded bg-muted" />
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-3 overflow-hidden p-3">
+        {[0, 1, 2, 3, 4].map((row) => (
+          <div key={row} className="flex items-center gap-3 rounded-lg border border-border p-3">
+            <div className="h-8 w-8 shrink-0 animate-pulse rounded-md bg-muted" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-3 w-2/5 animate-pulse rounded bg-muted" />
+              <div className="h-2.5 w-3/5 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <span className="sr-only" role="status">{t('repo.loading')}</span>
     </div>
   )
 }
