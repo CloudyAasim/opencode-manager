@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 
 type PrefetchLoader = () => Promise<unknown>
 
+const PREFETCH_START_DELAY_MS = 5000
+
 const AUTHENTICATED_ROUTES: PrefetchLoader[] = [
   () => import('../pages/Repos'),
   () => import('../pages/RepoDetail'),
@@ -35,33 +37,43 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
 
     let cancelled = false
     let idleHandle: number | undefined
-    const warm = (loaders: PrefetchLoader[]) => {
+    let timer: number | undefined
+
+    const run = async (loaders: PrefetchLoader[]) => {
+      // One at a time on purpose. Firing all nine at once pulls ~70 chunks
+      // in parallel, and on a cross-border link those speculative requests
+      // are slower than the chunks the user is actually waiting for.
       for (const load of loaders) {
         if (cancelled) return
-        void load().catch(() => undefined)
+        try {
+          await load()
+        } catch {
+          void 0
+        }
       }
     }
+
     const warmAll = () => {
       if (cancelled) return
-      warm(AUTHENTICATED_ROUTES)
-      if (isAdmin) warm(ADMIN_ROUTES)
+      void run(isAdmin ? [...AUTHENTICATED_ROUTES, ...ADMIN_ROUTES] : AUTHENTICATED_ROUTES)
     }
 
-    // Only warm the other routes once the browser is idle, so the critical
-    // chunks for what the user actually opened are never queued behind ~70
-    // speculative requests competing for the same connection.
-    if (typeof window.requestIdleCallback === 'function') {
-      idleHandle = window.requestIdleCallback(warmAll, { timeout: 3000 })
-      return () => {
-        cancelled = true
-        if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
+    const start = () => {
+      if (cancelled || idleHandle !== undefined) return
+      if (typeof window.requestIdleCallback === 'function') {
+        idleHandle = window.requestIdleCallback(warmAll, { timeout: 5000 })
+      } else {
+        timer = window.setTimeout(warmAll, 2000)
       }
     }
 
-    const timer = setTimeout(warmAll, 1500)
+    // Give the shell and the current route priority before speculating.
+    timer = window.setTimeout(start, PREFETCH_START_DELAY_MS)
+
     return () => {
       cancelled = true
-      clearTimeout(timer)
+      if (timer !== undefined) window.clearTimeout(timer)
+      if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
     }
   }, [isAuthenticated, isAdmin])
 }
