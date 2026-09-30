@@ -106,7 +106,9 @@ export function ResizableSplit({
     return (
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         <div className={cn('min-h-0 flex-1', primaryClassName)}>{primary}</div>
-        <div className={cn('min-h-0 flex-1', secondaryClassName)}>{secondary}</div>
+        <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', secondaryClassName)}>
+          {secondary}
+        </div>
       </div>
     )
   }
@@ -144,7 +146,9 @@ export function ResizableSplit({
         data-testid="split-handle"
         data-dragging={dragging || undefined}
       />
-      <div className={cn('min-w-0 min-h-0 flex-1', secondaryClassName)}>{secondary}</div>
+      <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', secondaryClassName)}>
+        {secondary}
+      </div>
     </div>
   )
 }

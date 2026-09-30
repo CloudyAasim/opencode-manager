@@ -318,3 +318,98 @@ test.describe('preview width containment', () => {
     expect(documentWidth).toBeLessThanOrEqual(viewport + 2)
   })
 })
+
+test.describe('preview scrolling', () => {
+  const TALL_CONTENT = Array.from({ length: 200 }, (_, index) => `line ${index} some content here`).join('\n')
+
+  async function openTallFile(page: import('@playwright/test').Page) {
+    await signIn(page)
+    await installApiMocks(page, { repos: [REPO] })
+    await page.route(/.*\/api\/files(\/ignored-paths)?(\?.*)?$/, (route) => {
+      const url = new URL(route.request().url())
+      if (url.pathname.endsWith('/ignored-paths')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ignoredPaths: [] }),
+        })
+      }
+      const target = url.searchParams.get('path') ?? ''
+      if (target === 'tall.txt') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            name: 'tall.txt',
+            path: 'tall.txt',
+            isDirectory: false,
+            size: TALL_CONTENT.length,
+            mimeType: 'text/plain',
+            lastModified: new Date(0).toISOString(),
+            content: btoa(TALL_CONTENT),
+          }),
+        })
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          name: 'root',
+          path: '',
+          isDirectory: true,
+          size: 0,
+          workspaceRoot: REPO.fullPath,
+          children: [
+            { name: 'tall.txt', path: 'tall.txt', isDirectory: false, size: TALL_CONTENT.length, lastModified: new Date(0).toISOString() },
+          ],
+        }),
+      })
+    })
+    await page.goto('/files')
+    await expect(page.locator('[data-testid="file-list-scroller"]')).toBeVisible()
+    await page.locator('[data-tree-row="tall.txt"]').click()
+    await expect(page.locator('[data-preview-root]')).toBeVisible({ timeout: 15_000 })
+  }
+
+  test.skip(({ viewport }) => (viewport?.width ?? 0) < 768, 'the split pane is desktop only')
+
+  test('the preview is bounded by the viewport instead of growing to fit the file', async ({ page }) => {
+    await openTallFile(page)
+
+    const metrics = await page.evaluate(() => {
+      const root = document.querySelector('[data-preview-root]')
+      if (!root) return null
+      return {
+        rootHeight: Math.round(root.getBoundingClientRect().height),
+        viewport: window.innerHeight,
+        documentScrolls: document.documentElement.scrollHeight > window.innerHeight + 2,
+      }
+    })
+
+    expect(metrics).not.toBeNull()
+    expect(metrics?.rootHeight).toBeLessThanOrEqual((metrics?.viewport ?? 0) + 2)
+    expect(metrics?.documentScrolls).toBe(false)
+  })
+
+  test('a file taller than the pane scrolls inside the pane', async ({ page }) => {
+    await openTallFile(page)
+
+    const scrolled = await page.evaluate(() => {
+      const candidates = [...document.querySelectorAll('[data-preview-root] *')].filter((el) => {
+        const style = getComputedStyle(el)
+        return (
+          (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+          el.scrollHeight > el.clientHeight + 2
+        )
+      })
+      const target = candidates[0] as HTMLElement | undefined
+      if (!target) return { found: false }
+      target.scrollTop = 500
+      return { found: true, scrollTop: Math.round(target.scrollTop), scrollHeight: target.scrollHeight, clientHeight: target.clientHeight }
+    })
+
+    expect(scrolled.found).toBe(true)
+    expect(scrolled.scrollTop).toBeGreaterThan(0)
+    expect(scrolled.scrollHeight).toBeGreaterThan(scrolled.clientHeight ?? 0)
+  })
+})
