@@ -28,7 +28,7 @@ async function cacheInBatches(cache: Cache, urls: string[]): Promise<void> {
     const batch = urls.slice(index, index + DEFERRED_BATCH_SIZE);
     await Promise.allSettled(
       batch.map(async (url) => {
-        const response = await fetch(url, { cache: "reload" });
+        const response = await fetch(url);
         if (response.ok) await cache.put(url, response);
       }),
     );
@@ -48,7 +48,10 @@ worker.addEventListener("install", (event) => {
       const cache = await caches.open(APP_SHELL_CACHE);
       await Promise.allSettled(
         SHELL_URLS.map(async (url) => {
-          const response = await fetch(url, { cache: "reload" });
+          // No cache: "reload" here. Hashed assets are served immutable for a
+          // year, so the default strategy answers from the HTTP cache instead
+          // of re-downloading the shell, which is what kept activation slow.
+          const response = await fetch(url);
           if (response.ok) await cache.put(url, response);
         }),
       );
