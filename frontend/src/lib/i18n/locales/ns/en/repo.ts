@@ -291,6 +291,8 @@ export const repo = {
     },
     actions: {
       download: 'Download',
+      copy: 'Duplicate',
+      copyName: 'New name',
       rename: 'Rename',
       delete: 'Delete',
     },

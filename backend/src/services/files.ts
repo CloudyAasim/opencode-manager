@@ -204,6 +204,43 @@ export async function createFileOrFolder(userPath: string, body: { type: 'file' 
 }
 }
 
+async function copyRecursive(source: string, destination: string): Promise<void> {
+  const stats = await fs.stat(source)
+  if (stats.isDirectory()) {
+    await mkdirSafe(destination)
+    const entries = await fs.readdir(source)
+    for (const entry of entries) {
+      await copyRecursive(path.join(source, entry), path.join(destination, entry))
+    }
+    return
+  }
+  await mkdirSafe(path.dirname(destination))
+  await fs.copyFile(source, destination)
+}
+
+export async function copyFileOrFolder(userPath: string, body: { newPath: string }): Promise<FileInfo> {
+  const sourceValidated = validatePath(userPath)
+  const targetValidated = validatePath(body.newPath)
+
+  if (await fs.stat(targetValidated).then(() => true, () => false)) {
+    throw new ValidationError('A file or folder already exists at the destination')
+  }
+  if (targetValidated === sourceValidated || targetValidated.startsWith(`${sourceValidated}/`)) {
+    throw new ValidationError('Cannot copy a folder into itself')
+  }
+
+  await copyRecursive(sourceValidated, targetValidated)
+  const stats = await getFileStats(targetValidated)
+
+  return {
+    name: path.basename(targetValidated),
+    path: body.newPath,
+    isDirectory: stats.isDirectory,
+    size: stats.size,
+    lastModified: stats.lastModified,
+  }
+}
+
 export async function deleteFileOrFolder(userPath: string): Promise<void> {
   const validatedPath = validatePath(userPath)
   

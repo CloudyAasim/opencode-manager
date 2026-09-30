@@ -16,6 +16,7 @@ import {
   Edit3,
   Download
 } from 'lucide-react'
+import { Copy } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,7 @@ interface FileTreeProps {
   selectedFile: FileInfo | null
   onDelete: (path: string) => void
   onRename: (oldPath: string, newPath: string) => void
+  onCopy?: (sourcePath: string, newPath: string) => void
   currentPath?: string
   basePath?: string
   onNavigateUp?: () => void
@@ -46,9 +48,10 @@ interface TreeNodeProps {
   selectedFile?: FileInfo | null
   onDelete?: (path: string) => void
   onRename?: (oldPath: string, newPath: string) => void
+  onCopy?: (sourcePath: string, newPath: string) => void
 }
 
-function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename }: TreeNodeProps) {
+function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename, onCopy }: TreeNodeProps) {
   const { t } = useI18n()
   const isMobile = useMobile()
   const [expanded, setExpanded] = useState(false)
@@ -93,6 +96,28 @@ function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, o
   const handleRenameCancel = () => {
     setEditing(false)
     setEditName(file.name)
+  }
+
+  const [copying, setCopying] = useState(false)
+  const [copyName, setCopyName] = useState('')
+
+  const handleCopy = () => {
+    setCopying(true)
+    setCopyName(`${file.name}-copy`)
+  }
+
+  const handleCopySubmit = () => {
+    if (copyName && copyName !== file.name) {
+      const target = file.path.replace(/\/[^/]+$/, `/${copyName}`)
+      onCopy?.(file.path, target)
+    }
+    setCopying(false)
+    setCopyName('')
+  }
+
+  const handleCopyCancel = () => {
+    setCopying(false)
+    setCopyName('')
   }
 
   const handleDownload = () => {
@@ -199,6 +224,32 @@ function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, o
               <Edit3 className="w-4 h-4 mr-2" />
               {t('repo.fileBrowser.actions.rename')}
             </DropdownMenuItem>
+            {onCopy && !copying && (
+              <DropdownMenuItem onClick={handleCopy}>
+                <Copy className="w-4 h-4 mr-2" />
+                {t('repo.fileBrowser.actions.copy')}
+              </DropdownMenuItem>
+            )}
+            {copying && (
+              <div
+                className="px-2 py-1.5"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <Input
+                  value={copyName}
+                  onChange={(e) => setCopyName(e.target.value)}
+                  onBlur={handleCopySubmit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCopySubmit()
+                    if (e.key === 'Escape') handleCopyCancel()
+                  }}
+                  className="h-8 text-sm"
+                  placeholder={t('repo.fileBrowser.actions.copyName')}
+                  autoFocus
+                />
+              </div>
+            )}
             <DropdownMenuItem onClick={handleDelete} className="text-red-600">
               <Trash2 className="w-4 h-4 mr-2" />
               {t('repo.fileBrowser.actions.delete')}
@@ -219,6 +270,7 @@ function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, o
               selectedFile={selectedFile}
               onDelete={onDelete}
               onRename={onRename}
+              onCopy={onCopy}
             />
           ))}
         </div>
@@ -237,7 +289,7 @@ function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, o
   )
 }
 
-export const FileTree = memo(function FileTree({ files, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename, currentPath = '', basePath = '', onNavigateUp, canNavigateUp }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename, onCopy, currentPath = '', basePath = '', onNavigateUp, canNavigateUp }: FileTreeProps) {
   const { t } = useI18n()
   const handleGoUp = () => {
     onNavigateUp?.()
@@ -272,7 +324,7 @@ export const FileTree = memo(function FileTree({ files, onFileSelect, onDirector
             selectedFile={selectedFile}
             onDelete={onDelete}
             onRename={onRename}
-            
+            onCopy={onCopy}
           />
         ))
       )}

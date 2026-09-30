@@ -195,7 +195,12 @@ export function createFileRoutes() {
         const result = await fileService.applyFilePatches(path, body.patches)
         return c.json(result)
       }
-      
+
+      if (body.operation === 'copy') {
+        const result = await fileService.copyFileOrFolder(path, body)
+        return c.json(result)
+      }
+
       const result = await fileService.renameOrMoveFile(path, body)
       return c.json(result)
     } catch (error: unknown) {

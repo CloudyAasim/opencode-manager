@@ -1,0 +1,186 @@
+import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { FileBrowserView, type FileBrowserHandle } from './FileBrowserView'
+import { useFileBrowserController } from './useFileBrowserController'
+import { getRepoRelativeDisplayPath } from './display-path'
+import { Button } from '@/components/ui/button'
+import { PathDisplay } from '@/components/ui/path-display'
+import { DownloadDialog } from '@/components/ui/download-dialog'
+import { downloadDirectoryAsZip } from '@/api/files'
+import { downloadRepo } from '@/api/repos'
+import { Download } from 'lucide-react'
+import { useI18n } from '@/lib/i18n'
+import type { FileInfo } from '@/types/files'
+import { showToast } from '@/lib/toast'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+interface FileBrowserPageProps {
+  basePath?: string
+  repoName?: string
+  repoId?: number
+  allowNavigateAboveBase?: boolean
+  onFileSelect?: (file: FileInfo) => void
+}
+
+export function FileBrowserPage({
+  basePath = '',
+  repoName,
+  repoId,
+  allowNavigateAboveBase = true,
+  onFileSelect,
+}: FileBrowserPageProps) {
+  const navigate = useNavigate()
+  const fileBrowserRef = useRef<FileBrowserHandle>(null)
+
+  const controller = useFileBrowserController({
+    basePath,
+    allowNavigateAboveBase,
+    onFileSelect,
+  })
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/')
+    }
+  }
+
+  const currentPath = controller.currentPath
+  const displayPath = allowNavigateAboveBase
+    ? currentPath
+    : getRepoRelativeDisplayPath(currentPath, basePath)
+
+  return (
+    <div className="h-dvh max-h-dvh flex flex-col bg-background overflow-hidden pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
+      <FileBrowserHeader
+        back={handleBack}
+        repoName={repoName}
+        path={displayPath}
+        repoId={repoId}
+        basePath={basePath}
+        onLoadDirectory={(p) => void controller.loadFiles(p)}
+      />
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        <FileBrowserView
+          ref={fileBrowserRef}
+          controller={controller}
+          basePath={basePath}
+          showPath={false}
+          showHeader={false}
+          allowNavigateAboveBase={allowNavigateAboveBase}
+        />
+      </div>
+    </div>
+  )
+}
+
+interface FileBrowserHeaderProps {
+  back: () => void
+  repoName?: string
+  path: string
+  repoId?: number
+  basePath: string
+  onLoadDirectory: (path: string) => void
+}
+
+function FileBrowserHeader({ back, repoName, path, repoId, basePath }: FileBrowserHeaderProps) {
+  const { t } = useI18n()
+  const [downloadDialog, setDownloadDialog] = useState<{ type: 'directory' | 'repository' } | null>(null)
+
+  const handleDownloadDirectory = async () => {
+    if (!path) {
+      showToast.error(t('repo.download.noPath'))
+      return
+    }
+    try {
+      await downloadDirectoryAsZip(path)
+      showToast.success(t('repo.download.started'))
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : t('repo.download.failed'))
+    } finally {
+      setDownloadDialog(null)
+    }
+  }
+
+  const handleDownloadRepo = async () => {
+    if (repoId == null) {
+      showToast.error(t('repo.download.noPath'))
+      return
+    }
+    try {
+      await downloadRepo(repoId, repoName ?? '')
+      showToast.success(t('repo.download.started'))
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : t('repo.download.failed'))
+    } finally {
+      setDownloadDialog(null)
+    }
+  }
+
+  return (
+    <header className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-3 py-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={back}
+        aria-label={t('common.back')}
+        title={t('common.back')}
+        className="h-8 w-8 shrink-0"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+      {repoName && (
+        <h1 className="text-sm font-semibold text-foreground shrink-0 truncate max-w-[120px] sm:max-w-[160px]">
+          {repoName}
+        </h1>
+      )}
+      <PathDisplay path={path} maxSegments={4} className="truncate flex-1 min-w-0" />
+      {(repoId != null || basePath) && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              aria-label={t('repo.download.label')}
+              title={t('repo.download.label')}
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setDownloadDialog({ type: 'directory' })}>
+              <Download className="w-4 h-4 mr-2" />
+              {t('repo.download.currentDirectory')}
+            </DropdownMenuItem>
+            {repoId != null && (
+              <DropdownMenuItem onClick={() => setDownloadDialog({ type: 'repository' })}>
+                <Download className="w-4 h-4 mr-2" />
+                {t('repo.download.entireRepository')}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+      <DownloadDialog
+        open={downloadDialog !== null}
+        onOpenChange={(open) => !open && setDownloadDialog(null)}
+        onDownload={downloadDialog?.type === 'directory' ? handleDownloadDirectory : handleDownloadRepo}
+        title={downloadDialog?.type === 'directory' ? t('repo.download.currentDirectoryTitle') : t('repo.download.repositoryTitle')}
+        description={downloadDialog?.type === 'directory'
+          ? t('repo.download.currentDirectoryDescription')
+          : t('repo.download.repositoryDescription')}
+        itemName={downloadDialog?.type === 'directory'
+          ? path.split('/').pop() || t('repo.download.directoryFallback')
+          : repoName || t('repo.download.repositoryFallback')}
+      />
+    </header>
+  )
+}

@@ -1,18 +1,35 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Files } from '../Files'
 import type { FileInfo } from '@/types/files'
 
-vi.mock('@/components/file-browser/FileTreeExplorer', () => ({
-  FileTreeExplorer: ({ onSelectFile }: { onSelectFile: (file: FileInfo) => void }) => (
-    <button
-      type="button"
-      onClick={() => onSelectFile({ name: 'a.txt', path: 'a.txt', isDirectory: false, size: 1, lastModified: new Date(0) })}
-    >
-      pick-file
-    </button>
+const fetchMock = vi.hoisted(() => vi.fn())
+
+vi.stubGlobal('fetch', (...args: unknown[]) => fetchMock(...args))
+
+vi.mock('@/components/file-browser/FileTree', () => ({
+  FileTree: ({
+    files,
+    onFileSelect,
+    onDirectoryClick,
+  }: {
+    files: Array<{ name: string; path: string; isDirectory: boolean }>
+    onFileSelect: (file: FileInfo) => void
+    onDirectoryClick: (path: string) => void
+  }) => (
+    <div>
+      {files.map((file) => (
+        <button
+          key={file.path}
+          type="button"
+          onClick={() => (file.isDirectory ? onDirectoryClick(file.path) : onFileSelect(file as FileInfo))}
+        >
+          {file.name}
+        </button>
+      ))}
+    </div>
   ),
 }))
 
@@ -20,29 +37,84 @@ vi.mock('@/components/file-browser/FilePreview', () => ({
   FilePreview: ({ file }: { file: FileInfo }) => <div data-testid="preview">{file.path}</div>,
 }))
 
+vi.mock('@/components/file-browser/MobileFilePreviewModal', () => ({
+  MobileFilePreviewModal: ({ isOpen, file }: { isOpen: boolean; file: FileInfo | null }) => (
+    <div data-testid="mobile-preview">{`${String(isOpen)}|${file?.path ?? 'null'}`}</div>
+  ),
+}))
+
+const LISTING = {
+  name: '',
+  path: '',
+  isDirectory: true,
+  workspaceRoot: '/workspace',
+  children: [
+    { name: 'src', path: 'src', isDirectory: true, children: [] },
+    { name: 'a.txt', path: 'a.txt', isDirectory: false, size: 1, lastModified: new Date(0) },
+  ],
+}
+
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+}
+
 function wrapper({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={['/files']}>
+        <Routes>
+          <Route path="/files" element={children} />
+          <Route path="/" element={<div>home</div>} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>
   )
 }
 
 describe('Files page', () => {
-  it('renders the tree and asks for a selection before previewing', () => {
-    render(<Files />, { wrapper })
-
-    expect(screen.getByText('Files')).toBeInTheDocument()
-    expect(screen.getByText('pick-file')).toBeInTheDocument()
-    expect(screen.queryByTestId('preview')).not.toBeInTheDocument()
+  beforeEach(() => {
+    fetchMock.mockReset()
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('path=a.txt')) {
+        return jsonResponse({ name: 'a.txt', path: 'a.txt', isDirectory: false, size: 1, lastModified: new Date(0) })
+      }
+      return jsonResponse(LISTING)
+    })
   })
 
-  it('previews the file picked from the tree', () => {
+  afterEach(() => {
+    fetchMock.mockReset()
+  })
+
+  it('loads the root listing and offers a back control', async () => {
     render(<Files />, { wrapper })
 
-    fireEvent.click(screen.getByText('pick-file'))
+    await waitFor(() => {
+      expect(screen.getByText('a.txt')).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: /back|返回/i })).toBeInTheDocument()
+  })
 
-    expect(screen.getByTestId('preview')).toHaveTextContent('a.txt')
+  it('opens a full-screen preview for a picked file on narrow viewports', async () => {
+    render(<Files />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('a.txt')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('a.txt'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mobile-preview').textContent).toBe('true|a.txt')
+    })
+  })
+
+  it('lists directories returned for the root', async () => {
+    render(<Files />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('src')).toBeInTheDocument()
+    })
   })
 })

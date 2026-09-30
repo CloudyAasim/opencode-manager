@@ -31,3 +31,16 @@ export interface PatchOperation {
   endLine?: number
   content?: string
 }
+
+export interface UploadItem {
+  file: File
+  relativePath: string
+}
+
+export interface UploadProgress {
+  current: number
+  total: number
+  currentFile: string
+  errors: string[]
+  cancelled: boolean
+}

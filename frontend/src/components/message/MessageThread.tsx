@@ -1,6 +1,7 @@
-import { memo, useMemo, useState, useCallback, useEffect } from 'react'
+import { memo, useMemo, useState, useCallback, useEffect, type RefObject } from 'react'
 import { Pencil } from 'lucide-react'
 import { MessagePart } from './MessagePart'
+import { VirtualMessageList } from './VirtualMessageList'
 import { UserMessageActionButtons } from './UserMessageActionButtons'
 import { EditableUserMessage, ClickableUserMessage } from './EditableUserMessage'
 import { MessageError } from './MessageError'
@@ -30,6 +31,7 @@ interface MessageThreadProps {
   onChildSessionClick?: (sessionId: string) => void
   onUndoMessage?: (restoredPrompt: string) => void
   model?: string
+  scrollRef?: RefObject<HTMLElement | null>
 }
 
 const isMessageStreaming = (msg: Message): boolean => {
@@ -40,6 +42,9 @@ const isMessageStreaming = (msg: Message): boolean => {
 function isSessionStatusActive(sessionStatus: { type?: string }): boolean {
   return sessionStatus?.type !== undefined && sessionStatus.type !== 'idle'
 }
+
+const VIRTUALIZATION_THRESHOLD = 24
+const estimateMessageHeight = (): number => 168
 
 const compareMessageIds = (id1: string, id2: string): number => {
   const num1 = parseInt(id1, 10)
@@ -332,7 +337,8 @@ export const MessageThread = memo(function MessageThread({
   onFileClick, 
   onChildSessionClick,
   onUndoMessage,
-  model
+  model,
+  scrollRef
 }: MessageThreadProps) {
   const { t } = useI18n()
   const [editingUserMessageId, setEditingUserMessageId] = useState<string | null>(null)
@@ -427,31 +433,51 @@ export const MessageThread = memo(function MessageThread({
     )
   }
 
+  const useVirtualization = Boolean(scrollRef) && messages.length >= VIRTUALIZATION_THRESHOLD
+
+  const renderRow = (msgWithParts: MessageWithParts) => (
+    <MessageRow
+      key={msgWithParts.info.id}
+      msgWithParts={msgWithParts}
+      nextAssistantMessage={nextAssistantByMessageId.get(msgWithParts.info.id)}
+      pendingAssistantId={pendingAssistantId}
+      lastUserMessageId={lastUserMessageId}
+      isSessionBusy={isSessionBusy}
+      onUndoMessage={onUndoMessage}
+      editingUserMessageId={editingUserMessageId}
+      editingForAssistantId={editingForAssistantId}
+      opcodeUrl={opcodeUrl}
+      sessionID={sessionID}
+      directory={directory}
+      onFileClick={onFileClick}
+      onChildSessionClick={onChildSessionClick}
+      handleStartEditUserMessage={handleStartEditUserMessage}
+      handleCancelEdit={handleCancelEdit}
+      model={model}
+      simpleChatMode={simpleChatMode}
+      showReasoning={showReasoning}
+    />
+  )
+
+  if (useVirtualization && scrollRef) {
+    return (
+      <div className="p-2">
+        <VirtualMessageList
+          items={messages}
+          scrollRef={scrollRef}
+          enabled
+          estimateSize={estimateMessageHeight}
+          getKey={(item) => item.info.id}
+        >
+          {renderRow}
+        </VirtualMessageList>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col space-y-2 p-2 overflow-x-hidden">
-      {messages.map((msgWithParts) => (
-        <MessageRow
-          key={msgWithParts.info.id}
-          msgWithParts={msgWithParts}
-          nextAssistantMessage={nextAssistantByMessageId.get(msgWithParts.info.id)}
-          pendingAssistantId={pendingAssistantId}
-          lastUserMessageId={lastUserMessageId}
-          isSessionBusy={isSessionBusy}
-          onUndoMessage={onUndoMessage}
-          editingUserMessageId={editingUserMessageId}
-          editingForAssistantId={editingForAssistantId}
-          opcodeUrl={opcodeUrl}
-          sessionID={sessionID}
-          directory={directory}
-          onFileClick={onFileClick}
-          onChildSessionClick={onChildSessionClick}
-          handleStartEditUserMessage={handleStartEditUserMessage}
-          handleCancelEdit={handleCancelEdit}
-          model={model}
-          simpleChatMode={simpleChatMode}
-          showReasoning={showReasoning}
-        />
-      ))}
+      {messages.map(renderRow)}
     </div>
   )
 })

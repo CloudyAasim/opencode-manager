@@ -1,5 +1,6 @@
-import { useEffect, useState, memo, useCallback, useRef } from 'react'
-import { FileBrowser, type FileBrowserHandle } from './FileBrowser'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { FileBrowserView, type FileBrowserHandle } from './FileBrowserView'
+import { useFileBrowserController, type FileBrowserController } from './useFileBrowserController'
 import { getRepoRelativeDisplayPath } from './display-path'
 import { Button } from '@/components/ui/button'
 import { PathDisplay } from '@/components/ui/path-display'
@@ -30,10 +31,18 @@ interface FileBrowserSheetProps {
   onFileSelect?: (file: FileInfo) => void
 }
 
-export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose, basePath = '', repoName, repoId, initialSelectedFile, allowNavigateAboveBase = false, onFileSelect }: FileBrowserSheetProps) {
+export const FileBrowserSheet = memo(function FileBrowserSheet({
+  isOpen,
+  onClose,
+  basePath = '',
+  repoName,
+  repoId,
+  initialSelectedFile,
+  allowNavigateAboveBase = false,
+  onFileSelect,
+}: FileBrowserSheetProps) {
   const { t } = useI18n()
   const normalizedBasePath = basePath || '.'
-  const [isEditing, setIsEditing] = useState(false)
   const [displayPath, setDisplayPath] = useState<string>('/')
   const [shouldRender, setShouldRender] = useState(false)
   const [currentPath, setCurrentPath] = useState<string>(basePath || '.')
@@ -42,8 +51,16 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
   const containerRef = useRef<HTMLDivElement>(null)
   const fileBrowserRef = useRef<FileBrowserHandle>(null)
 
+  const controller = useFileBrowserController({
+    basePath: normalizedBasePath,
+    initialSelectedFile,
+    onFileSelect,
+    onPreviewStateChange: setIsPreviewOpen,
+    allowNavigateAboveBase,
+  })
+
   const { bind, swipeStyles } = useSwipeBack(onClose, {
-    enabled: isOpen && !isEditing && !isPreviewOpen,
+    enabled: isOpen && !isPreviewOpen,
     canBack: () => fileBrowserRef.current?.canGoBack() ?? false,
     onBack: () => fileBrowserRef.current?.goBack(),
   })
@@ -62,73 +79,65 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
     }
   }, [isOpen])
 
-  const handleDirectoryLoad = useCallback((info: { workspaceRoot?: string; currentPath: string }) => {
-    if (allowNavigateAboveBase) {
-      const pathParts = info.currentPath.split('/').filter(Boolean)
-      const displayParts = pathParts[0] === '..'
-        ? ['workspace', ...pathParts.slice(1)]
-        : ['workspace', 'repos', ...pathParts]
-
-      setDisplayPath('/' + displayParts.join('/'))
+  const handleDirectoryLoad = useCallback(
+    (info: { workspaceRoot?: string; currentPath: string }) => {
+      if (allowNavigateAboveBase) {
+        const pathParts = info.currentPath.split('/').filter(Boolean)
+        const displayParts = pathParts[0] === '..' ? ['workspace', ...pathParts.slice(1)] : ['workspace', 'repos', ...pathParts]
+        setDisplayPath('/' + displayParts.join('/'))
+        setCurrentPath(info.currentPath || '.')
+        return
+      }
       setCurrentPath(info.currentPath || '.')
-      return
-    }
+      setDisplayPath(getRepoRelativeDisplayPath(info.currentPath || '.', normalizedBasePath))
+    },
+    [allowNavigateAboveBase, normalizedBasePath],
+  )
 
-    setCurrentPath(info.currentPath || '.')
-    setDisplayPath(getRepoRelativeDisplayPath(info.currentPath || '.', normalizedBasePath))
-  }, [allowNavigateAboveBase, normalizedBasePath])
+  const openDownloadDialog = (type: 'directory' | 'repository') => setDownloadDialog({ type })
 
-  const handleDownloadDirectory = useCallback(async (options: { includeGit?: boolean, includePaths?: string[] }) => {
+  const handleDownloadDirectory = async () => {
     if (!currentPath) return
-    await downloadDirectoryAsZip(currentPath, options)
-  }, [currentPath])
-
-  const handleDownloadRepo = useCallback(async (options: { includeGit?: boolean, includePaths?: string[] }) => {
-    if (!repoId || !repoName) return
-    await downloadRepo(repoId, repoName, options)
-  }, [repoId, repoName])
-
-  const handleOpenDownloadDialog = (type: 'directory' | 'repository') => {
-    setDownloadDialog({ type })
+    await downloadDirectoryAsZip(currentPath)
+    setDownloadDialog(null)
   }
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isPreviewOpen) {
-        onClose()
-      }
-    }
+  const handleDownloadRepo = async () => {
+    if (repoId != null) await downloadRepo(repoId, repoName ?? '')
+    setDownloadDialog(null)
+  }
 
-    const handleEditModeChange = (event: CustomEvent<{ isEditing: boolean }>) => {
-      setIsEditing(event.detail.isEditing)
-    }
+  const mergedController: FileBrowserController = {
+    ...controller,
+    loadFiles: async (path: string) => {
+      await controller.loadFiles(path)
+      handleDirectoryLoad({
+        workspaceRoot: controller.files?.workspaceRoot,
+        currentPath: path,
+      })
+    },
+    navigateUp: () => {
+      controller.navigateUp()
+      handleDirectoryLoad({
+        workspaceRoot: controller.files?.workspaceRoot,
+        currentPath: controller.currentPath,
+      })
+    },
+  }
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-      document.addEventListener('editModeChange', handleEditModeChange as EventListener)
-      document.body.style.overflow = 'hidden'
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-      document.removeEventListener('editModeChange', handleEditModeChange as EventListener)
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen, onClose, isPreviewOpen])
-
-  if (!isOpen && !shouldRender) return null
+  if (!shouldRender) return null
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50"
       style={{
-        opacity: isOpen ? 1 : 0,
+        ...GPU_ACCELERATED_STYLE,
+        ...swipeStyles,
         pointerEvents: isOpen ? 'auto' : 'none',
         transition: 'opacity 150ms ease-out',
       }}
     >
-      <FullscreenSheet style={{ ...GPU_ACCELERATED_STYLE, ...swipeStyles }}>
+      <FullscreenSheet>
         <FullscreenSheetHeader className="px-4 py-1">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
@@ -140,7 +149,7 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
               <PathDisplay path={displayPath} maxSegments={4} className="truncate" />
             </div>
             <div className="flex items-center gap-2">
-              {repoId != null && !isEditing && (
+              {repoId != null && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -154,18 +163,18 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleOpenDownloadDialog('directory')}>
+                    <DropdownMenuItem onClick={() => openDownloadDialog('directory')}>
                       <Download className="w-4 h-4 mr-2" />
                       {t('repo.download.currentDirectory')}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenDownloadDialog('repository')}>
+                    <DropdownMenuItem onClick={() => openDownloadDialog('repository')}>
                       <Download className="w-4 h-4 mr-2" />
                       {t('repo.download.entireRepository')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {!isEditing && (
+              {(
                 <Button
                   variant="ghost"
                   size="icon"
@@ -182,16 +191,15 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
         </FullscreenSheetHeader>
 
         <FullscreenSheetContent>
-          <FileBrowser
-            ref={fileBrowserRef}
-            basePath={normalizedBasePath}
-            embedded={true}
-            initialSelectedFile={initialSelectedFile}
-            onFileSelect={onFileSelect}
-            onDirectoryLoad={handleDirectoryLoad}
-            onPreviewStateChange={setIsPreviewOpen}
-            allowNavigateAboveBase={allowNavigateAboveBase}
-          />
+          {shouldRender && (
+            <FileBrowserView
+              ref={fileBrowserRef}
+              controller={mergedController}
+              basePath={normalizedBasePath}
+              showHeader={false}
+              allowNavigateAboveBase={allowNavigateAboveBase}
+            />
+          )}
         </FullscreenSheetContent>
       </FullscreenSheet>
 
@@ -203,8 +211,9 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({ isOpen, onClose
         description={downloadDialog?.type === 'directory'
           ? t('repo.download.currentDirectoryDescription')
           : t('repo.download.repositoryDescription')}
-        itemName={downloadDialog?.type === 'directory' ? currentPath.split('/').pop() || t('repo.download.directoryFallback') : repoName || t('repo.download.repositoryFallback')}
-        targetPath={downloadDialog?.type === 'directory' ? currentPath : basePath}
+        itemName={downloadDialog?.type === 'directory'
+          ? currentPath.split('/').pop() || t('repo.download.directoryFallback')
+          : repoName || t('repo.download.repositoryFallback')}
       />
     </div>
   )

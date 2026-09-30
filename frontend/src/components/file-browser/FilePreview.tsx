@@ -274,10 +274,9 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            className={`text-[16px] bg-muted text-foreground p-2 rounded font-mono w-full resize-none focus:outline-none focus:ring-0 border-none block ${
+            className={`flex-1 w-full text-[16px] bg-muted text-foreground p-2 rounded font-mono resize-none focus:outline-none focus:ring-0 border-none block ${
               lineWrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre overflow-x-auto'
             }`}
-            style={{ minHeight: '95vh' }}
             placeholder={t('repo.fileBrowser.editPlaceholder')}
             autoFocus
             data-file-editor="true"
