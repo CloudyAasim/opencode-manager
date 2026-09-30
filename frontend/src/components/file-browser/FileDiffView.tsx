@@ -174,7 +174,7 @@ function DiffLineComponent({
   return (
     <div
       className={cn(
-        "flex font-mono text-sm border-l-2 transition-colors min-w-0",
+        "flex min-w-0 max-w-full font-mono text-sm border-l-2 transition-colors",
         bgClass,
         line.type === "add" && "border-l-emerald-500",
         line.type === "remove" && "border-l-rose-500",
@@ -205,7 +205,7 @@ function DiffLineComponent({
       </div>
       <pre
         className={cn(
-          "flex-1 min-w-0 px-2 py-0.5 whitespace-pre-wrap break-words overflow-hidden",
+          "flex min-w-0 flex-1 px-2 py-0.5 whitespace-pre-wrap [overflow-wrap:anywhere] overflow-hidden",
           textClass,
         )}
       >
@@ -353,7 +353,7 @@ export function FileDiffView({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+      <div className="flex min-w-0 flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         {diffData.isBinary ? (
           <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20">
             <p className="text-sm">{t('repo.fileBrowser.diff.binary')}</p>

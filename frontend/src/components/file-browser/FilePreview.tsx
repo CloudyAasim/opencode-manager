@@ -359,7 +359,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
   const showCancelButton = viewMode === 'edit'
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div data-preview-root className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-background">
       {!hideHeader && (
         <>
           <div className={`flex items-start gap-2 px-3 py-2 border-b border-border flex-shrink-0 overflow-hidden ${isMobileModal ? 'pt-3' : ''}`}>
@@ -441,9 +441,9 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       
       <div 
         ref={contentRef}
-        className={`flex-1 ${viewMode === 'edit' && !shouldVirtualize ? 'overflow-hidden' : shouldVirtualize ? '' : 'overflow-y-auto overscroll-contain'} min-h-0 overflow-x-hidden`}
+        className={`flex min-w-0 flex-1 ${viewMode === 'edit' && !shouldVirtualize ? 'overflow-hidden' : shouldVirtualize ? '' : 'overflow-y-auto overscroll-contain'} min-h-0 overflow-x-hidden`}
       >
-        <div className={`${shouldVirtualize ? 'h-full' : 'p-2'} min-w-0 max-w-full overflow-hidden`}>
+        <div className={`${shouldVirtualize ? 'h-full' : 'p-2'} min-w-0 w-full max-w-full overflow-x-hidden`}>
           {renderContent()}
         </div>
       </div>

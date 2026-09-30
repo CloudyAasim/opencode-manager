@@ -233,3 +233,88 @@ test.describe('file tree expansion', () => {
     expect(rows).toEqual(expect.arrayContaining(['config', 'config/settings.json', 'readme.md']))
   })
 })
+
+test.describe('preview width containment', () => {
+  const LONG_LINE = `const value = "${'A'.repeat(320)}";`
+
+  async function openPreviewWith(page: import('@playwright/test').Page, content: string) {
+    await signIn(page)
+    await installApiMocks(page, { repos: [REPO] })
+    await page.route(/.*\/api\/files(\/ignored-paths)?(\?.*)?$/, (route) => {
+      const url = new URL(route.request().url())
+      if (url.pathname.endsWith('/ignored-paths')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ignoredPaths: [] }),
+        })
+      }
+      const target = url.searchParams.get('path') ?? ''
+      if (target === 'wide.ts') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            name: 'wide.ts',
+            path: 'wide.ts',
+            isDirectory: false,
+            size: content.length,
+            mimeType: 'text/plain',
+            lastModified: new Date(0).toISOString(),
+            content: btoa(content),
+          }),
+        })
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          name: 'root',
+          path: '',
+          isDirectory: true,
+          size: 0,
+          workspaceRoot: REPO.fullPath,
+          children: [
+            { name: 'wide.ts', path: 'wide.ts', isDirectory: false, size: content.length, lastModified: new Date(0).toISOString() },
+          ],
+        }),
+      })
+    })
+    await page.goto('/files')
+    await expect(page.locator('[data-testid="file-list-scroller"]')).toBeVisible()
+    await page.getByText('wide.ts').first().click()
+  }
+
+  test('a 320-character line stays inside the preview pane', async ({ page }) => {
+    const content = Array.from({ length: 40 }, (_, index) => (index === 0 ? LONG_LINE : `line ${index} `)).join('\n')
+    await openPreviewWith(page, content)
+
+    const measurement = await page.evaluate(() => {
+      const node = [...document.querySelectorAll('pre')].find((el) => el.textContent?.includes('const value'))
+      if (!node) return null
+      const pre = node.getBoundingClientRect()
+      const pane = node.closest('[data-preview-root]')?.getBoundingClientRect() ?? pre
+      return {
+        preWidth: Math.round(pre.width),
+        paneWidth: Math.round(pane.width),
+        overflowsBy: Math.round(pre.right - pane.right),
+        documentOverflows: document.documentElement.scrollWidth > window.innerWidth + 2,
+      }
+    })
+
+    expect(measurement).not.toBeNull()
+    expect(measurement?.overflowsBy).toBeLessThanOrEqual(2)
+    expect(measurement?.preWidth).toBeLessThanOrEqual(measurement?.paneWidth ?? Infinity)
+    expect(measurement?.documentOverflows).toBe(false)
+  })
+
+  test('the preview never widens the document', async ({ page }) => {
+    const content = Array.from({ length: 60 }, (_, index) => (index === 0 ? LONG_LINE : `line ${index} `)).join('\n')
+    await openPreviewWith(page, content)
+
+    await page.waitForTimeout(500)
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+    const viewport = await page.evaluate(() => window.innerWidth)
+    expect(documentWidth).toBeLessThanOrEqual(viewport + 2)
+  })
+})
