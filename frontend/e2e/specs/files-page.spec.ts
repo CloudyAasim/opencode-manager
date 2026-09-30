@@ -179,3 +179,57 @@ test.describe('file tree at scale', () => {
   })
 
 })
+
+test.describe('file tree expansion', () => {
+  test('expands a folder in place without leaving the current directory', async ({ page }) => {
+    await signIn(page)
+    await installApiMocks(page, { repos: [REPO] })
+
+    const rootListing = {
+      name: 'root',
+      path: '',
+      isDirectory: true,
+      size: 0,
+      workspaceRoot: REPO.fullPath,
+      children: [
+        { name: 'config', path: 'config', isDirectory: true, size: 0, lastModified: new Date(0).toISOString(), children: [] },
+        { name: 'readme.md', path: 'readme.md', isDirectory: false, size: 10, lastModified: new Date(0).toISOString() },
+      ],
+    }
+
+    const configListing = {
+      name: 'config',
+      path: 'config',
+      isDirectory: true,
+      size: 0,
+      children: [
+        { name: 'settings.json', path: 'config/settings.json', isDirectory: false, size: 5, lastModified: new Date(0).toISOString() },
+      ],
+    }
+
+    await page.route(/.*\/api\/files(\?.*)?$/, (route) => {
+      const requested = new URL(route.request().url()).searchParams.get('path') ?? ''
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(requested === 'config' ? configListing : rootListing),
+      })
+    })
+
+    await page.goto('/files')
+    const scroller = page.locator('[data-testid="file-list-scroller"]')
+    await expect(scroller).toBeVisible()
+    await expect(scroller).toContainText('readme.md')
+
+    await page.locator('[data-tree-toggle="config"]').click()
+
+    const child = page.locator('[data-tree-row="config/settings.json"]')
+    await expect(child).toBeVisible()
+    await expect(scroller).toContainText('readme.md')
+
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-tree-row]')].map((el) => el.getAttribute('data-tree-row')),
+    )
+    expect(rows).toEqual(expect.arrayContaining(['config', 'config/settings.json', 'readme.md']))
+  })
+})

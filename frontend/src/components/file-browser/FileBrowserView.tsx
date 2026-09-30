@@ -158,7 +158,6 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
               <FileTree
                 files={visibleFiles}
                 onFileSelect={(f) => void controller.selectFile(f)}
-                onDirectoryClick={(path) => void controller.loadFiles(path)}
                 selectedFile={controller.selectedFile}
                 onDelete={controller.remove}
                 onRename={controller.rename}
@@ -170,6 +169,7 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
                 scrollRef={listRef}
                 expandedPaths={controller.expandedPaths}
                 onToggleDirectory={controller.toggleDirectory}
+                onLoadChildren={controller.loadChildren}
               />
             )}
           </div>

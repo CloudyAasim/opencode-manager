@@ -42,12 +42,19 @@ function makeScrollRef() {
   return ref
 }
 
-function StatefulTree(props: { files: FileInfo[]; onFileSelect?: (file: FileInfo) => void }) {
+function StatefulTree(props: {
+  files: FileInfo[]
+  onFileSelect?: (file: FileInfo) => void
+  onLoadChildren?: (path: string) => void
+  onDirectoryClick?: (path: string) => void
+}) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
   return (
     <FileTree
       files={props.files}
       onFileSelect={props.onFileSelect}
+      onDirectoryClick={props.onDirectoryClick}
+      onLoadChildren={props.onLoadChildren}
       scrollRef={makeScrollRef()}
       expandedPaths={expanded}
       onToggleDirectory={(path) =>
@@ -128,6 +135,41 @@ describe('FileTree', () => {
     })
 
     expect(onFileSelect).toHaveBeenCalledWith(files[1])
+  })
+
+  it('expands without navigating away from the current directory', () => {
+    const onDirectoryClick = vi.fn()
+    const onLoadChildren = vi.fn()
+    const files = makeFiles(2, 2)
+    render(
+      <StatefulTree
+        files={files}
+        onDirectoryClick={onDirectoryClick}
+        onLoadChildren={onLoadChildren}
+      />,
+    )
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tree-toggle="item-0000"]') as Element)
+    })
+
+    expect(onDirectoryClick).not.toHaveBeenCalled()
+    expect(onLoadChildren).not.toHaveBeenCalled()
+    expect(screen.getByText('child-0.ts')).toBeInTheDocument()
+  })
+
+  it('loads children on first expand when the directory has none yet', () => {
+    const onLoadChildren = vi.fn()
+    const files: FileInfo[] = [
+      { name: 'lazy', path: 'lazy', isDirectory: true, size: 0, lastModified: new Date(0) },
+    ]
+    render(<StatefulTree files={files} onLoadChildren={onLoadChildren} />)
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tree-toggle="lazy"]') as Element)
+    })
+
+    expect(onLoadChildren).toHaveBeenCalledWith('lazy')
   })
 
   it('keeps nested expansion state when the parent is toggled twice', () => {

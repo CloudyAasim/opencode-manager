@@ -37,7 +37,8 @@ export interface FileBrowserController {
   cancelUpload: () => void
   expandedPaths: Set<string>
   isExpanded: (path: string) => boolean
-  toggleDirectory: (path: string, navigate: boolean) => void
+  toggleDirectory: (path: string) => void
+  loadChildren: (path: string) => Promise<void>
   isDragging: boolean
   dragHandlers: {
     onDragEnter: (e: React.DragEvent) => void
@@ -70,6 +71,7 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set())
+  const loadedChildrenRef = useRef<Set<string>>(new Set())
 
   const dropZoneRef = useRef<HTMLDivElement>(null)
   const uploadCancelledRef = useRef(false)
@@ -101,26 +103,8 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
         const data = await response.json()
         setFiles(data)
         setCurrentPath(path)
-        setExpandedPaths((current) => {
-          if (current.size === 0) return current
-          const reachable = new Set<string>()
-          const collect = (entries: FileInfo[] | undefined, parents: string[]) => {
-            for (const entry of entries ?? []) {
-              if (!entry.isDirectory) continue
-              const parentsWithSelf = [...parents, entry.path]
-              if (current.has(entry.path)) {
-                reachable.add(entry.path)
-                for (const candidate of current) {
-                  if (candidate.startsWith(`${entry.path}/`)) reachable.add(candidate)
-                }
-              }
-              collect(entry.children, parentsWithSelf)
-            }
-          }
-          collect(data.children, [])
-          if (reachable.size === current.size) return current
-          return reachable
-        })
+        loadedChildrenRef.current = new Set()
+        setExpandedPaths(new Set())
         onDirectoryLoad?.({ workspaceRoot: data.workspaceRoot, currentPath: path })
       } catch (err) {
         setError(err instanceof Error ? err.message : t('repo.fileBrowser.errors.loadFilesGeneric'))
@@ -168,18 +152,39 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
     }
   }, [allowNavigateAboveBase, basePath, currentPath, loadFiles, getPathParts, normalizePath])
 
-  const toggleDirectory = useCallback((path: string, navigate: boolean) => {
+  const toggleDirectory = useCallback((path: string) => {
     setExpandedPaths((current) => {
-      const next = new Set(current)
-      if (next.has(path)) {
+      if (current.has(path)) {
+        const next = new Set(current)
         next.delete(path)
         return next
       }
+      const next = new Set(current)
       next.add(path)
       return next
     })
-    if (navigate) void loadFiles(path)
-  }, [loadFiles])
+  }, [])
+
+  const loadChildren = useCallback(
+    async (path: string): Promise<void> => {
+      if (!path || loadedChildrenRef.current.has(path)) return
+      loadedChildrenRef.current.add(path)
+      try {
+        const response = await fetch(getFileApiUrl(path))
+        if (!response.ok) return
+        const listing = (await response.json()) as FileInfo
+        if (!listing.isDirectory) return
+        setFiles((current) =>
+          current
+            ? { ...current, children: mergeChildren(rootsOf(current), path, listing.children ?? []) }
+            : current,
+        )
+      } catch {
+        loadedChildrenRef.current.delete(path)
+      }
+    },
+    [],
+  )
 
   const isExpanded = useCallback((path: string) => expandedPaths.has(path), [expandedPaths])
 
@@ -398,10 +403,28 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
     expandedPaths,
     isExpanded,
     toggleDirectory,
+    loadChildren,
     isDragging,
     dragHandlers,
     dropZoneRef,
   }
+}
+
+function mergeChildren(roots: FileInfo[], path: string, children: FileInfo[]): FileInfo[] {
+  const walk = (nodes: FileInfo[]): FileInfo[] =>
+    nodes.map((node) => {
+      if (node.path === path) return { ...node, children }
+      if (node.children) return { ...node, children: walk(node.children) }
+      return node
+    })
+
+  return walk(roots)
+}
+
+function rootsOf(files: FileInfo | null): FileInfo[] {
+  if (!files) return []
+  if (files.isDirectory) return files.children ?? []
+  return [files]
 }
 
 function getUploadItemsFromFileList(fileList: FileList | DataTransferItemList): UploadItem[] {

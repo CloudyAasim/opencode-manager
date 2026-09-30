@@ -29,7 +29,6 @@ import {
 export interface FileTreeProps {
   files: FileInfo[]
   onFileSelect?: (file: FileInfo) => void
-  onDirectoryClick?: (path: string) => void
   selectedFile?: FileInfo | null
   onDelete?: (path: string) => void
   onRename?: (oldPath: string, newPath: string) => void
@@ -41,7 +40,8 @@ export interface FileTreeProps {
   scrollRef?: React.RefObject<HTMLElement | null>
   virtualizationThreshold?: number
   expandedPaths: Set<string>
-  onToggleDirectory: (path: string, navigate: boolean) => void
+  onToggleDirectory: (path: string) => void
+  onLoadChildren?: (path: string) => void
 }
 
 interface FlatRow {
@@ -90,7 +90,6 @@ function flattenTree(
 export const FileTree = memo(function FileTree({
   files,
   onFileSelect,
-  onDirectoryClick,
   selectedFile,
   onDelete,
   onRename,
@@ -103,6 +102,7 @@ export const FileTree = memo(function FileTree({
   virtualizationThreshold = 60,
   expandedPaths,
   onToggleDirectory,
+  onLoadChildren,
 }: FileTreeProps) {
   const { t } = useI18n()
   const isMobile = useMobile()
@@ -126,11 +126,11 @@ export const FileTree = memo(function FileTree({
   const toggle = useCallback(
     (path: string) => {
       const row = rows.find((candidate) => candidate.file.path === path)
-      const shouldNavigate = !expandedPaths.has(path) && !row?.hasChildren
-      onToggleDirectory(path, shouldNavigate)
-      if (shouldNavigate) onDirectoryClick?.(path)
+      const willExpand = !expandedPaths.has(path)
+      onToggleDirectory(path)
+      if (willExpand && !row?.hasChildren) void onLoadChildren?.(path)
     },
-    [rows, expandedPaths, onDirectoryClick, onToggleDirectory],
+    [rows, expandedPaths, onToggleDirectory, onLoadChildren],
   )
 
   const virtualEnabled = Boolean(scrollRef) && rows.length >= virtualizationThreshold
