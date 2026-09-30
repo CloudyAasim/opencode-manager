@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useCallback } from 'react'
 import { FileTree } from './FileTree'
 import { FilePreview } from './FilePreview'
 import { MobileFilePreviewModal } from './MobileFilePreviewModal'
@@ -9,6 +9,9 @@ import { CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { RefreshCw, Upload, FolderOpen } from 'lucide-react'
 import { useMobile } from '@/hooks/useMobile'
 import { useFileBrowserController, type FileBrowserController } from './useFileBrowserController'
+import { STORAGE_KEYS } from '@/lib/storage-keys'
+import { ResizableSplit } from '@/components/ui/resizable-split'
+import { useI18n } from '@/lib/i18n'
 
 export interface FileBrowserHandle {
   goBack: () => void
@@ -56,8 +59,17 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
     [controller.navigateUp, controller.canNavigateUp, controller.currentPath],
   )
 
+  const { t } = useI18n()
   const isMobile = useMobile()
   const showPath = props.showPath ?? true
+  const listRef = useRef<HTMLDivElement>(null)
+  const dropZoneRef = controller.dropZoneRef
+  const setDropZone = useCallback((node: HTMLDivElement | null) => {
+    dropZoneRef.current = node
+  }, [dropZoneRef])
+  const setList = useCallback((node: HTMLDivElement | null) => {
+    listRef.current = node
+  }, [])
   const showHeader = props.showHeader ?? true
 
   const children = controller.files?.isDirectory ? (controller.files.children ?? []) : []
@@ -89,8 +101,15 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
       )}
 
       <CardContent className="flex-1 flex overflow-hidden min-h-0 p-0 relative">
+        <ResizableSplit
+          storageKey={STORAGE_KEYS.fileSplitPct}
+          primaryLabel={t('repo.fileBrowser.listPane')}
+          secondaryLabel={t('repo.fileBrowser.previewPane')}
+          primaryClassName="flex flex-col min-h-0"
+          primary={
+            <>
         <div
-          ref={controller.dropZoneRef}
+          ref={setDropZone}
           {...controller.dragHandlers}
           className={`flex-1 flex flex-col min-h-0 outline-none ${isMobile ? '' : 'border-r'}`}
         >
@@ -98,14 +117,14 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
             <div className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center pointer-events-none">
               <div className="text-center">
                 <Upload className="w-12 h-12 mx-auto mb-2 text-primary" />
-                <p className="text-lg font-semibold text-primary">Drop files here</p>
+                <p className="text-lg font-semibold text-primary">{t('repo.fileBrowser.dropHere')}</p>
               </div>
             </div>
           )}
 
           <div className="flex items-center gap-2 p-3 border-b flex-shrink-0">
             <Input
-              placeholder="Search"
+              placeholder={t('repo.fileBrowser.search')}
               value={controller.searchQuery}
               onChange={(e) => controller.setSearchQuery(e.target.value)}
               className="flex-1"
@@ -119,15 +138,18 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
           {controller.uploadProgress && (
             <div className="px-3 py-2 border-b text-xs bg-muted/30 flex items-center justify-between">
               <span>
-                Uploading {controller.uploadProgress.current} / {controller.uploadProgress.total}…
+                {t('repo.fileBrowser.uploading', {
+                  current: controller.uploadProgress.current,
+                  total: controller.uploadProgress.total,
+                })}
               </span>
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={controller.cancelUpload}>
-                Cancel
+                {t('repo.fileBrowser.cancel')}
               </Button>
             </div>
           )}
 
-          <div data-testid="file-list-scroller" className="flex-1 min-h-0 overflow-y-auto">
+          <div ref={setList} data-testid="file-list-scroller" className="flex-1 min-h-0 overflow-y-auto">
             {controller.loading && !controller.files ? (
               <div className="flex items-center justify-center h-64">
                 <RefreshCw className="w-6 h-6 animate-spin" />
@@ -145,11 +167,18 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
                 basePath={props.basePath ?? ''}
                 onNavigateUp={controller.navigateUp}
                 canNavigateUp={controller.canNavigateUp()}
+                scrollRef={listRef}
+                expandedPaths={controller.expandedPaths}
+                onToggleDirectory={controller.toggleDirectory}
               />
             )}
           </div>
         </div>
 
+            </>
+          }
+          secondary={
+            <>
         {!isMobile && (
           <div data-testid="file-preview-surface" className="hidden sm:flex flex-1 min-h-0 overflow-y-auto">
             {controller.selectedFile && !controller.selectedFile.isDirectory ? (
@@ -159,11 +188,14 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
               />
             ) : (
               <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                Select a file to preview
+                {t('repo.fileBrowser.selectFile')}
               </div>
             )}
           </div>
         )}
+            </>
+          }
+        />
       </CardContent>
 
       <div data-testid="file-preview-modal-host" hidden={!controller.isPreviewModalOpen}>

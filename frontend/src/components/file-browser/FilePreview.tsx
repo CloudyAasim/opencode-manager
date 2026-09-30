@@ -274,8 +274,10 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            className={`flex-1 w-full text-[16px] bg-muted text-foreground p-2 rounded font-mono resize-none focus:outline-none focus:ring-0 border-none block ${
-              lineWrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre overflow-x-auto'
+            className={`flex-1 w-full min-w-0 max-w-full text-[16px] bg-muted text-foreground p-2 rounded font-mono resize-none focus:outline-none focus:ring-0 border-none block ${
+              lineWrap
+                ? 'whitespace-pre-wrap [overflow-wrap:anywhere]'
+                : 'whitespace-pre overflow-x-auto'
             }`}
             placeholder={t('repo.fileBrowser.editPlaceholder')}
             autoFocus
@@ -308,16 +310,16 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               const lineNum = index + 1
               const isHighlighted = highlightedLine === lineNum
               return (
-                <div 
+                <div
                   key={`line-${index}`}
-                  className={`flex transition-colors duration-300 ${isHighlighted ? 'bg-yellow-500/30' : ''}`}
+                  className={`flex min-w-0 transition-colors duration-300 ${isHighlighted ? 'bg-yellow-500/30' : ''}`}
                   style={{ minHeight: '20px', lineHeight: '20px' }}
                 >
-                  <span className="w-12 flex-shrink-0 text-right pr-3 text-muted-foreground select-none border-r border-border/50 text-xs">
+                  <span className="w-10 sm:w-12 flex-shrink-0 text-right pr-2 sm:pr-3 text-muted-foreground select-none border-r border-border/50 text-xs">
                     {lineNum}
                   </span>
-                  <pre className={`flex-1 pl-3 ${
-                    lineWrap ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'
+                  <pre className={`flex-1 min-w-0 pl-3 ${
+                    lineWrap ? 'whitespace-pre-wrap [overflow-wrap:anywhere]' : 'whitespace-pre'
                   }`}>
                     {line || ' '}
                   </pre>
@@ -441,7 +443,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
         ref={contentRef}
         className={`flex-1 ${viewMode === 'edit' && !shouldVirtualize ? 'overflow-hidden' : shouldVirtualize ? '' : 'overflow-y-auto overscroll-contain'} min-h-0 overflow-x-hidden`}
       >
-        <div className={`${shouldVirtualize ? 'h-full' : 'p-2'} min-w-0`}>
+        <div className={`${shouldVirtualize ? 'h-full' : 'p-2'} min-w-0 max-w-full overflow-hidden`}>
           {renderContent()}
         </div>
       </div>

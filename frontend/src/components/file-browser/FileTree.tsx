@@ -1,333 +1,460 @@
-import { useState, memo } from 'react'
-import { useMobile } from '@/hooks/useMobile'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { DeleteDialog } from '@/components/ui/delete-dialog'
-import { getFileApiUrl } from '@/api/files'
-import { saveFileFromUrl } from '@/lib/download'
-import { 
-  File, 
-  Folder, 
-  FolderOpen, 
-  ChevronRight, 
+import { useState, memo, useCallback, useMemo } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import {
+  ChevronRight,
   ChevronDown,
+  Folder,
+  FolderOpen,
+  File,
   MoreVertical,
   Trash2,
   Edit3,
-  Download
+  Download,
+  Copy,
 } from 'lucide-react'
-import { Copy } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { DeleteDialog } from '@/components/ui/delete-dialog'
+import { useMobile } from '@/hooks/useMobile'
+import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
+import type { FileInfo } from '@/types/files'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { FileInfo } from '@/types/files'
-import { useI18n } from '@/lib/i18n'
 
-interface FileTreeProps {
+export interface FileTreeProps {
   files: FileInfo[]
-  onFileSelect: (file: FileInfo) => void
-  onDirectoryClick: (path: string) => void
-  selectedFile: FileInfo | null
-  onDelete: (path: string) => void
-  onRename: (oldPath: string, newPath: string) => void
+  onFileSelect?: (file: FileInfo) => void
+  onDirectoryClick?: (path: string) => void
+  selectedFile?: FileInfo | null
+  onDelete?: (path: string) => void
+  onRename?: (oldPath: string, newPath: string) => void
   onCopy?: (sourcePath: string, newPath: string) => void
   currentPath?: string
   basePath?: string
   onNavigateUp?: () => void
   canNavigateUp?: boolean
+  scrollRef?: React.RefObject<HTMLElement | null>
+  virtualizationThreshold?: number
+  expandedPaths: Set<string>
+  onToggleDirectory: (path: string, navigate: boolean) => void
 }
 
-interface TreeNodeProps {
+interface FlatRow {
   file: FileInfo
   level: number
-  onFileSelect: (file: FileInfo) => void
-  onDirectoryClick: (path: string) => void
-  selectedFile?: FileInfo | null
-  onDelete?: (path: string) => void
-  onRename?: (oldPath: string, newPath: string) => void
-  onCopy?: (sourcePath: string, newPath: string) => void
+  expandable: boolean
+  expanded: boolean
+  hasChildren: boolean
 }
 
-function TreeNode({ file, level, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename, onCopy }: TreeNodeProps) {
+const FILE_ICON_MAP: Record<string, string> = {
+  js: '🟨',
+  ts: '🔷',
+  jsx: '🟨',
+  tsx: '🔷',
+  json: '📋',
+  md: '📝',
+  html: '🌐',
+  css: '🎨',
+  png: '🖼️',
+  jpg: '🖼️',
+  jpeg: '🖼️',
+  gif: '🖼️',
+  svg: '🖼️',
+  pdf: '📄',
+  zip: '📦',
+}
+
+function flattenTree(
+  files: FileInfo[],
+  expanded: Set<string>,
+  level = 0,
+  out: FlatRow[] = [],
+): FlatRow[] {
+  for (const file of files) {
+    const hasChildren = file.isDirectory && (file.children?.length ?? 0) > 0
+    const isExpanded = hasChildren && expanded.has(file.path)
+    out.push({ file, level, expandable: file.isDirectory, expanded: isExpanded, hasChildren })
+    if (isExpanded && file.children) {
+      flattenTree(file.children, expanded, level + 1, out)
+    }
+  }
+  return out
+}
+
+export const FileTree = memo(function FileTree({
+  files,
+  onFileSelect,
+  onDirectoryClick,
+  selectedFile,
+  onDelete,
+  onRename,
+  onCopy,
+  currentPath = '',
+  basePath = '',
+  onNavigateUp,
+  canNavigateUp,
+  scrollRef,
+  virtualizationThreshold = 60,
+  expandedPaths,
+  onToggleDirectory,
+}: FileTreeProps) {
   const { t } = useI18n()
   const isMobile = useMobile()
-  const [expanded, setExpanded] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [editName, setEditName] = useState(file.name)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-
-  const handleClick = () => {
-    if (file.isDirectory) {
-      onDirectoryClick(file.path)
-    } else {
-      onFileSelect(file)
-    }
-  }
-
-  const handleDelete = () => {
-    setDeleteDialogOpen(true)
-  }
-
-  const handleDeleteConfirm = () => {
-    onDelete?.(file.path)
-    setDeleteDialogOpen(false)
-  }
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false)
-  }
-
-  const handleRename = () => {
-    setEditing(true)
-    setEditName(file.name)
-  }
-
-  const handleRenameSubmit = () => {
-    if (editName && editName !== file.name) {
-      const newPath = file.path.replace(/\/[^/]+$/, `/${editName}`)
-      onRename?.(file.path, newPath)
-    }
-    setEditing(false)
-  }
-
-  const handleRenameCancel = () => {
-    setEditing(false)
-    setEditName(file.name)
-  }
-
-  const [copying, setCopying] = useState(false)
+  const [editingPath, setEditingPath] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [copyingPath, setCopyingPath] = useState<string | null>(null)
   const [copyName, setCopyName] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
-  const handleCopy = () => {
-    setCopying(true)
+  const handleGoUp = useCallback(() => {
+    onNavigateUp?.()
+  }, [onNavigateUp])
+
+  const showGoUp = canNavigateUp ?? Boolean(currentPath && currentPath !== basePath)
+
+  const rows = useMemo(
+    () => flattenTree(files, expandedPaths),
+    [files, expandedPaths],
+  )
+
+  const toggle = useCallback(
+    (path: string) => {
+      const row = rows.find((candidate) => candidate.file.path === path)
+      const shouldNavigate = !expandedPaths.has(path) && !row?.hasChildren
+      onToggleDirectory(path, shouldNavigate)
+      if (shouldNavigate) onDirectoryClick?.(path)
+    },
+    [rows, expandedPaths, onDirectoryClick, onToggleDirectory],
+  )
+
+  const virtualEnabled = Boolean(scrollRef) && rows.length >= virtualizationThreshold
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef?.current ?? null,
+    estimateSize: () => 34,
+    getItemKey: (index) => (rows[index]?.file.path ?? index),
+    overscan: 12,
+    enabled: virtualEnabled,
+  })
+
+  const startRename = useCallback((file: FileInfo) => {
+    setEditingPath(file.path)
+    setEditName(file.name)
+    setCopyingPath(null)
+  }, [])
+
+  const submitRename = useCallback(() => {
+    if (editingPath && editName && editName !== editNameFromPath(editingPath)) {
+      onRename?.(editingPath, replaceName(editingPath, editName))
+    }
+    setEditingPath(null)
+  }, [editingPath, editName, onRename])
+
+  const startCopy = useCallback((file: FileInfo) => {
+    setCopyingPath(file.path)
     setCopyName(`${file.name}-copy`)
-  }
+    setEditingPath(null)
+  }, [])
 
-  const handleCopySubmit = () => {
-    if (copyName && copyName !== file.name) {
-      const target = file.path.replace(/\/[^/]+$/, `/${copyName}`)
-      onCopy?.(file.path, target)
+  const submitCopy = useCallback(() => {
+    if (copyingPath && copyName && copyName !== nameFromPath(copyingPath)) {
+      onCopy?.(copyingPath, replaceName(copyingPath, copyName))
     }
-    setCopying(false)
+    setCopyingPath(null)
     setCopyName('')
-  }
+  }, [copyingPath, copyName, onCopy])
 
-  const handleCopyCancel = () => {
-    setCopying(false)
-    setCopyName('')
-  }
+  const renderRow = useCallback(
+    (row: FlatRow) => {
+      const { file } = row
+      const isEditing = editingPath === file.path
+      const isCopying = copyingPath === file.path
 
-  const handleDownload = () => {
-    if (file.isDirectory) return
-
-    void saveFileFromUrl(getFileApiUrl(file.path, { params: { download: true } }), file.name)
-  }
-
-  const getFileIcon = () => {
-    if (file.isDirectory) {
-      return expanded ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />
-    }
-    
-    const ext = file.name.split('.').pop()?.toLowerCase()
-    const iconMap: Record<string, string> = {
-      'js': '🟨',
-      'ts': '🔷',
-      'jsx': '🟨',
-      'tsx': '🔷',
-      'json': '📋',
-      'md': '📝',
-      'html': '🌐',
-      'css': '🎨',
-      'png': '🖼️',
-      'jpg': '🖼️',
-      'jpeg': '🖼️',
-      'gif': '🖼️',
-      'svg': '🖼️',
-      'pdf': '📄',
-      'zip': '📦',
-    }
-    
-    return (
-      <span className="w-4 h-4 flex items-center justify-center text-xs">
-        {iconMap[ext || ''] || <File className="w-4 h-4" />}
-      </span>
-    )
-  }
-
-  return (
-    <div>
-      <div 
-        className={`flex items-center gap-1 px-2 py-1 mb-4 hover:bg-muted rounded cursor-pointer group ${
-          selectedFile?.path === file.path ? 'bg-muted' : ''
-        }`}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
-      >
-        {file.isDirectory && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-4 h-4 p-0"
-            onClick={(e) => {
-              e.stopPropagation()
-              setExpanded(!expanded)
-              if (!expanded) {
-                onDirectoryClick(file.path)
-              }
-            }}
-          >
-            {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-          </Button>
-        )}
-        
-        <div className="flex items-center gap-1 flex-1 min-w-0" onClick={handleClick}>
-          {getFileIcon()}
-          
-          {editing ? (
-            <Input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onBlur={handleRenameSubmit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleRenameSubmit()
-                if (e.key === 'Escape') handleRenameCancel()
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="h-10"
-              autoFocus
-            />
-          ) : (
-            <span className="text-sm truncate">{file.name}</span>
-          )}
-        </div>
-        
+      const menu = isEditing || isCopying ? null : (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className={`w-6 h-6 p-0 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              className={cn('w-6 h-6 p-0 shrink-0', isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}
+              aria-label={t('repo.fileBrowser.actions.more')}
             >
               <MoreVertical className="w-3 h-3" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             {!file.isDirectory && (
-              <DropdownMenuItem onClick={handleDownload}>
+              <DropdownMenuItem
+                onClick={() => {
+                  const url = `/api/files?path=${encodeURIComponent(file.path)}&download=true`
+                  window.open(url, '_blank')
+                }}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 {t('repo.fileBrowser.actions.download')}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={handleRename}>
+            <DropdownMenuItem onClick={() => startRename(file)}>
               <Edit3 className="w-4 h-4 mr-2" />
               {t('repo.fileBrowser.actions.rename')}
             </DropdownMenuItem>
-            {onCopy && !copying && (
-              <DropdownMenuItem onClick={handleCopy}>
+            {onCopy && (
+              <DropdownMenuItem onClick={() => startCopy(file)}>
                 <Copy className="w-4 h-4 mr-2" />
                 {t('repo.fileBrowser.actions.copy')}
               </DropdownMenuItem>
             )}
-            {copying && (
-              <div
-                className="px-2 py-1.5"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-              >
-                <Input
-                  value={copyName}
-                  onChange={(e) => setCopyName(e.target.value)}
-                  onBlur={handleCopySubmit}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCopySubmit()
-                    if (e.key === 'Escape') handleCopyCancel()
-                  }}
-                  className="h-8 text-sm"
-                  placeholder={t('repo.fileBrowser.actions.copyName')}
-                  autoFocus
-                />
-              </div>
+            {onDelete && (
+              <DropdownMenuItem onClick={() => setDeleteTarget(file.path)} className="text-red-600">
+                <Trash2 className="w-4 h-4 mr-2" />
+                {t('repo.fileBrowser.actions.delete')}
+              </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-              <Trash2 className="w-4 h-4 mr-2" />
-              {t('repo.fileBrowser.actions.delete')}
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-      
-      {file.isDirectory && expanded && file.children && (
-        <div>
-          {file.children.map((child) => (
-            <TreeNode
-              key={child.path}
-              file={child}
-              level={level + 1}
-              onFileSelect={onFileSelect}
-              onDirectoryClick={onDirectoryClick}
-              selectedFile={selectedFile}
-              onDelete={onDelete}
-              onRename={onRename}
-              onCopy={onCopy}
+      )
+
+      if (isEditing) {
+        return (
+          <div
+            className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded group"
+            style={{ paddingLeft: `${row.level * 16 + 8}px` }}
+          >
+            {row.expandable && <div className="w-4 shrink-0" />}
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={submitRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitRename()
+                if (e.key === 'Escape') setEditingPath(null)
+              }}
+              className="h-7"
+              autoFocus
             />
-          ))}
+          </div>
+        )
+      }
+
+      if (isCopying) {
+        return (
+          <div
+            className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded group"
+            style={{ paddingLeft: `${row.level * 16 + 8}px` }}
+          >
+            {row.expandable && <div className="w-4 shrink-0" />}
+            <Input
+              value={copyName}
+              onChange={(e) => setCopyName(e.target.value)}
+              onBlur={submitCopy}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitCopy()
+                if (e.key === 'Escape') setCopyingPath(null)
+              }}
+              className="h-7"
+              placeholder={t('repo.fileBrowser.actions.copyName')}
+              autoFocus
+            />
+          </div>
+        )
+      }
+
+      return (
+        <div
+          className={cn(
+            'flex items-center gap-1 px-2 py-1.5 hover:bg-muted rounded cursor-pointer group',
+            selectedFile?.path === file.path && 'bg-muted',
+          )}
+          style={{ paddingLeft: `${row.level * 16 + 8}px` }}
+          onClick={() => {
+            if (file.isDirectory) toggle(file.path)
+            else onFileSelect?.(file)
+          }}
+          data-tree-row={file.path}
+        >
+          {row.expandable ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-4 h-4 p-0 shrink-0"
+              aria-label={expandedLabel(expandedOf(expandedPaths, file.path))}
+              onClick={(e) => {
+                e.stopPropagation()
+                toggle(file.path)
+              }}
+              data-tree-toggle={file.path}
+            >
+              {expandedOf(expandedPaths, file.path) ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
+            </Button>
+          ) : (
+            <div className="w-4 shrink-0" />
+          )}
+
+          {file.isDirectory ? (
+            expandedOf(expandedPaths, file.path) ? (
+              <FolderOpen className="w-4 h-4 shrink-0" />
+            ) : (
+              <Folder className="w-4 h-4 shrink-0" />
+            )
+          ) : (
+            <span className="w-4 h-4 flex items-center justify-center text-xs shrink-0">
+              {FILE_ICON_MAP[file.name.split('.').pop()?.toLowerCase() ?? ''] ?? <File className="w-4 h-4" />}
+            </span>
+          )}
+
+          <span className="flex-1 truncate text-sm">{file.name}</span>
+
+          {menu}
         </div>
-      )}
-
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteConfirm}
-        onCancel={handleDeleteCancel}
-        title={file.isDirectory ? t('repo.fileBrowser.deleteFolderTitle') : t('repo.fileBrowser.deleteFileTitle')}
-        description={file.isDirectory ? t('repo.fileBrowser.deleteFolderDescription') : t('repo.fileBrowser.deleteFileDescription')}
-        itemName={file.name}
-      />
-    </div>
+      )
+    },
+    [
+      copyingPath,
+      copyName,
+      editingPath,
+      editName,
+      expandedPaths,
+      isMobile,
+      onCopy,
+      onDelete,
+      onFileSelect,
+      selectedFile?.path,
+      startCopy,
+      startRename,
+      submitCopy,
+      submitRename,
+      t,
+      toggle,
+    ],
   )
-}
 
-export const FileTree = memo(function FileTree({ files, onFileSelect, onDirectoryClick, selectedFile, onDelete, onRename, onCopy, currentPath = '', basePath = '', onNavigateUp, canNavigateUp }: FileTreeProps) {
-  const { t } = useI18n()
-  const handleGoUp = () => {
-    onNavigateUp?.()
+  const goUpRow = showGoUp ? (
+    <div
+      className="flex items-center gap-1 px-2 py-1.5 hover:bg-muted rounded cursor-pointer"
+      onClick={handleGoUp}
+      data-tree-row="__up__"
+    >
+      <span className="w-4 h-4 flex items-center justify-center text-sm">↩️</span>
+      <span className="text-sm text-muted-foreground">..</span>
+    </div>
+  ) : null
+
+  const deleteDialog = deleteTarget ? (
+    <DeleteDialog
+      open
+      onOpenChange={(open) => !open && setDeleteTarget(null)}
+      onConfirm={() => {
+        onDelete?.(deleteTarget)
+        setDeleteTarget(null)
+      }}
+      onCancel={() => setDeleteTarget(null)}
+      title={
+        findNode(files, deleteTarget)?.isDirectory
+          ? t('repo.fileBrowser.deleteFolderTitle')
+          : t('repo.fileBrowser.deleteFileTitle')
+      }
+      description={
+        findNode(files, deleteTarget)?.isDirectory
+          ? t('repo.fileBrowser.deleteFolderDescription')
+          : t('repo.fileBrowser.deleteFileDescription')
+      }
+      itemName={nameFromPath(deleteTarget)}
+    />
+  ) : null
+
+  if (files.length === 0) {
+    return (
+      <>
+        <div className="text-center text-muted-foreground py-8">{t('repo.fileBrowser.noFiles')}</div>
+        {deleteDialog}
+      </>
+    )
   }
 
-  const showGoUp = canNavigateUp ?? Boolean(currentPath && currentPath !== basePath)
+  if (!virtualEnabled) {
+    return (
+      <>
+        {goUpRow}
+        {rows.map(renderRow)}
+        {deleteDialog}
+      </>
+    )
+  }
+
+  const virtualRows = virtualizer.getVirtualItems()
 
   return (
-    <div className="overflow-y-auto">
-      {showGoUp && (
-        <div 
-          className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded cursor-pointer"
-          onClick={handleGoUp}
-        >
-          <span className="w-4 h-4 flex items-center justify-center text-sm">↩️</span>
-          <span className="text-sm text-muted-foreground">..</span>
-        </div>
-      )}
-      
-      {files.length === 0 ? (
-        <div className="text-center text-muted-foreground py-8">
-          {t('repo.fileBrowser.noFiles')}
-        </div>
-      ) : (
-        files.map((file) => (
-          <TreeNode
-            key={file.path}
-            file={file}
-            level={0}
-            onFileSelect={onFileSelect}
-            onDirectoryClick={onDirectoryClick}
-            selectedFile={selectedFile}
-            onDelete={onDelete}
-            onRename={onRename}
-            onCopy={onCopy}
-          />
-        ))
-      )}
-    </div>
+    <>
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize() + (goUpRow ? 34 : 0)}px`,
+          position: 'relative',
+          width: '100%',
+        }}
+      >
+        {goUpRow && (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 34 }}>{goUpRow}</div>
+        )}
+        {virtualRows.map((virtualRow) => (
+          <div
+            key={virtualRow.key}
+            data-index={virtualRow.index}
+            ref={virtualizer.measureElement}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              transform: `translateY(${virtualRow.start + (goUpRow ? 34 : 0)}px)`,
+            }}
+          >
+            {renderRow(rows[virtualRow.index] as FlatRow)}
+          </div>
+        ))}
+      </div>
+      {deleteDialog}
+    </>
   )
 })
+
+function expandedOf(expanded: Set<string>, path: string): boolean {
+  return expanded.has(path)
+}
+
+function expandedLabel(isExpanded: boolean): string {
+  return isExpanded ? 'collapse' : 'expand'
+}
+
+function nameFromPath(path: string): string {
+  return path.split('/').pop() ?? path
+}
+
+function editNameFromPath(path: string): string {
+  return nameFromPath(path)
+}
+
+function replaceName(path: string, name: string): string {
+  return path.replace(/\/[^/]*$/, `/${name}`)
+}
+
+function findNode(files: FileInfo[], path: string): FileInfo | undefined {
+  for (const file of files) {
+    if (file.path === path) return file
+    if (file.children) {
+      const found = findNode(file.children, path)
+      if (found) return found
+    }
+  }
+  return undefined
+}

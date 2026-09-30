@@ -35,6 +35,9 @@ export interface FileBrowserController {
   copy: (sourcePath: string, newPath: string) => Promise<void>
   upload: (files: FileList) => Promise<void>
   cancelUpload: () => void
+  expandedPaths: Set<string>
+  isExpanded: (path: string) => boolean
+  toggleDirectory: (path: string, navigate: boolean) => void
   isDragging: boolean
   dragHandlers: {
     onDragEnter: (e: React.DragEvent) => void
@@ -66,6 +69,7 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
   const [isDragging, setIsDragging] = useState(false)
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set())
 
   const dropZoneRef = useRef<HTMLDivElement>(null)
   const uploadCancelledRef = useRef(false)
@@ -97,6 +101,26 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
         const data = await response.json()
         setFiles(data)
         setCurrentPath(path)
+        setExpandedPaths((current) => {
+          if (current.size === 0) return current
+          const reachable = new Set<string>()
+          const collect = (entries: FileInfo[] | undefined, parents: string[]) => {
+            for (const entry of entries ?? []) {
+              if (!entry.isDirectory) continue
+              const parentsWithSelf = [...parents, entry.path]
+              if (current.has(entry.path)) {
+                reachable.add(entry.path)
+                for (const candidate of current) {
+                  if (candidate.startsWith(`${entry.path}/`)) reachable.add(candidate)
+                }
+              }
+              collect(entry.children, parentsWithSelf)
+            }
+          }
+          collect(data.children, [])
+          if (reachable.size === current.size) return current
+          return reachable
+        })
         onDirectoryLoad?.({ workspaceRoot: data.workspaceRoot, currentPath: path })
       } catch (err) {
         setError(err instanceof Error ? err.message : t('repo.fileBrowser.errors.loadFilesGeneric'))
@@ -143,6 +167,21 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
       loadFiles(allowNavigateAboveBase ? parentPath : parentPath || basePath)
     }
   }, [allowNavigateAboveBase, basePath, currentPath, loadFiles, getPathParts, normalizePath])
+
+  const toggleDirectory = useCallback((path: string, navigate: boolean) => {
+    setExpandedPaths((current) => {
+      const next = new Set(current)
+      if (next.has(path)) {
+        next.delete(path)
+        return next
+      }
+      next.add(path)
+      return next
+    })
+    if (navigate) void loadFiles(path)
+  }, [loadFiles])
+
+  const isExpanded = useCallback((path: string) => expandedPaths.has(path), [expandedPaths])
 
   const closePreview = useCallback(() => {
     setIsPreviewModalOpen(false)
@@ -356,6 +395,9 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
     copy,
     upload,
     cancelUpload,
+    expandedPaths,
+    isExpanded,
+    toggleDirectory,
     isDragging,
     dragHandlers,
     dropZoneRef,

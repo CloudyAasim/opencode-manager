@@ -332,5 +332,11 @@ export const repo = {
       binary: 'Binary file - cannot display diff',
       noChanges: 'No changes to display',
     },
-  },
+    listPane: 'File list',
+    previewPane: 'File preview',
+    search: 'Search',
+    selectFile: 'Select a file to preview',
+    dropHere: 'Drop files here',
+    cancel: 'Cancel',
+    },
 }

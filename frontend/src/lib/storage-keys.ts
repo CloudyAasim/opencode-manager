@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   fileTreeWidth: 'ocm.fileTreeWidth',
   sidebarCollapsed: 'oc:sidebar:collapsed',
   locale: 'ocm.locale',
+  fileSplitPct: 'ocm.fileSplitPct',
 } as const
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]

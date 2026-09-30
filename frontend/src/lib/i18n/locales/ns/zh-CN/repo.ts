@@ -332,5 +332,11 @@ export const repo = {
       binary: '二进制文件 —— 无法显示差异',
       noChanges: '没有可显示的更改',
     },
-  },
+    listPane: '文件列表',
+    previewPane: '文件预览',
+    search: '搜索',
+    selectFile: '选择一个文件以预览',
+    dropHere: '拖放文件到此处',
+    cancel: '取消',
+    },
 }

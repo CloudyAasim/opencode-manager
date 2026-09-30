@@ -61,7 +61,6 @@ test.describe('files page on a phone', () => {
     const scroller = page.locator('[data-testid="file-list-scroller"]')
     await expect(scroller).toBeVisible()
     await expect(scroller).toContainText('file-000.ts')
-    await expect(scroller).toContainText('file-399.ts')
 
     const metrics = await scroller.evaluate((node) => ({
       clientHeight: node.clientHeight,
@@ -69,7 +68,8 @@ test.describe('files page on a phone', () => {
       rows: node.querySelectorAll('button').length,
       pageScrolls: document.documentElement.scrollHeight > window.innerHeight + 2,
     }))
-    expect(metrics.rows).toBeGreaterThan(50)
+    expect(metrics.rows).toBeGreaterThan(0)
+    expect(metrics.rows).toBeLessThan(120)
 
     expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight)
     expect(metrics.pageScrolls).toBe(false)
@@ -78,6 +78,8 @@ test.describe('files page on a phone', () => {
       node.scrollTop = node.scrollHeight
     })
     await expect(scroller).toContainText('file-399.ts')
+    const afterScroll = await scroller.evaluate((node) => node.querySelectorAll('[data-tree-row]').length)
+    expect(afterScroll).toBeLessThan(120)
   })
 
   test('the back control leaves the files page', async ({ page }) => {
@@ -136,4 +138,44 @@ test.describe('files page on a phone', () => {
     expect(fits.overflowsHorizontally).toBe(false)
     expect(fits.overflowsVertically).toBe(false)
   })
+})
+
+test.describe('file tree at scale', () => {
+  test('windows a large directory', async ({ page }) => {
+    await signIn(page)
+    await installApiMocks(page, { repos: [REPO] })
+
+    const children = Array.from({ length: 200 }, (_, index) => ({
+      name: `entry-${String(index).padStart(3, '0')}.ts`,
+      path: `entry-${String(index).padStart(3, '0')}.ts`,
+      isDirectory: false,
+      size: 128,
+      lastModified: new Date(0).toISOString(),
+    }))
+
+    await mockListing(page, directory(children))
+
+    await page.goto('/files')
+    const scroller = page.locator('[data-testid="file-list-scroller"]')
+    await expect(scroller).toBeVisible()
+    await expect(scroller).toContainText('entry-000.ts')
+
+    const initial = await scroller.evaluate((node) => ({
+      total: node.scrollHeight,
+      visible: node.clientHeight,
+      rows: node.querySelectorAll('[data-tree-row]').length,
+    }))
+
+    expect(initial.total).toBeGreaterThan(initial.visible)
+    expect(initial.rows).toBeGreaterThan(0)
+    expect(initial.rows).toBeLessThan(120)
+
+    await scroller.evaluate((node) => {
+      node.scrollTop = node.scrollHeight
+    })
+    await expect(scroller).toContainText('entry-199.ts')
+    const tail = await scroller.evaluate((node) => node.querySelectorAll('[data-tree-row]').length)
+    expect(tail).toBeLessThan(120)
+  })
+
 })
