@@ -127,7 +127,7 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
             </div>
           )}
 
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div data-testid="file-list-scroller" className="flex-1 min-h-0 overflow-y-auto">
             {controller.loading && !controller.files ? (
               <div className="flex items-center justify-center h-64">
                 <RefreshCw className="w-6 h-6 animate-spin" />
@@ -151,7 +151,7 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
         </div>
 
         {!isMobile && (
-          <div className="hidden sm:flex flex-1 min-h-0 overflow-y-auto">
+          <div data-testid="file-preview-surface" className="hidden sm:flex flex-1 min-h-0 overflow-y-auto">
             {controller.selectedFile && !controller.selectedFile.isDirectory ? (
               <FilePreview
                 key={controller.selectedFile.path}
@@ -166,11 +166,13 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
         )}
       </CardContent>
 
-      <MobileFilePreviewModal
-        isOpen={controller.isPreviewModalOpen}
-        onClose={controller.closePreview}
-        file={controller.selectedFile}
-      />
+      <div data-testid="file-preview-modal-host" hidden={!controller.isPreviewModalOpen}>
+        <MobileFilePreviewModal
+          isOpen={controller.isPreviewModalOpen}
+          onClose={controller.closePreview}
+          file={controller.selectedFile}
+        />
+      </div>
     </>
   )
 })

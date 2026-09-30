@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
+import { useMobile } from '@/hooks/useMobile'
 import { getFileApiUrl, useFile } from '@/api/files'
 import type { FileInfo, UploadItem, UploadProgress } from '@/types/files'
 
@@ -46,6 +47,7 @@ export interface FileBrowserController {
 
 export function useFileBrowserController(options: FileBrowserControllerOptions): FileBrowserController {
   const { t } = useI18n()
+  const isMobile = useMobile()
   const {
     basePath = '',
     initialSelectedFile,
@@ -73,9 +75,9 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
   useEffect(() => {
     if (initialFileData) {
       setSelectedFile(initialFileData)
-      onPreviewStateChange?.(true)
+      if (isMobile) onPreviewStateChange?.(true)
     }
-  }, [initialFileData, onPreviewStateChange])
+  }, [initialFileData, isMobile, onPreviewStateChange])
 
   useEffect(() => {
     if (initialFileError) {
@@ -163,8 +165,10 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
         const fullFileData: FileInfo = await response.json()
         setSelectedFile(fullFileData)
         onFileSelect?.(fullFileData)
-        setIsPreviewModalOpen(true)
-        onPreviewStateChange?.(true)
+        if (isMobile) {
+          setIsPreviewModalOpen(true)
+          onPreviewStateChange?.(true)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : t('repo.fileBrowser.errors.loadFileGeneric'))
         setSelectedFile(null)
@@ -172,7 +176,7 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
         setLoading(false)
       }
     },
-    [onFileSelect, onPreviewStateChange, t],
+    [isMobile, onFileSelect, onPreviewStateChange, t],
   )
 
   const create = useCallback(

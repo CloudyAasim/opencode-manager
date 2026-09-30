@@ -6,6 +6,12 @@ import { Files } from '../Files'
 import type { FileInfo } from '@/types/files'
 
 const fetchMock = vi.hoisted(() => vi.fn())
+const useMobileMock = vi.hoisted(() => vi.fn(() => false))
+
+vi.mock('@/hooks/useMobile', () => ({
+  useMobile: useMobileMock,
+  useSwipeBack: () => ({ bind: () => undefined, swipeStyles: {} }),
+}))
 
 vi.stubGlobal('fetch', (...args: unknown[]) => fetchMock(...args))
 
@@ -74,6 +80,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 describe('Files page', () => {
   beforeEach(() => {
+    useMobileMock.mockReturnValue(false)
     fetchMock.mockReset()
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -98,6 +105,7 @@ describe('Files page', () => {
   })
 
   it('opens a full-screen preview for a picked file on narrow viewports', async () => {
+    useMobileMock.mockReturnValue(true)
     render(<Files />, { wrapper })
 
     await waitFor(() => {
@@ -108,6 +116,20 @@ describe('Files page', () => {
     await waitFor(() => {
       expect(screen.getByTestId('mobile-preview').textContent).toBe('true|a.txt')
     })
+  })
+
+  it('previews inline on wide viewports instead of opening the modal', async () => {
+    render(<Files />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('a.txt')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('a.txt'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('preview')).toHaveTextContent('a.txt')
+    })
+    expect(screen.getByTestId('mobile-preview').textContent).toBe('false|a.txt')
   })
 
   it('lists directories returned for the root', async () => {
