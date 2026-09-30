@@ -9,7 +9,19 @@ import { registerServiceWorker } from './lib/serviceWorker'
 
 registerServiceWorker()
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root')!
+
+const boot = document.getElementById('boot')
+if (boot) {
+  const observer = new MutationObserver(() => {
+    if (rootElement.childElementCount === 0) return
+    observer.disconnect()
+    boot.remove()
+  })
+  observer.observe(rootElement, { childList: true })
+}
+
+createRoot(rootElement).render(
   <StrictMode>
     <ErrorBoundary>
       <TooltipProvider>

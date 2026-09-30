@@ -28,9 +28,42 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="OpenCode" />
     <title>OpenCode Manager</title>
+    <style>
+      html { background: #ffffff; }
+      @media (prefers-color-scheme: dark) { html { background: #0a0a0a; } }
+      #boot {
+        position: fixed; inset: 0; display: flex; flex-direction: column;
+        gap: 12px; padding: 12px; box-sizing: border-box;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      #boot .row {
+        display: flex; align-items: center; gap: 12px;
+        border: 1px solid rgba(128,128,128,0.22); border-radius: 12px; padding: 12px;
+      }
+      #boot .dot { width: 32px; height: 32px; border-radius: 8px; flex: 0 0 auto; }
+      #boot .lines { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+      #boot .bar { height: 12px; border-radius: 6px; }
+      @media (prefers-reduced-motion: no-preference) {
+        #boot .dot, #boot .bar { background: rgba(128,128,128,0.18); animation: boot-pulse 1.4s ease-in-out infinite; }
+        #boot .bar.wide { width: 60%; animation-delay: 0.12s; }
+        #boot .bar.narrow { width: 38%; animation-delay: 0.24s; }
+        #boot .row:nth-child(2) .bar { animation-delay: 0.06s; }
+        #boot .row:nth-child(3) .bar { animation-delay: 0.12s; }
+        #boot .row:nth-child(4) .bar { animation-delay: 0.18s; }
+        #boot .row:nth-child(5) .bar { animation-delay: 0.24s; }
+        @keyframes boot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot" aria-hidden="true">
+      <div class="row"><div class="dot"></div><div class="lines"><div class="bar wide"></div><div class="bar narrow"></div></div></div>
+      <div class="row"><div class="dot"></div><div class="lines"><div class="bar wide"></div><div class="bar narrow"></div></div></div>
+      <div class="row"><div class="dot"></div><div class="lines"><div class="bar wide"></div><div class="bar narrow"></div></div></div>
+      <div class="row"><div class="dot"></div><div class="lines"><div class="bar wide"></div><div class="bar narrow"></div></div></div>
+      <div class="row"><div class="dot"></div><div class="lines"><div class="bar wide"></div><div class="bar narrow"></div></div></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
