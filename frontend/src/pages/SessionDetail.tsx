@@ -812,7 +812,8 @@ export function SessionDetail() {
           {repoLoading || sessionLoading || messagesLoading ? (
             <MessageSkeleton />
           ) : opcodeUrl && sessionDirectory ? (
-            <MessageThread 
+            <MessageThread
+              scrollRef={messageContainerRef}
               opcodeUrl={opcodeUrl} 
               sessionID={sessionId} 
               directory={sessionDirectory}
