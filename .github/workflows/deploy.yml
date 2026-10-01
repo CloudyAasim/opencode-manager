@@ -40,7 +40,11 @@ jobs:
           set -euo pipefail
           HOST=SERVER_HOST
           APP=opencode-manager
-          DOMAIN=APP_DOMAIN
+          # All domains this app answers on. The first one is the canonical
+          # origin used for cookies, CORS and Passkey. Add extra names here when
+          # the certificate covers them, or the browser will reject the request.
+          DOMAINS=(APP_DOMAIN)
+          DOMAIN="${DOMAINS[0]}"
 
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
@@ -75,19 +79,27 @@ jobs:
           # TLS is managed manually (dokku letsencrypt). Detect it so an automated
           # deploy never downgrades origins/cookies or drops the https port map.
           SSL_ENABLED=$(dokku certs:report "$APP" --ssl-enabled 2>/dev/null | tail -1 || echo "false")
+          HTTPS_ORIGINS=""
+          HTTP_ORIGINS=""
+          for d in "${DOMAINS[@]}"; do
+            HTTPS_ORIGINS="${HTTPS_ORIGINS}${HTTPS_ORIGINS:+,}https://$d"
+            HTTP_ORIGINS="${HTTP_ORIGINS}${HTTP_ORIGINS:+,}http://$d"
+          done
           if [ "$SSL_ENABLED" = "true" ]; then
-            DOKKU_ORIGINS="https://$DOMAIN"
-            DOKKU_CORS="https://$DOMAIN"
+            DOKKU_ORIGINS="$HTTPS_ORIGINS"
+            DOKKU_CORS="$HTTPS_ORIGINS"
             DOKKU_SECURE_COOKIES=true
             DOKKU_PORT_MAP="http:80:5003 https:443:5003"
             DOKKU_BASE_URL="https://$DOMAIN"
           else
-            DOKKU_ORIGINS="http://$DOMAIN,https://$DOMAIN"
-            DOKKU_CORS="http://$DOMAIN"
+            DOKKU_ORIGINS="$HTTP_ORIGINS,$HTTPS_ORIGINS"
+            DOKKU_CORS="$HTTP_ORIGINS"
             DOKKU_SECURE_COOKIES=false
             DOKKU_PORT_MAP="http:80:5003"
             DOKKU_BASE_URL="http://$DOMAIN"
           fi
+          echo "domains=${DOMAINS[*]}"
+          echo "origins=$DOKKU_ORIGINS"
 
           # Output is suppressed because Dokku echoes variable values; the values
           # are sourced from GitHub secrets, which Actions masks anyway.
@@ -109,9 +121,11 @@ jobs:
             >/dev/null
 
           echo "== configuring domain and port mapping =="
-          dokku domains:add "$APP" "$DOMAIN" || true
+          for d in "${DOMAINS[@]}"; do
+            dokku domains:add "$APP" "$d" || true
+          done
           # Let's Encrypt cannot validate an IP or an unresolvable default vhost;
-          # keep only the real domain so renewals succeed.
+          # keep only the real domains so renewals succeed.
           dokku domains:remove "$APP" "$HOST" || true
           dokku domains:remove "$APP" "APP_VHOST" || true
           dokku ports:set "$APP" $DOKKU_PORT_MAP || true
