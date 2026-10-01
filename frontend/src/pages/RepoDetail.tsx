@@ -6,7 +6,7 @@ import { OPENCODE_API_ENDPOINT } from '@/config'
 import { projectSessionPath } from '@/lib/project-session-path'
 import { useI18n } from '@/lib/i18n'
 import { useWorktreeTab } from '@/hooks/useWorktreeTab'
-import { SessionRouteFallback } from '@/components/session/SessionRouteFallback'
+import { SessionRouteFallback } from '@/features/session/SessionRouteFallback'
 import { getSessionListPath } from '@/lib/navigation'
 
 interface SessionListEnvelope {

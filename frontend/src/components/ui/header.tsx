@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { PageHeader } from "@/components/ui/page-header";
-import { EditSessionTitleDialog } from "@/components/session/EditSessionTitleDialog";
+import { EditSessionTitleDialog } from "@/components/ui/EditSessionTitleDialog";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";

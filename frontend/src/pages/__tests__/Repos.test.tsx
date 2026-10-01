@@ -8,7 +8,7 @@ import { Repos } from '../Repos'
 vi.mock('@/features/repos/RepoList', () => ({ RepoList: () => <div data-testid="repo-list" /> }))
 vi.mock('@/features/repos/AddRepoDialog', () => ({ AddRepoDialog: () => null }))
 vi.mock('@/features/file-browser/FileBrowserSheet', () => ({ FileBrowserSheet: () => null }))
-vi.mock('@/components/notifications/PendingActionsGroup', () => ({ PendingActionsGroup: () => null }))
+vi.mock('@/features/notifications/PendingActionsGroup', () => ({ PendingActionsGroup: () => null }))
 
 function LocationSpy() {
   const location = useLocation()

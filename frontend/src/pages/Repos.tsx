@@ -5,7 +5,7 @@ import { AddRepoDialog } from "@/features/repos/AddRepoDialog";
 import { FileBrowserSheet } from "@/features/file-browser/FileBrowserSheet";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
-import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
+import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { useDialogParam } from "@/hooks/useDialogParam";
 import { Plus } from "lucide-react";

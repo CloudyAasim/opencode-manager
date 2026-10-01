@@ -7,7 +7,7 @@ import { PromptInput, type PromptInputHandle } from "@/features/message/PromptIn
 import { FloatingTTSButton } from '@/features/message/FloatingTTSButton'
 import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare } from "lucide-react";
 import { Header } from "@/components/ui/header";
-import { SessionList } from "@/components/session/SessionList";
+import { SessionList } from "@/features/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
 import { FetchError } from '@/api/fetchWrapper'
 
@@ -22,12 +22,12 @@ import { TerminalView } from "@/features/terminal/TerminalView";
 import type { FileInfo } from "@/types/files";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ContextUsageIndicator } from "@/components/session/ContextUsageIndicator";
+import { ContextUsageIndicator } from "@/features/session/ContextUsageIndicator";
 import { useSession, useAbortSession, useUpdateSession, useMessages, useCreateSession } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
 import { useRepoSiblings, useCreateRepoWorkspace, useDeleteRepoWorkspaces } from "@/hooks/useRepoSiblings";
 import { useWorktreeTab } from "@/hooks/useWorktreeTab";
-import { SessionRouteFallback } from "@/components/session/SessionRouteFallback";
+import { SessionRouteFallback } from "@/features/session/SessionRouteFallback";
 import { WorktreeTabs } from "@/features/repos/WorktreeTabs";
 import { WorkspaceManager } from "@/features/repos/WorkspaceManager";
 import { CreateWorkspaceDialog } from "@/features/repos/CreateWorkspaceDialog";
@@ -59,11 +59,11 @@ import { createOpenCodeClient } from "@/api/opencode";
 import { usePermissions, useQuestions } from "@/contexts/EventContext";
 import { useSessionStatusForSession } from "@/stores/sessionStatusStore";
 import type { QuestionRequest } from "@/api/types";
-import { QuestionPrompt } from "@/components/session/QuestionPrompt";
-import { MinimizedQuestionIndicator } from "@/components/session/MinimizedQuestionIndicator";
-import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
+import { QuestionPrompt } from "@/features/session/QuestionPrompt";
+import { MinimizedQuestionIndicator } from "@/features/session/MinimizedQuestionIndicator";
+import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup";
 import { SourceControlPanel, ChangesTab } from "@/features/source-control";
-import { SessionSendErrorBanner } from "@/components/session/SessionSendErrorBanner";
+import { SessionSendErrorBanner } from "@/features/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
 import { useDialogParam } from "@/hooks/useDialogParam";
 import { MEDIA } from '@/framework/shell/breakpoints';

@@ -142,7 +142,7 @@ vi.mock('@/api/repos', () => ({
   initializeAssistantMode: vi.fn(() => Promise.resolve({ directory: '/test/repo' })),
 }))
 
-vi.mock('@/components/session/SessionList', () => ({
+vi.mock('@/features/session/SessionList', () => ({
   SessionList: vi.fn(() => null),
 }))
 
@@ -170,17 +170,17 @@ vi.mock('@/features/source-control', () => ({
   SourceControlPanel: vi.fn(() => null),
 }))
 
-vi.mock('@/components/session/QuestionPrompt', () => ({
+vi.mock('@/features/session/QuestionPrompt', () => ({
   QuestionPrompt: ({ question }: { question: QuestionRequest }) => (
     <div data-testid="question-prompt">{question.id}</div>
   ),
 }))
 
-vi.mock('@/components/session/MinimizedQuestionIndicator', () => ({
+vi.mock('@/features/session/MinimizedQuestionIndicator', () => ({
   MinimizedQuestionIndicator: vi.fn(() => null),
 }))
 
-vi.mock('@/components/notifications/PendingActionsGroup', () => ({
+vi.mock('@/features/notifications/PendingActionsGroup', () => ({
   PendingActionsGroup: vi.fn(() => null),
 }))
 

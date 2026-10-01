@@ -132,16 +132,16 @@ vi.mock('@/api/repos', () => ({
   initializeAssistantMode: vi.fn(() => Promise.resolve({ directory: '/test/repo' })),
 }))
 
-vi.mock('@/components/session/SessionList', () => ({ SessionList: vi.fn(() => null) }))
+vi.mock('@/features/session/SessionList', () => ({ SessionList: vi.fn(() => null) }))
 vi.mock('@/features/file-browser/FileBrowserSheet', () => ({ FileBrowserSheet: vi.fn(() => null) }))
 vi.mock('@/features/repos/RepoMcpDialog', () => ({ RepoMcpDialog: vi.fn(() => null) }))
 vi.mock('@/features/repos/ResetPermissionsDialog', () => ({ ResetPermissionsDialog: vi.fn(() => null) }))
 vi.mock('@/features/repos/RepoLspDialog', () => ({ RepoLspDialog: vi.fn(() => null) }))
 vi.mock('@/features/repos/RepoSkillsDialog', () => ({ RepoSkillsDialog: vi.fn(() => null) }))
 vi.mock('@/features/source-control', () => ({ SourceControlPanel: vi.fn(() => null) }))
-vi.mock('@/components/session/QuestionPrompt', () => ({ QuestionPrompt: vi.fn(() => null) }))
-vi.mock('@/components/session/MinimizedQuestionIndicator', () => ({ MinimizedQuestionIndicator: vi.fn(() => null) }))
-vi.mock('@/components/notifications/PendingActionsGroup', () => ({ PendingActionsGroup: vi.fn(() => null) }))
+vi.mock('@/features/session/QuestionPrompt', () => ({ QuestionPrompt: vi.fn(() => null) }))
+vi.mock('@/features/session/MinimizedQuestionIndicator', () => ({ MinimizedQuestionIndicator: vi.fn(() => null) }))
+vi.mock('@/features/notifications/PendingActionsGroup', () => ({ PendingActionsGroup: vi.fn(() => null) }))
 
 const findPendingActionsQuery = (queryClient: QueryClient): Query | undefined =>
   queryClient
