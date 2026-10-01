@@ -2,6 +2,8 @@ export const misc = {
   common: {
     cancel: 'Cancel',
     create: 'Create',
+    pageNotFound: 'Page not found',
+    backToHome: 'Back to home',
   },
   apiKey: {
     updateTitle: 'Update {{provider}} API Key',

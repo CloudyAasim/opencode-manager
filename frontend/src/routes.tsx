@@ -95,6 +95,11 @@ export const appRoutes: AppRoute[] = [
     loader: terminalLoader,
     prefetch: { group: 'admin', order: 9 },
   },
+  {
+    path: '*',
+    lazy: async () => ({ Component: (await import('./pages/NotFound')).NotFound }),
+    loader: protectedLoader,
+  },
 ]
 
 export function createAppRouter(shell: ReactElement) {

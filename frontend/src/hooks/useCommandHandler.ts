@@ -87,7 +87,7 @@ export function useCommandHandler({
                 const newPath = `/repos/${repoId}/sessions/${newSession.id}`
                 navigate(newPath)
               } else {
-                navigate(`/session/${newSession.id}`)
+                navigate('/repos')
               }
             }
           } catch (error) {

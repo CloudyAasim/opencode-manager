@@ -2,6 +2,8 @@ export const misc = {
   common: {
     cancel: '取消',
     create: '创建',
+    pageNotFound: '页面不存在',
+    backToHome: '返回首页',
   },
   apiKey: {
     updateTitle: '更新 {{provider}} API 密钥',
