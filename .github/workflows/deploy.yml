@@ -36,15 +36,19 @@ jobs:
           AUTH_SECRET: ${{ secrets.OCM_AUTH_SECRET }}
           ADMIN_EMAIL: ${{ secrets.OCM_ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.OCM_ADMIN_PASSWORD }}
+          DOKKU_HOST: ${{ secrets.DOKKU_HOST }}
+          DOKKU_APP: ${{ secrets.DOKKU_APP }}
+          DOKKU_DOMAINS: ${{ secrets.DOKKU_DOMAINS }}
         run: |
           set -euo pipefail
-          HOST=SERVER_HOST
-          APP=opencode-manager
+          HOST="$DOKKU_HOST"
+          APP="$DOKKU_APP"
           # All domains this app answers on. The first one is the canonical
           # origin used for cookies, CORS and Passkey. Add extra names here when
           # the certificate covers them, or the browser will reject the request.
-          DOMAINS=(APP_DOMAIN)
+          read -ra DOMAINS <<< "$DOKKU_DOMAINS"
           DOMAIN="${DOMAINS[0]}"
+          [ ${#DOMAINS[@]} -gt 0 ] || { echo "::error::DOKKU_DOMAINS secret is empty"; exit 1; }
 
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
@@ -126,8 +130,8 @@ jobs:
           done
           # Let's Encrypt cannot validate an IP or an unresolvable default vhost;
           # keep only the real domains so renewals succeed.
+          dokku domains:remove "$APP" "$APP.dokku.aasim.l.cd" 2>/dev/null || true
           dokku domains:remove "$APP" "$HOST" || true
-          dokku domains:remove "$APP" "APP_VHOST" || true
           dokku ports:set "$APP" $DOKKU_PORT_MAP || true
           echo "base_url=$DOKKU_BASE_URL" >> "$GITHUB_OUTPUT"
 
@@ -147,7 +151,7 @@ jobs:
       - name: Push to dokku
         uses: dokku/github-action@master
         with:
-          git_remote_url: 'ssh://dokku@SERVER_HOST:22/opencode-manager'
+          git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE }}
           ssh_private_key: ${{ secrets.DEBAINDOKKU001 }}
           ssh_host_key: ${{ secrets.SSH_HOST_KEY }}
           branch: main
@@ -157,10 +161,12 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEBAINDOKKU001 }}
           SSH_HOST_KEY: ${{ secrets.SSH_HOST_KEY }}
+          DOKKU_HOST: ${{ secrets.DOKKU_HOST }}
+          DOKKU_APP: ${{ secrets.DOKKU_APP }}
         run: |
           set -uo pipefail
-          HOST=SERVER_HOST
-          APP=opencode-manager
+          HOST="$DOKKU_HOST"
+          APP="$DOKKU_APP"
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
@@ -170,7 +176,7 @@ jobs:
           echo "########## logs (tail 200) ##########"; dokku logs "$APP" --num 200 || true
           echo "########## probe ##########"
           BASE="${{ steps.configure.outputs.base_url }}"
-          curl -v -m 15 "${BASE:-https://APP_DOMAIN}/api/health" 2>&1 | tail -15 || true
+          curl -v -m 15 "${BASE:-https://example.invalid}/api/health" 2>&1 | tail -15 || true
 
       - name: Smoke test
         env:
