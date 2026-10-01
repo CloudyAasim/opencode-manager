@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
+import { LayerProvider } from '@/framework/layer/LayerProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Repos } from '../Repos'
 
@@ -18,7 +19,9 @@ function wrapper({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter>
+        <LayerProvider>{children}</LayerProvider>
+      </MemoryRouter>
     </QueryClientProvider>
   )
 }

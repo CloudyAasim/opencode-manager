@@ -2,12 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { renderHook, act, render, screen } from '@testing-library/react'
 import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { useDialogParam } from './useDialogParam'
+import { LayerProvider } from '@/framework/layer/LayerProvider'
 import { describe, it, expect } from 'vitest'
 
 describe('useDialogParam', () => {
   const createWrapper = (initialEntries?: string[]) => {
     return function wrapper({ children }: { children: React.ReactNode }) {
-      return <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
+      return (
+        <MemoryRouter initialEntries={initialEntries}>
+          <LayerProvider>{children}</LayerProvider>
+        </MemoryRouter>
+      )
     }
   }
 
@@ -23,7 +28,7 @@ describe('useDialogParam', () => {
     expect(result.current[0]).toBe(true)
   })
 
-  it('opening sets dialog param and clears mobileTab', () => {
+  it('opening clears mobileTab', () => {
     const wrapper = createWrapper(['/?mobileTab=more'])
     const { result } = renderHook(() => useDialogParam('mcp'), { wrapper })
 
@@ -60,13 +65,89 @@ describe('useDialogParam', () => {
     expect(result2.current[0]).toBe(true)
   })
 
-  it('concurrent different names do not interfere', () => {
+  it('concurrent different names do not interfere on first paint', () => {
     const wrapper = createWrapper(['/?dialog=mcp'])
     const { result: result1 } = renderHook(() => useDialogParam('mcp'), { wrapper })
     const { result: result2 } = renderHook(() => useDialogParam('skills'), { wrapper })
 
     expect(result1.current[0]).toBe(true)
     expect(result2.current[0]).toBe(false)
+  })
+
+  it('opening a second layer keeps the first one open', () => {
+    const wrapper = createWrapper()
+    const { result } = renderHook(
+      () => ({
+        mcp: useDialogParam('mcp'),
+        skills: useDialogParam('skills'),
+      }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.mcp[1](true)
+    })
+    expect(result.current.mcp[0]).toBe(true)
+
+    act(() => {
+      result.current.skills[1](true)
+    })
+
+    expect(result.current.skills[0]).toBe(true)
+    expect(result.current.mcp[0]).toBe(true)
+  })
+
+  it('closing a middle layer leaves the top layer alone', () => {
+    const wrapper = createWrapper()
+    const { result } = renderHook(
+      () => ({
+        mcp: useDialogParam('mcp'),
+        skills: useDialogParam('skills'),
+      }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.mcp[1](true)
+    })
+    act(() => {
+      result.current.skills[1](true)
+    })
+
+    act(() => {
+      result.current.mcp[1](false)
+    })
+
+    expect(result.current.mcp[0]).toBe(false)
+    expect(result.current.skills[0]).toBe(true)
+  })
+
+  it('opening the same layer twice does not duplicate it', () => {
+    const wrapper = createWrapper()
+    const { result } = renderHook(
+      () => ({
+        mcp: useDialogParam('mcp'),
+        skills: useDialogParam('skills'),
+      }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.mcp[1](true)
+    })
+    act(() => {
+      result.current.mcp[1](true)
+    })
+
+    act(() => {
+      result.current.skills[1](true)
+    })
+
+    act(() => {
+      result.current.mcp[1](false)
+    })
+
+    expect(result.current.skills[0]).toBe(true)
   })
 
   it('open pushes so browser back closes the dialog', () => {
@@ -102,7 +183,9 @@ describe('useDialogParam', () => {
 
     render(
       <MemoryRouter initialEntries={['/']}>
-        <DialogPushHarness />
+        <LayerProvider>
+          <DialogPushHarness />
+        </LayerProvider>
       </MemoryRouter>,
     )
 
@@ -113,5 +196,39 @@ describe('useDialogParam', () => {
 
     act(() => { screen.getByText('back').click() })
     expect(screen.getByTestId('dialog-state').textContent).toBe('closed')
+  })
+
+  it('browser back pops only the top layer and reveals the one beneath', () => {
+    function StackHarness() {
+      const [mcpOpen] = useDialogParam('mcp')
+      const [skillsOpen, setSkillsOpen] = useDialogParam('skills')
+      const navigate = useNavigate()
+
+      return (
+        <div>
+          <span data-testid="mcp">{mcpOpen ? 'open' : 'closed'}</span>
+          <span data-testid="skills">{skillsOpen ? 'open' : 'closed'}</span>
+          <button onClick={() => setSkillsOpen(true)}>open skills</button>
+          <button onClick={() => navigate(-1)}>back</button>
+        </div>
+      )
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <LayerProvider>
+          <StackHarness />
+        </LayerProvider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByTestId('skills').textContent).toBe('closed')
+
+    act(() => { screen.getByText('open skills').click() })
+    expect(screen.getByTestId('skills').textContent).toBe('open')
+
+    act(() => { screen.getByText('back').click() })
+    expect(screen.getByTestId('skills').textContent).toBe('closed')
+    expect(screen.getByTestId('mcp').textContent).toBe('closed')
   })
 })

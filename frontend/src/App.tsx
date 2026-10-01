@@ -7,6 +7,7 @@ import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
 import { MobileSheetHost } from '@/components/navigation/MobileSheetHost'
 import { createAppRouter } from './routes'
+import { LayerProvider } from './framework/layer/LayerProvider'
 import { useTheme } from './hooks/useTheme'
 import { useRightEdgeSwipe, useSwipeBack } from './hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
@@ -172,7 +173,9 @@ function AppShell() {
             </Suspense>
           )}
           <main className="flex-1 min-w-0 min-h-0 flex flex-col">
-            <Outlet />
+            <LayerProvider>
+              <Outlet />
+            </LayerProvider>
           </main>
         </div>
         {!isDesktop && (
