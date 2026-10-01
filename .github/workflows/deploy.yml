@@ -130,8 +130,16 @@ jobs:
           done
           # Let's Encrypt cannot validate an IP or an unresolvable default vhost;
           # keep only the real domains so renewals succeed.
-          dokku domains:remove "$APP" "$APP.dokku.aasim.l.cd" 2>/dev/null || true
-          dokku domains:remove "$APP" "$HOST" || true
+          # ACME cannot validate an IP or an unresolvable default vhost, so drop
+          # every domain that is not on the keep list. Discovering them keeps
+          # this free of any host specific value.
+          for existing in $(dokku domains:report "$APP" 2>/dev/null | awk 'NR > 1 { print $2 }'); do
+            keep=0
+            for want in "${DOMAINS[@]}"; do
+              [ "$existing" = "$want" ] && keep=1
+            done
+            [ "$keep" -eq 0 ] && dokku domains:remove "$APP" "$existing" || true
+          done
           dokku ports:set "$APP" $DOKKU_PORT_MAP || true
           echo "base_url=$DOKKU_BASE_URL" >> "$GITHUB_OUTPUT"
 
