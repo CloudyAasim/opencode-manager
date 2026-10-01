@@ -10,7 +10,7 @@ import { opencodeServerManager } from '../../services/opencode-single-server'
 import { validateSSHPrivateKey } from '../../utils/ssh-validation'
 import { encryptSecret } from '../../utils/crypto'
 import type { SettingsRouteContext } from './context'
-import * as helpers from './helpers'
+import { UpdateSettingsSchema } from '@opencode-manager/shared/schemas'
 
 export function createPreferencesRoutes(ctx: SettingsRouteContext) {
   const { openCodeClient, settingsService, currentUserId } = ctx
@@ -30,7 +30,7 @@ export function createPreferencesRoutes(ctx: SettingsRouteContext) {
     try {
       const userId = currentUserId(c)
       const body = await c.req.json()
-      const validated = helpers.UpdateSettingsSchema.parse(body)
+      const validated = UpdateSettingsSchema.parse(body)
 
       const touchesServerEnv =
         validated.preferences.serverEnvVars !== undefined ||

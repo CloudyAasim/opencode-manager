@@ -12,7 +12,6 @@ import type { OpenCodeClient } from '../../services/opencode/client'
 import { getRepoById } from '../../db/queries'
 import type { SkillScope } from '@opencode-manager/shared'
 import { opencodeServerManager } from '../../services/opencode-single-server'
-import { UserPreferencesSchema } from '../../types/settings'
 export function getOpenCodeInstallMethod(): string {
   const homePath = process.env.HOME || ''
   const opencodePath = process.env.OPENCOD_PATH || resolve(homePath, '.opencode', 'bin', 'opencode')
@@ -158,40 +157,6 @@ export function getMarkdownUploadManifest(manifest: ReturnType<typeof parseUploa
   return manifest.filter(entry => entry.relativePath.toLowerCase().endsWith('.md'))
 }
 
-export const UpdateSettingsSchema = z.object({
-  preferences: UserPreferencesSchema.partial(),
-})
-
-export const CreateCustomCommandSchema = z.object({
-  name: z.string().min(1).max(255),
-  description: z.string().min(1).max(1000),
-  promptTemplate: z.string().min(1).max(10000),
-})
-
-export const UpdateCustomCommandSchema = z.object({
-  description: z.string().min(1).max(1000),
-  promptTemplate: z.string().min(1).max(10000),
-})
-
-
-
-export const ConnectMcpDirectorySchema = z.object({
-  directory: z.string().min(1),
-})
-
-export const McpAuthDirectorySchema = ConnectMcpDirectorySchema
-
-export const TestSSHConnectionSchema = z.object({
-  host: z.string().min(1),
-  sshPrivateKey: z.string().min(1),
-  passphrase: z.string().optional(),
-})
-
-export const SyncOpenCodeImportSchema = z.object({
-  overwriteState: z.boolean().optional(),
-})
-
-
 export async function extractOpenCodeError(response: Response, defaultError: string): Promise<string> {
   const errorObj = await response.json().catch(() => null)
   return (errorObj && typeof errorObj === 'object' && 'error' in errorObj)
@@ -199,6 +164,3 @@ export async function extractOpenCodeError(response: Response, defaultError: str
     : defaultError
 }
 
-export const OpenCodeServerAuthBodySchema = z.object({
-  password: z.union([z.string().min(8), z.null()]),
-})

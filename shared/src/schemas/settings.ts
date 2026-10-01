@@ -377,3 +377,38 @@ export const UpdateOpenCodeConfigRequestSchema = z.object({
   source: OpenCodeConfigSourceNameSchema.optional(),
   expectedRevision: z.string().optional(),
 });
+
+export const UpdateSettingsSchema = z.object({
+  preferences: UserPreferencesSchema.partial(),
+})
+
+export const CreateCustomCommandSchema = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().min(1).max(1000),
+  promptTemplate: z.string().min(1).max(10000),
+})
+
+export const UpdateCustomCommandSchema = z.object({
+  description: z.string().min(1).max(1000),
+  promptTemplate: z.string().min(1).max(10000),
+})
+
+export const ConnectMcpDirectorySchema = z.object({
+  directory: z.string().min(1),
+})
+
+export const McpAuthDirectorySchema = ConnectMcpDirectorySchema
+
+export const TestSSHConnectionSchema = z.object({
+  host: z.string().min(1),
+  sshPrivateKey: z.string().min(1),
+  passphrase: z.string().optional(),
+})
+
+export const SyncOpenCodeImportSchema = z.object({
+  overwriteState: z.boolean().optional(),
+})
+
+export const OpenCodeServerAuthBodySchema = z.object({
+  password: z.union([z.string().min(8), z.null()]),
+})

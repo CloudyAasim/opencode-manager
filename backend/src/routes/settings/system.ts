@@ -8,7 +8,7 @@ import { sseAggregator } from '../../services/sse-aggregator'
 import { restartOpenCode, getOpenCodeRestartCoordinator } from '../../services/opencode-restart'
 import { ENV } from '@opencode-manager/shared/config/env'
 import type { SettingsRouteContext } from './context'
-import * as helpers from './helpers'
+import { OpenCodeServerAuthBodySchema } from '@opencode-manager/shared/schemas'
 
 export function createSystemRoutes(ctx: SettingsRouteContext) {
   const { db, openCodeSupervisor, settingsService } = ctx
@@ -28,7 +28,7 @@ export function createSystemRoutes(ctx: SettingsRouteContext) {
   app.patch('/opencode-server-auth', async (c) => {
     try {
       const body = await c.req.json()
-      const validated = helpers.OpenCodeServerAuthBodySchema.parse(body)
+      const validated = OpenCodeServerAuthBodySchema.parse(body)
       const previousPasswordState = settingsService.getStoredOpenCodeServerPasswordState()
 
       if (validated.password === null) {

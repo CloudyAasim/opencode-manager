@@ -11,6 +11,7 @@ import { installOpenCodeDirectoryFiles, listOpenCodeDirectoryFiles, getOpenCodeD
 import { parseUploadManifest, readUploadedManifestFiles, UploadValidationError } from '../upload-utils'
 import type { SettingsRouteContext } from './context'
 import * as helpers from './helpers'
+import { CreateCustomCommandSchema, UpdateCustomCommandSchema } from '@opencode-manager/shared/schemas'
 
 export function createConfigEditorRoutes(ctx: SettingsRouteContext) {
   const { db, openCodeClient, openCodeSupervisor, settingsService, currentUserId } = ctx
@@ -30,7 +31,7 @@ export function createConfigEditorRoutes(ctx: SettingsRouteContext) {
     try {
       const userId = currentUserId(c)
       const body = await c.req.json()
-      const validated = helpers.CreateCustomCommandSchema.parse(body)
+      const validated = CreateCustomCommandSchema.parse(body)
       
       const settings = settingsService.getSettings(userId)
       const existingCommand = settings.preferences.customCommands.find(cmd => cmd.name === validated.name)
@@ -57,7 +58,7 @@ export function createConfigEditorRoutes(ctx: SettingsRouteContext) {
       const userId = currentUserId(c)
       const commandName = decodeURIComponent(c.req.param('name'))
       const body = await c.req.json()
-      const validated = helpers.UpdateCustomCommandSchema.parse(body)
+      const validated = UpdateCustomCommandSchema.parse(body)
       
       const settings = settingsService.getSettings(userId)
       const commandIndex = settings.preferences.customCommands.findIndex(cmd => cmd.name === commandName)

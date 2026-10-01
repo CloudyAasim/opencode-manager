@@ -12,6 +12,7 @@ import { getImportedSessionDirectories, getOpenCodeImportStatus, OpenCodeImportP
 import { relinkReposFromSessionDirectories } from '../../services/repo'
 import type { SettingsRouteContext } from './context'
 import * as helpers from './helpers'
+import { SyncOpenCodeImportSchema } from '@opencode-manager/shared/schemas'
 import { githubFetch } from '../../utils/github'
 
 export function createOpenCodeLifecycleRoutes(ctx: SettingsRouteContext) {
@@ -52,7 +53,7 @@ export function createOpenCodeLifecycleRoutes(ctx: SettingsRouteContext) {
   app.post('/opencode-import', async (c) => {
     try {
       const rawBody = c.req.header('content-type')?.includes('application/json') ? await c.req.json() : {}
-      const body = helpers.SyncOpenCodeImportSchema.parse(rawBody)
+      const body = SyncOpenCodeImportSchema.parse(rawBody)
       const result = await syncOpenCodeImport({
         overwriteState: body.overwriteState ?? false,
         protectExistingState: true,

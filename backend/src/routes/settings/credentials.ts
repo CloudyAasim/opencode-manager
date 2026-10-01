@@ -5,6 +5,7 @@ import { spawnWithTimeout } from '../../utils/process'
 import { validateSSHPrivateKey } from '../../utils/ssh-validation'
 import type { SettingsRouteContext } from './context'
 import * as helpers from './helpers'
+import { TestSSHConnectionSchema, ConnectMcpDirectorySchema, McpAuthDirectorySchema } from '@opencode-manager/shared/schemas'
 
 export function createCredentialsRoutes(ctx: SettingsRouteContext) {
   const { openCodeClient } = ctx
@@ -12,7 +13,7 @@ export function createCredentialsRoutes(ctx: SettingsRouteContext) {
   app.post('/test-ssh', async (c) => {
     try {
       const body = await c.req.json()
-      const { host, sshPrivateKey, passphrase } = helpers.TestSSHConnectionSchema.parse(body)
+      const { host, sshPrivateKey, passphrase } = TestSSHConnectionSchema.parse(body)
 
       logger.info(`Testing SSH connection to ${host}`)
 
@@ -129,7 +130,7 @@ export function createCredentialsRoutes(ctx: SettingsRouteContext) {
     try {
       const serverName = c.req.param('name')
       const body = await c.req.json()
-      const { directory } = helpers.ConnectMcpDirectorySchema.parse(body)
+      const { directory } = ConnectMcpDirectorySchema.parse(body)
       
       const response = await (openCodeClient).forward({
         method: 'POST',
@@ -156,7 +157,7 @@ export function createCredentialsRoutes(ctx: SettingsRouteContext) {
     try {
       const serverName = c.req.param('name')
       const body = await c.req.json()
-      const { directory } = helpers.ConnectMcpDirectorySchema.parse(body)
+      const { directory } = ConnectMcpDirectorySchema.parse(body)
       
       const response = await (openCodeClient).forward({
         method: 'POST',
@@ -183,7 +184,7 @@ export function createCredentialsRoutes(ctx: SettingsRouteContext) {
     try {
       const serverName = c.req.param('name')
       const body = await c.req.json()
-      const { directory } = helpers.McpAuthDirectorySchema.parse(body)
+      const { directory } = McpAuthDirectorySchema.parse(body)
       
       const response = await (openCodeClient).forward({
         method: 'POST',
@@ -210,7 +211,7 @@ export function createCredentialsRoutes(ctx: SettingsRouteContext) {
     try {
       const serverName = c.req.param('name')
       const body = await c.req.json()
-      const { directory } = helpers.ConnectMcpDirectorySchema.parse(body)
+      const { directory } = ConnectMcpDirectorySchema.parse(body)
       
       const response = await (openCodeClient).forward({
         method: 'DELETE',
