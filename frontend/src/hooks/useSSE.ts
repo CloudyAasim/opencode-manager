@@ -12,6 +12,7 @@ import { openCodeEventStream } from '@/lib/opencode-event-stream'
 import type { EventStreamSubscription } from '@/lib/opencode-event-stream'
 import { parseOpenCodeError } from '@/lib/opencode-errors'
 import { createPartsBatcher } from '@/lib/partsBatcher'
+import { useI18n } from '@/lib/i18n'
 
 const STATUS_POLL_INTERVAL_MS = 15000
 
@@ -51,6 +52,7 @@ const handleRestartServer = async () => {
 
 
 export const useSSE = (opcodeUrl: string | null | undefined, directory?: string | string[], currentSessionId?: string) => {
+  const { t } = useI18n()
   const directoriesList = useMemo(() => {
     if (!directory) return [] as string[]
     if (Array.isArray(directory)) return directory.filter(Boolean)
@@ -218,7 +220,7 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
         const { sessionID } = event.properties
         setSessionStatus(sessionID, { type: 'idle' })
         showToast.dismiss(`compact-${sessionID}`)
-        showToast.success('Session compacted')
+        showToast.success(t('session.actions.compacted'))
         queryClient.invalidateQueries({ 
           queryKey: messagesQueryKey(opcodeUrl, sessionID, cacheDirectory) 
         })
@@ -352,7 +354,7 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
       default:
         break
     }
-  }, [queryClient, opcodeUrl, directorySet, resolveCacheDirectory, setSessionStatus, setSessionTodos, currentSessionId])
+  }, [t, queryClient, opcodeUrl, directorySet, resolveCacheDirectory, setSessionStatus, setSessionTodos, currentSessionId])
 
   const fetchInitialData = useCallback(async () => {
     if (!client || !primaryDirectory || !mountedRef.current) return

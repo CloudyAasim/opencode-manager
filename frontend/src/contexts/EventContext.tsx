@@ -10,6 +10,7 @@ import { openCodeEventStream, type EventStreamHealthState } from '@/lib/opencode
 import { OPENCODE_API_ENDPOINT } from '@/config'
 import { addToSessionKeyedState, removeFromSessionKeyedState } from '@/lib/sessionKeyedState'
 import { invalidateRepoGitCachesDebounced } from '@/lib/queryInvalidation'
+import { useI18n } from '@/lib/i18n'
 
 type PermissionsBySession = Record<string, PermissionRequest[]>
 type QuestionsBySession = Record<string, QuestionRequest[]>
@@ -179,6 +180,7 @@ const EventContext = createContext<EventContextValue | null>(null)
 export function EventProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   const [sshHostKeyRequest, setSSHHostKeyRequest] = useState<SSHHostKeyRequest | null>(null)
   const [sseHealth, setSseHealth] = useState<SSEHealthState>(() => {
@@ -192,9 +194,9 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       await respondSSHHostKey(requestId, approved)
       setSSHHostKeyRequest(null)
     } catch {
-      showToast.error('Failed to respond to SSH host key verification')
+      showToast.error(t('misc.ssh.respondFailed'))
     }
-  }, [])
+  }, [t])
 
   const handleHealthChange = useCallback((next: EventStreamHealthState) => {
     setSseHealth((prev) => {

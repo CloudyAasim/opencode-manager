@@ -98,8 +98,10 @@ export const session = {
   },
   actions: {
     createFailed: '创建新会话失败',
+    deleteFailed: '删除会话失败',
     noModel: '未选择模型。请先选择服务商和模型。',
     compacting: '正在压缩会话…',
+    compacted: '会话已压缩',
     compactFailed: '压缩失败：{{error}}',
     undoFailed: '撤销失败：{{error}}',
     redoFailed: '重做失败：{{error}}',

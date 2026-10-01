@@ -82,6 +82,13 @@ export const misc = {
     pull: '拉取',
     push: '推送',
     title: '源代码管理',
+    fetchCompleted: '获取完成',
+    pullCompleted: '拉取完成',
+    pushCompleted: '推送完成',
+    commitCreated: '提交已创建',
+    filesStaged: '文件已暂存',
+    filesUnstaged: '文件已取消暂存',
+    resetToCommit: '已重置到该提交',
   },
   changesTab: {
     loadFailed: '加载 Git 状态失败',
@@ -108,6 +115,7 @@ export const misc = {
     backToCommits: '返回提交列表',
   },
   branches: {
+    created: '分支已创建',
     switched: '已切换到分支：{{branch}}',
     authFailed: '身份验证失败。请在设置中更新你的 Git 令牌。',
     switchFailed: '切换分支失败',

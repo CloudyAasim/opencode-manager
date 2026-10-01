@@ -4,6 +4,7 @@ import { createOpenCodeClient } from '@/api/opencode'
 import { useCreateSession } from '@/hooks/useOpenCode'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 import type { components } from '@/api/opencode-types'
 import { useSessionStatus } from '@/stores/sessionStatusStore'
 
@@ -33,6 +34,7 @@ export function useCommandHandler({
   currentAgent
 }: CommandHandlerProps) {
   const navigate = useNavigate()
+  const { t } = useI18n()
   const createSession = useCreateSession(opcodeUrl, directory)
   const { model, modelString } = useModelSelection(opcodeUrl, directory)
   const setSessionStatus = useSessionStatus((state) => state.setStatus)
@@ -110,7 +112,7 @@ export function useCommandHandler({
         case 'compact':
         case 'summarize': {
           if (!model?.providerID || !model?.modelID) {
-            showToast.error('No model selected. Please select a provider and model first.')
+            showToast.error(t('session.actions.noModel'))
             break
           }
 
@@ -156,7 +158,7 @@ export function useCommandHandler({
     } finally {
       setLoading(false)
     }
-  }, [sessionID, opcodeUrl, directory, onShowSessionsDialog, onShowModelsDialog, onShowHelpDialog, onToggleDetails, onExportSession, createSession, navigate, model, modelString, currentAgent, setSessionStatus])
+  }, [t, sessionID, opcodeUrl, directory, onShowSessionsDialog, onShowModelsDialog, onShowHelpDialog, onToggleDetails, onExportSession, createSession, navigate, model, modelString, currentAgent, setSessionStatus])
 
   return {
     executeCommand,

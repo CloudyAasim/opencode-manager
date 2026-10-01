@@ -93,7 +93,7 @@ export function DownloadDialog({
       const includePaths = Array.from(selectedPaths).filter(p => p !== '.git/')
       await onDownload({ includeGit, includePaths })
     } catch (error) {
-      showToast.error('下载失败', { description: error instanceof Error ? error.message : String(error) })
+      showToast.error(t('ui.downloadDialog.downloadFailed'), { description: error instanceof Error ? error.message : String(error) })
     } finally {
       setIsDownloading(false)
       onOpenChange(false)

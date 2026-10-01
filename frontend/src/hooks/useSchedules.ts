@@ -16,6 +16,7 @@ import {
   updateRepoSchedule,
 } from '@/api/schedules'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 import type { ListAllRunsParams, ScheduleJobWithRepo, ScheduleRunWithContext } from '@/api/schedules'
 
 export function useAllSchedules() {
@@ -90,6 +91,7 @@ export function useRepoScheduleRun(repoId: number | undefined, jobId: number | n
 
 export function useCreateRepoSchedule() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation({
     mutationFn: async ({ repoId, data }: { repoId: number; data: CreateScheduleJobRequest }) => {
@@ -99,7 +101,7 @@ export function useCreateRepoSchedule() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
-      showToast.success('Schedule created')
+      showToast.success(t('schedules.toast.created'))
     },
     onError: (error: unknown) => {
       showToast.error(`Failed to create schedule: ${error instanceof Error ? error.message : String(error)}`)
@@ -109,6 +111,7 @@ export function useCreateRepoSchedule() {
 
 export function useUpdateRepoSchedule() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation({
     mutationFn: async ({ repoId, jobId, data }: { repoId: number; jobId: number; data: UpdateScheduleJobRequest }) => {
@@ -119,7 +122,7 @@ export function useUpdateRepoSchedule() {
       queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId] })
       queryClient.invalidateQueries({ queryKey: ['repo-schedule', variables.repoId, variables.jobId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
-      showToast.success('Schedule updated')
+      showToast.success(t('schedules.toast.updated'))
     },
     onError: (error: unknown) => {
       showToast.error(`Failed to update schedule: ${error instanceof Error ? error.message : String(error)}`)
@@ -129,6 +132,7 @@ export function useUpdateRepoSchedule() {
 
 export function useDeleteRepoSchedule() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation({
     mutationFn: ({ repoId, jobId }: { repoId: number; jobId: number }) => {
@@ -137,7 +141,7 @@ export function useDeleteRepoSchedule() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['repo-schedules', variables.repoId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
-      showToast.success('Schedule deleted')
+      showToast.success(t('schedules.toast.deleted'))
     },
     onError: (error: unknown) => {
       showToast.error(`Failed to delete schedule: ${error instanceof Error ? error.message : String(error)}`)
@@ -169,6 +173,7 @@ export function useRunRepoSchedule() {
 
 export function useCancelRepoScheduleRun() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation({
     mutationFn: async ({ repoId, jobId, runId }: { repoId: number; jobId: number; runId: number }) => {
@@ -181,7 +186,7 @@ export function useCancelRepoScheduleRun() {
       queryClient.invalidateQueries({ queryKey: ['repo-schedule', variables.repoId, run.jobId] })
       queryClient.invalidateQueries({ queryKey: ['repo-schedule-run', variables.repoId, run.jobId, run.id] })
       queryClient.invalidateQueries({ queryKey: ['all-schedules'] })
-      showToast.success('Schedule run cancelled')
+      showToast.success(t('schedules.toast.runCancelled'))
     },
     onError: (error) => {
       showToast.error(`Failed to cancel schedule run: ${error instanceof Error ? error.message : String(error)}`)
@@ -209,6 +214,7 @@ export function useClearRepoScheduleRuns() {
 
 export function useDeleteRepoScheduleRun() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation({
     mutationFn: ({ repoId, jobId, runId }: { repoId: number; jobId: number; runId: number }) => {
@@ -217,7 +223,7 @@ export function useDeleteRepoScheduleRun() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['repo-schedule-runs', variables.repoId, variables.jobId] })
       queryClient.invalidateQueries({ queryKey: ['all-schedule-runs'] })
-      showToast.success('Run deleted')
+      showToast.success(t('schedules.toast.runDeleted'))
     },
     onError: (error: unknown) => {
       showToast.error(`Failed to delete run: ${error instanceof Error ? error.message : String(error)}`)

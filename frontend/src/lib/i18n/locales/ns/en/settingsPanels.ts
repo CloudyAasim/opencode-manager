@@ -900,6 +900,8 @@ export const settingsPanels = {
   },
   server: {
     maintenance: 'Server maintenance',
+    upToDate: 'OpenCode is already up to date',
+    restartSucceeded: 'Server restarted successfully',
   },
   serverEnv: {
     title: 'Server Environment Variables',

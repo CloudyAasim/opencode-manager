@@ -7,6 +7,7 @@ import {
   deletePromptTemplate,
 } from '@/api/prompt-templates'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 
 export function usePromptTemplates() {
   return useQuery({
@@ -20,11 +21,12 @@ export function usePromptTemplates() {
 
 export function useCreatePromptTemplate() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   return useMutation({
     mutationFn: (data: CreatePromptTemplateRequest) => createPromptTemplate(data).then(r => r.template),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompt-templates'] })
-      showToast.success('Template created')
+      showToast.success(t('schedules.promptTemplates.created'))
     },
     onError: (error) => {
       showToast.error(`Failed to create template: ${error instanceof Error ? error.message : String(error)}`)
@@ -34,12 +36,13 @@ export function useCreatePromptTemplate() {
 
 export function useUpdatePromptTemplate() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdatePromptTemplateRequest }) =>
       updatePromptTemplate(id, data).then(r => r.template),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompt-templates'] })
-      showToast.success('Template updated')
+      showToast.success(t('schedules.promptTemplates.updated'))
     },
     onError: (error) => {
       showToast.error(`Failed to update template: ${error instanceof Error ? error.message : String(error)}`)
@@ -49,11 +52,12 @@ export function useUpdatePromptTemplate() {
 
 export function useDeletePromptTemplate() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   return useMutation({
     mutationFn: (id: number) => deletePromptTemplate(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompt-templates'] })
-      showToast.success('Template deleted')
+      showToast.success(t('schedules.promptTemplates.deleted'))
     },
     onError: (error) => {
       showToast.error(`Failed to delete template: ${error instanceof Error ? error.message : String(error)}`)

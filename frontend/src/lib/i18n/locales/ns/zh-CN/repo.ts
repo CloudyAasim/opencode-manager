@@ -148,6 +148,9 @@ export const repo = {
     deleteWorkspaces: '删除工作区',
     deleteDescription: '确定要删除此 OpenCode 工作区吗？这将移除该工作区及其在 OpenCode 中的会话。',
     deleteMultipleDescription: '确定要删除 {{n}} 个 OpenCode 工作区吗？这将移除这些工作区及其在 OpenCode 中的会话。',
+    created: '工作区已创建',
+    createFailed: '创建工作区失败',
+    deleteFailed: '删除工作区失败',
   },
   directoryPicker: {
     selectFolder: '选择文件夹',
@@ -300,6 +303,8 @@ export const repo = {
     deleteFileTitle: '删除文件',
     deleteFolderDescription: '确定要删除此文件夹吗？',
     deleteFileDescription: '确定要删除此文件吗？',
+    editLoadFailed: '加载编辑内容失败',
+    saveFailed: '保存失败',
     fileTooLargeForMarkdown: '文件太大，无法进行 Markdown 预览（最大 1MB）',
     viewRaw: '查看原始内容',
     editPlaceholder: '编辑文件内容…',

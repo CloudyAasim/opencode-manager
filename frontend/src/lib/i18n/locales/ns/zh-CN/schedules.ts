@@ -69,6 +69,9 @@ export const schedules = {
     emptyDescription: '创建提示词模板，以便在多个计划中复用。',
     promptPlaceholder: '审查项目，总结主要风险，并开启一个我之后可以查看的会话。',
     promptHint: '此提示词会在计划运行时作为发送给智能体的第一条消息。',
+    created: '模板已创建',
+    updated: '模板已更新',
+    deleted: '模板已删除',
     dialog: {
       editTitle: '编辑模板',
       newTitle: '新建模板',
@@ -277,5 +280,12 @@ export const schedules = {
     clearRunsBranch_other: '个运行分支',
     clearRunsKeepRunning: '正在进行的运行会被保留。此操作无法撤销。',
     deleteRunDescription: '这将永久删除此运行及其 git 运行分支和工作树。此操作无法撤销。',
+  },
+  toast: {
+    created: '计划已创建',
+    updated: '计划已更新',
+    deleted: '计划已删除',
+    runCancelled: '计划运行已取消',
+    runDeleted: '运行已删除',
   },
 }

@@ -133,7 +133,7 @@ export function SessionDetail() {
   const isDesktop = useDesktop();
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const promptInputRef = useRef<PromptInputHandle>(null);
-  const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
+  const [sessionsDialogOpen, setSessionsDialogOpen] = useDialogParam('sessions');
   const [fileBrowserOpen, setFileBrowserOpen] = useDialogParam('files');
   const [lspDialogOpen, setLspDialogOpen] = useDialogParam('lsp');
   const [mcpDialogOpen, setMcpDialogOpen] = useDialogParam('mcp');
@@ -297,8 +297,8 @@ export function SessionDetail() {
   const { data: siblings } = useRepoSiblings(repoId);
   const createWorkspace = useCreateRepoWorkspace(repoId);
   const deleteWorkspaces = useDeleteRepoWorkspaces(repoId);
-  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
-  const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useDialogParam('createWorkspace');
+  const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useDialogParam('workspaceSelector');
   const [activeWorkspaceDirectory, setActiveWorkspaceDirectory] = useState<string | undefined>();
 
   const workspaceSiblings = useMemo(

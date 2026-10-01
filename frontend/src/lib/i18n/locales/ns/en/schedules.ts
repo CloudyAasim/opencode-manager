@@ -74,6 +74,9 @@ export const schedules = {
     emptyDescription: 'Create prompt templates to reuse across your schedules.',
     promptPlaceholder: 'Review the repo, summarize notable risks, and open a session I can inspect later.',
     promptHint: 'This prompt becomes the first message sent to the agent when the schedule runs.',
+    created: 'Template created',
+    updated: 'Template updated',
+    deleted: 'Template deleted',
     dialog: {
       editTitle: 'Edit template',
       newTitle: 'New template',
@@ -285,5 +288,12 @@ export const schedules = {
     clearRunsKeepRunning: 'A run in progress is kept. This cannot be undone.',
     deleteRunDescription:
       'This permanently deletes this run along with its git run branch and worktree. This cannot be undone.',
+  },
+  toast: {
+    created: 'Schedule created',
+    updated: 'Schedule updated',
+    deleted: 'Schedule deleted',
+    runCancelled: 'Schedule run cancelled',
+    runDeleted: 'Run deleted',
   },
 }

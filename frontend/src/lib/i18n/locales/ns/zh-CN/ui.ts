@@ -40,6 +40,7 @@ export const ui = {
     processing: '处理中…',
     creatingArchive: '正在创建 ZIP 压缩包，请稍候…',
     downloadStarting: '下载即将开始…',
+    downloadFailed: '下载失败',
     cancel: '取消',
     download: '下载',
   },

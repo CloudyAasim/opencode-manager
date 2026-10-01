@@ -122,4 +122,9 @@ export const message = {
     swipe: '上滑',
     to: '以',
   },
+  errors: {
+    removeFailed: '移除消息失败',
+    refreshFailed: '刷新消息失败',
+    undoFailed: '撤销消息失败',
+  },
 }

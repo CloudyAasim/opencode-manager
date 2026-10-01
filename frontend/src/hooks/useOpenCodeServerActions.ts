@@ -4,12 +4,14 @@ import { settingsApi } from '@/api/settings'
 import { showToast } from '@/lib/toast'
 import { refreshOpenCodeServerCaches } from '@/lib/queryInvalidation'
 import { getOpenCodeApiErrorMessage } from '@/lib/opencode-errors'
+import { useI18n } from '@/lib/i18n'
 
 const RESTART_TOAST_ID = 'opencode-restart'
 const UPGRADE_TOAST_ID = 'upgrade-opencode'
 
 export function useOpenCodeServerActions() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [activeSessionCount, setActiveSessionCount] = useState(0)
 
@@ -27,7 +29,7 @@ export function useOpenCodeServerActions() {
       if (data.upgraded) {
         showToast.success(`Upgraded to v${data.newVersion} and server restarted`, { id: UPGRADE_TOAST_ID })
       } else {
-        showToast.success('OpenCode is already up to date', { id: UPGRADE_TOAST_ID })
+        showToast.success(t('settingsPanels.server.upToDate'), { id: UPGRADE_TOAST_ID })
       }
     },
     onError: (error) => {
@@ -55,7 +57,7 @@ export function useOpenCodeServerActions() {
     showToast.loading('Restarting OpenCode server...', { id: RESTART_TOAST_ID })
     try {
       await restartServerMutation.mutateAsync()
-      showToast.success('Server restarted successfully', { id: RESTART_TOAST_ID })
+      showToast.success(t('settingsPanels.server.restartSucceeded'), { id: RESTART_TOAST_ID })
     } catch (error) {
       showToast.error(getOpenCodeApiErrorMessage(error, 'Failed to restart OpenCode server'), { id: RESTART_TOAST_ID })
     }

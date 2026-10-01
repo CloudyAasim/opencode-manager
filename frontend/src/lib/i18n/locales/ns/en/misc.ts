@@ -82,6 +82,13 @@ export const misc = {
     pull: 'Pull',
     push: 'Push',
     title: 'Source Control',
+    fetchCompleted: 'Fetch completed',
+    pullCompleted: 'Pull completed',
+    pushCompleted: 'Push completed',
+    commitCreated: 'Commit created',
+    filesStaged: 'Files staged',
+    filesUnstaged: 'Files unstaged',
+    resetToCommit: 'Reset to commit',
   },
   changesTab: {
     loadFailed: 'Failed to load git status',
@@ -108,6 +115,7 @@ export const misc = {
     backToCommits: 'Back to commits',
   },
   branches: {
+    created: 'Branch created',
     switched: 'Switched to branch: {{branch}}',
     authFailed: 'Authentication failed. Please update your Git token in Settings.',
     switchFailed: 'Failed to switch branch',

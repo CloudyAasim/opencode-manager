@@ -148,6 +148,9 @@ export const repo = {
     deleteWorkspaces: 'Delete Workspaces',
     deleteDescription: 'Are you sure you want to delete this OpenCode workspace? This removes the workspace and its sessions in OpenCode.',
     deleteMultipleDescription: 'Are you sure you want to delete {{n}} OpenCode workspaces? This removes the workspaces and their sessions in OpenCode.',
+    created: 'Workspace created',
+    createFailed: 'Failed to create workspace',
+    deleteFailed: 'Failed to delete workspaces',
   },
   directoryPicker: {
     selectFolder: 'Select Folder',
@@ -300,6 +303,8 @@ export const repo = {
     deleteFileTitle: 'Delete File',
     deleteFolderDescription: 'Are you sure you want to delete this folder?',
     deleteFileDescription: 'Are you sure you want to delete this file?',
+    editLoadFailed: 'Failed to load the file for editing',
+    saveFailed: 'Failed to save the file',
     fileTooLargeForMarkdown: 'File too large for markdown preview (max 1MB)',
     viewRaw: 'View raw',
     editPlaceholder: 'Edit file content...',

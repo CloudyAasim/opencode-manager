@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createOpenCodeClient } from '@/api/opencode'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 import { messagesQueryKey } from '@/lib/queryInvalidation'
 import type { Message, Part, MessageWithParts } from '@/api/types'
 
@@ -16,6 +17,7 @@ interface RemoveMessageContext {
 
 export function useRemoveMessage({ opcodeUrl, sessionId, directory }: UseRemoveMessageOptions) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation<unknown, Error, { messageID: string; partID?: string }, RemoveMessageContext>({
     mutationFn: async ({ messageID, partID }: { messageID: string, partID?: string }) => {
@@ -49,7 +51,7 @@ export function useRemoveMessage({ opcodeUrl, sessionId, directory }: UseRemoveM
         )
       }
       
-      showToast.error('Failed to remove message')
+      showToast.error(t('message.errors.removeFailed'))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -70,6 +72,7 @@ interface UseRefreshMessageOptions {
 
 export function useRefreshMessage({ opcodeUrl, sessionId, directory }: UseRefreshMessageOptions) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const removeMessage = useRemoveMessage({ opcodeUrl, sessionId, directory })
 
   return useMutation({
@@ -162,7 +165,7 @@ export function useRefreshMessage({ opcodeUrl, sessionId, directory }: UseRefres
           return messages
         }
       )
-      showToast.error('Failed to refresh message')
+      showToast.error(t('message.errors.refreshFailed'))
     }
   })
 }

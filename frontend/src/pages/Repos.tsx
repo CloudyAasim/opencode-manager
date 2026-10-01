@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bot } from "lucide-react";
 import { RepoList } from "@/components/repo/RepoList";
@@ -15,7 +14,7 @@ import { useI18n } from '@/lib/i18n'
 export function Repos() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [addRepoOpen, setAddRepoOpen] = useState(false);
+  const [addRepoOpen, setAddRepoOpen] = useDialogParam('addRepo');
   const [fileBrowserOpen, setFileBrowserOpen] = useDialogParam('files');
 
   useSidebarAction('new-repo', () => {

@@ -98,8 +98,10 @@ export const session = {
   },
   actions: {
     createFailed: 'Failed to create new session',
+    deleteFailed: 'Failed to delete sessions',
     noModel: 'No model selected. Please select a provider and model first.',
     compacting: 'Compacting session...',
+    compacted: 'Session compacted',
     compactFailed: 'Compact failed: {{error}}',
     undoFailed: 'Undo failed: {{error}}',
     redoFailed: 'Redo failed: {{error}}',

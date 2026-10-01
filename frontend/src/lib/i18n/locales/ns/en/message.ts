@@ -122,4 +122,9 @@ export const message = {
     swipe: 'Swipe',
     to: 'To',
   },
+  errors: {
+    removeFailed: 'Failed to remove message',
+    refreshFailed: 'Failed to refresh message',
+    undoFailed: 'Failed to undo message',
+  },
 }

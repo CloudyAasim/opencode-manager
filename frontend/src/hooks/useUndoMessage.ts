@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createOpenCodeClient } from '@/api/opencode'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 import { messagesQueryKey } from '@/lib/queryInvalidation'
 import type { MessageWithParts } from '@/api/types'
 
@@ -22,6 +23,7 @@ export function useUndoMessage({
   onSuccess 
 }: UseUndoMessageOptions) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation<string, Error, { messageID: string; messageContent: string }, UndoMessageContext>({
     mutationFn: async ({ messageID, messageContent }: { messageID: string, messageContent: string }) => {
@@ -56,7 +58,7 @@ export function useUndoMessage({
         )
       }
       
-      showToast.error('Failed to undo message')
+      showToast.error(t('message.errors.undoFailed'))
     },
     onSuccess: (restoredPrompt) => {
       queryClient.invalidateQueries({

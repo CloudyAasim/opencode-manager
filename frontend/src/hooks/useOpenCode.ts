@@ -11,6 +11,7 @@ import type {
 import type { paths, components } from "../api/opencode-types";
 import { parseNetworkError, isGatewayTimeout } from "../lib/opencode-errors";
 import { showToast } from "../lib/toast";
+import { useI18n } from "../lib/i18n";
 import { useSendErrorStore } from "../stores/sendErrorStore";
 import { useSessionStatus } from "../stores/sessionStatusStore";
 import { invalidateSessionListCaches, messagesQueryKey } from "../lib/queryInvalidation";
@@ -225,6 +226,7 @@ const shouldDeleteWorkspaceForSessionDeleteError = (error: unknown) =>
 
 export const useDeleteSession = (opcodeUrl: string | null | undefined, directory?: string | string[]) => {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const directories = useMemo(
     () => (Array.isArray(directory) ? directory : directory ? [directory] : []),
     [directory],
@@ -289,7 +291,7 @@ export const useDeleteSession = (opcodeUrl: string | null | undefined, directory
       showToast.success(deleted === 1 ? 'Session deleted' : `${deleted} sessions deleted`);
     },
     onError: () => {
-      showToast.error('Failed to delete sessions');
+      showToast.error(t('session.actions.deleteFailed'));
     },
     onSettled: (_data, _error, variables) => {
       invalidateSessionListCaches(queryClient, opcodeUrl);

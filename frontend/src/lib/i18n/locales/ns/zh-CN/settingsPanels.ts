@@ -875,6 +875,8 @@ export const settingsPanels = {
   },
   server: {
     maintenance: '服务器维护',
+    upToDate: 'OpenCode 已是最新版本',
+    restartSucceeded: '服务器重启成功',
   },
   serverEnv: {
     title: '服务器环境变量',

@@ -3,9 +3,11 @@ import { gitFetch, gitPull, gitPush, gitCommit, gitStageFiles, gitUnstageFiles, 
 import { createBranch, switchBranch } from '@/api/repos'
 import { showToast } from '@/lib/toast'
 import { invalidateRepoGitCaches, setRepoGitStatusCaches } from '@/lib/queryInvalidation'
+import { useI18n } from '@/lib/i18n'
 
 export function useGit(repoId: number | undefined, onError?: (error: unknown) => void) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   const handleError = (error: unknown) => {
     if (onError) {
@@ -23,7 +25,7 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false })
-      showToast.success('Fetch completed')
+      showToast.success(t('misc.sourceControl.fetchCompleted'))
     },
     onError: handleError,
   })
@@ -36,7 +38,7 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false })
-      showToast.success('Pull completed')
+      showToast.success(t('misc.sourceControl.pullCompleted'))
     },
     onError: handleError,
   })
@@ -49,7 +51,7 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false, invalidateRepoMeta: false })
-      showToast.success('Push completed')
+      showToast.success(t('misc.sourceControl.pushCompleted'))
     },
     onError: handleError,
   })
@@ -62,7 +64,7 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false, invalidateRepoMeta: false })
-      showToast.success('Commit created')
+      showToast.success(t('misc.sourceControl.commitCreated'))
     },
     onError: handleError,
   })
@@ -75,7 +77,7 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false, invalidateRepoMeta: false })
-      showToast.success('Files staged')
+      showToast.success(t('misc.sourceControl.filesStaged'))
     },
     onError: handleError,
   })
@@ -88,7 +90,7 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false, invalidateRepoMeta: false })
-      showToast.success('Files unstaged')
+      showToast.success(t('misc.sourceControl.filesUnstaged'))
     },
     onError: handleError,
   })
@@ -130,7 +132,7 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false })
-      showToast.success('Branch created')
+      showToast.success(t('misc.branches.created'))
     },
     onError: handleError,
   })
@@ -141,10 +143,10 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
       await switchBranch(repoId, branchName)
       return fetchGitStatus(repoId)
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false })
-      showToast.success('Switched to branch')
+      showToast.success(t('misc.branches.switched', { branch: variables }))
     },
     onError: handleError,
   })
@@ -157,7 +159,7 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false, invalidateRepoMeta: false })
-      showToast.success('Reset to commit')
+      showToast.success(t('misc.sourceControl.resetToCommit'))
     },
     onError: handleError,
   })

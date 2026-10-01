@@ -40,6 +40,7 @@ export const ui = {
     processing: 'Processing...',
     creatingArchive: 'Creating ZIP archive, please wait...',
     downloadStarting: 'Download starting...',
+    downloadFailed: 'Download failed',
     cancel: 'Cancel',
     download: 'Download',
   },

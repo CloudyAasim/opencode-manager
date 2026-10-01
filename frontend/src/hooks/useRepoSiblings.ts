@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createRepoWorkspace, deleteRepoWorkspace, getRepoSiblings, type RepoSibling } from '@/api/repos'
 import { showToast } from '@/lib/toast'
+import { useI18n } from '@/lib/i18n'
 
 export function useRepoSiblings(repoId: number | undefined) {
   return useQuery<RepoSibling[]>({
@@ -13,6 +14,7 @@ export function useRepoSiblings(repoId: number | undefined) {
 
 export function useDeleteRepoWorkspaces(repoId: number | undefined) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation({
     mutationFn: async (workspaceIds: string[]) => {
@@ -29,19 +31,20 @@ export function useDeleteRepoWorkspaces(repoId: number | undefined) {
       if (failed === 0) {
         showToast.success(deleted === 1 ? 'Workspace deleted' : `${deleted} workspaces deleted`)
       } else if (deleted === 0) {
-        showToast.error('Failed to delete workspaces')
+        showToast.error(t('repo.workspaceManager.deleteFailed'))
       } else {
         showToast.error(`Deleted ${deleted}, failed ${failed}`)
       }
     },
     onError: () => {
-      showToast.error('Failed to delete workspaces')
+      showToast.error(t('repo.workspaceManager.deleteFailed'))
     },
   })
 }
 
 export function useCreateRepoWorkspace(repoId: number | undefined) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   return useMutation({
     mutationFn: async () => {
@@ -50,10 +53,10 @@ export function useCreateRepoWorkspace(repoId: number | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repo', 'siblings', repoId] })
-      showToast.success('Workspace created')
+      showToast.success(t('repo.workspaceManager.created'))
     },
     onError: () => {
-      showToast.error('Failed to create workspace')
+      showToast.error(t('repo.workspaceManager.createFailed'))
     },
   })
 }

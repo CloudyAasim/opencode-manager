@@ -146,7 +146,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       const event = new CustomEvent('editModeChange', { detail: { isEditing: true } })
       window.dispatchEvent(event)
     } catch (err) {
-      showToast.error('编辑加载失败', { description: err instanceof Error ? err.message : String(err) })
+      showToast.error(t('repo.fileBrowser.editLoadFailed'), { description: err instanceof Error ? err.message : String(err) })
     }
   }
 
@@ -161,7 +161,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       const editEvent = new CustomEvent('editModeChange', { detail: { isEditing: false } })
       window.dispatchEvent(editEvent)
     } catch (err) {
-      showToast.error('保存失败', { description: err instanceof Error ? err.message : String(err) })
+      showToast.error(t('repo.fileBrowser.saveFailed'), { description: err instanceof Error ? err.message : String(err) })
     } finally {
       setIsSaving(false)
     }
@@ -195,7 +195,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
     try {
       await saveFileContent(content)
     } catch (err) {
-      showToast.error('保存失败', { description: err instanceof Error ? err.message : String(err) })
+      showToast.error(t('repo.fileBrowser.saveFailed'), { description: err instanceof Error ? err.message : String(err) })
     } finally {
       setIsSaving(false)
     }
