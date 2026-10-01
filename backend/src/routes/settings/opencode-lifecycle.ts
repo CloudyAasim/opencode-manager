@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { archiveBrokenOpenCodeConfigFile, deleteOpenCodeConfigFile } from '../../services/opencode-config-file'
 import { restoreLastKnownGoodOpenCodeConfig } from '../../services/opencode-config-apply'
 import { logger } from '../../utils/logger'
+import { execWithTimeout } from '../../utils/process'
 import { ValidationError, UpstreamUnavailableError, ServiceUnavailableError } from '../../utils/errors'
 import { opencodeServerManager, ConfigReloadError, resolveOpenCodeExecutable } from '../../services/opencode-single-server'
 import { restartOpenCode, reloadOpenCodeConfig } from '../../services/opencode-restart'
@@ -193,7 +194,7 @@ export function createOpenCodeLifecycleRoutes(ctx: SettingsRouteContext) {
       const installMethod = helpers.getOpenCodeInstallMethod()
       const openCodeExecutable = resolveOpenCodeExecutable() ?? 'opencode'
       logger.info(`Running opencode upgrade --method ${installMethod} with 90s timeout...`)
-      const { output: upgradeOutput, timedOut } = helpers.execWithTimeout([openCodeExecutable, 'upgrade', '--method', installMethod], 90000)
+      const { output: upgradeOutput, timedOut } = execWithTimeout([openCodeExecutable, 'upgrade', '--method', installMethod], 90000)
       logger.info(`Upgrade output: ${upgradeOutput}`)
 
       if (timedOut) {
@@ -345,7 +346,7 @@ export function createOpenCodeLifecycleRoutes(ctx: SettingsRouteContext) {
       const openCodeExecutable = resolveOpenCodeExecutable() ?? 'opencode'
       logger.info(`Running opencode upgrade ${versionArg} --method ${installMethod} with 90s timeout...`)
 
-      const { output: upgradeOutput, timedOut } = helpers.execWithTimeout(
+      const { output: upgradeOutput, timedOut } = execWithTimeout(
         [openCodeExecutable, 'upgrade', versionArg, '--method', installMethod],
         90000
       )

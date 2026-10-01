@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { logger } from '../../utils/logger'
+import { spawnWithTimeout } from '../../utils/process'
 import { validateSSHPrivateKey } from '../../utils/ssh-validation'
 import type { SettingsRouteContext } from './context'
 import * as helpers from './helpers'
@@ -55,7 +56,7 @@ export function createCredentialsRoutes(ctx: SettingsRouteContext) {
           env.SSHPASS = passphrase
         }
 
-        const { output, timedOut } = helpers.spawnWithTimeout([executable, ...sshArgs], 30000, env)
+        const { output, timedOut } = spawnWithTimeout([executable, ...sshArgs], 30000, env)
 
         if (timedOut) {
           logger.warn(`SSH connection test to ${host} timed out`)

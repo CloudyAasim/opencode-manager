@@ -9,11 +9,7 @@ const graph = buildImportGraph(BACKEND_SRC)
 const LAYERS = ['routes', 'services', 'db', 'utils', 'auth', 'types', 'middleware'] as const
 type Layer = (typeof LAYERS)[number]
 
-const LEGACY_ROUTE_SHELLING: ReadonlySet<string> = new Set([
-  'routes/internal/repo-mirror-helpers.ts',
-  'routes/internal/repo-mirror.ts',
-  'routes/settings/helpers.ts',
-])
+const LEGACY_ROUTE_SHELLING: ReadonlySet<string> = new Set<string>()
 
 const FORBIDDEN_ROUTE_SHELLING = new Set(['child_process', 'node:child_process'])
 

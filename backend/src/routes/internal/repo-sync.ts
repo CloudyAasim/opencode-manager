@@ -3,7 +3,7 @@ import type { Database } from 'bun:sqlite'
 import { getRepoById, getRepoName } from '../../db/queries'
 import { logger } from '../../utils/logger'
 import { getErrorMessage } from '../../utils/error-utils'
-import { safeGitOut } from './repo-sync-helpers'
+import { safeGitOut } from '../../services/git/git-commands'
 
 export function createInternalRepoSyncRoutes(db: Database) {
   const app = new Hono()

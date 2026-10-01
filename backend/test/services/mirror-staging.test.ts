@@ -305,7 +305,7 @@ describe('extractPartsToStaging', () => {
   })
 
   it('rejects zero-part commits before creating a staging directory', async () => {
-    const { extractPartsToStaging } = await import('../../src/routes/internal/repo-mirror-helpers')
+    const { extractPartsToStaging } = await import('../../src/services/uploads/mirror-staging')
 
     await expect(extractPartsToStaging('upload-id', 0, false)).rejects.toThrow('totalParts must be a positive integer')
     expect(fs.existsSync(path.join(tmpRoot, '.ocm-staging'))).toBe(false)

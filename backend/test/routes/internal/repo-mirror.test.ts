@@ -30,10 +30,9 @@ vi.mock('@opencode-manager/shared/config/env', () => ({
   getWorkspacePath: () => '/tmp/fake-workspace',
 }))
 
-vi.mock('../../../src/routes/internal/repo-sync-helpers', () => ({
+vi.mock('../../../src/services/git/git-commands', () => ({
   gitOut: (...args: unknown[]) => mockGitOut(...args),
   safeGitOut: (...args: unknown[]) => mockSafeGitOut(...args),
-  isSafeRelativePath: vi.fn(),
 }))
 
 const mockGetRepoById = vi.fn()

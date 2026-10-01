@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { spawnSync } from 'child_process'
 import { existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import type { Context } from 'hono'
@@ -157,50 +156,6 @@ export function parseBooleanFormValue(value: unknown): boolean | undefined {
 
 export function getMarkdownUploadManifest(manifest: ReturnType<typeof parseUploadManifest>) {
   return manifest.filter(entry => entry.relativePath.toLowerCase().endsWith('.md'))
-}
-
-export function execWithTimeout(
-  args: [executable: string, ...commandArgs: string[]],
-  timeoutMs: number,
-  env?: Record<string, string>
-): { output: string; timedOut: boolean } {
-  const result = spawnSync(args[0], args.slice(1), {
-    encoding: 'utf8',
-    timeout: timeoutMs,
-    killSignal: 'SIGKILL',
-    env: env ? { ...process.env, ...env } : undefined
-  })
-
-  if (result.signal === 'SIGKILL' || result.error?.message?.includes('TIMEOUT')) {
-    return { output: '', timedOut: true }
-  }
-
-  if (result.error) {
-    throw result.error
-  }
-
-  const output = (result.stdout || '') + (result.stderr || '')
-  if (result.status !== 0) {
-    throw new Error(output || `Command exited with status ${result.status}`)
-  }
-
-  return { output, timedOut: false }
-}
-
-export function spawnWithTimeout(args: string[], timeoutMs: number, env?: Record<string, string>): { output: string; timedOut: boolean } {
-  const result = spawnSync(args[0]!, args.slice(1), {
-    encoding: 'utf8',
-    timeout: timeoutMs,
-    killSignal: 'SIGKILL',
-    env: env ? { ...process.env, ...env } : undefined
-  })
-
-  if (result.signal === 'SIGKILL' || result.error?.message?.includes('TIMEOUT')) {
-    return { output: '', timedOut: true }
-  }
-
-  const output = (result.stdout || '') + (result.stderr || '')
-  return { output, timedOut: false }
 }
 
 export const UpdateSettingsSchema = z.object({
