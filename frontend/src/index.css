@@ -42,6 +42,21 @@
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.12), 0 1px 2px -1px rgb(0 0 0 / 0.12);
   --shadow-md: 0 6px 18px -6px rgb(0 0 0 / 0.35);
+
+  --color-status-running: #f59e0b;
+  --color-status-running-text: #fcd34d;
+  --color-status-completed: #10b981;
+  --color-status-completed-text: #6ee7b7;
+  --color-status-failed: #ef4444;
+  --color-status-failed-text: #fca5a5;
+  --color-status-cancelled: #64748b;
+  --color-status-cancelled-text: #cbd5e1;
+  --color-status-idle: #71717a;
+  --color-status-idle-text: #d4d4d8;
+  --color-info: #3b82f6;
+  --color-info-text: #60a5fa;
+  --color-link: #3b82f6;
+  --color-link-hover: #93c5fd;
 }
 
 :root:not(.dark) {
@@ -73,6 +88,21 @@
   --color-destructive-foreground: #ffffff;
   --color-success: #16a34a;
   --color-warning: #d97706;
+
+  --color-status-running: #d97706;
+  --color-status-running-text: #b45309;
+  --color-status-completed: #059669;
+  --color-status-completed-text: #047857;
+  --color-status-failed: #dc2626;
+  --color-status-failed-text: #b91c1c;
+  --color-status-cancelled: #475569;
+  --color-status-cancelled-text: #334155;
+  --color-status-idle: #71717a;
+  --color-status-idle-text: #52525b;
+  --color-info: #2563eb;
+  --color-info-text: #1d4ed8;
+  --color-link: #2563eb;
+  --color-link-hover: #1e40af;
 }
 
 html {

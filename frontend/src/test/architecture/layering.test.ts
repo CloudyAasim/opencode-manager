@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, findCycles, relativeTo } from './import-graph'
 
@@ -113,6 +114,28 @@ describe('frontend 分层契约', () => {
     const actual = sourceRootFiles()
     const declared = [...COMPOSITION_ROOTS].sort()
     expect(declared, render('组合根清单与实际不符', actual)).toEqual(actual)
+  })
+})
+
+const TOKEN_ONLY_PREFIXES = ['framework/', 'features/']
+
+const RAW_PALETTE =
+  /\b(?:bg|text|border|ring|from|to|via|fill|stroke|outline|decoration|shadow|accent|caret|divide)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/
+
+describe('frontend 设计令牌', () => {
+  it('新代码不得使用 Tailwind 原生色板，只能用语义令牌', () => {
+    const offenders: string[] = []
+    for (const file of graph.files) {
+      const rel = fileRel(file)
+      if (!TOKEN_ONLY_PREFIXES.some((prefix) => rel.startsWith(prefix))) continue
+      const source = fs.readFileSync(file, 'utf8')
+      if (!RAW_PALETTE.test(source)) continue
+      const lines = source.split('\n')
+      lines.forEach((line, index) => {
+        if (RAW_PALETTE.test(line)) offenders.push(`${rel}:${index + 1}  ${line.trim()}`)
+      })
+    }
+    expect(offenders, render('新代码使用了原生色板', offenders)).toEqual([])
   })
 })
 

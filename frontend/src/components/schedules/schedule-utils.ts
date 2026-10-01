@@ -324,24 +324,24 @@ export function formatTimestamp(t: TFunction, value: number | null): string {
 
 export function getRunTone(run: ScheduleRun): string {
   if (run.status === 'completed') {
-    return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+    return 'bg-status-completed/15 text-status-completed-text border-status-completed/30'
   }
 
   if (run.status === 'failed') {
-    return 'bg-red-500/15 text-red-300 border-red-500/30'
+    return 'bg-status-failed/15 text-status-failed-text border-status-failed/30'
   }
 
   if (run.status === 'cancelled') {
-    return 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+    return 'bg-status-cancelled/15 text-status-cancelled-text border-status-cancelled/30'
   }
 
-  return 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+  return 'bg-status-running/15 text-status-running-text border-status-running/30'
 }
 
 export function getJobStatusTone(job: ScheduleJob): string {
   return job.enabled
-    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-    : 'bg-muted text-muted-foreground border-border'
+    ? 'bg-status-completed/10 text-status-completed-text border-status-completed/20'
+    : 'bg-status-idle/10 text-status-idle-text border-status-idle/20'
 }
 
 export function hasSkillMetadata(job?: ScheduleJob | null): boolean {
