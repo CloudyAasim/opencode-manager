@@ -10,7 +10,7 @@ const createOpenCodeClientMock = vi.hoisted(() => vi.fn(() => ({
 })))
 
 const spawnMock = vi.hoisted(() => vi.fn(() => ({
-  pid: 1234,
+  pid: 4194305,
   stderr: null as unknown,
   on: vi.fn(),
 })))
@@ -159,7 +159,7 @@ describe('OpenCodeServerManager - server auth', () => {
     originalHost = ENV.OPENCODE.HOST
     originalPassword = ENV.OPENCODE.SERVER_PASSWORD
     setOpenCodeEnv({ host: '127.0.0.1', password: '' })
-    readFileSyncMock.mockReturnValue(procStatString(1234, '42'))
+    readFileSyncMock.mockReturnValue(procStatString(4194305, '42'))
     readdirSyncMock.mockReset()
     readdirSyncMock.mockReturnValue([])
     forceProcessAttestation(true)
@@ -216,7 +216,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('fails startup when externally exposed without a resolved password', async () => {
     setOpenCodeEnv({ host: '0.0.0.0', password: '' })
-    execSyncMock.mockReturnValue(Buffer.from('1234\n'))
+    execSyncMock.mockReturnValue(Buffer.from('4194305\n'))
     const { opencodeServerManager } = await import('../../src/services/opencode-single-server')
     opencodeServerManager.setDatabase(createPasswordDb(null))
 
@@ -247,7 +247,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('requires an OpenCode password for a server bound to an external host', async () => {
     execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
+      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : ''
       if (cmd.includes('opencode --version')) return '1.18.16\n'
       throw new Error('not found')
     })
@@ -390,7 +390,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('honors a user-supplied HOME serverEnvVars entry', async () => {
     execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
+      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : ''
       if (cmd.includes('opencode --version')) return '1.18.16\n'
       throw new Error('not found')
     })
@@ -469,7 +469,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('honors a user-supplied SHELL serverEnvVars entry and passes inherited shell vars through', async () => {
     execSyncMock.mockImplementation((cmd: string) => {
-      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
+      if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : ''
       if (cmd.includes('opencode --version')) return '1.18.16\n'
       throw new Error('not found')
     })
@@ -557,9 +557,9 @@ describe('OpenCodeServerManager - server auth', () => {
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatStringWithGroup(1234, '42'))
+      readFileSyncMock.mockReturnValue(procStatStringWithGroup(4194305, '42'))
       killSpy.mockImplementation(((pid: number, signal?: number | string) => {
-        if (pid === -1234) {
+        if (pid === -4194305) {
           if (signal === 0) {
             groupChecks += 1
             if (groupChecks === 1) return true
@@ -580,8 +580,8 @@ describe('OpenCodeServerManager - server auth', () => {
       await manager.start()
       await manager.stop()
 
-      expect(killSpy).toHaveBeenCalledWith(-1234, 'SIGTERM')
-      expect(killSpy).not.toHaveBeenCalledWith(1234, 'SIGTERM')
+      expect(killSpy).toHaveBeenCalledWith(-4194305, 'SIGTERM')
+      expect(killSpy).not.toHaveBeenCalledWith(4194305, 'SIGTERM')
     } finally {
       killSpy.mockRestore()
       Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
@@ -606,7 +606,7 @@ describe('OpenCodeServerManager - server auth', () => {
       }) as typeof readFileSyncMock)
       forceProcessAttestation(false)
       killSpy.mockImplementation(((pid: number, signal?: number | string) => {
-        if (pid === 1234 && signal === 0) {
+        if (pid === 4194305 && signal === 0) {
           const error = new Error('No such process') as NodeJS.ErrnoException
           error.code = 'ESRCH'
           throw error
@@ -627,12 +627,12 @@ describe('OpenCodeServerManager - server auth', () => {
 
       await manager.stop()
 
-      expect(killSpy).toHaveBeenCalledWith(1234, 'SIGTERM')
+      expect(killSpy).toHaveBeenCalledWith(4194305, 'SIGTERM')
       expect((manager as any).serverPid).toBeNull()
       expect((manager as any).isHealthy).toBe(false)
     } finally {
       killSpy.mockRestore()
-      readFileSyncMock.mockReturnValue(procStatString(1234, '42'))
+      readFileSyncMock.mockReturnValue(procStatString(4194305, '42'))
       forceProcessAttestation(true)
       Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
     }
@@ -646,9 +646,9 @@ describe('OpenCodeServerManager - server auth', () => {
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatStringWithGroup(1234, '42'))
+      readFileSyncMock.mockReturnValue(procStatStringWithGroup(4194305, '42'))
       killSpy.mockImplementation(((pid: number) => {
-        if (pid === -1234) return true
+        if (pid === -4194305) return true
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ESRCH'
         throw error
@@ -668,7 +668,7 @@ describe('OpenCodeServerManager - server auth', () => {
       )
       expect((manager as any).serverPid).not.toBeNull()
       expect((manager as any).isHealthy).toBe(false)
-      expect(manager.getLastStartupError()).toContain('1234')
+      expect(manager.getLastStartupError()).toContain('4194305')
     } finally {
       killSpy.mockRestore()
       Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
@@ -683,16 +683,16 @@ describe('OpenCodeServerManager - server auth', () => {
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
-      readdirSyncMock.mockReturnValue(['1234', '1235'])
+      readdirSyncMock.mockReturnValue(['4194305', '4194306'])
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/1234/stat')) return procStatStringWithGroup(1234, '42')
-        if (String(filePath).includes('/proc/1235/stat')) return procStatStringWithPgrp(1235, '77', 1234)
+        if (String(filePath).includes('/proc/4194305/stat')) return procStatStringWithGroup(4194305, '42')
+        if (String(filePath).includes('/proc/4194306/stat')) return procStatStringWithPgrp(4194306, '77', 4194305)
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ENOENT'
         throw error
       })
       killSpy.mockImplementation(((pid: number) => {
-        if (pid === -1234) return true
+        if (pid === -4194305) return true
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ESRCH'
         throw error
@@ -707,21 +707,21 @@ describe('OpenCodeServerManager - server auth', () => {
       expect(markerCall).toBeDefined()
       const markerContent = markerCall![1] as string
       expect(JSON.parse(markerContent)).toMatchObject({
-        pid: 1234,
-        pgid: 1234,
+        pid: 4194305,
+        pgid: 4194305,
         groupMembers: [
-          { pid: 1234, startToken: '42' },
-          { pid: 1235, startToken: '77' },
+          { pid: 4194305, startToken: '42' },
+          { pid: 4194306, startToken: '77' },
         ],
       })
 
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/1235/stat')) return procStatStringWithPgrp(1235, '77', 1234)
+        if (String(filePath).includes('/proc/4194306/stat')) return procStatStringWithPgrp(4194306, '77', 4194305)
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ENOENT'
         throw error
       })
-      readdirSyncMock.mockReturnValue(['1235'])
+      readdirSyncMock.mockReturnValue(['4194306'])
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
           return Promise.resolve(markerContent)
@@ -732,8 +732,8 @@ describe('OpenCodeServerManager - server auth', () => {
       rmMock.mockClear()
 
       await expect(manager.stop()).rejects.toThrow('refusing to complete the stop')
-      expect(killSpy).toHaveBeenCalledWith(-1234, 'SIGTERM')
-      expect(killSpy).toHaveBeenCalledWith(-1234, 'SIGKILL')
+      expect(killSpy).toHaveBeenCalledWith(-4194305, 'SIGTERM')
+      expect(killSpy).toHaveBeenCalledWith(-4194305, 'SIGKILL')
       expect(rmMock).not.toHaveBeenCalledWith(
         '/test/workspace/.opencode/state/opencode-server-child.json',
         { force: true },
@@ -757,9 +757,9 @@ describe('OpenCodeServerManager - server auth', () => {
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatStringWithGroup(1234, '42'))
+      readFileSyncMock.mockReturnValue(procStatStringWithGroup(4194305, '42'))
       killSpy.mockImplementation(((pid: number) => {
-        if (pid === -1234) return true
+        if (pid === -4194305) return true
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ESRCH'
         throw error
@@ -803,16 +803,16 @@ describe('OpenCodeServerManager - server auth', () => {
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
-      readdirSyncMock.mockReturnValue(['1234', '1235'])
+      readdirSyncMock.mockReturnValue(['4194305', '4194306'])
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/1234/stat')) return procStatStringWithGroup(1234, '42')
-        if (String(filePath).includes('/proc/1235/stat')) return procStatStringWithPgrp(1235, '77', 1234)
+        if (String(filePath).includes('/proc/4194305/stat')) return procStatStringWithGroup(4194305, '42')
+        if (String(filePath).includes('/proc/4194306/stat')) return procStatStringWithPgrp(4194306, '77', 4194305)
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ENOENT'
         throw error
       })
       killSpy.mockImplementation(((pid: number, signal?: number | string) => {
-        if (pid === -1234) {
+        if (pid === -4194305) {
           if (signal === 0) {
             groupChecks += 1
             if (groupChecks === 1) return true
@@ -843,12 +843,12 @@ describe('OpenCodeServerManager - server auth', () => {
       expect((manager as any).serverPid).toBeNull()
 
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/1235/stat')) return procStatStringWithPgrp(1235, '77', 1234)
+        if (String(filePath).includes('/proc/4194306/stat')) return procStatStringWithPgrp(4194306, '77', 4194305)
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ENOENT'
         throw error
       })
-      readdirSyncMock.mockReturnValue(['1235'])
+      readdirSyncMock.mockReturnValue(['4194306'])
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
           return Promise.resolve(markerContent)
@@ -860,7 +860,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
       await manager.stop()
 
-      expect(killSpy).toHaveBeenCalledWith(-1234, 'SIGTERM')
+      expect(killSpy).toHaveBeenCalledWith(-4194305, 'SIGTERM')
       expect(rmMock).toHaveBeenCalledWith(
         '/test/workspace/.opencode/state/opencode-server-child.json',
         { force: true },
@@ -884,7 +884,7 @@ describe('OpenCodeServerManager - server auth', () => {
       })
       readdirSyncMock.mockReturnValue([])
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/1234/stat')) return procStatStringWithGroup(1234, '42')
+        if (String(filePath).includes('/proc/4194305/stat')) return procStatStringWithGroup(4194305, '42')
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ENOENT'
         throw error
@@ -893,7 +893,7 @@ describe('OpenCodeServerManager - server auth', () => {
       const { EventEmitter } = await import('events')
       const stdout = new EventEmitter()
       const stderr = new EventEmitter()
-      spawnMock.mockImplementationOnce(() => ({ pid: 1234, stdout, stderr, on: vi.fn() }))
+      spawnMock.mockImplementationOnce(() => ({ pid: 4194305, stdout, stderr, on: vi.fn() }))
 
       const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
       const { readManagerLogEntries, resetManagerLogBuffer } = await import('../../src/utils/log-buffer')
@@ -938,14 +938,14 @@ describe('OpenCodeServerManager - server auth', () => {
     let groupChecks = 0
     try {
       const marker = JSON.stringify({
-        pid: 9999,
-        pgid: 9999,
+        pid: 4194307,
+        pgid: 4194307,
         enforced: false,
         startToken: 'old-token',
         generation: 0,
         groupMembers: [
-          { pid: 9999, startToken: 'old-token' },
-          { pid: 1235, startToken: '77' },
+          { pid: 4194307, startToken: 'old-token' },
+          { pid: 4194306, startToken: '77' },
         ],
       })
       readFileMock.mockImplementation((filePath: string) => {
@@ -953,19 +953,19 @@ describe('OpenCodeServerManager - server auth', () => {
         return Promise.resolve(undefined)
       })
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/1234/stat')) return procStatStringWithGroup(1234, 'new-token')
-        if (String(filePath).includes('/proc/1235/stat')) return procStatStringWithPgrp(1235, '77', 9999)
+        if (String(filePath).includes('/proc/4194305/stat')) return procStatStringWithGroup(4194305, 'new-token')
+        if (String(filePath).includes('/proc/4194306/stat')) return procStatStringWithPgrp(4194306, '77', 4194307)
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ENOENT'
         throw error
       })
-      readdirSyncMock.mockReturnValue(['1235'])
+      readdirSyncMock.mockReturnValue(['4194306'])
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return ''
         throw new Error('not found')
       })
       killSpy.mockImplementation(((pid: number, signal?: number | string) => {
-        if (pid === -9999) {
+        if (pid === -4194307) {
           if (signal === 0) {
             groupChecks += 1
             if (groupChecks === 1) return true
@@ -985,7 +985,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
       await manager.start()
 
-      expect(killSpy).toHaveBeenCalledWith(-9999, 'SIGTERM')
+      expect(killSpy).toHaveBeenCalledWith(-4194307, 'SIGTERM')
       expect(spawnMock).toHaveBeenCalled()
     } finally {
       killSpy.mockRestore()
@@ -1001,24 +1001,24 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
       const marker = JSON.stringify({
-        pid: 9999,
-        pgid: 9999,
+        pid: 4194307,
+        pgid: 4194307,
         enforced: false,
         startToken: 'old-token',
         generation: 0,
-        groupMembers: [{ pid: 9999, startToken: 'old-token' }],
+        groupMembers: [{ pid: 4194307, startToken: 'old-token' }],
       })
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) return Promise.resolve(marker)
         return Promise.resolve(undefined)
       })
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/1235/stat')) return procStatStringWithPgrp(1235, '77', 9999)
+        if (String(filePath).includes('/proc/4194306/stat')) return procStatStringWithPgrp(4194306, '77', 4194307)
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ENOENT'
         throw error
       })
-      readdirSyncMock.mockReturnValue(['1235'])
+      readdirSyncMock.mockReturnValue(['4194306'])
       execSyncMock.mockImplementation((cmd: string) => {
         if (cmd.includes('lsof')) return ''
         throw new Error('not found')
@@ -1035,7 +1035,7 @@ describe('OpenCodeServerManager - server auth', () => {
         '/test/workspace/.opencode/state/opencode-server-child.json',
         { force: true },
       )
-      expect(manager.getLastStartupError()).toContain('9999')
+      expect(manager.getLastStartupError()).toContain('4194307')
     } finally {
       readFileMock.mockReset()
       readFileSyncMock.mockReset()
@@ -1072,39 +1072,39 @@ describe('OpenCodeServerManager - server auth', () => {
     let groupChecks = 0
     try {
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
+        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : ''
         if (cmd.includes('opencode --version')) return '1.18.16\n'
         throw new Error('not found')
       })
-      readdirSyncMock.mockReturnValue(['10001'])
+      readdirSyncMock.mockReturnValue(['4194308'])
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/9999/stat')) {
+        if (String(filePath).includes('/proc/4194307/stat')) {
           const error = new Error('No such process') as NodeJS.ErrnoException
           error.code = 'ENOENT'
           throw error
         }
-        if (String(filePath).includes('/proc/10001/stat')) {
-          return procStatStringWithPgrp(10001, '77', 9999)
+        if (String(filePath).includes('/proc/4194308/stat')) {
+          return procStatStringWithPgrp(4194308, '77', 4194307)
         }
-        return procStatStringWithGroup(1234, '42')
+        return procStatStringWithGroup(4194305, '42')
       })
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
           return Promise.resolve(
             JSON.stringify({
-              pid: 9999,
-              pgid: 9999,
+              pid: 4194307,
+              pgid: 4194307,
               enforced: false,
               startToken: '42',
               generation: 0,
-              groupMembers: [{ pid: 10001, startToken: '77' }],
+              groupMembers: [{ pid: 4194308, startToken: '77' }],
             }),
           )
         }
         return Promise.resolve(undefined)
       })
       killSpy.mockImplementation(((pid: number, signal?: number | string) => {
-        if (pid === -9999) {
+        if (pid === -4194307) {
           if (signal === 0) {
             groupChecks += 1
             if (groupChecks === 1) return true
@@ -1124,8 +1124,8 @@ describe('OpenCodeServerManager - server auth', () => {
 
       await manager.start()
 
-      expect(killSpy).toHaveBeenCalledWith(-9999, 'SIGTERM')
-      expect(killSpy).not.toHaveBeenCalledWith(9999, 'SIGTERM')
+      expect(killSpy).toHaveBeenCalledWith(-4194307, 'SIGTERM')
+      expect(killSpy).not.toHaveBeenCalledWith(4194307, 'SIGTERM')
       expect(spawnMock).toHaveBeenCalled()
     } finally {
       killSpy.mockRestore()
@@ -1146,22 +1146,22 @@ describe('OpenCodeServerManager - server auth', () => {
         if (cmd.includes('opencode --version')) return '1.18.16\n'
         throw new Error('not found')
       })
-      readdirSyncMock.mockReturnValue(['10001'])
+      readdirSyncMock.mockReturnValue(['4194308'])
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/9999/stat')) {
-          return procStatStringWithGroup(9999, '77')
+        if (String(filePath).includes('/proc/4194307/stat')) {
+          return procStatStringWithGroup(4194307, '77')
         }
-        if (String(filePath).includes('/proc/10001/stat')) {
-          return procStatStringWithPgrp(10001, '88', 9999)
+        if (String(filePath).includes('/proc/4194308/stat')) {
+          return procStatStringWithPgrp(4194308, '88', 4194307)
         }
-        return procStatStringWithGroup(1234, '42')
+        return procStatStringWithGroup(4194305, '42')
       })
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
           return Promise.resolve(
             JSON.stringify({
-              pid: 9999,
-              pgid: 9999,
+              pid: 4194307,
+              pgid: 4194307,
               enforced: false,
               startToken: '42',
               generation: 0,
@@ -1172,7 +1172,7 @@ describe('OpenCodeServerManager - server auth', () => {
         return Promise.resolve(undefined)
       })
       killSpy.mockImplementation(((pid: number) => {
-        if (pid === -9999) return true
+        if (pid === -4194307) return true
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ESRCH'
         throw error
@@ -1182,10 +1182,10 @@ describe('OpenCodeServerManager - server auth', () => {
       manager.setDatabase(createPasswordDb(null))
 
       await expect(manager.start()).rejects.toThrow('cannot be proven to belong to it')
-      expect(manager.getLastStartupError()).toContain('9999')
-      expect(killSpy).not.toHaveBeenCalledWith(-9999, 'SIGTERM')
-      expect(killSpy).not.toHaveBeenCalledWith(-9999, 'SIGKILL')
-      expect(killSpy).not.toHaveBeenCalledWith(9999, 'SIGTERM')
+      expect(manager.getLastStartupError()).toContain('4194307')
+      expect(killSpy).not.toHaveBeenCalledWith(-4194307, 'SIGTERM')
+      expect(killSpy).not.toHaveBeenCalledWith(-4194307, 'SIGKILL')
+      expect(killSpy).not.toHaveBeenCalledWith(4194307, 'SIGTERM')
       expect(spawnMock).not.toHaveBeenCalled()
     } finally {
       killSpy.mockRestore()
@@ -1202,20 +1202,20 @@ describe('OpenCodeServerManager - server auth', () => {
     const killSpy = vi.spyOn(process, 'kill')
     try {
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
+        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : ''
         if (cmd.includes('opencode --version')) return '1.18.16\n'
         throw new Error('not found')
       })
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/9999/stat')) {
-          return procStatStringWithGroup(9999, '77')
+        if (String(filePath).includes('/proc/4194307/stat')) {
+          return procStatStringWithGroup(4194307, '77')
         }
-        return procStatStringWithGroup(1234, '42')
+        return procStatStringWithGroup(4194305, '42')
       })
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
           return Promise.resolve(
-            JSON.stringify({ pid: 9999, pgid: 9999, enforced: false, startToken: '42', generation: 0 }),
+            JSON.stringify({ pid: 4194307, pgid: 4194307, enforced: false, startToken: '42', generation: 0 }),
           )
         }
         return Promise.resolve(undefined)
@@ -1231,9 +1231,9 @@ describe('OpenCodeServerManager - server auth', () => {
 
       await manager.start()
 
-      expect(killSpy).not.toHaveBeenCalledWith(9999, 'SIGTERM')
-      expect(killSpy).not.toHaveBeenCalledWith(9999, 'SIGKILL')
-      expect(killSpy).not.toHaveBeenCalledWith(-9999, 'SIGTERM')
+      expect(killSpy).not.toHaveBeenCalledWith(4194307, 'SIGTERM')
+      expect(killSpy).not.toHaveBeenCalledWith(4194307, 'SIGKILL')
+      expect(killSpy).not.toHaveBeenCalledWith(-4194307, 'SIGTERM')
       expect(spawnMock).toHaveBeenCalled()
     } finally {
       killSpy.mockRestore()
@@ -1288,7 +1288,7 @@ describe('OpenCodeServerManager - server auth', () => {
         throw new Error('not found')
       })
       killSpy.mockImplementation(((pid: number, signal?: number | string) => {
-        if (pid === 1234 && signal !== 0) return true
+        if (pid === 4194305 && signal !== 0) return true
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ESRCH'
         throw error
@@ -1298,7 +1298,7 @@ describe('OpenCodeServerManager - server auth', () => {
       manager.setDatabase(createPasswordDb(null))
 
       await expect(manager.start()).rejects.toThrow('does not own the OpenCode port')
-      expect(manager.getLastStartupError()).toContain('1234')
+      expect(manager.getLastStartupError()).toContain('4194305')
       expect(manager.getLastStartupError()).toContain('9997')
     } finally {
       killSpy.mockRestore()
@@ -1312,10 +1312,10 @@ describe('OpenCodeServerManager - server auth', () => {
     const killSpy = vi.spyOn(process, 'kill')
     try {
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
+        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : ''
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatStringWithGroup(1234, '42'))
+      readFileSyncMock.mockReturnValue(procStatStringWithGroup(4194305, '42'))
       const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
       const manager = OpenCodeServerManager.getInstance()
       manager.setDatabase(createPasswordDb(null))
@@ -1326,23 +1326,23 @@ describe('OpenCodeServerManager - server auth', () => {
       rmMock.mockClear()
       killSpy.mockClear()
       readFileSyncMock.mockImplementation((filePath: string) => {
-        if (String(filePath).includes('/proc/1234/stat')) return procStatStringWithGroup(1234, 'reused-token')
+        if (String(filePath).includes('/proc/4194305/stat')) return procStatStringWithGroup(4194305, 'reused-token')
         const error = new Error('No such process') as NodeJS.ErrnoException
         error.code = 'ENOENT'
         throw error
       })
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
-          return Promise.resolve(JSON.stringify({ pid: 1234, pgid: 1234, enforced: false, startToken: '42', generation: 0, groupMembers: [] }))
+          return Promise.resolve(JSON.stringify({ pid: 4194305, pgid: 4194305, enforced: false, startToken: '42', generation: 0, groupMembers: [] }))
         }
         return Promise.resolve(undefined)
       })
 
       await manager.stop()
 
-      expect(killSpy).not.toHaveBeenCalledWith(1234, 'SIGTERM')
-      expect(killSpy).not.toHaveBeenCalledWith(-1234, 'SIGTERM')
-      expect(killSpy).not.toHaveBeenCalledWith(1234, 'SIGKILL')
+      expect(killSpy).not.toHaveBeenCalledWith(4194305, 'SIGTERM')
+      expect(killSpy).not.toHaveBeenCalledWith(-4194305, 'SIGTERM')
+      expect(killSpy).not.toHaveBeenCalledWith(4194305, 'SIGKILL')
       expect(rmMock).not.toHaveBeenCalledWith(
         '/test/workspace/.opencode/state/opencode-server-child.json',
         { force: true },
@@ -1361,10 +1361,10 @@ describe('OpenCodeServerManager - server auth', () => {
     const killSpy = vi.spyOn(process, 'kill')
     try {
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : ''
+        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : ''
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatStringWithGroup(1234, '42'))
+      readFileSyncMock.mockReturnValue(procStatStringWithGroup(4194305, '42'))
       const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
       const manager = OpenCodeServerManager.getInstance()
       manager.setDatabase(createPasswordDb(null))
@@ -1392,13 +1392,13 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return '9999\n'
+        if (cmd.includes('lsof')) return '4194307\n'
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatString(9999, '42'))
+      readFileSyncMock.mockReturnValue(procStatString(4194307, '42'))
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
-          return Promise.resolve(JSON.stringify({ pid: 9999, enforced: false, startToken: '42', generation: 0 }))
+          return Promise.resolve(JSON.stringify({ pid: 4194307, enforced: false, startToken: '42', generation: 0 }))
         }
         return Promise.resolve(undefined)
       })
@@ -1432,7 +1432,7 @@ describe('OpenCodeServerManager - server auth', () => {
       const markerCall = writeFileMock.mock.calls.find((call: unknown[]) => String(call[0]).includes('opencode-server-child'))
       expect(markerCall).toBeDefined()
       const marker = JSON.parse(markerCall![1] as string) as Record<string, unknown>
-      expect(marker).toEqual({ pid: 1234, pgid: null, enforced: false, startToken: '42', generation: 0, groupMembers: [] })
+      expect(marker).toEqual({ pid: 4194305, pgid: null, enforced: false, startToken: '42', generation: 0, groupMembers: [] })
     } finally {
       Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
     }
@@ -1445,7 +1445,7 @@ describe('OpenCodeServerManager - server auth', () => {
       execSyncMock.mockImplementation(() => {
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatStringWithGroup(1234, '42'))
+      readFileSyncMock.mockReturnValue(procStatStringWithGroup(4194305, '42'))
       const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
       const manager = OpenCodeServerManager.getInstance()
       manager.setDatabase(createPasswordDb(null))
@@ -1467,12 +1467,12 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('does not record reused process-group members into the child state marker after the tracked child exits', async () => {
     const marker = JSON.stringify({
-      pid: 1234,
-      pgid: 1234,
+      pid: 4194305,
+      pgid: 4194305,
       enforced: false,
       startToken: '42',
       generation: 0,
-      groupMembers: [{ pid: 1234, startToken: '42' }],
+      groupMembers: [{ pid: 4194305, startToken: '42' }],
     })
     readFileMock.mockImplementation((filePath: string) => {
       if (filePath.includes('opencode-server-child.json')) return Promise.resolve(marker)
@@ -1503,19 +1503,19 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('does not refresh the child state marker when the tracked leader PID is reused with a different identity', async () => {
     const marker = JSON.stringify({
-      pid: 1234,
-      pgid: 1234,
+      pid: 4194305,
+      pgid: 4194305,
       enforced: false,
       startToken: '42',
       generation: 0,
-      groupMembers: [{ pid: 1234, startToken: '42' }],
+      groupMembers: [{ pid: 4194305, startToken: '42' }],
     })
     readFileMock.mockImplementation((filePath: string) => {
       if (filePath.includes('opencode-server-child.json')) return Promise.resolve(marker)
       return Promise.resolve(undefined)
     })
     readFileSyncMock.mockImplementation((filePath: string) => {
-      if (String(filePath).includes('/proc/1234/stat')) return procStatStringWithPgrp(1234, 'reused-token', 1234)
+      if (String(filePath).includes('/proc/4194305/stat')) return procStatStringWithPgrp(4194305, 'reused-token', 4194305)
       const error = new Error('No such process') as NodeJS.ErrnoException
       error.code = 'ENOENT'
       throw error
@@ -1539,21 +1539,21 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('updates the child state marker with live attested group members while the tracked child is running', async () => {
     const marker = JSON.stringify({
-      pid: 1234,
-      pgid: 1234,
+      pid: 4194305,
+      pgid: 4194305,
       enforced: false,
       startToken: '42',
       generation: 0,
-      groupMembers: [{ pid: 1234, startToken: '42' }],
+      groupMembers: [{ pid: 4194305, startToken: '42' }],
     })
     readFileMock.mockImplementation((filePath: string) => {
       if (filePath.includes('opencode-server-child.json')) return Promise.resolve(marker)
       return Promise.resolve(undefined)
     })
-    readdirSyncMock.mockReturnValue(['1234', '1235'])
+    readdirSyncMock.mockReturnValue(['4194305', '4194306'])
     readFileSyncMock.mockImplementation((filePath: string) => {
-      if (String(filePath).includes('/proc/1234/stat')) return procStatStringWithGroup(1234, '42')
-      if (String(filePath).includes('/proc/1235/stat')) return procStatStringWithPgrp(1235, '77', 1234)
+      if (String(filePath).includes('/proc/4194305/stat')) return procStatStringWithGroup(4194305, '42')
+      if (String(filePath).includes('/proc/4194306/stat')) return procStatStringWithPgrp(4194306, '77', 4194305)
       const error = new Error('No such process') as NodeJS.ErrnoException
       error.code = 'ENOENT'
       throw error
@@ -1568,12 +1568,12 @@ describe('OpenCodeServerManager - server auth', () => {
       const markerCall = writeFileMock.mock.calls.find((call: unknown[]) => String(call[0]).includes('opencode-server-child'))
       expect(markerCall).toBeDefined()
       expect(JSON.parse(markerCall![1] as string)).toMatchObject({
-        pid: 1234,
-        pgid: 1234,
+        pid: 4194305,
+        pgid: 4194305,
         startToken: '42',
         groupMembers: [
-          { pid: 1234, startToken: '42' },
-          { pid: 1235, startToken: '77' },
+          { pid: 4194305, startToken: '42' },
+          { pid: 4194306, startToken: '77' },
         ],
       })
       expect((manager as any).markerRefreshTimer).not.toBeNull()
@@ -1608,7 +1608,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
       await expect(manager.start()).rejects.toThrow('Failed to persist the OpenCode child state marker: disk full')
 
-      expect(killSpy).toHaveBeenCalledWith(1234, 'SIGTERM')
+      expect(killSpy).toHaveBeenCalledWith(4194305, 'SIGTERM')
       expect((manager as any).isHealthy).toBe(false)
       expect((manager as any).serverPid).toBeNull()
       expect(manager.getLastStartupError()).toContain('Failed to persist the OpenCode child state marker')
@@ -1624,13 +1624,13 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : '9999\n'
+        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : '4194307\n'
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatString(9999, 'new-token'))
+      readFileSyncMock.mockReturnValue(procStatString(4194307, 'new-token'))
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
-          return Promise.resolve(JSON.stringify({ pid: 9999, enforced: false, startToken: 'old-token', generation: 0 }))
+          return Promise.resolve(JSON.stringify({ pid: 4194307, enforced: false, startToken: 'old-token', generation: 0 }))
         }
         return Promise.resolve(undefined)
       })
@@ -1652,12 +1652,12 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '1234\n' : '9999\n'
+        if (cmd.includes('lsof')) return spawnMock.mock.calls.length > 0 ? '4194305\n' : '4194307\n'
         throw new Error('not found')
       })
       readFileMock.mockImplementation((filePath: string) => {
         if (filePath.includes('opencode-server-child.json')) {
-          return Promise.resolve(JSON.stringify({ pid: 9999, enforced: false, writtenAt: Date.now() }))
+          return Promise.resolve(JSON.stringify({ pid: 4194307, enforced: false, writtenAt: Date.now() }))
         }
         return Promise.resolve(undefined)
       })
@@ -1700,10 +1700,10 @@ describe('OpenCodeServerManager - server auth', () => {
     Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: 'production', configurable: true, writable: true })
     try {
       execSyncMock.mockImplementation((cmd: string) => {
-        if (cmd.includes('lsof') && spawnMock.mock.calls.length > 0) return '1234\n'
+        if (cmd.includes('lsof') && spawnMock.mock.calls.length > 0) return '4194305\n'
         throw new Error('not found')
       })
-      readFileSyncMock.mockReturnValue(procStatString(1234, '42'))
+      readFileSyncMock.mockReturnValue(procStatString(4194305, '42'))
       const db = createGenerationDb()
       const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
       const firstManager = OpenCodeServerManager.getInstance()
@@ -1714,7 +1714,7 @@ describe('OpenCodeServerManager - server auth', () => {
       const markerCall = writeFileMock.mock.calls.find((call: unknown[]) => String(call[0]).includes('opencode-server-child'))
       expect(markerCall).toBeDefined()
       const markerContent = markerCall![1] as string
-      expect(JSON.parse(markerContent)).toMatchObject({ pid: 1234, enforced: false, generation: 0 })
+      expect(JSON.parse(markerContent)).toMatchObject({ pid: 4194305, enforced: false, generation: 0 })
 
       firstManager.markRestartPending()
 
