@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { SkillLibraryList } from '@/components/skills/SkillLibraryList'
-import { SkillInstallDialog } from '@/components/settings/SkillInstallDialog'
+import { SkillInstallDialog } from '@/features/settings/SkillInstallDialog'
 import { settingsApi } from '@/api/settings'
 import { useLoadSkill } from '@/hooks/useOpenCode'
 import { useDeleteSkill } from '@/hooks/useDeleteSkill'

@@ -11,7 +11,7 @@ import { oauthApi, type OAuthAuthorizeResponse } from '@/api/oauth'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { OAuthAuthorizeDialog } from './OAuthAuthorizeDialog'
 import { OAuthCallbackDialog } from './OAuthCallbackDialog'
-import { ApiKeyDialog } from '@/components/model/ApiKeyDialog'
+import { ApiKeyDialog } from '@/features/settings/ApiKeyDialog'
 import { invalidateProviderCaches } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
 

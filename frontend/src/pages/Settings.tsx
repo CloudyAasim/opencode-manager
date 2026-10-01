@@ -1,4 +1,4 @@
-import { SettingsDialog } from '@/components/settings/SettingsDialog'
+import { SettingsDialog } from '@/features/settings/SettingsDialog'
 
 export function Settings() {
   return (

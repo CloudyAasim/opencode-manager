@@ -7,7 +7,7 @@ import { useOpenCodeServerActions } from '@/hooks/useOpenCodeServerActions'
 
 vi.mock('@/hooks/useServerHealth')
 vi.mock('@/hooks/useOpenCodeServerActions')
-vi.mock('@/components/settings/RestartServerDialog', () => ({
+vi.mock('@/features/settings/RestartServerDialog', () => ({
   RestartServerDialog: () => null,
 }))
 

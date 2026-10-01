@@ -56,7 +56,7 @@ vi.mock('./OAuthCallbackDialog', () => ({
   }) => (open ? <div data-testid="oauth-callback-dialog">{providerId}</div> : null),
 }))
 
-vi.mock('@/components/model/ApiKeyDialog', () => ({
+vi.mock('@/features/settings/ApiKeyDialog', () => ({
   ApiKeyDialog: ({
     open,
     mode,

@@ -5,43 +5,43 @@ import { SettingsDialog } from './SettingsDialog'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DESKTOP_MEDIA_QUERY } from '@/hooks/useMediaQuery'
 
-vi.mock('@/components/settings/GeneralSettings', () => ({
+vi.mock('@/features/settings/GeneralSettings', () => ({
   GeneralSettings: () => <div data-testid="general-settings">General Settings Content</div>,
 }))
 
-vi.mock('@/components/settings/GitSettings', () => ({
+vi.mock('@/features/settings/GitSettings', () => ({
   GitSettings: () => <div data-testid="git-settings">Git Settings Content</div>,
 }))
 
-vi.mock('@/components/settings/KeyboardShortcuts', () => ({
+vi.mock('@/features/settings/KeyboardShortcuts', () => ({
   KeyboardShortcuts: () => <div data-testid="shortcuts-settings">Keyboard Shortcuts Content</div>,
 }))
 
-vi.mock('@/components/settings/OpenCodeConfigManager', () => ({
+vi.mock('@/features/settings/OpenCodeConfigManager', () => ({
   OpenCodeConfigManager: () => <div data-testid="opencode-settings">OpenCode Config Content</div>,
 }))
 
-vi.mock('@/components/settings/ProviderSettings', () => ({
+vi.mock('@/features/settings/ProviderSettings', () => ({
   ProviderSettings: () => <div data-testid="providers-settings">Provider Settings Content</div>,
 }))
 
-vi.mock('@/components/settings/AccountSettings', () => ({
+vi.mock('@/features/settings/AccountSettings', () => ({
   AccountSettings: () => <div data-testid="account-settings">Account Settings Content</div>,
 }))
 
-vi.mock('@/components/settings/VoiceSettings', () => ({
+vi.mock('@/features/settings/VoiceSettings', () => ({
   VoiceSettings: () => <div data-testid="voice-settings">Voice Settings Content</div>,
 }))
 
-vi.mock('@/components/settings/NotificationSettings', () => ({
+vi.mock('@/features/settings/NotificationSettings', () => ({
   NotificationSettings: () => <div data-testid="notification-settings">Notification Settings Content</div>,
 }))
 
-vi.mock('@/components/settings/VersionSelectDialog', () => ({
+vi.mock('@/features/settings/VersionSelectDialog', () => ({
   VersionSelectDialog: () => <div data-testid="version-select-dialog">Version Select Dialog</div>,
 }))
 
-vi.mock('@/components/settings/LogsViewer', () => ({
+vi.mock('@/features/settings/LogsViewer', () => ({
   LogsViewer: () => <div data-testid="logs-settings">Logs Content</div>,
 }))
 

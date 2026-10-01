@@ -140,6 +140,8 @@ describe('frontend 设计令牌', () => {
 })
 
 const CROSS_FEATURE_DIALOG: ReadonlySet<string> = new Set([
+  'features/repos/RepoMcpDialog.tsx -> features/settings/McpOAuthDialog.tsx',
+  'features/repos/RepoSkillsDialog.tsx -> features/settings/SkillInstallDialog.tsx',
   'features/navigation/MobileSheetHost.tsx -> features/file-browser/FileBrowserSheet.tsx',
   'features/navigation/MoreDrawer.tsx -> features/file-browser/FileBrowserSheet.tsx',
   'features/navigation/RepoQuickSwitchSheet.tsx -> features/repos/AddRepoDialog.tsx',
@@ -148,6 +150,18 @@ const CROSS_FEATURE_DIALOG: ReadonlySet<string> = new Set([
 ])
 
 const MIGRATION_BACK_REFERENCE_BASELINE = 0
+
+const MIGRATED_FEATURE_DIRS: ReadonlySet<string> = new Set([
+  'file-browser',
+  'message',
+  'navigation',
+  'repos',
+  'schedules',
+  'settings',
+  'source-control',
+  'ssh',
+  'terminal',
+])
 
 function featureOwner(rel: string): string | null {
   return rel.startsWith('features/') ? rel.split('/')[1]! : null
@@ -198,6 +212,13 @@ describe('frontend feature 边界', () => {
       }
     }
     expect(offenders, render(_label, offenders)).toEqual([])
+  })
+
+  it('已迁移的 feature 不得在旧树复活', () => {
+    const revived = [...MIGRATED_FEATURE_DIRS]
+      .filter((name) => fs.existsSync(path.join(FRONTEND_SRC, 'components', name)))
+      .sort()
+    expect(revived, render('旧树中复活的 feature 目录', revived)).toEqual([])
   })
 
   it('旧 components 不得新增对 feature 的反向依赖', () => {

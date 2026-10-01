@@ -92,11 +92,11 @@ vi.mock('@/contexts/EventContext', () => ({
   EventContext: mocks.EventContext,
 }))
 
-vi.mock('@/components/agent/AgentQuickSelect', () => ({
+vi.mock('./AgentQuickSelect', () => ({
   AgentQuickSelect: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
-vi.mock('@/components/model/ModelQuickSelect', () => ({
+vi.mock('./ModelQuickSelect', () => ({
   ModelQuickSelect: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
@@ -104,7 +104,7 @@ vi.mock('@/components/ui/session-status-indicator', () => ({
   SessionStatusIndicator: () => <div>SessionStatus</div>,
 }))
 
-vi.mock('@/components/command/CommandSuggestions', () => ({
+vi.mock('./CommandSuggestions', () => ({
   CommandSuggestions: () => <div>CommandSuggestions</div>,
 }))
 
