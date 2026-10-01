@@ -8,6 +8,8 @@ import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
 import { MobileSheetHost } from '@/components/navigation/MobileSheetHost'
 import { createAppRouter } from './routes'
 import { LayerProvider } from './framework/layer/LayerProvider'
+import { ShellFrame } from './framework/shell/ShellFrame'
+import { StatusBar } from './framework/shell/StatusBar'
 import { useTheme } from './hooks/useTheme'
 import { useRightEdgeSwipe, useSwipeBack } from './hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
@@ -166,23 +168,25 @@ function AppShell() {
   return (
     <AuthProvider>
       <EventProvider>
-        <div ref={rootRef} className="flex h-dvh w-full min-w-0">
-          {isDesktop && (
+        <ShellFrame
+          rootRef={rootRef}
+          rail={
             <Suspense fallback={null}>
               <DesktopSidebar />
             </Suspense>
-          )}
-          <main className="flex-1 min-w-0 min-h-0 flex flex-col">
+          }
+          main={
             <LayerProvider>
               <Outlet />
             </LayerProvider>
-          </main>
-        </div>
-        {!isDesktop && (
-          <Suspense fallback={null}>
-            <MobileTabBar />
-          </Suspense>
-        )}
+          }
+          bottom={
+            <Suspense fallback={null}>
+              <MobileTabBar />
+            </Suspense>
+          }
+          status={<StatusBar />}
+        />
         <MobileSheetHost />
         <PermissionDialogWrapper />
         <SSHHostKeyDialogWrapper />

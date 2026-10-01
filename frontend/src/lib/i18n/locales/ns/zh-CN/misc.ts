@@ -1,4 +1,12 @@
 export const misc = {
+  shell: {
+    status: {
+      healthy: '正常',
+      degraded: '降级',
+      offline: '重连中',
+      pending: '{{count}} 项待确认',
+    },
+  },
   common: {
     cancel: '取消',
     create: '创建',

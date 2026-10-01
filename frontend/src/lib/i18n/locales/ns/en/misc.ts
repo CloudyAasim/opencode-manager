@@ -1,4 +1,12 @@
 export const misc = {
+  shell: {
+    status: {
+      healthy: 'Healthy',
+      degraded: 'Degraded',
+      offline: 'Reconnecting',
+      pending: '{{count}} awaiting reply',
+    },
+  },
   common: {
     cancel: 'Cancel',
     create: 'Create',
