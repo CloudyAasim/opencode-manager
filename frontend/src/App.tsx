@@ -11,6 +11,7 @@ import { LayerProvider } from './framework/layer/LayerProvider'
 import { ShellFrame } from './framework/shell/ShellFrame'
 import { StatusBar } from './framework/shell/StatusBar'
 import { TopBar } from './framework/shell/TopBar'
+import { Inspector } from './framework/shell/Inspector'
 import { CommandProvider } from './framework/commands/CommandProvider'
 import { CommandPalette } from './framework/commands/CommandPalette'
 import { BuiltinCommands } from './framework/commands/BuiltinCommands'
@@ -191,6 +192,7 @@ function AppShell() {
                 </Suspense>
               }
               status={<StatusBar />}
+              inspector={<Inspector />}
             />
             <MobileSheetHost />
             <PermissionDialogWrapper />

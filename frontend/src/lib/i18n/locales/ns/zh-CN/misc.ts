@@ -3,6 +3,11 @@ export const misc = {
     repo: {
       all: '全部项目',
     },
+    inspector: {
+      open: '打开侧边面板',
+      close: '关闭侧边面板',
+      resize: '调整侧边宽度',
+    },
     commands: {
       title: '命令面板',
       placeholder: '搜索命令',

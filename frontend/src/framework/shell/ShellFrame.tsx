@@ -5,12 +5,21 @@ interface ShellFrameProps {
   rootRef: RefObject<HTMLDivElement | null>
   header: ReactNode
   rail: ReactNode
+  inspector: ReactNode
   main: ReactNode
   bottom: ReactNode
   status: ReactNode
 }
 
-export function ShellFrame({ rootRef, header, rail, main, bottom, status }: ShellFrameProps) {
+export function ShellFrame({
+  rootRef,
+  header,
+  rail,
+  inspector,
+  main,
+  bottom,
+  status,
+}: ShellFrameProps) {
   const isDesktop = useDesktop()
 
   return (
@@ -19,6 +28,7 @@ export function ShellFrame({ rootRef, header, rail, main, bottom, status }: Shel
       <div className="flex min-h-0 flex-1">
         {isDesktop && rail}
         <div className="flex min-w-0 flex-1 flex-col">{main}</div>
+        {inspector}
       </div>
       {!isDesktop && bottom}
       {status}

@@ -3,6 +3,11 @@ export const misc = {
     repo: {
       all: 'All projects',
     },
+    inspector: {
+      open: 'Open inspector',
+      close: 'Close inspector',
+      resize: 'Resize inspector',
+    },
     commands: {
       title: 'Command palette',
       placeholder: 'Search commands',
