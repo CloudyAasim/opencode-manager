@@ -184,7 +184,7 @@ vi.mock('@/components/notifications/PendingActionsGroup', () => ({
   PendingActionsGroup: vi.fn(() => null),
 }))
 
-vi.mock('@/components/message/PromptInput', () => ({
+vi.mock('@/features/message/PromptInput', () => ({
   PromptInput: vi.fn(() => <div>MockedPromptInput</div>),
 }))
 

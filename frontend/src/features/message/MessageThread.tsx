@@ -10,7 +10,7 @@ import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
 import { useSessionTodos } from '@/stores/sessionTodosStore'
 import { useSettings } from '@/hooks/useSettings'
 import type { components } from '@/api/opencode-types'
-import type { Todo } from '@/components/message/SessionTodoDisplay'
+import type { Todo } from '@/features/message/SessionTodoDisplay'
 import type { OpenCodeError } from '@/lib/opencode-errors'
 import { useI18n } from '@/lib/i18n'
 

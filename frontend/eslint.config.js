@@ -30,14 +30,14 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/components/ui/**/*.{ts,tsx}', 'src/components/message/FileToolRender.tsx'],
+    files: ['src/components/ui/**/*.{ts,tsx}', 'src/features/message/FileToolRender.tsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },
   },
   // Special rules for PromptInput
   {
-    files: ['src/components/message/PromptInput.tsx'],
+    files: ['src/features/message/PromptInput.tsx'],
     rules: {
       'no-empty': 'off',
     }

@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useParams, useNavigate, Navigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getRepo } from "@/api/repos";
-import { MessageThread } from "@/components/message/MessageThread";
-import { PromptInput, type PromptInputHandle } from "@/components/message/PromptInput";
-import { FloatingTTSButton } from '@/components/message/FloatingTTSButton'
+import { MessageThread } from "@/features/message/MessageThread";
+import { PromptInput, type PromptInputHandle } from "@/features/message/PromptInput";
+import { FloatingTTSButton } from '@/features/message/FloatingTTSButton'
 import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare } from "lucide-react";
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/components/session/SessionList";
@@ -44,7 +44,7 @@ import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { useTTS } from "@/hooks/useTTS";
 import { getAssistantText, getLatestPlayableAssistantMessage, useAutoPlayLastResponse } from "@/hooks/useAutoPlayLastResponse";
 import { useEffect, useRef, useCallback, useMemo } from "react";
-import { MessageSkeleton } from "@/components/message/MessageSkeleton";
+import { MessageSkeleton } from "@/features/message/MessageSkeleton";
 import { exportSession, downloadMarkdown } from "@/lib/exportSession";
 import type { MessageWithParts } from "@/api/types";
 import { getMessagesContentVersion } from "./sessionContentVersion";
@@ -64,7 +64,7 @@ import { MinimizedQuestionIndicator } from "@/components/session/MinimizedQuesti
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
 import { SourceControlPanel, ChangesTab } from "@/features/source-control";
 import { SessionSendErrorBanner } from "@/components/session/SessionSendErrorBanner";
-import { SessionTodoDisplay } from "@/components/message/SessionTodoDisplay";
+import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
 import { useDialogParam } from "@/hooks/useDialogParam";
 import { MEDIA } from '@/framework/shell/breakpoints';
 import { useDesktop } from "@/hooks/useDesktop";

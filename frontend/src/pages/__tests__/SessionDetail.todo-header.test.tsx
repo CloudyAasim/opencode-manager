@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { useSessionTodos } from '@/stores/sessionTodosStore'
-import type { Todo } from '@/components/message/SessionTodoDisplay'
+import type { Todo } from '@/features/message/SessionTodoDisplay'
 import { SessionDetail } from '../SessionDetail'
 
 const mocks = vi.hoisted(() => ({
