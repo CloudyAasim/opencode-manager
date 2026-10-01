@@ -1,23 +1,7 @@
 import { useEffect } from 'react'
-
-type PrefetchLoader = () => Promise<unknown>
+import { prefetchLoaders } from '@/routes'
 
 const PREFETCH_START_DELAY_MS = 5000
-
-const AUTHENTICATED_ROUTES: PrefetchLoader[] = [
-  () => import('../pages/Repos'),
-  () => import('../pages/RepoDetail'),
-  () => import('../pages/SessionDetail'),
-  () => import('../pages/AssistantRedirect'),
-  () => import('../pages/Files'),
-  () => import('../pages/Settings'),
-  () => import('../pages/Schedules'),
-  () => import('../pages/GlobalSchedules'),
-]
-
-const ADMIN_ROUTES: PrefetchLoader[] = [
-  () => import('../pages/Terminal'),
-]
 
 interface NetworkInformation {
   saveData?: boolean
@@ -39,10 +23,10 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
     let idleHandle: number | undefined
     let timer: number | undefined
 
-    const run = async (loaders: PrefetchLoader[]) => {
-      // One at a time on purpose. Firing all nine at once pulls ~70 chunks
-      // in parallel, and on a cross-border link those speculative requests
-      // are slower than the chunks the user is actually waiting for.
+    const run = async (loaders: Array<() => Promise<unknown>>) => {
+      // One at a time on purpose. Firing them all at once pulls every chunk in
+      // parallel, and on a cross-border link those speculative requests are
+      // slower than the chunks the user is actually waiting for.
       for (const load of loaders) {
         if (cancelled) return
         try {
@@ -55,7 +39,8 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
 
     const warmAll = () => {
       if (cancelled) return
-      void run(isAdmin ? [...AUTHENTICATED_ROUTES, ...ADMIN_ROUTES] : AUTHENTICATED_ROUTES)
+      const groups = isAdmin ? (['authenticated', 'admin'] as const) : (['authenticated'] as const)
+      void run(prefetchLoaders(groups))
     }
 
     const start = () => {
@@ -67,7 +52,6 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
       }
     }
 
-    // Give the shell and the current route priority before speculating.
     timer = window.setTimeout(start, PREFETCH_START_DELAY_MS)
 
     return () => {

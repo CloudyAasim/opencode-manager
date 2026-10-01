@@ -26,8 +26,6 @@ export interface AuthContextValue {
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
-export { useAuth } from '@/hooks/useAuth'
-
 interface AuthProviderProps {
   children: ReactNode
 }

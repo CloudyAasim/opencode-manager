@@ -1,12 +1,12 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createBrowserRouter, RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Suspense, lazy, useEffect, useRef, useCallback } from 'react'
 import { Toaster } from 'sonner'
 import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
 import { MobileSheetHost } from '@/components/navigation/MobileSheetHost'
-import { RouteErrorBoundary } from '@/components/ui/route-error-boundary'
+import { createAppRouter } from './routes'
 import { useTheme } from './hooks/useTheme'
 import { useRightEdgeSwipe, useSwipeBack } from './hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
@@ -17,7 +17,6 @@ import { EventProvider, usePermissions, useEventContext } from '@/contexts/Event
 import { SwipeNavigationProvider, useSwipeNavigation } from '@/contexts/SwipeNavigationContext'
 import { PermissionRequestDialog } from './components/session/PermissionRequestDialog'
 import { SSHHostKeyDialog } from './components/ssh/SSHHostKeyDialog'
-import { loginLoader, setupLoader, registerLoader, protectedLoader, terminalLoader } from './lib/auth-loaders'
 import { getSwipeBackTarget } from '@/lib/navigation'
 import { onNotificationClick } from '@/lib/serviceWorker'
 import { useAuth } from '@/hooks/useAuth'
@@ -201,80 +200,7 @@ function AppShell() {
   )
 }
 
-const router = createBrowserRouter([
-  {
-    element: <AppShell />,
-    errorElement: <RouteErrorBoundary />,
-    children: [
-      {
-        path: '/login',
-        lazy: async () => ({ Component: (await import('./pages/Login')).Login }),
-        loader: loginLoader,
-      },
-      {
-        path: '/register',
-        lazy: async () => ({ Component: (await import('./pages/Register')).Register }),
-        loader: registerLoader,
-      },
-      {
-        path: '/setup',
-        lazy: async () => ({ Component: (await import('./pages/Setup')).Setup }),
-        loader: setupLoader,
-      },
-      {
-        path: '/',
-        lazy: async () => ({ Component: (await import('./pages/Repos')).Repos }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/assistant',
-        lazy: async () => ({ Component: (await import('./pages/AssistantRedirect')).AssistantRedirect }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/files',
-        lazy: async () => ({ Component: (await import('./pages/Files')).Files }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/settings',
-        lazy: async () => ({ Component: (await import('./pages/Settings')).Settings }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/repos/:id',
-        lazy: async () => ({ Component: (await import('./pages/RepoDetail')).RepoDetail }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/repos/:id/assistant',
-        lazy: async () => ({ Component: (await import('./pages/AssistantRedirect')).AssistantRedirect }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/repos/:id/sessions/:sessionId',
-        lazy: async () => ({ Component: (await import('./pages/SessionDetail')).SessionDetail }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/repos/:id/schedules',
-        lazy: async () => ({ Component: (await import('./pages/Schedules')).Schedules }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/schedules',
-        lazy: async () => ({ Component: (await import('./pages/GlobalSchedules')).GlobalSchedules }),
-        loader: protectedLoader,
-      },
-      {
-        path: '/terminal',
-        lazy: async () => ({ Component: (await import('./pages/Terminal')).TerminalPage }),
-        loader: terminalLoader,
-      },
-    ],
-  },
-])
-
+const router = createAppRouter(<AppShell />)
 function App() {
   return (
     <QueryClientProvider client={queryClient}>

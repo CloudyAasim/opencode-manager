@@ -2,7 +2,8 @@ import type { ScheduleJob, ScheduleRun } from '@opencode-manager/shared/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { History, Loader2, Trash2 } from 'lucide-react'
-import { RunHistoryCards, RunDetailPanel } from '@/components/schedules'
+import { RunHistoryCards } from '@/components/schedules/RunHistoryCards'
+import { RunDetailPanel } from '@/components/schedules/RunDetailPanel'
 import { useI18n } from '@/lib/i18n'
 
 interface RunHistoryTabProps {
