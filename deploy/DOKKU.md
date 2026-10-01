@@ -1,5 +1,21 @@
 # Dokku deployment runbook
 
+> **⚠️ PARTIALLY OUTDATED (checked 2026-10-01)**
+>
+> - The "Why port 8080" section below is **no longer true**: inbound TCP 80/443 is
+>   reachable from outside, and the app is served at `https://APP_DOMAIN`
+>   (80 -> 301 -> 443, `Server: nginx`, HTTP 200). No Cloudflare front is required.
+> - The **public URL** is `https://APP_DOMAIN`, not `http://SERVER_HOST:8080`.
+> - The certificate is issued by **ZeroSSL** (`ZeroSSL ECC DV SSL CA 2`), managed by
+>   the Dokku `letsencrypt` plugin via its `--ca` option.
+>
+> Still accurate below: the storage paths, the reason zero-downtime checks are
+> disabled, and the cold-start behaviour.
+>
+> **The authoritative source for the current deployment is
+> `.github/workflows/deploy.yml`** — it is what actually runs on every push.
+> Keep this file for the operational notes it still gets right.
+
 This fork is deployed to a Dokku host by GitHub Actions. No manual steps are
 required for a normal release: pushing to `main` builds the image, configures the
 app, deploys it, and runs a health + authentication smoke test.

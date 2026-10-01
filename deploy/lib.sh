@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared helpers for deploy scripts. Source this file, do not execute it.
 #
 # deploy/.env is a docker-compose env file, not a shell script (values may

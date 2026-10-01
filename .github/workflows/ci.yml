@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main, dev]
     types: [labeled]
@@ -17,7 +19,10 @@ jobs:
       - name: Check trigger conditions
         id: check
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request_review" && "${{ github.event.review.state }}" == "approved" ]]; then
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "Triggered by push to main"
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request_review" && "${{ github.event.review.state }}" == "approved" ]]; then
             echo "Triggered by PR approval"
             echo "run=true" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.label.name }}" == "ready-for-ci" ]]; then

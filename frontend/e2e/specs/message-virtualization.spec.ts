@@ -37,7 +37,7 @@ function messageListResponse(ids: string[]) {
   }
 }
 
-function sessionResponse(index: number) {
+function sessionResponse() {
   return {
     id: 'ses_virtual',
     projectID: 'p',
@@ -53,7 +53,6 @@ function sessionResponse(index: number) {
 test.describe('message thread virtualization', () => {
   test('keeps the DOM small for a long conversation and still scrolls to the end', async ({ page }) => {
     const messages = makeMessages(200)
-    const newest = messages[messages.length - 1]!
 
     await installApiMocks(page, {
       repos: [REPO, OTHER],
@@ -71,7 +70,7 @@ test.describe('message thread virtualization', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(sessionResponse(0)),
+        body: JSON.stringify(sessionResponse()),
       }),
     )
 
@@ -130,7 +129,7 @@ test.describe('message thread virtualization', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ...sessionResponse(0), id: 'ses_short' }),
+        body: JSON.stringify({ ...sessionResponse(), id: 'ses_short' }),
       }),
     )
 
@@ -138,7 +137,7 @@ test.describe('message thread virtualization', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ...sessionResponse(0), id: 'ses_short' }),
+        body: JSON.stringify({ ...sessionResponse(), id: 'ses_short' }),
       }),
     )
     await page.route(/.*\/api\/opencode\/.*message.*$/, (route) =>
