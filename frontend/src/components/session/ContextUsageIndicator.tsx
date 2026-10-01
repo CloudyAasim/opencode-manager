@@ -1,4 +1,5 @@
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { MEDIA } from '@/framework/shell/breakpoints'
 import { useContextUsage } from '@/hooks/useContextUsage'
 import { useI18n } from '@/lib/i18n'
 
@@ -10,7 +11,7 @@ interface ContextUsageIndicatorProps {
   isReconnecting?: boolean
 }
 
-const COMPACT_QUERY = '(min-width: 768px)'
+const COMPACT_QUERY = MEDIA.layoutUp
 
 const getUsageTextColor = (percentage: number) => {
   if (percentage < 50) return 'text-green-700 dark:text-green-400'

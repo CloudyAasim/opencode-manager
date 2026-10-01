@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { RowActionsMenuContext, SettingsList, SettingsListRow } from './settings-list'
 import { DirectoryFilesList } from '@/components/settings/DirectoryFilesList'
+import { DESKTOP_MEDIA_QUERY } from '@/hooks/useMediaQuery'
 
 vi.mock('@/api/settings', () => ({
   settingsApi: {
@@ -120,7 +121,7 @@ describe('SettingsListRow', () => {
 
   const mockViewport = (isDesktop: boolean) => {
     vi.stubGlobal('matchMedia', (query: string) => ({
-      matches: query === '(min-width: 640px)' ? isDesktop : false,
+      matches: query === DESKTOP_MEDIA_QUERY ? isDesktop : false,
       media: query,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),

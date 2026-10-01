@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { BREAKPOINT, MEDIA } from "@/framework/shell/breakpoints";
 import { render, screen, act } from "@testing-library/react";
 import {
   Dialog,
@@ -7,6 +8,19 @@ import {
   DialogTitle,
 } from "./dialog";
 
+function stubViewport(width: number) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query === MEDIA.belowLayout ? width < BREAKPOINT.layout : false,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    onchange: null,
+    dispatchEvent: vi.fn(),
+  }))
+}
+
 function withMobileViewport(fn: () => void) {
   const originalWidth = window.innerWidth
   Object.defineProperty(window, 'innerWidth', {
@@ -14,12 +28,14 @@ function withMobileViewport(fn: () => void) {
     configurable: true,
     value: 375,
   })
+  stubViewport(375)
   fn()
   Object.defineProperty(window, 'innerWidth', {
     writable: true,
     configurable: true,
     value: originalWidth,
   })
+  vi.unstubAllGlobals()
 }
 
 describe("DialogContent", () => {
@@ -29,6 +45,11 @@ describe("DialogContent", () => {
       configurable: true,
       value: 375,
     })
+    stubViewport(375)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it("applies safe-area padding when fullscreen prop is true", () => {

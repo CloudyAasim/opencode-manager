@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { usePersistentNumberState } from '@/hooks/usePersistentNumberState'
 import type { StorageKey } from '@/lib/storage-keys'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { MEDIA } from '@/framework/shell/breakpoints'
 import { cn } from '@/lib/utils'
 
 export const RESIZABLE_SPLIT_MIN_PCT = 15
@@ -35,7 +36,7 @@ export function ResizableSplit({
   primaryClassName,
   secondaryClassName,
 }: ResizableSplitProps) {
-  const isWide = useMediaQuery('(min-width: 768px)')
+  const isWide = useMediaQuery(MEDIA.layoutUp)
   const containerRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
   const [pct, setPct] = usePersistentNumberState({

@@ -5,6 +5,7 @@ import { OpenCodeConfigEditor } from './OpenCodeConfigEditor'
 import { makeOpenCodeConfigFile, makeOpenCodeConfigSource } from '@/test/fixtures/opencode-config'
 import { FetchError } from '@/api/fetchWrapper'
 import { saveFile } from '@/lib/download'
+import { BREAKPOINT, MEDIA } from '@/framework/shell/breakpoints'
 
 vi.mock('@/lib/download', () => ({
   saveFile: vi.fn().mockResolvedValue(true),
@@ -42,6 +43,19 @@ function setContent(textarea: HTMLTextAreaElement, value: string) {
   fireEvent.change(textarea, { target: { value } })
 }
 
+function stubViewport(width: number) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query === MEDIA.layoutUp ? width >= BREAKPOINT.layout : false,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    onchange: null,
+    dispatchEvent: vi.fn(),
+  }))
+}
+
 describe('OpenCodeConfigEditor', () => {
   beforeAll(() => {
     Element.prototype.hasPointerCapture ??= () => false
@@ -68,10 +82,12 @@ describe('OpenCodeConfigEditor', () => {
 
   beforeEach(() => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 })
+    stubViewport(375)
   })
 
   afterEach(() => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 })
+    vi.unstubAllGlobals()
   })
 
   it('loads rawContent verbatim into the editor', () => {
@@ -97,6 +113,7 @@ describe('OpenCodeConfigEditor', () => {
 
   it('autofocuses the editor on a desktop viewport', () => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1280 })
+    stubViewport(1280)
     renderEditor()
     expect(screen.getByLabelText('Config content')).toHaveFocus()
     expect(screen.getByLabelText('Find in content')).not.toHaveFocus()

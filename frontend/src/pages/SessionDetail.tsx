@@ -66,6 +66,7 @@ import { SourceControlPanel, ChangesTab } from "@/components/source-control";
 import { SessionSendErrorBanner } from "@/components/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/components/message/SessionTodoDisplay";
 import { useDialogParam } from "@/hooks/useDialogParam";
+import { MEDIA } from '@/framework/shell/breakpoints';
 import { useDesktop } from "@/hooks/useDesktop";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/components/navigation/SessionMoreButton";
@@ -150,7 +151,7 @@ export function SessionDetail() {
   const [railOpen, setRailOpen] = useState(() =>
     typeof window === 'undefined' || typeof window.matchMedia !== 'function'
       ? true
-      : window.matchMedia('(min-width: 768px)').matches,
+      : window.matchMedia(MEDIA.layoutUp).matches,
   )
   const [panelWidth, setPanelWidth] = usePersistentNumberState({
     storageKey: STORAGE_KEYS.chatPanelWidth,

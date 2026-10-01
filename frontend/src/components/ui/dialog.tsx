@@ -6,6 +6,10 @@ import { cn } from "@/lib/utils"
 import { useSwipeBack } from '@/hooks/useMobile'
 import { useVisualViewport } from '@/hooks/useVisualViewport'
 import { useI18n } from '@/lib/i18n'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { MEDIA } from '@/framework/shell/breakpoints'
+
+const BELOW_LAYOUT = MEDIA.belowLayout
 
 const DialogOpenContext = React.createContext<boolean>(true)
 
@@ -58,7 +62,7 @@ const DialogContent = React.forwardRef<
   const { t } = useI18n()
   const isMobileFullscreenMode = fullscreen || mobileFullscreen
   const isDialogOpen = React.useContext(DialogOpenContext)
-  const [isMobile, setIsMobile] = React.useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+  const isMobile = useMediaQuery(BELOW_LAYOUT)
   const shouldEnableMobileSwipe = mobileSwipeToClose !== false && isMobile && isDialogOpen
   const shouldAnimateSwipe = shouldEnableMobileSwipe && isMobileFullscreenMode
   const { keyboardHeight } = useVisualViewport({ enabled: keyboardAware === true && isDialogOpen })
@@ -74,11 +78,6 @@ const DialogContent = React.forwardRef<
     }
   }, [ref])
   
-  React.useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
   const { bind: swipeBind, swipeStyles } = useSwipeBack(
     () => closeTriggerRef.current?.click(),
     { enabled: shouldEnableMobileSwipe, canBack: canSwipeBack, onBack: onSwipeBack }

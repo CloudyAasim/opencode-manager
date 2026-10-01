@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { MEDIA } from '@/framework/shell/breakpoints'
 
-export const DESKTOP_MEDIA_QUERY = '(min-width: 640px)'
+export const DESKTOP_MEDIA_QUERY = MEDIA.compactUp
 
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState<boolean>(() => {

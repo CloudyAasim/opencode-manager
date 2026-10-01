@@ -1,21 +1,10 @@
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react'
 import { useSwipeNavigation } from '@/contexts/SwipeNavigationContext'
+import { useMediaQuery } from './useMediaQuery'
+import { MEDIA } from '@/framework/shell/breakpoints'
 
-export function useMobile() {
-  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false))
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  return isMobile
+export function useMobile(): boolean {
+  return !useMediaQuery(MEDIA.layoutUp)
 }
 
 const VELOCITY_THRESHOLD = 0.3
