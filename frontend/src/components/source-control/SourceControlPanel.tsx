@@ -1,36 +1,10 @@
-import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FetchError } from '@opencode-manager/shared'
-import { useGitStatus, getApiErrorMessage } from '@/api/git'
-import { getRepo } from '@/api/repos'
-
-import { useGit } from '@/hooks/useGit'
-import { ChangesTab } from './ChangesTab'
-import { CommitsTab } from './CommitsTab'
-import { BranchesTab } from './BranchesTab'
-import { CommitDetailView } from './CommitDetailView'
-import { GitErrorBanner } from './GitErrorBanner'
-import { FileDiffView } from '@/components/file-browser/FileDiffView'
-import { Button } from '@/components/ui/button'
+import { GitBranch, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { GIT_UI_COLORS } from '@/lib/git-status-styles'
-import {
-  Loader2,
-  GitBranch,
-  FileCode,
-  History,
-  Upload,
-  ArrowUp,
-  ArrowDown,
-  RefreshCw,
-  ArrowDownFromLine,
-  X,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { useMobile } from '@/hooks/useMobile'
-import { invalidateRepoGitCaches } from '@/lib/queryInvalidation'
-import { useRefreshOnOpen } from '@/hooks/useRefreshOnOpen'
 import { useI18n } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
+import { SourceControlContent } from './SourceControlContent'
 
 interface SourceControlPanelProps {
   repoId: number
@@ -40,9 +14,6 @@ interface SourceControlPanelProps {
   repoName?: string
 }
 
-type Tab = 'changes' | 'commits' | 'branches'
-type View = 'default' | 'commit-detail'
-
 export function SourceControlPanel({
   repoId,
   isOpen,
@@ -51,216 +22,7 @@ export function SourceControlPanel({
   repoName,
 }: SourceControlPanelProps) {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<Tab>('changes')
-  const [selectedFile, setSelectedFile] = useState<{path: string, staged: boolean} | undefined>()
-  const [currentView, setCurrentView] = useState<View>('default')
-  const [selectedCommit, setSelectedCommit] = useState<string | undefined>()
-  const [selectedCommitFile, setSelectedCommitFile] = useState<string | undefined>()
-  const [gitError, setGitError] = useState<{ summary: string; detail?: string } | null>(null)
-  const queryClient = useQueryClient()
-  const { data: status } = useGitStatus(repoId)
-  const { data: repo } = useQuery({
-    queryKey: ['repo', repoId],
-    queryFn: () => getRepo(repoId),
-    enabled: isOpen,
-  })
   const isMobile = useMobile()
-  const displayBranch = repo?.currentBranch || repo?.branch || currentBranch
-
-  useRefreshOnOpen(isOpen, () => { invalidateRepoGitCaches(queryClient, repoId) })
-
-  const handleGitError = (error: unknown) => {
-    if (error instanceof FetchError) {
-      setGitError({ summary: getApiErrorMessage(error), detail: error.detail })
-    } else {
-      setGitError({ summary: getApiErrorMessage(error) })
-    }
-  }
-
-  const git = useGit(repoId, handleGitError)
-
-  const handleGitAction = async (action: () => Promise<unknown>) => {
-    try {
-      setGitError(null)
-      await action()
-    } catch {
-    void 0
-    }
-  }
-
-  const handleSelectCommit = (hash: string) => {
-    setSelectedCommit(hash)
-    setCurrentView('commit-detail')
-  }
-
-  const handleBackToCommits = () => {
-    setSelectedCommit(undefined)
-    setSelectedCommitFile(undefined)
-    setCurrentView('default')
-    setActiveTab('commits')
-  }
-
-  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: 'changes', label: t('misc.sourceControl.changes'), icon: FileCode },
-    { id: 'commits', label: t('misc.sourceControl.commits'), icon: History },
-    { id: 'branches', label: t('misc.sourceControl.branches'), icon: GitBranch },
-  ]
-
-  const changesCount = status?.files.length || 0
-  const stagedCount = status?.files.filter(f => f.staged).length || 0
-
-  const content = (
-    <div className="flex flex-col h-full gap-0">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <GitBranch className={cn('w-4 h-4', GIT_UI_COLORS.current)} />
-            <span className={cn('text-sm font-medium', GIT_UI_COLORS.current)}>{displayBranch}</span>
-          </div>
-          {status && (status.ahead > 0 || status.behind > 0) && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              {status.ahead > 0 && (
-                <span className={`flex items-center gap-0.5 ${GIT_UI_COLORS.ahead}`}>
-                  <ArrowUp className="w-3 h-3" />{status.ahead}
-                </span>
-              )}
-              {status.behind > 0 && (
-                <span className={`flex items-center gap-0.5 ${GIT_UI_COLORS.behind}`}>
-                  <ArrowDown className="w-3 h-3" />{status.behind}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleGitAction(() => git.fetch.mutateAsync())}
-            disabled={git.fetch.isPending}
-            className="h-7 w-7 p-0"
-            title={t('misc.sourceControl.fetchFromRemote')}
-          >
-            {git.fetch.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleGitAction(() => git.pull.mutateAsync())}
-            disabled={git.pull.isPending}
-            className="h-7 w-7 p-0"
-            title={t('misc.sourceControl.pull')}
-          >
-            {git.pull.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ArrowDownFromLine className="w-4 h-4" />
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleGitAction(() => git.push.mutateAsync(undefined))}
-            disabled={git.push.isPending}
-            className="h-7 w-7 p-0"
-            title={t('misc.sourceControl.push')}
-          >
-            {git.push.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Upload className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {gitError && (
-        <GitErrorBanner error={gitError} onDismiss={() => setGitError(null)} />
-      )}
-
-      {!((currentView === 'commit-detail' && selectedCommitFile) || (isMobile && selectedFile && activeTab === 'changes')) && (
-        <div className="flex border-b border-border flex-shrink-0">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 text-sm transition-colors border-b-2 -mb-px',
-                  activeTab === tab.id
-                    ? 'border-primary text-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
-                )}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-                {tab.id === 'changes' && changesCount > 0 && (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-accent">
-                    {stagedCount > 0 ? `${stagedCount}/${changesCount}` : changesCount}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      <div className={cn('flex-1 min-h-0', isMobile ? 'flex flex-col gap-0' : 'flex')}>
-        <div className={cn(
-          'overflow-hidden min-h-0 h-full flex flex-col',
-          isMobile 
-            ? 'flex-1' 
-            : currentView === 'commit-detail' 
-              ? 'flex-1' 
-              : selectedFile 
-                ? 'w-[35%] border-r border-border' 
-                : 'flex-1'
-        )}>
-          {activeTab === 'changes' && (
-            <ChangesTab
-              repoId={repoId}
-              onFileSelect={(path, staged) => setSelectedFile({ path, staged })}
-              onClearFileSelection={() => setSelectedFile(undefined)}
-              selectedFile={selectedFile}
-              isMobile={isMobile}
-              onError={handleGitError}
-            />
-          )}
-          {activeTab === 'commits' && currentView === 'default' && (
-            <CommitsTab repoId={repoId} branch={displayBranch} onSelectCommit={handleSelectCommit} />
-          )}
-          {activeTab === 'branches' && currentView === 'default' && (
-            <BranchesTab repoId={repoId} currentBranch={displayBranch} />
-          )}
-
-          {currentView === 'commit-detail' && selectedCommit && (
-            <div className="flex flex-1 min-h-0 overflow-hidden flex-col">
-              <CommitDetailView
-                repoId={repoId}
-                commitHash={selectedCommit}
-                onBack={handleBackToCommits}
-                onFileSelect={setSelectedCommitFile}
-                selectedFile={selectedCommitFile}
-              />
-            </div>
-          )}
-        </div>
-
-        {selectedFile && !isMobile && currentView === 'default' && (
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-auto">
-              <FileDiffView repoId={repoId} filePath={selectedFile.path} includeStaged={selectedFile.staged} onClose={() => setSelectedFile(undefined)} />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -272,10 +34,7 @@ export function SourceControlPanel({
           isMobile ? 'h-full' : 'w-[90vw] sm:max-w-6xl h-[90vh] sm:pb-0'
         )}
       >
-        <DialogHeader className={cn(
-          'px-4 py-2 border-b border-border flex-shrink-0',
-          isMobile && 'relative'
-        )}>
+        <DialogHeader className={cn('px-4 py-2 border-b border-border flex-shrink-0', isMobile && 'relative')}>
           <DialogTitle className="flex items-center gap-2">
             <GitBranch className="w-5 h-5" />
             {isMobile && repoName ? repoName : t('misc.sourceControl.title')}
@@ -292,7 +51,12 @@ export function SourceControlPanel({
           )}
         </DialogHeader>
         <div className="flex-1 overflow-hidden pb-0">
-          {content}
+          <SourceControlContent
+            repoId={repoId}
+            currentBranch={currentBranch}
+            isMobile={isMobile}
+            active={isOpen}
+          />
         </div>
       </DialogContent>
     </Dialog>

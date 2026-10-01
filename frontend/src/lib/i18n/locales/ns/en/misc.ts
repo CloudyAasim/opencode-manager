@@ -7,6 +7,7 @@ export const misc = {
       open: 'Open inspector',
       close: 'Close inspector',
       resize: 'Resize inspector',
+      needProject: 'Open a project to see its changes',
     },
     commands: {
       title: 'Command palette',
