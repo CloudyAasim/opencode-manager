@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -15,8 +16,26 @@ jobs:
           fetch-depth: 0
 
       - name: Deploy to Dokku
-        uses: dokku/github-action@master
-        with:
-          git_remote_url: ${{ secrets.GIT_REMOTE_URL }}
-          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          branch: main
+        env:
+          GIT_REMOTE_URL: ${{ secrets.GIT_REMOTE_URL }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          HOST=$(printf '%s' "$GIT_REMOTE_URL" | sed -E 's|^ssh://[^@]+@([^:/]+).*|\1|')
+          echo "host=$HOST"
+
+          mkdir -p ~/.ssh
+          # The trailing newline is what makes the key readable; without it ssh
+          # loads nothing, offers no public key, and the server falls back to
+          # password auth, which fails with a misleading "Permission denied".
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keygen -y -f ~/.ssh/id_deploy > /dev/null
+
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 644 ~/.ssh/known_hosts
+
+          git remote remove dokku 2>/dev/null || true
+          git remote add dokku "$GIT_REMOTE_URL"
+          git push dokku HEAD:main
