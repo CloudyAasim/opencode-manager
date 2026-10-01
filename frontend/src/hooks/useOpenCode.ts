@@ -160,8 +160,7 @@ export const useMessages = (opcodeUrl: string | null | undefined, sessionID: str
       return response as MessageWithParts[]
     },
     enabled: !!client && !!sessionID,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
     staleTime: 30000,
     gcTime: 10 * 60 * 1000,

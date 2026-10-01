@@ -458,18 +458,18 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     if (!reposToUse || reposToUse.length === 0) return
 
     const uniqueDirectories = [...new Set(reposToUse.map(r => r.fullPath))]
-    
-    for (const directory of uniqueDirectories) {
-      try {
+
+    await Promise.allSettled(
+      uniqueDirectories.map(async (directory) => {
         const client = new OpenCodeClient(OPENCODE_API_ENDPOINT, directory)
-        const pendingPermissions = await client.listPendingPermissions()
+        const [pendingPermissions, pendingQuestions] = await Promise.all([
+          client.listPendingPermissions(),
+          client.listPendingQuestions(),
+        ])
         reconcilePermissionsForDirectory(directory, pendingPermissions ?? [])
-        const pendingQuestions = await client.listPendingQuestions()
         reconcileQuestionsForDirectory(directory, pendingQuestions ?? [])
-      } catch {
-        void 0
-      }
-    }
+      })
+    )
   }, [reconcilePermissionsForDirectory, reconcileQuestionsForDirectory])
 
   const syncPermissionsForSession = useCallback(async (directory: string, sessionID: string) => {

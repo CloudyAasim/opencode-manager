@@ -1,4 +1,5 @@
 import { encodeSSEFrame } from '../utils/sse-frame'
+import { logger } from '../utils/logger'
 
 export interface QueuedSSEWriterInput {
   write: (chunk: Uint8Array) => Promise<unknown> | void
@@ -17,6 +18,7 @@ export function createQueuedSSEWriter(input: QueuedSSEWriterInput): QueuedSSEWri
   const queue: Uint8Array[] = []
   let draining = false
   let closed = false
+  let droppedFrames = 0
 
   const pump = async () => {
     if (draining || closed) return
@@ -39,6 +41,10 @@ export function createQueuedSSEWriter(input: QueuedSSEWriterInput): QueuedSSEWri
   const writeFrame = (frame: Uint8Array) => {
     if (closed) return
     if (queue.length >= MAX_QUEUED_FRAMES) {
+      droppedFrames += 1
+      if (droppedFrames === 1 || droppedFrames % 100 === 0) {
+        logger.warn(`SSE queue saturated at ${MAX_QUEUED_FRAMES} frames, dropped ${droppedFrames} frame(s) for a slow client`)
+      }
       return
     }
     queue.push(frame)

@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import { compress } from 'hono/compress'
 import { cors } from 'hono/cors'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { readFile } from 'fs/promises'
@@ -102,6 +103,16 @@ app.use('/*', cors({
   allowHeaders: ['Content-Type', 'Authorization', 'CF-Access-Client-Id', 'CF-Access-Client-Secret'],
   credentials: true,
 }))
+
+const COMPRESS_EXCLUDED_PREFIXES = ['/api/sse/']
+
+app.use('/*', async (c, next) => {
+  if (COMPRESS_EXCLUDED_PREFIXES.some((prefix) => c.req.path.startsWith(prefix))) {
+    await next()
+    return
+  }
+  await compress()(c, next)
+})
 
 const db = initializeDatabase(DB_PATH)
 const auth = createAuth(db)

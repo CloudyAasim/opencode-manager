@@ -371,14 +371,14 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
   }, [client, primaryDirectory, replaceSessionStatuses])
 
   useEffect(() => {
-    if (!client || !primaryDirectory) return
+    if (!client || !primaryDirectory || isConnected) return
 
     const interval = setInterval(() => {
       void fetchInitialData().catch(() => undefined)
     }, STATUS_POLL_INTERVAL_MS)
 
     return () => clearInterval(interval)
-  }, [client, primaryDirectory, fetchInitialData])
+  }, [client, primaryDirectory, fetchInitialData, isConnected])
 
   const syncCurrentSession = useCallback(() => {
     const sessionId = sessionIdRef.current
