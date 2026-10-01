@@ -152,27 +152,27 @@ vi.mock('@/components/session/SessionList', () => ({
   SessionList: vi.fn(() => null),
 }))
 
-vi.mock('@/components/file-browser/FileBrowserSheet', () => ({
+vi.mock('@/features/file-browser/FileBrowserSheet', () => ({
   FileBrowserSheet: vi.fn(() => null),
 }))
 
-vi.mock('@/components/repo/RepoMcpDialog', () => ({
+vi.mock('@/features/repos/RepoMcpDialog', () => ({
   RepoMcpDialog: vi.fn(() => null),
 }))
 
-vi.mock('@/components/repo/ResetPermissionsDialog', () => ({
+vi.mock('@/features/repos/ResetPermissionsDialog', () => ({
   ResetPermissionsDialog: vi.fn(() => null),
 }))
 
-vi.mock('@/components/repo/RepoLspDialog', () => ({
+vi.mock('@/features/repos/RepoLspDialog', () => ({
   RepoLspDialog: vi.fn(() => null),
 }))
 
-vi.mock('@/components/repo/RepoSkillsDialog', () => ({
+vi.mock('@/features/repos/RepoSkillsDialog', () => ({
   RepoSkillsDialog: vi.fn(() => null),
 }))
 
-vi.mock('@/components/source-control', () => ({
+vi.mock('@/features/source-control', () => ({
   SourceControlPanel: vi.fn(() => null),
 }))
 

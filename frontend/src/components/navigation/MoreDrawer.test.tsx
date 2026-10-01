@@ -15,7 +15,7 @@ vi.mock('@/hooks/useCommands')
 vi.mock('@/api/repos', () => ({
   getRepo: vi.fn(),
 }))
-vi.mock('@/components/file-browser/FileBrowserSheet', () => ({
+vi.mock('@/features/file-browser/FileBrowserSheet', () => ({
   FileBrowserSheet: ({ isOpen, basePath, onFileSelect }: { isOpen: boolean; basePath: string; onFileSelect: (file: { path: string }) => void }) => (
     isOpen ? (
       <div data-testid="mention-file-browser" data-base-path={basePath}>

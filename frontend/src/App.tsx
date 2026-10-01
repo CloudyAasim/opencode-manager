@@ -12,6 +12,10 @@ import { ShellFrame } from './framework/shell/ShellFrame'
 import { StatusBar } from './framework/shell/StatusBar'
 import { TopBar } from './framework/shell/TopBar'
 import { Inspector } from './framework/shell/Inspector'
+import { InspectorProvider } from './framework/inspector/InspectorProvider'
+import { FileBrowserInspectorTab } from './features/file-browser/InspectorTab'
+import { SourceControlInspectorTab } from './features/source-control/InspectorTab'
+import { TerminalInspectorTab } from './features/terminal/InspectorTab'
 import { CommandProvider } from './framework/commands/CommandProvider'
 import { CommandPalette } from './framework/commands/CommandPalette'
 import { BuiltinCommands } from './framework/commands/BuiltinCommands'
@@ -175,6 +179,11 @@ function AppShell() {
       <EventProvider>
         <LayerProvider>
           <CommandProvider>
+            <InspectorProvider>
+              <FileBrowserInspectorTab />
+              <SourceControlInspectorTab />
+              <TerminalInspectorTab />
+            </InspectorProvider>
             <BuiltinCommands />
             <CommandPalette />
             <ShellFrame

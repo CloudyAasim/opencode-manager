@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { useGit } from '@/hooks/useGit'
 import { GIT_UI_COLORS } from '@/lib/git-status-styles'
-import { CreateWorktreeDialog } from '@/components/repo/CreateWorktreeDialog'
+import { CreateWorktreeDialog } from '@/features/repos/CreateWorktreeDialog'
 import { invalidateRepoGitCaches, setRepoGitStatusCaches } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
 

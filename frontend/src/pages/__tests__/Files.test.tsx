@@ -15,7 +15,7 @@ vi.mock('@/hooks/useMobile', () => ({
 
 vi.stubGlobal('fetch', (...args: unknown[]) => fetchMock(...args))
 
-vi.mock('@/components/file-browser/FileTree', () => ({
+vi.mock('@/features/file-browser/FileTree', () => ({
   FileTree: ({
     files,
     onFileSelect,
@@ -39,11 +39,11 @@ vi.mock('@/components/file-browser/FileTree', () => ({
   ),
 }))
 
-vi.mock('@/components/file-browser/FilePreview', () => ({
+vi.mock('@/features/file-browser/FilePreview', () => ({
   FilePreview: ({ file }: { file: FileInfo }) => <div data-testid="preview">{file.path}</div>,
 }))
 
-vi.mock('@/components/file-browser/MobileFilePreviewModal', () => ({
+vi.mock('@/features/file-browser/MobileFilePreviewModal', () => ({
   MobileFilePreviewModal: ({ isOpen, file }: { isOpen: boolean; file: FileInfo | null }) => (
     <div data-testid="mobile-preview">{`${String(isOpen)}|${file?.path ?? 'null'}`}</div>
   ),

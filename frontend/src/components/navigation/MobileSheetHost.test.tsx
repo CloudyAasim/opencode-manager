@@ -4,7 +4,7 @@ vi.mock('@/hooks/useMobile')
 vi.mock('@/hooks/useMobileTabBar', () => ({
   useMobileTabBar: vi.fn(),
 }))
-vi.mock('@/components/file-browser/FileBrowserSheet', () => ({
+vi.mock('@/features/file-browser/FileBrowserSheet', () => ({
   FileBrowserSheet: ({ isOpen, basePath, repoName }: { isOpen: boolean; basePath: string; repoName: string }) =>
     isOpen ? <div data-testid="file-browser-sheet" data-base-path={basePath} data-repo-name={repoName}>FileBrowserSheet</div> : null,
 }))

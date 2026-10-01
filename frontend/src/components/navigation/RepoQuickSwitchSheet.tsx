@@ -7,7 +7,7 @@ import { BottomSheet, BottomSheetHeader, BottomSheetContent } from '@/components
 import { Button } from '@/components/ui/button'
 import { cn, getRepoDisplayName } from '@/lib/utils'
 import { listRepos } from '@/api/repos'
-import { AddRepoDialog } from '@/components/repo/AddRepoDialog'
+import { AddRepoDialog } from '@/features/repos/AddRepoDialog'
 import { FolderGit2, Check, Plus, GitBranch } from 'lucide-react'
 import { useUrlParams } from '@/hooks/useUrlParams'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'

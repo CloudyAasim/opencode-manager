@@ -1,4 +1,4 @@
-import { FileBrowserPage } from '@/components/file-browser/FileBrowserPage'
+import { FileBrowserPage } from '@/features/file-browser/FileBrowserPage'
 import { useI18n } from '@/lib/i18n'
 import { useState } from 'react'
 import type { FileInfo } from '@/types/files'

@@ -2,7 +2,7 @@ import { useCommitDetails } from '@/api/git'
 import { Loader2, GitCommit, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GitFlatFileList } from './GitFlatFileList'
-import { FileDiffView } from '@/components/file-browser/FileDiffView'
+import { FileDiffView } from '@/features/source-control/FileDiffView'
 import { useI18n } from '@/lib/i18n'
 
 interface CommitDetailViewProps {

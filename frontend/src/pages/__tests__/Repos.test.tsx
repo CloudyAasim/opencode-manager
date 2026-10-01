@@ -5,9 +5,9 @@ import { LayerProvider } from '@/framework/layer/LayerProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Repos } from '../Repos'
 
-vi.mock('@/components/repo/RepoList', () => ({ RepoList: () => <div data-testid="repo-list" /> }))
-vi.mock('@/components/repo/AddRepoDialog', () => ({ AddRepoDialog: () => null }))
-vi.mock('@/components/file-browser/FileBrowserSheet', () => ({ FileBrowserSheet: () => null }))
+vi.mock('@/features/repos/RepoList', () => ({ RepoList: () => <div data-testid="repo-list" /> }))
+vi.mock('@/features/repos/AddRepoDialog', () => ({ AddRepoDialog: () => null }))
+vi.mock('@/features/file-browser/FileBrowserSheet', () => ({ FileBrowserSheet: () => null }))
 vi.mock('@/components/notifications/PendingActionsGroup', () => ({ PendingActionsGroup: () => null }))
 
 function LocationSpy() {

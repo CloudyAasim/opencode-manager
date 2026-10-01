@@ -8,7 +8,7 @@ const RepoQuickSwitchSheet = lazy(() =>
   import('@/components/navigation/RepoQuickSwitchSheet').then((m) => ({ default: m.RepoQuickSwitchSheet })),
 )
 const FileBrowserSheet = lazy(() =>
-  import('@/components/file-browser/FileBrowserSheet').then((m) => ({ default: m.FileBrowserSheet })),
+  import('@/features/file-browser/FileBrowserSheet').then((m) => ({ default: m.FileBrowserSheet })),
 )
 const NotificationsSheet = lazy(() =>
   import('@/components/navigation/NotificationsSheet').then((m) => ({ default: m.NotificationsSheet })),

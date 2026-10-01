@@ -117,7 +117,7 @@ describe('frontend 分层契约', () => {
   })
 })
 
-const TOKEN_ONLY_PREFIXES = ['framework/', 'features/']
+const TOKEN_ONLY_PREFIXES = ['framework/']
 
 const RAW_PALETTE =
   /\b(?:bg|text|border|ring|from|to|via|fill|stroke|outline|decoration|shadow|accent|caret|divide)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/
@@ -136,6 +136,77 @@ describe('frontend 设计令牌', () => {
       })
     }
     expect(offenders, render('新代码使用了原生色板', offenders)).toEqual([])
+  })
+})
+
+const DECLARED_CROSS_FEATURE: ReadonlySet<string> = new Set([
+  'features/source-control/BranchesTab.tsx -> features/repos/CreateWorktreeDialog.tsx',
+  'features/repos/RepoRowActions.tsx -> features/source-control/SourceControlPanel.tsx',
+])
+
+const MIGRATION_BACK_REFERENCE_BASELINE = 4
+
+function featureOwner(rel: string): string | null {
+  return rel.startsWith('features/') ? rel.split('/')[1]! : null
+}
+
+function backReferencesFromLegacy(): string[] {
+  const found: string[] = []
+  for (const file of graph.files) {
+    const from = fileRel(file)
+    if (!from.startsWith('components/')) continue
+    for (const edge of graph.edges) {
+      if (edge.from !== file || edge.typeOnly) continue
+      const to = fileRel(edge.to)
+      if (!to.startsWith('features/')) continue
+      found.push(`${from} -> ${to}`)
+    }
+  }
+  return found.sort()
+}
+
+const FEATURE_RULES: ReadonlyArray<readonly [string, (from: string, to: string) => boolean]> = [
+  [
+    'framework 不得依赖 feature',
+    (from, to) => !from.startsWith('framework/') || !to.startsWith('features/'),
+  ],
+  [
+    'feature 不得横向依赖另一个 feature',
+    (from, to) => {
+      const source = featureOwner(from)
+      const target = featureOwner(to)
+      if (source === null || target === null) return true
+      return source === target
+    },
+  ],
+]
+
+describe('frontend feature 边界', () => {
+  it.each(FEATURE_RULES)('%s', (_label, allow) => {
+    const offenders: string[] = []
+    for (const file of graph.files) {
+      const from = fileRel(file)
+      for (const edge of graph.edges) {
+        if (edge.from !== file || edge.typeOnly) continue
+        const to = fileRel(edge.to)
+        if (allow(from, to)) continue
+        if (DECLARED_CROSS_FEATURE.has(`${from} -> ${to}`)) continue
+        offenders.push(`${from} -> ${to}`)
+      }
+    }
+    expect(offenders, render(_label, offenders)).toEqual([])
+  })
+
+  it('旧 components 对 feature 的反向依赖不得增加', () => {
+    const back = backReferencesFromLegacy()
+    expect(
+      back.length,
+      [
+        `旧树反向依赖 feature：${back.length} 条，上限 ${MIGRATION_BACK_REFERENCE_BASELINE}`,
+        ...back.map((entry) => `  ${entry}`),
+        '每迁移完一个 feature，这条基线应当下调。',
+      ].join('\n'),
+    ).toBeLessThanOrEqual(MIGRATION_BACK_REFERENCE_BASELINE)
   })
 })
 

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Loader2, TerminalSquare } from 'lucide-react'
 import { terminalApi } from '@/api/terminal'
 import { useI18n } from '@/lib/i18n'
-import { TerminalView } from '@/components/terminal/TerminalView'
+import { TerminalView } from '@/features/terminal/TerminalView'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 export function TerminalPage() {

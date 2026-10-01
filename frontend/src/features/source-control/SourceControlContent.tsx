@@ -10,7 +10,7 @@ import { CommitsTab } from './CommitsTab'
 import { BranchesTab } from './BranchesTab'
 import { CommitDetailView } from './CommitDetailView'
 import { GitErrorBanner } from './GitErrorBanner'
-import { FileDiffView } from '@/components/file-browser/FileDiffView'
+import { FileDiffView } from '@/features/source-control/FileDiffView'
 import { Button } from '@/components/ui/button'
 import { GIT_UI_COLORS } from '@/lib/git-status-styles'
 import {

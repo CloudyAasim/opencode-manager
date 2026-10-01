@@ -1,34 +1,22 @@
 import { useCallback, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { FileCode2, GitBranch, PanelRightClose, PanelRightOpen, TerminalSquare } from 'lucide-react'
+import { PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { FileBrowserView } from '@/components/file-browser/FileBrowserView'
-import { TerminalView } from '@/components/terminal/TerminalView'
-import { SourceControlContent } from '@/components/source-control/SourceControlContent'
-import { listRepos } from '@/api/repos'
 import { useI18n } from '@/lib/i18n'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { usePersistentBooleanState } from '@/hooks/usePersistentBooleanState'
 import { usePersistentNumberState } from '@/hooks/usePersistentNumberState'
 import { STORAGE_KEYS } from '@/lib/storage-keys'
 import { MEDIA } from '@/framework/shell/breakpoints'
+import { useInspectorTabs } from '@/framework/inspector/registry'
 
 const MIN_WIDTH = 320
 const MAX_WIDTH = 720
 const DEFAULT_WIDTH = 420
 
-function repoIdFromPath(pathname: string): number | null {
-  const match = /^\/repos\/(\d+)/.exec(pathname)
-  return match?.[1] ? Number(match[1]) : null
-}
-
 export function Inspector() {
   const { t } = useI18n()
   const canSplit = useMediaQuery(MEDIA.expandedUp)
-  const { pathname } = useLocation()
-  const { data: repos } = useQuery({ queryKey: ['repos'], queryFn: listRepos })
   const [open, setOpen, toggle] = usePersistentBooleanState({
     storageKey: STORAGE_KEYS.inspectorOpen,
     defaultValue: false,
@@ -39,11 +27,9 @@ export function Inspector() {
     min: MIN_WIDTH,
     max: MAX_WIDTH,
   })
-  const [tab, setTab] = useState('files')
+  const tabs = useInspectorTabs()
+  const [tab, setTab] = useState('')
   const draggingRef = useRef(false)
-
-  const repoId = repoIdFromPath(pathname)
-  const repo = repos?.find((entry) => entry.id === repoId)
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     draggingRef.current = true
@@ -82,6 +68,8 @@ export function Inspector() {
     )
   }
 
+  const active = tab && tabs.some((entry) => entry.id === tab) ? tab : (tabs[0]?.id ?? '')
+
   return (
     <aside className="flex shrink-0 flex-col border-l border-border bg-background" style={{ width }}>
       <div
@@ -93,21 +81,18 @@ export function Inspector() {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       />
-      <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+      <Tabs value={active} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-1 border-b border-border px-2 py-1">
           <TabsList className="h-8">
-            <TabsTrigger value="files" className="gap-1.5 text-xs">
-              <FileCode2 className="size-3.5" />
-              {t('navigation.files')}
-            </TabsTrigger>
-            <TabsTrigger value="source" className="gap-1.5 text-xs">
-              <GitBranch className="size-3.5" />
-              {t('misc.sourceControl.title')}
-            </TabsTrigger>
-            <TabsTrigger value="terminal" className="gap-1.5 text-xs">
-              <TerminalSquare className="size-3.5" />
-              {t('navigation.terminal')}
-            </TabsTrigger>
+            {tabs.map((entry) => {
+              const Icon = entry.icon
+              return (
+                <TabsTrigger key={entry.id} value={entry.id} className="gap-1.5 text-xs">
+                  <Icon className="size-3.5" />
+                  {t(entry.labelKey)}
+                </TabsTrigger>
+              )
+            })}
           </TabsList>
           <Button
             variant="ghost"
@@ -120,28 +105,15 @@ export function Inspector() {
           </Button>
         </div>
 
-        <TabsContent value="files" className="min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden">
-          <FileBrowserView embedded showPath={false} showHeader={false} />
-        </TabsContent>
-
-        <TabsContent value="source" className="min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden">
-          {repoId && repo ? (
-            <SourceControlContent
-              repoId={repoId}
-              currentBranch={repo.currentBranch || repo.branch || ''}
-              isMobile={false}
-            />
-          ) : (
-            <p className="p-4 text-sm text-muted-foreground">{t('shell.inspector.needProject')}</p>
-          )}
-        </TabsContent>
-
-        <TabsContent
-          value="terminal"
-          className="min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
-        >
-          <TerminalView className="h-full" />
-        </TabsContent>
+        {tabs.map((entry) => (
+          <TabsContent
+            key={entry.id}
+            value={entry.id}
+            className="min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+          >
+            {entry.render()}
+          </TabsContent>
+        ))}
       </Tabs>
     </aside>
   )

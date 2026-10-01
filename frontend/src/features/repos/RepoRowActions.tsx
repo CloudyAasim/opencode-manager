@@ -7,10 +7,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { SourceControlPanel } from '@/components/source-control/SourceControlPanel'
+import { SourceControlPanel } from '@/features/source-control/SourceControlPanel'
 import { DownloadDialog } from '@/components/ui/download-dialog'
-import { CreateWorktreeDialog } from '@/components/repo/CreateWorktreeDialog'
-import { RenameRepoDialog } from '@/components/repo/RenameRepoDialog'
+import { CreateWorktreeDialog } from '@/features/repos/CreateWorktreeDialog'
+import { RenameRepoDialog } from '@/features/repos/RenameRepoDialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { downloadRepo, renameRepo } from '@/api/repos'

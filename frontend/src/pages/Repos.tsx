@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Bot } from "lucide-react";
-import { RepoList } from "@/components/repo/RepoList";
-import { AddRepoDialog } from "@/components/repo/AddRepoDialog";
-import { FileBrowserSheet } from "@/components/file-browser/FileBrowserSheet";
+import { RepoList } from "@/features/repos/RepoList";
+import { AddRepoDialog } from "@/features/repos/AddRepoDialog";
+import { FileBrowserSheet } from "@/features/file-browser/FileBrowserSheet";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { PendingActionsGroup } from "@/components/notifications/PendingActionsGroup";
