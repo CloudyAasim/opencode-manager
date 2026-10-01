@@ -3,6 +3,16 @@ export const misc = {
     repo: {
       all: '全部项目',
     },
+    commands: {
+      title: '命令面板',
+      placeholder: '搜索命令',
+      empty: '没有匹配的命令',
+      group: {
+        navigate: '跳转',
+        repo: '项目',
+        view: '视图',
+      },
+    },
     status: {
       healthy: '正常',
       degraded: '降级',

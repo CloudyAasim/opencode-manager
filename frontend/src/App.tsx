@@ -11,6 +11,9 @@ import { LayerProvider } from './framework/layer/LayerProvider'
 import { ShellFrame } from './framework/shell/ShellFrame'
 import { StatusBar } from './framework/shell/StatusBar'
 import { TopBar } from './framework/shell/TopBar'
+import { CommandProvider } from './framework/commands/CommandProvider'
+import { CommandPalette } from './framework/commands/CommandPalette'
+import { BuiltinCommands } from './framework/commands/BuiltinCommands'
 import { useTheme } from './hooks/useTheme'
 import { useRightEdgeSwipe, useSwipeBack } from './hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
@@ -169,41 +172,43 @@ function AppShell() {
   return (
     <AuthProvider>
       <EventProvider>
-        <ShellFrame
-          rootRef={rootRef}
-          header={<TopBar />}
-          rail={
-            <Suspense fallback={null}>
-              <DesktopSidebar />
-            </Suspense>
-          }
-          main={
-            <LayerProvider>
-              <Outlet />
-            </LayerProvider>
-          }
-          bottom={
-            <Suspense fallback={null}>
-              <MobileTabBar />
-            </Suspense>
-          }
-          status={<StatusBar />}
-        />
-        <MobileSheetHost />
-        <PermissionDialogWrapper />
-        <SSHHostKeyDialogWrapper />
-        <HealthMonitor />
-        <RoutePrefetcher />
-        <VersionNotifier />
-        <PwaUpdatePrompt />
-        <Toaster
-          position={isDesktop ? 'bottom-right' : 'top-center'}
-          offset={isDesktop ? undefined : '64px'}
-          expand={false}
-          richColors
-          closeButton
-          duration={2500}
-        />
+        <LayerProvider>
+          <CommandProvider>
+            <BuiltinCommands />
+            <CommandPalette />
+            <ShellFrame
+              rootRef={rootRef}
+              header={<TopBar />}
+              rail={
+                <Suspense fallback={null}>
+                  <DesktopSidebar />
+                </Suspense>
+              }
+              main={<Outlet />}
+              bottom={
+                <Suspense fallback={null}>
+                  <MobileTabBar />
+                </Suspense>
+              }
+              status={<StatusBar />}
+            />
+            <MobileSheetHost />
+            <PermissionDialogWrapper />
+            <SSHHostKeyDialogWrapper />
+            <HealthMonitor />
+            <RoutePrefetcher />
+            <VersionNotifier />
+            <PwaUpdatePrompt />
+            <Toaster
+              position={isDesktop ? 'bottom-right' : 'top-center'}
+              offset={isDesktop ? undefined : '64px'}
+              expand={false}
+              richColors
+              closeButton
+              duration={2500}
+            />
+          </CommandProvider>
+        </LayerProvider>
       </EventProvider>
     </AuthProvider>
   )

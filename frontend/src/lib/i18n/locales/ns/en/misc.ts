@@ -3,6 +3,16 @@ export const misc = {
     repo: {
       all: 'All projects',
     },
+    commands: {
+      title: 'Command palette',
+      placeholder: 'Search commands',
+      empty: 'No matching command',
+      group: {
+        navigate: 'Go to',
+        repo: 'Project',
+        view: 'View',
+      },
+    },
     status: {
       healthy: 'Healthy',
       degraded: 'Degraded',
