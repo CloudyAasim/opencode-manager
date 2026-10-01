@@ -142,10 +142,6 @@ vi.mock('@/api/repos', () => ({
   initializeAssistantMode: vi.fn(() => Promise.resolve({ directory: '/test/repo' })),
 }))
 
-vi.mock('@/components/model/ModelSelectDialog', () => ({
-  ModelSelectDialog: vi.fn(() => null),
-}))
-
 vi.mock('@/components/session/SessionList', () => ({
   SessionList: vi.fn(() => null),
 }))

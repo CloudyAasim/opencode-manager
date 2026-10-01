@@ -3,8 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@testing-library/jest-dom'
 import { FileBrowserSheet } from './FileBrowserSheet'
-import { FileBrowser } from './FileBrowser'
-import type { FileBrowserHandle } from './FileBrowser'
+import { FileBrowser } from './FileBrowserView'
+import type { FileBrowserHandle } from './FileBrowserView'
 import * as useMobile from '../../hooks/useMobile'
 
 function createQueryClient() {
