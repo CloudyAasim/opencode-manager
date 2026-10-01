@@ -8,15 +8,15 @@ vi.mock('@/features/file-browser/FileBrowserSheet', () => ({
   FileBrowserSheet: ({ isOpen, basePath, repoName }: { isOpen: boolean; basePath: string; repoName: string }) =>
     isOpen ? <div data-testid="file-browser-sheet" data-base-path={basePath} data-repo-name={repoName}>FileBrowserSheet</div> : null,
 }))
-vi.mock('@/components/navigation/RepoQuickSwitchSheet', () => ({
+vi.mock('@/features/navigation/RepoQuickSwitchSheet', () => ({
   RepoQuickSwitchSheet: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="repo-quick-switch-sheet">RepoQuickSwitchSheet</div> : null,
 }))
-vi.mock('@/components/navigation/NotificationsSheet', () => ({
+vi.mock('@/features/navigation/NotificationsSheet', () => ({
   NotificationsSheet: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="notifications-sheet">NotificationsSheet</div> : null,
 }))
-vi.mock('@/components/navigation/MoreDrawer', () => ({
+vi.mock('@/features/navigation/MoreDrawer', () => ({
   MoreDrawer: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="more-drawer">MoreDrawer</div> : null,
 }))

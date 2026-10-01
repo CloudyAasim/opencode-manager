@@ -1,6 +1,6 @@
 import type { ScheduleJob } from '@opencode-manager/shared/types'
 import { Badge } from '@/components/ui/badge'
-import { formatScheduleShortLabel, getJobStatusTone } from '@/components/schedules/schedule-utils'
+import { formatScheduleShortLabel, getJobStatusTone } from './schedule-utils'
 import { Bot, Clock3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'

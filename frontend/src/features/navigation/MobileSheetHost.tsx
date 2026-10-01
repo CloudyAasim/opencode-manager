@@ -5,16 +5,16 @@ import { useMobile } from '@/hooks/useMobile'
 import { useI18n } from '@/lib/i18n'
 
 const RepoQuickSwitchSheet = lazy(() =>
-  import('@/components/navigation/RepoQuickSwitchSheet').then((m) => ({ default: m.RepoQuickSwitchSheet })),
+  import('@/features/navigation/RepoQuickSwitchSheet').then((m) => ({ default: m.RepoQuickSwitchSheet })),
 )
 const FileBrowserSheet = lazy(() =>
   import('@/features/file-browser/FileBrowserSheet').then((m) => ({ default: m.FileBrowserSheet })),
 )
 const NotificationsSheet = lazy(() =>
-  import('@/components/navigation/NotificationsSheet').then((m) => ({ default: m.NotificationsSheet })),
+  import('@/features/navigation/NotificationsSheet').then((m) => ({ default: m.NotificationsSheet })),
 )
 const MoreDrawer = lazy(() =>
-  import('@/components/navigation/MoreDrawer').then((m) => ({ default: m.MoreDrawer })),
+  import('@/features/navigation/MoreDrawer').then((m) => ({ default: m.MoreDrawer })),
 )
 
 export function MobileSheetHost() {

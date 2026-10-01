@@ -7,7 +7,7 @@ import {
   formatTimestamp,
   getJobStatusTone,
   hasSkillMetadata,
-} from '@/components/schedules/schedule-utils'
+} from './schedule-utils'
 import { Bot, CalendarClock, Clock3, History, Loader2, Pencil, Play, Sparkles, Trash2 } from 'lucide-react'
 import { useScheduleModels } from '@/hooks/useScheduleModels'
 import { resolveScheduleModel } from '@/lib/schedules/schedule-model'

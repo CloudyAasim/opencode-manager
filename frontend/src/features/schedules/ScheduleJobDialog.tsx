@@ -17,7 +17,7 @@ import {
   detectSchedulePreset,
   getLocalTimeZone,
   type SchedulePreset,
-} from '@/components/schedules/schedule-utils'
+} from './schedule-utils'
 import { getRepoDisplayName } from '@/lib/utils'
 import { ASSISTANT_REPO_ID, ASSISTANT_REPO_NAME } from '@opencode-manager/shared/utils'
 import { DEFAULT_DESTRUCTIVE_BASH_PATTERNS } from '@opencode-manager/shared/schemas'

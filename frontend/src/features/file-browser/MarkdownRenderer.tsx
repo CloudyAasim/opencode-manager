@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
-import { markdownComponents } from './MarkdownComponents'
+import { markdownComponents } from '@/components/markdown/MarkdownComponents'
 import type { Components } from 'react-markdown'
 
 interface MarkdownRendererProps {

@@ -9,8 +9,8 @@ import {
   schedulePresetOptions,
   weekdayOptions,
   type SchedulePreset,
-} from '@/components/schedules/schedule-utils'
-import { formatDraftScheduleSummary, getLocalTimeZone } from '@/components/schedules/schedule-utils'
+} from './schedule-utils'
+import { formatDraftScheduleSummary, getLocalTimeZone } from './schedule-utils'
 import { useI18n } from '@/lib/i18n'
 
 type TimingTabProps = {

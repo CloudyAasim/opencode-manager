@@ -69,7 +69,7 @@ import { useDialogParam } from "@/hooks/useDialogParam";
 import { MEDIA } from '@/framework/shell/breakpoints';
 import { useDesktop } from "@/hooks/useDesktop";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
-import { SessionMoreButton } from "@/components/navigation/SessionMoreButton";
+import { SessionMoreButton } from "@/features/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
 import { usePersistentJSONState } from "@/hooks/usePersistentJSONState";

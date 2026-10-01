@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScheduleRunMarkdown } from '@/components/schedules/ScheduleRunMarkdown'
+import { ScheduleRunMarkdown } from '@/features/schedules/ScheduleRunMarkdown'
 import { Loader2 } from 'lucide-react'
 import type { ScheduleRun } from '@opencode-manager/shared/types'
 import { useI18n } from '@/lib/i18n'

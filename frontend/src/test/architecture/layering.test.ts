@@ -139,12 +139,15 @@ describe('frontend 设计令牌', () => {
   })
 })
 
-const DECLARED_CROSS_FEATURE: ReadonlySet<string> = new Set([
+const CROSS_FEATURE_DIALOG: ReadonlySet<string> = new Set([
+  'features/navigation/MobileSheetHost.tsx -> features/file-browser/FileBrowserSheet.tsx',
+  'features/navigation/MoreDrawer.tsx -> features/file-browser/FileBrowserSheet.tsx',
+  'features/navigation/RepoQuickSwitchSheet.tsx -> features/repos/AddRepoDialog.tsx',
   'features/source-control/BranchesTab.tsx -> features/repos/CreateWorktreeDialog.tsx',
   'features/repos/RepoRowActions.tsx -> features/source-control/SourceControlPanel.tsx',
 ])
 
-const MIGRATION_BACK_REFERENCE_BASELINE = 4
+const MIGRATION_BACK_REFERENCE_BASELINE = 0
 
 function featureOwner(rel: string): string | null {
   return rel.startsWith('features/') ? rel.split('/')[1]! : null
@@ -190,14 +193,14 @@ describe('frontend feature 边界', () => {
         if (edge.from !== file || edge.typeOnly) continue
         const to = fileRel(edge.to)
         if (allow(from, to)) continue
-        if (DECLARED_CROSS_FEATURE.has(`${from} -> ${to}`)) continue
+        if (CROSS_FEATURE_DIALOG.has(`${from} -> ${to}`)) continue
         offenders.push(`${from} -> ${to}`)
       }
     }
     expect(offenders, render(_label, offenders)).toEqual([])
   })
 
-  it('旧 components 对 feature 的反向依赖不得增加', () => {
+  it('旧 components 不得新增对 feature 的反向依赖', () => {
     const back = backReferencesFromLegacy()
     expect(
       back.length,

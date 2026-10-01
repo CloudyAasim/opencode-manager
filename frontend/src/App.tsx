@@ -5,7 +5,7 @@ import { Suspense, lazy, useEffect, useRef, useCallback } from 'react'
 import { Toaster } from 'sonner'
 import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
-import { MobileSheetHost } from '@/components/navigation/MobileSheetHost'
+import { MobileSheetHost } from '@/features/navigation/MobileSheetHost'
 import { createAppRouter } from './routes'
 import { LayerProvider } from './framework/layer/LayerProvider'
 import { ShellFrame } from './framework/shell/ShellFrame'
@@ -36,10 +36,10 @@ import { useServerHealth } from '@/hooks/useServerHealth'
 import { usePrefetchRoutes } from '@/hooks/usePrefetchRoutes'
 
 const DesktopSidebar = lazy(() =>
-  import('@/components/navigation/DesktopSidebar').then((m) => ({ default: m.DesktopSidebar })),
+  import('@/features/navigation/DesktopSidebar').then((m) => ({ default: m.DesktopSidebar })),
 )
 const MobileTabBar = lazy(() =>
-  import('@/components/navigation/MobileTabBar').then((m) => ({ default: m.MobileTabBar })),
+  import('@/features/navigation/MobileTabBar').then((m) => ({ default: m.MobileTabBar })),
 )
 
 const queryClient = new QueryClient({

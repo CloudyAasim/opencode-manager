@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
-import { markdownComponents } from '@/features/file-browser/MarkdownComponents'
+import { markdownComponents } from '@/components/markdown/MarkdownComponents'
 
 type ScheduleRunMarkdownProps = {
   content: string

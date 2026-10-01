@@ -53,7 +53,7 @@ vi.mock('@/hooks/useScheduleUrlState', () => ({
   useScheduleUrlState: mocks.useScheduleUrlState,
 }))
 
-vi.mock('@/components/schedules', () => ({
+vi.mock('@/features/schedules', () => ({
   ScheduleJobDialog: vi.fn(({ onOpenChange }) => (
     <div>
       ScheduleJobDialog
