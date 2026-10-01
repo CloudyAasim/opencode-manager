@@ -1,5 +1,8 @@
 export const misc = {
   shell: {
+    repo: {
+      all: '全部项目',
+    },
     status: {
       healthy: '正常',
       degraded: '降级',

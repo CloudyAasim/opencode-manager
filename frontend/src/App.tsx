@@ -10,6 +10,7 @@ import { createAppRouter } from './routes'
 import { LayerProvider } from './framework/layer/LayerProvider'
 import { ShellFrame } from './framework/shell/ShellFrame'
 import { StatusBar } from './framework/shell/StatusBar'
+import { TopBar } from './framework/shell/TopBar'
 import { useTheme } from './hooks/useTheme'
 import { useRightEdgeSwipe, useSwipeBack } from './hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
@@ -170,6 +171,7 @@ function AppShell() {
       <EventProvider>
         <ShellFrame
           rootRef={rootRef}
+          header={<TopBar />}
           rail={
             <Suspense fallback={null}>
               <DesktopSidebar />
