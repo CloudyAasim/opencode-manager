@@ -14,7 +14,7 @@ import { showToast } from "../lib/toast";
 import { useI18n } from "../lib/i18n";
 import { useSendErrorStore } from "../stores/sendErrorStore";
 import { useSessionStatus } from "../stores/sessionStatusStore";
-import { invalidateSessionListCaches, messagesQueryKey } from "../lib/queryInvalidation";
+import { invalidateSessionListCaches, messagesQueryKey, stopQueries } from "../lib/queryInvalidation";
 import { reconcileConfirmedPrompt } from "../lib/sendErrorReconcile";
 import { buildSessionKey } from "../lib/sessionKey";
 import { toggleSessionPin } from "../api/sessionPins";
@@ -439,7 +439,7 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
       if (!client) throw new Error("No client available");
 
       const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
-      await queryClient.cancelQueries({ queryKey });
+      await stopQueries(queryClient, { queryKey });
 
       useSessionStatus.getState().setOptimisticActive(sessionID);
 
@@ -715,7 +715,7 @@ export const useSendShell = (opcodeUrl: string | null | undefined, directory?: s
       const userMessageInfo = createOptimisticUserMessageInfo(sessionID, optimisticUserID);
 
       const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
-      await queryClient.cancelQueries({ queryKey });
+      await stopQueries(queryClient, { queryKey });
 
       const optimisticMessageWithParts: MessageWithParts = {
         info: userMessageInfo,
@@ -821,7 +821,7 @@ export const useLoadSkill = (
         parts: userMessageParts,
       };
 
-      await queryClient.cancelQueries({ queryKey });
+      await stopQueries(queryClient, { queryKey });
       queryClient.setQueryData<MessageWithParts[]>(
         queryKey,
         (old) => [...(old || []), optimisticMessageWithParts],

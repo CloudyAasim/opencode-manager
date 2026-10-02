@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { settingsApi } from '@/api/settings'
 import type { UserPreferences } from '@/api/types/settings'
-import { invalidateConfigCaches } from '@/lib/queryInvalidation'
+import { invalidateConfigCaches, stopQueries } from '@/lib/queryInvalidation'
 
 export function useSettings(userId = 'default') {
   const queryClient = useQueryClient()
@@ -16,7 +16,7 @@ export function useSettings(userId = 'default') {
     mutationFn: (updates: Partial<UserPreferences>) =>
       settingsApi.updateSettings({ preferences: updates }, userId),
     onMutate: async (updates) => {
-      await queryClient.cancelQueries({ queryKey: ['settings', userId] })
+      await stopQueries(queryClient, { queryKey: ['settings', userId] })
       
       const previousData = queryClient.getQueryData(['settings', userId])
       

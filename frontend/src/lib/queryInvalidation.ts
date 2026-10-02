@@ -1,6 +1,24 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { GitStatusResponse } from '@/types/git'
 
+/**
+ * Stop whatever is in flight for these queries, and do not treat it as a
+ * failure when there was something to stop.
+ *
+ * `cancelQueries` rejects with CancelledError whenever it actually had a
+ * query running. Awaiting it bare inside `onMutate` means a background
+ * refetch that happens to be in flight at that instant takes the whole
+ * mutation down with it: the snapshot is never taken and `mutationFn` never
+ * runs, so the click does nothing at all. The cancellation is the outcome we
+ * wanted, so it is not an error.
+ */
+export async function stopQueries(
+  queryClient: QueryClient,
+  filters: Parameters<QueryClient['cancelQueries']>[0],
+): Promise<void> {
+  await queryClient.cancelQueries(filters).catch(() => {})
+}
+
 export function messagesQueryKey(
   opcodeUrl: string | null | undefined,
   sessionID: string | null | undefined,
@@ -130,8 +148,8 @@ export function getRepoGitStatus(queryClient: QueryClient, repoId: number): GitS
 
 /** A refetch landing mid-write would stomp the local guess. Stop it first. */
 export async function cancelRepoGitStatus(queryClient: QueryClient, repoId: number) {
-  await queryClient.cancelQueries({ queryKey: ['gitStatus', repoId] })
-  await queryClient.cancelQueries({ queryKey: ['reposGitStatus'] })
+  await stopQueries(queryClient, { queryKey: ['gitStatus', repoId] })
+  await stopQueries(queryClient, { queryKey: ['reposGitStatus'] })
 }
 
 const repoGitInvalidationTimers = new WeakMap<QueryClient, Map<number, ReturnType<typeof setTimeout>>>()

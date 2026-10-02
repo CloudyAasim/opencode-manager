@@ -4,6 +4,7 @@ import { useConfig } from './useOpenCode'
 import { useOpenCodeClient } from './useOpenCode'
 import { useModelStore, modelExists, type ModelSelection } from '@/stores/modelStore'
 import { showErrorToast } from '@/lib/error-toast'
+import { stopQueries } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
 import { addOpenCodeRecentModel, getOpenCodeModelState, getProviders, removeOpenCodeRecentModel, toggleOpenCodeFavoriteModel, type OpenCodeModelState } from '@/api/providers'
 
@@ -87,7 +88,7 @@ export function useModelSelection(
     mutationFn: removeOpenCodeRecentModel,
     onMutate: async (removedModel) => {
       const queryKey = [...modelStateQueryKey, opcodeUrl, directory]
-      await queryClient.cancelQueries({ queryKey })
+      await stopQueries(queryClient, { queryKey })
       const previousState = queryClient.getQueryData<OpenCodeModelState>(queryKey)
 
       if (previousState) {

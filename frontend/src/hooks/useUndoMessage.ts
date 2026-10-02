@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createOpenCodeClient } from '@/api/opencode'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
-import { messagesQueryKey } from '@/lib/queryInvalidation'
+import { messagesQueryKey, stopQueries } from '@/lib/queryInvalidation'
 import type { MessageWithParts } from '@/api/types'
 
 interface UseUndoMessageOptions {
@@ -36,7 +36,7 @@ export function useUndoMessage({
     onMutate: async ({ messageID }) => {
       const queryKey = messagesQueryKey(opcodeUrl, sessionId, directory)
       
-      await queryClient.cancelQueries({ queryKey })
+      await stopQueries(queryClient, { queryKey })
       
       const previousMessages = queryClient.getQueryData<MessageWithParts[]>(queryKey)
       

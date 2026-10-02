@@ -79,8 +79,11 @@ function arrowBody(handler: string): string {
 
 /** "writes a query cache" - by whatever helper the file happens to use. */
 const WRITES_CACHE = /setQueryData|setQueriesData|setRepoGitStatusCaches/
-/** A cancellation step, however it is spelled. */
-const CANCELS = /\bcancel[A-Z]\w*\s*\(/
+/** Stopping in-flight queries goes through the one helper that also swallows
+ *  the cancellation, so a new optimistic write cannot pick the unsafe spelling. */
+/** A step that stops in-flight queries, by whatever it is called. The spelling
+ *  is not the point - the next rule is what makes it safe. */
+const STOPS_QUERIES = /\b(cancel[A-Z]\w*|stop[A-Z]\w*)\s*\(/
 /** A handler that runs but accomplishes nothing. `handleError` is real work. */
 const DOES_NOTHING = /^\{?\s*(\/\/[^\n]*\s*|void 0\s*|return\s+void 0\s*)*\}?$/
 
@@ -146,6 +149,10 @@ describe('列表型写操作先改本地', () => {
     const pathBlocks = mutationBlocks(read(USE_GIT)).filter((b) => /\bpaths:\s*string\[\]/.test(b))
     expect(pathBlocks.length, '按文件路径操作的 mutation 数量变了').toBe(3)
     expect(LOCAL_WRITES.length, '写本地缓存的 mutation 数量变了').toBeGreaterThanOrEqual(6)
+    // the rule above points at this helper; if it stops swallowing the
+    // rejection the rule is guarding nothing
+    expect(read('lib/queryInvalidation.ts'), 'stopQueries 不再吞掉取消的拒绝，这条规则就悬空了')
+      .toMatch(/cancelQueries\(filters\)\.catch\(\(\) => \{\}\)/)
     for (const [rel, why] of MUST_MOVE_THE_LIST_NOW) {
       expect(ALL_FILES.includes(rel), `找不到 ${rel}（${why}）`).toBe(true)
     }
@@ -179,8 +186,8 @@ describe('列表型写操作先改本地', () => {
   })
 
   it('写了本地缓存的 mutation：改之前先叫停在途 refetch', () => {
-    const offenders = LOCAL_WRITES.filter((m) => !CANCELS.test(arrowBody(m.onMutate))).map((m) => m.rel)
-    expect(offenders, '这些 mutation 直接写本地，没先取消在途 refetch').toEqual([])
+    const offenders = LOCAL_WRITES.filter((m) => !STOPS_QUERIES.test(arrowBody(m.onMutate))).map((m) => m.rel)
+    expect(offenders, '这些 mutation 直接写本地，没先停住在途 refetch').toEqual([])
   })
 
   it('写了本地缓存的 mutation：失败时必须在 onError 里按原样放回去', () => {
@@ -216,6 +223,25 @@ describe('列表型写操作先改本地', () => {
       })
       .map((m) => m.rel)
     expect(offenders, '这些 mutation 把失败整个吞掉了').toEqual([])
+  })
+
+  it('cancelQueries 全应用只允许出现在 stopQueries 内部', () => {
+    // cancelQueries rejects with CancelledError whenever it actually had a
+    // query running. Awaited bare, a background refetch that happens to be in
+    // flight at that instant aborts the whole mutation: the snapshot is never
+    // taken and mutationFn never runs, so the click does nothing at all. The
+    // cancellation is the outcome we wanted, so it is not an error.
+    //
+    // Scoped to the whole app rather than to onMutate, because a wrapper like
+    // cancelRepoGitStatus is perfectly fine - what is not fine is any caller
+    // that reaches the client directly and has to remember this on its own.
+    const offenders = ALL_FILES
+      .filter((rel) => rel !== 'lib/queryInvalidation.ts')
+      .filter((rel) => /cancelQueries\s*\(/.test(read(rel)))
+    expect(
+      offenders,
+      `cancelQueries 只能出现在 stopQueries 内部，这些地方是裸调用：${offenders.join(', ')}`,
+    ).toEqual([])
   })
 
   it('hasChanges 只在那一处从列表长度推算', () => {

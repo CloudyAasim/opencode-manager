@@ -23,7 +23,7 @@ import {
   type RepoSortMode,
 } from "./repo-list-state"
 import { RepoListControls } from "./RepoListControls"
-import { invalidateRepoListCaches } from "@/lib/queryInvalidation"
+import { invalidateRepoListCaches, stopQueries } from "@/lib/queryInvalidation"
 import { ASSISTANT_REPO_ID } from "@opencode-manager/shared/utils"
 import { useI18n } from '@/lib/i18n'
 
@@ -260,7 +260,7 @@ export function RepoList() {
   const updateOrderMutation = useMutation({
     mutationFn: updateRepoOrder,
     onMutate: async (newOrder) => {
-      await queryClient.cancelQueries({ queryKey: ["repos"] })
+      await stopQueries(queryClient, { queryKey: ["repos"] })
 
       const previousRepos = queryClient.getQueryData<Repo[]>(["repos"])
 

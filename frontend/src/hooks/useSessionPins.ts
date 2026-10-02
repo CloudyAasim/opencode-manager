@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listSessionPins, toggleSessionPin } from '@/api/sessionPins'
 import { showErrorToast } from '@/lib/error-toast'
+import { stopQueries } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
 import { withToggledPin } from '@/lib/sessionPins'
 import type { SessionPin, ToggleSessionPinRequest } from '@opencode-manager/shared/schemas'
@@ -22,7 +23,7 @@ export function useToggleSessionPin() {
     mutationFn: (input: ToggleSessionPinRequest) => toggleSessionPin(input),
     onMutate: async (input) => {
       // a refetch landing here would put the row back where it was
-      await queryClient.cancelQueries({ queryKey: SESSION_PINS_QUERY_KEY })
+      await stopQueries(queryClient, { queryKey: SESSION_PINS_QUERY_KEY })
       const previous = queryClient.getQueryData<SessionPin[]>(SESSION_PINS_QUERY_KEY)
       if (previous) {
         queryClient.setQueryData(
