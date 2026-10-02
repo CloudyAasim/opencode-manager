@@ -1,4 +1,5 @@
 import { useState, useRef, useId } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { cn } from '@/lib/utils'
 import { Loader2, Edit, Download, RotateCcw, FileText, ChevronDown, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -194,9 +195,7 @@ export function OpenCodeConfigManager() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading />
     )
   }
 

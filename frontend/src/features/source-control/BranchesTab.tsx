@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listBranches, switchBranch, GitAuthError, getRepo } from '@/api/repos'
 import { fetchGitStatus } from '@/api/git'
@@ -86,9 +87,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading size="sm" />
     )
   }
 

@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import type { CreatePromptTemplateRequest } from '@opencode-manager/shared/types'
 import type { PromptDialog } from '@/hooks/useScheduleUrlState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader2, FileText, Plus, Upload } from 'lucide-react'
+import { FileText, Plus, Upload } from 'lucide-react'
 import { usePromptTemplates, useDeletePromptTemplate } from '@/hooks/usePromptTemplates'
 import { parseMarkdownTemplate } from '@/lib/schedules/markdownTemplate'
 import { PromptTemplateDialog } from './PromptTemplateDialog'
@@ -110,9 +111,7 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
 
       <div className="flex-1 overflow-y-auto p-4">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <PanelLoading size="md" />
         ) : templates.length === 0 ? (
           <div className="flex min-h-full items-center justify-center">
             <Card className="max-w-md border-dashed border-border/70">

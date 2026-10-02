@@ -66,6 +66,9 @@ export const ui = {
     noOptionsFound: 'No options found',
     removeOption: 'Remove {{label}}',
   },
+  panelLoading: {
+    label: 'Loading…',
+  },
   pendingActionBadge: {
     title_one: '{{count}} pending {{label}}',
     title_other: '{{count}} pending {{label}}s',

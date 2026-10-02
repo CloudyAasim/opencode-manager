@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useSettings } from '@/hooks/useSettings'
 import { useMobile } from '@/hooks/useMobile'
-import { Loader2, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { DEFAULT_DIRECT_SHORTCUTS, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_LEADER_KEY } from '@/api/types/settings'
 import { ALL_KEYBOARD_ACTIONS, CONVERSATION_ACTIONS, NAVIGATION_ACTIONS } from '@/framework/commands/keyboardActions'
 import { normalizeShortcut, parseEventShortcut, parseModifierShortcut } from '@/framework/commands/shortcutMatch'
@@ -213,9 +214,7 @@ export function KeyboardShortcuts() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading />
     )
   }
 

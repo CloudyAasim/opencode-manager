@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useGitStatus } from '@/api/git'
 import { useGit } from '@/hooks/useGit'
 import { GitFlatFileList } from './GitFlatFileList'
@@ -64,9 +65,7 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading size="sm" />
     )
   }
 

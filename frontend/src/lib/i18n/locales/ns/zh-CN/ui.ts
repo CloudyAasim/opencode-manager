@@ -66,6 +66,9 @@ export const ui = {
     noOptionsFound: '未找到选项',
     removeOption: '移除 {{label}}',
   },
+  panelLoading: {
+    label: '加载中…',
+  },
   pendingActionBadge: {
     title_one: '{{count}} 个待处理的{{label}}',
     title_other: '{{count}} 个待处理的{{label}}',

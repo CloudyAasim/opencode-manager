@@ -1,5 +1,6 @@
 import { useGitLog } from '@/api/git'
-import { Loader2, GitCommit, AlertCircle, ArrowUp } from 'lucide-react'
+import { PanelLoading } from '@/components/ui/panel-loading'
+import { GitCommit, AlertCircle, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GIT_UI_COLORS } from '@/lib/git-status-styles'
 import { useI18n } from '@/lib/i18n'
@@ -36,9 +37,7 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading size="sm" />
     )
   }
 

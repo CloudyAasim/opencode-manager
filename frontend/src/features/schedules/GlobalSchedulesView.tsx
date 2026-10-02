@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useNavigate } from 'react-router-dom'
 import { useAllSchedules, useAllScheduleRuns, useCancelRepoScheduleRun } from '@/hooks/useSchedules'
 import { useDeleteRepoSchedule, useRunRepoSchedule, useUpdateRepoSchedule, useCreateRepoSchedule } from '@/hooks/useSchedules'
@@ -821,9 +822,7 @@ export function GlobalSchedulesView() {
 
           <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-4 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
             {runsLoading && allRuns.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
+              <PanelLoading size="md" />
             ) : allRuns.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <Card className="max-w-md border-dashed border-border/70">

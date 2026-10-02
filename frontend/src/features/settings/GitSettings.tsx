@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSettings } from '@/hooks/useSettings'
 import { Loader2, Plus, Trash2, Save, User, Key, Pencil } from 'lucide-react'
@@ -181,9 +182,7 @@ export function GitSettings() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading />
     )
   }
 

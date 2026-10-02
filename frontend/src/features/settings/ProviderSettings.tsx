@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
-import { Loader2, Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2 } from 'lucide-react'
+import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2 } from 'lucide-react'
 import { providerCredentialsApi, getProviders } from '@/api/providers'
 import type { Provider } from '@/api/providers'
 import { oauthApi, type OAuthAuthorizeResponse } from '@/api/oauth'
@@ -160,9 +161,7 @@ export function ProviderSettings() {
 
   if (providersLoading || credentialsLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading />
     )
   }
 
