@@ -26,9 +26,6 @@ export const REQUEST_TIMEOUTS = {
 
 export type RequestTimeoutKey = keyof typeof REQUEST_TIMEOUTS
 
-/** Built-in fetch ceiling, for the many calls that are just reads. */
-export const DEFAULT_TIMEOUT_MS = 45_000
-
 /**
  * Routes whose handler runs one of the long operations above. Declared rather
  * than inferred: the frontend cannot see the server's budget from here, and a

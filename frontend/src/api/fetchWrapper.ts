@@ -1,4 +1,4 @@
-import { FetchError } from '@opencode-manager/shared'
+import { DEFAULTS, FetchError } from '@opencode-manager/shared'
 import type { ApiErrorResponse } from '@opencode-manager/shared'
 
 export { FetchError }
@@ -69,7 +69,6 @@ function buildUrl(url: string, params?: Record<string, string | number | boolean
 }
 
 const RETRYABLE_STATUS = new Set([502, 503, 504])
-const DEFAULT_GET_RETRIES = 1
 
 function isIdempotentMethod(method: string | undefined): boolean {
   const normalized = (method ?? 'GET').toUpperCase()
@@ -98,10 +97,10 @@ async function fetchWithTimeout(
   url: string,
   options: FetchWrapperOptions = {}
 ): Promise<Response> {
-  const { timeout = 45000, params, retry, ...fetchOptions } = options
+  const { timeout = DEFAULTS.TIMEOUTS.HTTP_REQUEST_MS, params, retry, ...fetchOptions } = options
   const maxRetries = typeof retry === 'number'
     ? retry
-    : isIdempotentMethod(fetchOptions.method) ? DEFAULT_GET_RETRIES : 0
+    : isIdempotentMethod(fetchOptions.method) ? DEFAULTS.TIMEOUTS.HTTP_GET_RETRIES : 0
   const urlObj = buildUrl(url, params)
   const externalSignal = fetchOptions.signal
   let lastError: unknown

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULTS } from '@opencode-manager/shared'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -71,8 +72,16 @@ describe('慢请求的客户端预算不许短于服务端', () => {
     const declared = [...BUDGETS.matchAll(/^\s{2}(\w+):\s*([\d_]+),/gm)].map((m) => Number(m[2]!.replace(/_/g, '')))
     expect(declared.length, 'REQUEST_TIMEOUTS 解析不到任何数值').toBe(declaredRoutes.length)
     for (const ms of declared) {
-      expect(ms, `预算 ${ms}ms 没有比默认的 45s 长`).toBeGreaterThan(45_000)
+      expect(ms, `预算 ${ms}ms 没有比默认的 ${DEFAULTS.TIMEOUTS.HTTP_REQUEST_MS}ms 长`)
+        .toBeGreaterThan(DEFAULTS.TIMEOUTS.HTTP_REQUEST_MS)
     }
+    // fetchWrapper must not carry its own copy of the ceiling; that is how
+    // the two ends drifted in the first place
+    expect(read('api/fetchWrapper.ts'), 'fetchWrapper 又自己写死了一份超时')
+      .not.toMatch(/timeout\s*=\s*[\d_]{4,}/)
+    // the ceiling itself lives in shared; a second copy here is how the
+    // two ends drifted in the first place
+    expect(BUDGETS, 'api/timeouts.ts 又自己留了一份默认值').not.toMatch(/=\s*[\d_]{4,}/)
   })
 
   it('声明的每条慢路由，都在自己的调用里带上了对应的预算', () => {

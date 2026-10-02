@@ -36,6 +36,13 @@ export const DEFAULTS = {
     PROCESS_VERIFY_WAIT_MS: 1000,
     HEALTH_CHECK_TIMEOUT_MS: 30000,
     HEALTH_CHECK_PROBE_TIMEOUT_MS: 2000,
+    /** How long the browser waits on one API call. Routes that run something
+     *  slow - a clone, an install - pass a larger budget of their own; see
+     *  frontend/src/api/timeouts.ts, which derives those from the server's
+     *  own budget rather than from taste. */
+    HTTP_REQUEST_MS: 45000,
+    /** Idempotent requests get one more attempt. A POST never does. */
+    HTTP_GET_RETRIES: 1,
   },
 
   FILE_LIMITS: {
