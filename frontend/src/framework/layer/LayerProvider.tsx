@@ -1,14 +1,34 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useUrlParams } from '@/hooks/useUrlParams'
 import { LayerContext, type LayerStack } from './layerContext'
+import { isKnownLayer } from './knownLayers'
 
 export function LayerProvider({ children }: { children: ReactNode }) {
   const { searchParams, updateParams } = useUrlParams()
-  const urlDialog = searchParams.get('dialog')
+  const rawDialog = searchParams.get('dialog')
+  // A URL can name any layer it likes. One that nothing renders is not a
+  // dialog, it is a phantom that would sit under every real one and keep
+  // saying so in the address bar.
+  const urlDialog = isKnownLayer(rawDialog) ? rawDialog : null
 
   const [layers, setLayers] = useState<string[]>(() => (urlDialog ? [urlDialog] : []))
   const syncedRef = useRef(urlDialog)
+
+  // and it is not written back either
+  const staleDialog = rawDialog !== null && urlDialog === null
   const top = layers.length > 0 ? layers[layers.length - 1]! : null
+
+  useEffect(() => {
+    if (staleDialog) {
+      updateParams(
+        (params) => {
+          params.delete('dialog')
+          return
+        },
+        'replace',
+      )
+    }
+  }, [staleDialog, updateParams])
 
   useEffect(() => {
     if (urlDialog === syncedRef.current) return

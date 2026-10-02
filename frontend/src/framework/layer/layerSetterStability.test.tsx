@@ -31,8 +31,8 @@ describe('a layer setter captured before the stack changed', () => {
   it('still opens its layer afterwards', () => {
     const { result } = renderHook(
       () => {
-        const [open, setOpen] = useLayer('probe')
-        const [, setOther] = useLayer('other')
+        const [open, setOpen] = useLayer('mcp')
+        const [, setOther] = useLayer('sessions')
         // captured once and never refreshed - the shape a useCallback with an
         // empty dependency array produces
         const captured = useRef(setOpen)
@@ -65,7 +65,7 @@ describe('a layer setter captured before the stack changed', () => {
     // adding the dependency rather than suppressing it. Before this, the setter
     // was rebuilt on every open and close.
     const { result } = renderHook(
-      () => ({ setA: useLayer('a')[1], setB: useLayer('b')[1] }),
+      () => ({ setA: useLayer('mcp')[1], setB: useLayer('skills')[1] }),
       { wrapper },
     )
     const before = result.current.setA

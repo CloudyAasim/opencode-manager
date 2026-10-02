@@ -152,7 +152,7 @@ describe('layer stack', () => {
 
   it('open pushes so browser back closes the dialog', () => {
     function DialogPushHarness() {
-      const [isOpen, setOpen] = useLayer('test')
+      const [isOpen, setOpen] = useLayer('mcp')
       const navigate = useNavigate()
       const [step, setStep] = useState<'start' | 'opened' | 'back'>('start')
       const handled = useRef(false)
