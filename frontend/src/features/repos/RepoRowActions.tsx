@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loader2, GitBranch, GitBranchPlus, Download, Trash2, MoreVertical, Pencil } from 'lucide-react'
+import { Loader2, GitBranch, GitBranchPlus, Download, Trash2, MoreVertical, Pencil, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import { SourceControlPanel } from '@/features/source-control/SourceControlPanel
 import { DownloadDialog } from '@/components/ui/download-dialog'
 import { CreateWorktreeDialog } from '@/features/repos/CreateWorktreeDialog'
 import { RenameRepoDialog } from '@/features/repos/RenameRepoDialog'
+import { ResetPermissionsDialog } from '@/features/repos/ResetPermissionsDialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { downloadRepo, renameRepo } from '@/api/repos'
@@ -57,6 +58,7 @@ export function RepoRowActions({
   const [showSourceControl, setShowSourceControl] = useState(false)
   const [showWorktreeDialog, setShowWorktreeDialog] = useState(false)
   const [showRenameDialog, setShowRenameDialog] = useState(false)
+  const [showResetPermissions, setShowResetPermissions] = useState(false)
 
   const repoName = getRepoDisplayName(repo)
   const branchToDisplay = gitStatus?.branch || repo.currentBranch || repo.branch
@@ -139,6 +141,13 @@ export function RepoRowActions({
               <GitBranch className="w-4 h-4 mr-2" />
               {t('repo.actions.sourceControl')}
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setShowResetPermissions(true)}
+              disabled={!isReady}
+            >
+              <ShieldAlert className="w-4 h-4 mr-2" />
+              {t('repo.actions.resetPermissions')}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleRenameOpen(true)}>
               <Pencil className="w-4 h-4 mr-2" />
               {t('repo.actions.rename')}
@@ -193,6 +202,11 @@ export function RepoRowActions({
           derivedName={repoName}
           onClose={() => handleRenameOpen(false)}
           onSave={(name) => renameMutation.mutate(name)}
+        />
+        <ResetPermissionsDialog
+          open={showResetPermissions}
+          onOpenChange={setShowResetPermissions}
+          repoId={repo.id}
         />
       </>
     )
@@ -252,6 +266,23 @@ export function RepoRowActions({
               <TooltipContent>{t('repo.actions.createWorktree')}</TooltipContent>
             </Tooltip>
           )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                  aria-label={t('repo.actions.resetPermissions')}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowResetPermissions(true)}
+                  disabled={!isReady}
+                  className="h-8 w-8 p-0"
+                  title={t('repo.actions.resetPermissions')}
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('repo.actions.resetPermissions')}</TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -322,6 +353,11 @@ export function RepoRowActions({
         derivedName={repoName}
         onClose={() => handleRenameOpen(false)}
         onSave={(name) => renameMutation.mutate(name)}
+      />
+      <ResetPermissionsDialog
+        open={showResetPermissions}
+        onOpenChange={setShowResetPermissions}
+        repoId={repo.id}
       />
     </>
   )

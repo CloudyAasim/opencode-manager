@@ -78,6 +78,7 @@ export const repo = {
   actions: {
     repositoryActions: 'Repository actions',
     sourceControl: 'Source Control',
+    resetPermissions: 'Reset Permissions',
     rename: 'Rename',
     renameRepository: 'Rename Repository',
     createWorktree: 'Create Worktree',

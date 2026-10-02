@@ -1,10 +1,8 @@
 import { useLayer } from '@/framework/layer/useLayer'
 import { FileBrowserSheet } from '@/features/file-browser/FileBrowserSheet'
 import { SourceControlPanel } from '@/features/source-control'
-import { RepoLspDialog } from './RepoLspDialog'
 import { RepoMcpDialog } from './RepoMcpDialog'
 import { RepoSkillsDialog } from './RepoSkillsDialog'
-import { ResetPermissionsDialog } from './ResetPermissionsDialog'
 import type { SkillFileInfo } from '@opencode-manager/shared'
 
 // The overlays a page sitting on one repository mounts. Three of them were
@@ -42,11 +40,9 @@ export function RepoOverlays({
   onSkillLoaded,
 }: RepoOverlaysProps) {
   const [filesOpen, setFilesOpen] = useLayer('files')
-  const [lspOpen, setLspOpen] = useLayer('lsp')
   const [skillsOpen, setSkillsOpen] = useLayer('skills')
   const [mcpOpen, setMcpOpen] = useLayer('mcp')
   const [sourceControlOpen, setSourceControlOpen] = useLayer('sourceControl')
-  const [resetPermissionsOpen, setResetPermissionsOpen] = useLayer('resetPermissions')
 
   return (
     <>
@@ -61,9 +57,6 @@ export function RepoOverlays({
         repoId={repoId}
         initialSelectedFile={initialSelectedFile}
       />
-      {opcodeUrl && directory ? (
-        <RepoLspDialog open={lspOpen} onOpenChange={setLspOpen} opcodeUrl={opcodeUrl} directory={directory} />
-      ) : null}
       {sessionId && opcodeUrl ? (
         <RepoSkillsDialog
           open={skillsOpen}
@@ -86,11 +79,6 @@ export function RepoOverlays({
         onClose={() => setSourceControlOpen(false)}
         currentBranch={currentBranch}
         repoName={repoName}
-      />
-      <ResetPermissionsDialog
-        open={resetPermissionsOpen}
-        onOpenChange={setResetPermissionsOpen}
-        repoId={repoId}
       />
     </>
   )

@@ -15,11 +15,14 @@ const SOURCES = graph.files.map((file) => ({
 // ended up with three different prop sets.
 const OWNER = 'features/repos/RepoOverlays.tsx'
 
+// RepoLspDialog and ResetPermissionsDialog used to be listed here. The first
+// is gone: it needed an OpenCode connection that no menu on the repo pages
+// has, so there was nowhere honest to put it. The second moved to the
+// per-repo actions menu, next to source control and rename, which is where
+// an operation on one repository belongs.
 const OVERLAYS: ReadonlyArray<{ tag: string; alsoAllowed: readonly string[] }> = [
   // A row action opens it for one repo, not for the page's repo context.
   { tag: 'SourceControlPanel', alsoAllowed: ['features/repos/RepoRowActions.tsx'] },
-  { tag: 'ResetPermissionsDialog', alsoAllowed: [] },
-  { tag: 'RepoLspDialog', alsoAllowed: [] },
   { tag: 'RepoMcpDialog', alsoAllowed: [] },
   { tag: 'RepoSkillsDialog', alsoAllowed: [] },
   // Three different things: the workspace root (Repos.tsx) and the two
@@ -81,7 +84,7 @@ describe('仓库弹层只有一处装配', () => {
     )
     const layers = [...owner.matchAll(/useLayer\('([^']+)'\)/g)].map((match) => match[1])
     expect(layers, '共享组件没有自己读 layer，开关就没人接了').toEqual(
-      expect.arrayContaining(['files', 'lsp', 'skills', 'mcp', 'sourceControl', 'resetPermissions']),
+      expect.arrayContaining(['files', 'skills', 'mcp', 'sourceControl']),
     )
   })
 })

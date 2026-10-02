@@ -78,6 +78,7 @@ export const repo = {
   actions: {
     repositoryActions: '项目操作',
     sourceControl: '源代码管理',
+    resetPermissions: '重置权限',
     rename: '重命名',
     renameRepository: '重命名项目',
     createWorktree: '创建工作树',

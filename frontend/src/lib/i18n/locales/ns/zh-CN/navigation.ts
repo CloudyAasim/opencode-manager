@@ -7,7 +7,6 @@ export const navigation = {
   files: '文件',
   mcp: 'MCP',
   skills: '技能',
-  lsp: 'LSP',
   resetPermissions: '重置权限',
   schedules: '定时任务',
   sourceControl: '源代码管理',

@@ -219,11 +219,6 @@ export class OpenCodeClient {
     })
   }
 
-  async getLSPStatus() {
-    return fetchWrapper<LspStatusResponse>(`${this.baseURL}/lsp`, {
-      params: this.getParams(),
-    })
-  }
 
   async updateConfig(config: Partial<ConfigResponse>) {
     return fetchWrapper<ConfigResponse>(`${this.baseURL}/config`, {

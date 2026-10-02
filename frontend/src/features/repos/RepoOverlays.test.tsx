@@ -2,15 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { RepoOverlays } from './RepoOverlays'
 
-const { useLayerMock, fileBrowserMock, lspMock, skillsMock, mcpMock, sourceControlMock, resetMock } =
+const { useLayerMock, fileBrowserMock, skillsMock, mcpMock, sourceControlMock } =
   vi.hoisted(() => ({
     useLayerMock: vi.fn(),
     fileBrowserMock: vi.fn(),
-    lspMock: vi.fn(),
     skillsMock: vi.fn(),
     mcpMock: vi.fn(),
     sourceControlMock: vi.fn(),
-    resetMock: vi.fn(),
   }))
 
 vi.mock('@/framework/layer/useLayer', () => ({ useLayer: useLayerMock }))
@@ -24,12 +22,6 @@ vi.mock('@/features/file-browser/FileBrowserSheet', () => ({
     )
   },
 }))
-vi.mock('./RepoLspDialog', () => ({
-  RepoLspDialog: (props: Record<string, unknown>) => {
-    lspMock(props)
-    return <div data-testid="lsp" />
-  },
-}))
 vi.mock('./RepoSkillsDialog', () => ({
   RepoSkillsDialog: (props: Record<string, unknown>) => {
     skillsMock(props)
@@ -40,12 +32,6 @@ vi.mock('./RepoMcpDialog', () => ({
   RepoMcpDialog: (props: Record<string, unknown>) => {
     mcpMock(props)
     return <div data-testid="mcp" />
-  },
-}))
-vi.mock('./ResetPermissionsDialog', () => ({
-  ResetPermissionsDialog: (props: Record<string, unknown>) => {
-    resetMock(props)
-    return <div data-testid="reset" />
   },
 }))
 vi.mock('@/features/source-control', () => ({
@@ -70,16 +56,16 @@ describe('RepoOverlays', () => {
     useLayerMock.mockReturnValue([false, vi.fn()])
   })
 
-  it('六个弹层自己从 layer 读开关，不靠页面把 open 传进来', () => {
+  // Every one of these has an entry point somewhere; the layer-openers
+  // gate is what keeps that true. See test/architecture/layer-openers.
+  it('这四个弹层自己从 layer 读开关，不靠页面把 open 传进来', () => {
     render(<RepoOverlays {...BASE} />)
 
     expect(useLayerMock.mock.calls.map((call) => call[0])).toEqual([
       'files',
-      'lsp',
       'skills',
       'mcp',
       'sourceControl',
-      'resetPermissions',
     ])
     expect(fileBrowserMock).toHaveBeenCalledWith(
       expect.objectContaining({ isOpen: false, repoId: 7, basePath: '/repo' }),
@@ -91,14 +77,13 @@ describe('RepoOverlays', () => {
     render(<RepoOverlays {...BASE} />)
 
     expect(mcpMock).toHaveBeenCalledWith(expect.objectContaining({ open: true }))
-    expect(lspMock).toHaveBeenCalledWith(expect.objectContaining({ open: false }))
+    expect(skillsMock).toHaveBeenCalledWith(expect.objectContaining({ open: false }))
   })
 
-  it('没有 directory 时不挂 MCP 与 LSP', () => {
+  it('没有 directory 时不挂 MCP', () => {
     render(<RepoOverlays {...BASE} directory={undefined} />)
 
     expect(screen.queryByTestId('mcp')).toBeNull()
-    expect(screen.queryByTestId('lsp')).toBeNull()
     expect(screen.getByTestId('skills')).toBeInTheDocument()
   })
 

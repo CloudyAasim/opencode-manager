@@ -7,7 +7,6 @@ export const navigation = {
   files: 'Files',
   mcp: 'MCP',
   skills: 'Skills',
-  lsp: 'LSP',
   resetPermissions: 'Reset Permissions',
   schedules: 'Schedules',
   sourceControl: 'Source Control',
