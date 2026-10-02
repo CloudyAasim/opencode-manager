@@ -85,6 +85,10 @@ export const settingsPanels = {
     restartNow: '立即重启',
   },
   skillsEditor: {
+    toast: {
+      deleteSucceeded: '技能已删除',
+      deleteFailed: '删除技能失败',
+    },
     created: '技能创建成功',
     createFailed: '创建技能失败',
     updated: '技能更新成功',
@@ -694,6 +698,19 @@ export const settingsPanels = {
     },
   },
   mcpManager: {
+    toast: {
+      added: 'MCP 服务器添加成功',
+      addFailed: '添加 MCP 服务器失败：{{error}}',
+      connected: 'MCP 服务器已连接',
+      connectFailed: '连接 MCP 服务器失败：{{error}}',
+      disconnected: 'MCP 服务器已断开',
+      disconnectFailed: '断开 MCP 服务器失败：{{error}}',
+      authStartFailed: '开始认证失败：{{error}}',
+      authCompleted: '认证已完成',
+      authCompleteFailed: '完成认证失败：{{error}}',
+      authRemoved: '认证凭据已删除',
+      authRemoveFailed: '删除认证凭据失败：{{error}}',
+    },
     deleteFailed: '删除 MCP 服务器失败',
     noConfig: '未找到 OpenCode 配置文件。',
     updating: '正在更新 MCP 服务器...',
@@ -884,6 +901,12 @@ export const settingsPanels = {
     maintenance: '服务器维护',
     upToDate: 'OpenCode 已是最新版本',
     restartSucceeded: '服务器重启成功',
+    restarting: '正在重启 OpenCode 服务器...',
+    restartFailed: '重启 OpenCode 服务器失败',
+    upgrading: '正在升级 OpenCode...',
+    upgradeSucceeded: '已升级到 v{{version}} 并重启服务器',
+    upgradeRecovered: '升级失败，但服务器已恢复到 v{{version}}',
+    upgradeFailed: '升级 OpenCode 失败',
   },
   serverEnv: {
     title: '服务器环境变量',

@@ -43,6 +43,8 @@ export const ui = {
     downloadFailed: 'Download failed',
     saveFailed: 'Failed to save {{filename}}',
     unsupportedDevice: '{{filename}} cannot be saved from this device',
+    tapSaveToFinish: 'Tap Save to finish saving {{filename}}',
+    saveAction: 'Save',
     cancel: 'Cancel',
     download: 'Download',
   },

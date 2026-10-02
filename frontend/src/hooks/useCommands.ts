@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { currentLocale, useI18n } from '@/lib/i18n'
 import { createOpenCodeClient } from '@/api/opencode'
 import type { components } from '@/api/opencode-types'
 
@@ -15,10 +17,15 @@ function rankCommandMatch(command: CommandType, searchTerm: string): number {
   return 2
 }
 
-const BUILTIN_COMMANDS: CommandType[] = [
+/** The command palette renders these descriptions, so they are part of the
+ *  UI and not metadata - which is why they go through t() like any other
+ *  string the user reads. */
+function builtinCommands(t: (key: string) => string): CommandType[] {
+  const B = (name: string) => t(`shell.commands.builtin.${name}`)
+  return [
   {
     name: 'help',
-    description: 'Show the help dialog',
+    description: B('help'),
     template: '',
     agent: '',
     model: '',
@@ -26,7 +33,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'init',
-    description: 'Create or update AGENTS.md file',
+    description: B('init'),
     template: '',
     agent: '',
     model: '',
@@ -34,7 +41,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'new',
-    description: 'Start a new session',
+    description: B('new'),
     template: '',
     agent: '',
     model: '',
@@ -42,7 +49,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'clear',
-    description: 'Start a new session (alias for /new)',
+    description: B('newAlias'),
     template: '',
     agent: '',
     model: '',
@@ -50,7 +57,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'sessions',
-    description: 'List and switch between sessions',
+    description: B('sessions'),
     template: '',
     agent: '',
     model: '',
@@ -58,7 +65,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'resume',
-    description: 'List and switch between sessions (alias for /sessions)',
+    description: B('sessionsAlias'),
     template: '',
     agent: '',
     model: '',
@@ -66,7 +73,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'continue',
-    description: 'List and switch between sessions (alias for /sessions)',
+    description: B('sessionsAlias2'),
     template: '',
     agent: '',
     model: '',
@@ -74,7 +81,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'models',
-    description: 'List available models',
+    description: B('models'),
     template: '',
     agent: '',
     model: '',
@@ -82,7 +89,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'themes',
-    description: 'List available themes',
+    description: B('themes'),
     template: '',
     agent: '',
     model: '',
@@ -90,7 +97,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'share',
-    description: 'Share current session',
+    description: B('share'),
     template: '',
     agent: '',
     model: '',
@@ -98,7 +105,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'unshare',
-    description: 'Unshare current session',
+    description: B('unshare'),
     template: '',
     agent: '',
     model: '',
@@ -106,7 +113,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'export',
-    description: 'Export current conversation to Markdown',
+    description: B('export'),
     template: '',
     agent: '',
     model: '',
@@ -114,7 +121,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'compact',
-    description: 'Compact the current session',
+    description: B('compact'),
     template: '',
     agent: '',
     model: '',
@@ -122,7 +129,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'summarize',
-    description: 'Compact the current session (alias for /compact)',
+    description: B('compactAlias'),
     template: '',
     agent: '',
     model: '',
@@ -130,7 +137,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'undo',
-    description: 'Undo last message in the conversation',
+    description: B('undo'),
     template: '',
     agent: '',
     model: '',
@@ -138,7 +145,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'redo',
-    description: 'Redo a previously undone message',
+    description: B('redo'),
     template: '',
     agent: '',
     model: '',
@@ -146,7 +153,7 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'details',
-    description: 'Toggle tool execution details',
+    description: B('details'),
     template: '',
     agent: '',
     model: '',
@@ -154,30 +161,38 @@ const BUILTIN_COMMANDS: CommandType[] = [
   },
   {
     name: 'editor',
-    description: 'Open external editor for composing messages',
+    description: B('editor'),
     template: '',
     agent: '',
     model: '',
     hints: []
   }
-]
-
-const SORTED_BUILTIN_COMMANDS = sortCommandsByName(BUILTIN_COMMANDS)
+  ]
+}
 
 export function useCommands(opcodeUrl: string | null) {
+  const { t } = useI18n()
+  const locale = currentLocale()
+  // `t` changes identity when the language does, so the list follows. What
+  // actually decides what gets cached is the query key below, which carries
+  // the locale explicitly - and a gate asserts that it does.
+  const builtins = useMemo(() => builtinCommands(t), [t])
+  const sortedBuiltins = useMemo(() => sortCommandsByName(builtins), [builtins])
   const { data: commands, isLoading: loading, error } = useQuery({
-    queryKey: ['opencode', 'commands', opcodeUrl],
+    // locale is part of the key: these descriptions are translated, so a
+    // cached list from the previous language would be rendered as-is
+    queryKey: ['opencode', 'commands', opcodeUrl, locale],
     queryFn: async () => {
       const client = createOpenCodeClient(opcodeUrl!)
       const commandList = await client.listCommands()
-      const allCommands = [...BUILTIN_COMMANDS, ...commandList]
+      const allCommands = [...builtins, ...commandList]
       const uniqueCommands = allCommands.filter((command, index, self) =>
         index === self.findIndex((c) => c.name === command.name)
       )
       return sortCommandsByName(uniqueCommands)
     },
     enabled: !!opcodeUrl,
-    initialData: SORTED_BUILTIN_COMMANDS,
+    initialData: sortedBuiltins,
   })
 
   const filterCommands = (query: string) => {
@@ -196,7 +211,7 @@ export function useCommands(opcodeUrl: string | null) {
   return {
     commands,
     loading,
-    error: error ? 'Failed to load commands' : null,
+    error: error ? t('shell.commands.loadFailed') : null,
     filterCommands
   }
 }

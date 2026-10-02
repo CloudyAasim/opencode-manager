@@ -43,6 +43,8 @@ export const ui = {
     downloadFailed: '下载失败',
     saveFailed: '保存 {{filename}} 失败',
     unsupportedDevice: '此设备无法保存 {{filename}}',
+    tapSaveToFinish: '点“保存”以完成保存 {{filename}}',
+    saveAction: '保存',
     cancel: '取消',
     download: '下载',
   },

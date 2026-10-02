@@ -38,8 +38,11 @@ async function saveViaShareSheet(blob: Blob, filename: string): Promise<boolean>
     const name = error instanceof DOMException ? error.name : ''
     if (name === 'AbortError') return false
     if (name === 'NotAllowedError') {
-      showToast.info(`Tap Save to finish saving ${filename}`, {
-        action: { label: 'Save', onClick: () => void saveViaShareSheet(blob, filename) },
+      showToast.info(i18n.t('ui.downloadDialog.tapSaveToFinish', { filename }), {
+        action: {
+          label: i18n.t('ui.downloadDialog.saveAction'),
+          onClick: () => void saveViaShareSheet(blob, filename),
+        },
       })
       return false
     }

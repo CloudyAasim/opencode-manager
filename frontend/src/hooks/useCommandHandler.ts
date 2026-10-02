@@ -117,7 +117,7 @@ export function useCommandHandler({
             break
           }
 
-          showToast.loading('Compacting session...', { id: `compact-${sessionID}` })
+          showToast.loading(t('session.actions.compacting'), { id: `compact-${sessionID}` })
 
           setSessionStatus(sessionID, { type: 'compact' })
 

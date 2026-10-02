@@ -5,6 +5,7 @@ import { settingsApi } from '@/api/settings'
 import { invalidateConfigCaches, invalidateSettingsCaches } from '@/lib/queryInvalidation'
 import { fetchWrapper } from '@/api/fetchWrapper'
 import { useSettingsDialog } from '@/hooks/useSettingsDialog'
+import { useI18n } from '@/lib/i18n'
 
 const MISSING_PASSWORD_ERROR_PATTERN = /no password is configured|OPENCODE_SERVER_PASSWORD/i
 
@@ -31,6 +32,7 @@ async function fetchHealth(): Promise<HealthResponse> {
 }
 
 export function useServerHealth(enabled = true) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const { isOpen: isSettingsOpen, setActiveTab } = useSettingsDialog()
   const lastHealthStatusRef = useRef<'healthy' | 'unhealthy'>('healthy')
@@ -43,7 +45,7 @@ export function useServerHealth(enabled = true) {
     },
     onSuccess: () => {
       invalidateConfigCaches(queryClient)
-      toast.success('OpenCode server restarted', { id: 'reload-config' })
+      toast.success(t('session.actions.restartSucceeded'), { id: 'reload-config' })
     },
     onError: (error: unknown) => {
       const errorMessage = error && typeof error === 'object' && 'response' in error
@@ -64,7 +66,7 @@ export function useServerHealth(enabled = true) {
       toast.success(data.message, { id: 'rollback-config' })
     },
     onError: () => {
-      toast.error('Failed to rollback to previous config', { id: 'rollback-config' })
+      toast.error(t('session.actions.rollbackFailed'), { id: 'rollback-config' })
     },
   })
 
@@ -91,30 +93,30 @@ export function useServerHealth(enabled = true) {
     if (isUnhealthy && missingPassword && !hasAutoOpenedSettingsRef.current && !isSettingsOpen) {
       hasAutoOpenedSettingsRef.current = true
       setActiveTab('opencode')
-      toast.error(health.error || 'OpenCode server requires a password', {
+      toast.error(health.error || t('session.actions.healthPasswordRequired'), {
         id: 'server-health-password',
         duration: Infinity,
-        description: 'Set a password under Settings → OpenCode to start the server.',
+        description: t('session.actions.healthPasswordHint'),
       })
     } else if (prevHealth && currentStatus !== prevHealth) {
       if (isUnhealthy && previousStatus === 'healthy') {
-        toast.error(health.error || 'OpenCode server is currently unhealthy', {
+        toast.error(health.error || t('session.actions.healthUnhealthy'), {
           id: 'server-health-unhealthy',
           duration: Infinity,
           action: {
-            label: 'Restart',
+            label: t('session.actions.restart'),
             onClick: () => restartMutation.mutate(),
           },
         })
       } else if (!isUnhealthy && previousStatus === 'unhealthy') {
-        toast.success('Server is back online', { id: 'server-health-online' })
+        toast.success(t('session.actions.healthOnline'), { id: 'server-health-online' })
         hasAutoOpenedSettingsRef.current = false
       }
     }
 
     lastHealthStatusRef.current = currentStatus
     prevHealthRef.current = currentStatus
-  }, [health, restartMutation, isSettingsOpen, setActiveTab])
+  }, [health, restartMutation, isSettingsOpen, setActiveTab, t])
 
   return {
     ...query,

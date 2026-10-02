@@ -88,6 +88,10 @@ export const settingsPanels = {
     restartNow: 'Restart now',
   },
   skillsEditor: {
+    toast: {
+      deleteSucceeded: 'Skill deleted successfully',
+      deleteFailed: 'Failed to delete skill',
+    },
     created: 'Skill created successfully',
     createFailed: 'Failed to create skill',
     updated: 'Skill updated successfully',
@@ -714,6 +718,19 @@ export const settingsPanels = {
     },
   },
   mcpManager: {
+    toast: {
+      added: 'MCP server added successfully',
+      addFailed: 'Failed to add MCP server: {{error}}',
+      connected: 'MCP server connected',
+      connectFailed: 'Failed to connect MCP server: {{error}}',
+      disconnected: 'MCP server disconnected',
+      disconnectFailed: 'Failed to disconnect MCP server: {{error}}',
+      authStartFailed: 'Failed to start authentication: {{error}}',
+      authCompleted: 'Authentication completed',
+      authCompleteFailed: 'Failed to complete authentication: {{error}}',
+      authRemoved: 'Authentication credentials removed',
+      authRemoveFailed: 'Failed to remove authentication: {{error}}',
+    },
     deleteFailed: 'Failed to delete MCP server',
     noConfig: 'No OpenCode configuration file found.',
     updating: 'Updating MCP server...',
@@ -909,6 +926,12 @@ export const settingsPanels = {
     maintenance: 'Server maintenance',
     upToDate: 'OpenCode is already up to date',
     restartSucceeded: 'Server restarted successfully',
+    restarting: 'Restarting OpenCode server...',
+    restartFailed: 'Failed to restart OpenCode server',
+    upgrading: 'Upgrading OpenCode...',
+    upgradeSucceeded: 'Upgraded to v{{version}} and server restarted',
+    upgradeRecovered: 'Upgrade failed but server recovered at v{{version}}',
+    upgradeFailed: 'Failed to upgrade OpenCode',
   },
   serverEnv: {
     title: 'Server Environment Variables',

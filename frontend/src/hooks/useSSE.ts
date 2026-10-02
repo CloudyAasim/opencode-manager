@@ -12,7 +12,7 @@ import { openCodeEventStream } from '@/lib/opencode-event-stream'
 import type { EventStreamSubscription } from '@/lib/opencode-event-stream'
 import { parseOpenCodeError } from '@/lib/opencode-errors'
 import { createPartsBatcher } from '@/lib/partsBatcher'
-import { useI18n } from '@/lib/i18n'
+import { i18n, useI18n } from '@/lib/i18n'
 
 const STATUS_POLL_INTERVAL_MS = 15000
 
@@ -22,7 +22,7 @@ const getEventDirectory = (event: SSEEvent): string | undefined => {
 }
 
 const handleRestartServer = async () => {
-  showToast.loading('Restarting OpenCode server...', {
+  showToast.loading(i18n.t('session.actions.serverRestarting'), {
     id: 'restart-server',
   })
 
@@ -296,8 +296,8 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
 
       case 'installation.updated':
         if ('version' in event.properties) {
-          showToast.success(`OpenCode updated to v${event.properties.version}`, {
-            description: 'The server has been successfully upgraded.',
+          showToast.success(t('session.actions.serverUpdated', { version: event.properties.version }), {
+            description: t('session.actions.serverUpdatedDescription'),
             duration: 5000,
           })
         }
@@ -305,10 +305,12 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
 
       case 'installation.update-available':
         if ('version' in event.properties) {
-          showToast.info(`OpenCode v${event.properties.version} is available`, {
-            description: 'A new version is ready to install.',
+          showToast.info(
+            t('session.actions.versionAvailable', { version: event.properties.version }),
+            {
+            description: t('session.actions.versionAvailableDescription'),
             action: {
-              label: 'Reload to Update',
+              label: t('session.actions.reloadToUpdate'),
               onClick: handleRestartServer
             },
             duration: 10000,

@@ -359,16 +359,18 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const permissionCount = allPermissions.length
     if (permissionCount > prevPermissionCountRef.current && permissionCount > 0 && !showPermissionDialog) {
-      showToast.info(`${permissionCount} pending permission${permissionCount > 1 ? 's' : ''}`, {
+      showToast.info(
+        t('session.permissions', { count: permissionCount }),
+        {
         duration: 5000,
         action: {
-          label: 'View',
+          label: t('session.permissions.viewAction'),
           onClick: () => setShowPermissionDialog(true),
         },
       })
     }
     prevPermissionCountRef.current = permissionCount
-  }, [allPermissions.length, showPermissionDialog])
+  }, [allPermissions.length, showPermissionDialog, t])
 
   // Take the prompt off screen before the round trip, not after. On a slow
   // link, waiting first leaves the dialog sitting there for seconds after
