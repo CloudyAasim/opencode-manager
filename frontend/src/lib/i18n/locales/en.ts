@@ -4,6 +4,7 @@ import { session } from './ns/en/session'
 import { message } from './ns/en/message'
 import { schedules } from './ns/en/schedules'
 import { ui } from './ns/en/ui'
+import { shell } from './ns/en/shell'
 import { misc } from './ns/en/misc'
 import { settingsPanels } from './ns/en/settingsPanels'
 import { home } from './ns/en/home'
@@ -201,6 +202,7 @@ export const en = {
   schedules,
   ui,
   misc,
+  shell,
   settingsPanels,
   home,
 } as const

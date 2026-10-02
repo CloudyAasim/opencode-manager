@@ -62,3 +62,42 @@ test('no route in the suite produces an uncaught error', async ({ page }) => {
   expect(failures.pageErrors).toEqual([])
   expect(failures.consoleErrors).toEqual([])
 })
+
+const RAW_KEY = /\b[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9_]+){2,}\b/
+const INTERACTIVE = 'a, button, [role="button"], [role="tab"], [role="option"], label, h1, h2, h3, p, span, li'
+
+function rawKeysIn(page: import('@playwright/test').Page): Promise<string[]> {
+  return page.evaluate(
+    ({ pattern, selector }) => {
+      const re = new RegExp(pattern)
+      const hits: string[] = []
+      for (const node of document.querySelectorAll(selector)) {
+        if (node.children.length > 0) continue
+        const text = (node.textContent ?? '').trim()
+        if (text && re.test(text) && !text.includes(' ')) hits.push(text)
+      }
+      return [...new Set(hits)]
+    },
+    { pattern: RAW_KEY.source, selector: INTERACTIVE },
+  )
+}
+
+test('no route paints a raw translation key', async ({ page }) => {
+  await installApiMocks(page)
+  const found: string[] = []
+
+  for (const route of ['/', '/files', '/settings', '/schedules']) {
+    await page.goto(route)
+    await page.waitForTimeout(700)
+    for (const key of await rawKeysIn(page)) found.push(`${route} -> ${key}`)
+  }
+
+  expect(
+    found,
+    [
+      `界面上出现了 ${found.length} 个未翻译的 key：`,
+      ...found,
+      'i18next 找不到键时返回键本身，不报错，所以这类问题只能靠断言拦。',
+    ].join('\n'),
+  ).toEqual([])
+})

@@ -4,6 +4,7 @@ import { session } from './ns/zh-CN/session'
 import { message } from './ns/zh-CN/message'
 import { schedules } from './ns/zh-CN/schedules'
 import { ui } from './ns/zh-CN/ui'
+import { shell } from './ns/zh-CN/shell'
 import { misc } from './ns/zh-CN/misc'
 import { settingsPanels } from './ns/zh-CN/settingsPanels'
 import { home } from './ns/zh-CN/home'
@@ -200,6 +201,7 @@ export const zhCN: DeepString<typeof en> = {
   schedules,
   ui,
   misc,
+  shell,
   settingsPanels,
   home,
 }
