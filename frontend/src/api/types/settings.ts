@@ -2,6 +2,7 @@ import {
   DEFAULT_TTS_CONFIG,
   DEFAULT_STT_CONFIG,
   DEFAULT_KEYBOARD_SHORTCUTS,
+  DEFAULT_DIRECT_SHORTCUTS,
   DEFAULT_USER_PREFERENCES,
   DEFAULT_LEADER_KEY,
   BLOCKED_SERVER_ENV_KEYS,
@@ -26,7 +27,7 @@ import type { NotificationPreferences } from '@opencode-manager/shared/types'
 import { saveFile } from '@/lib/download'
 
 export type { TTSConfig, STTConfig, OpenCodeConfigFile, OpenCodeConfigSourceFile, OpenCodeConfigSourceName, UpdateOpenCodeConfigRequest, ModelConfig, ProviderConfig, NotificationPreferences, SkillFileInfo, CreateSkillRequest, UpdateSkillRequest, SkillScope, InstallSkillFromGithubRequest, InstallSkillResponse }
-export { DEFAULT_TTS_CONFIG, DEFAULT_STT_CONFIG, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_USER_PREFERENCES, DEFAULT_LEADER_KEY, BLOCKED_SERVER_ENV_KEYS, DEFAULT_SERVER_ENV_VARS }
+export { DEFAULT_TTS_CONFIG, DEFAULT_STT_CONFIG, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_DIRECT_SHORTCUTS, DEFAULT_USER_PREFERENCES, DEFAULT_LEADER_KEY, BLOCKED_SERVER_ENV_KEYS, DEFAULT_SERVER_ENV_VARS }
 export { isOpenCodeConfigSourceName } from '@opencode-manager/shared'
 
 export function getOpenCodeConfigSources(config: OpenCodeConfigFile): OpenCodeConfigSourceFile[] {

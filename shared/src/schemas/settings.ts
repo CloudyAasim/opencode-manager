@@ -67,8 +67,8 @@ const CMD_KEY = isMac ? 'Cmd' : 'Ctrl';
 export const DEFAULT_LEADER_KEY = `${CMD_KEY}+O`;
 
 export const DEFAULT_KEYBOARD_SHORTCUTS: Record<string, string> = {
-  submit: `${CMD_KEY}+Enter`,
-  abort: 'Escape',
+  submit: `${CMD_KEY}+Return`,
+  abort: 'Esc',
   toggleMode: 'T',
   undo: 'Z',
   redo: 'Shift+Z',
@@ -82,6 +82,11 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: Record<string, string> = {
   selectModel: 'M',
   variantCycle: `${CMD_KEY}+T`,
 };
+
+// Actions that fire without the leader key. A user may move an action
+// out of this list, but the default belongs here so the runtime, the
+// settings panel and a fresh install all agree on it.
+export const DEFAULT_DIRECT_SHORTCUTS: string[] = ['submit', 'variantCycle'];
 
 export const GitCredentialSchema = z.object({
   id: z.string().optional(),
@@ -196,7 +201,7 @@ export const DEFAULT_USER_PREFERENCES = {
   showReasoning: false,
   simpleChatMode: false,
   leaderKey: DEFAULT_LEADER_KEY,
-  directShortcuts: ['submit', 'abort'],
+  directShortcuts: [...DEFAULT_DIRECT_SHORTCUTS],
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
   customCommands: [],
   customAgents: [],

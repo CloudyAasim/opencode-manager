@@ -576,14 +576,14 @@ export function SessionDetail() {
   }, [navigate, isAssistantSession])
 
   const { leaderActive } = useKeyboardShortcuts({
-    openModelDialog: () => {
+    selectModel: () => {
       const modelSelectTrigger = document.querySelector(
         "[data-model-select-trigger]",
       ) as HTMLElement;
       modelSelectTrigger?.click();
     },
-    openSessions: () => setSessionsDialogOpen(true),
-    openSettings,
+    sessions: () => setSessionsDialogOpen(true),
+    settings: openSettings,
     newSession: handleNewSession,
     closeSession: handleCloseSession,
     compact: handleCompact,
@@ -597,13 +597,13 @@ export function SessionDetail() {
       ) as HTMLButtonElement;
       modeButton?.click();
     },
-    submitPrompt: () => {
+    submit: () => {
       const submitButton = document.querySelector(
         "[data-submit-prompt]",
       ) as HTMLButtonElement;
       submitButton?.click();
     },
-    abortSession: () => {
+    abort: () => {
       if (sessionId) {
         abortSession.mutate(sessionId);
       }

@@ -6,6 +6,7 @@ import { useFileSearch } from '@/hooks/useFileSearch'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { useOpenCodeClient } from '@/hooks/useOpenCode'
 import { useVariants } from '@/hooks/useVariants'
+import { useShortcutAction } from '@/framework/commands/shortcutRegistry'
 import { useSessionAgent } from '@/hooks/useSessionAgent'
 import { useSTT } from '@/hooks/useSTT'
 
@@ -989,11 +990,9 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
       }
     }
     
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || (isMobile && !e.shiftKey))) {
+    if (e.key === 'Enter' && isMobile && !e.shiftKey) {
       e.preventDefault()
-      if (isMobile) {
-        textareaRef.current?.blur()
-      }
+      textareaRef.current?.blur()
       handleSubmit()
     } else if (e.key === 'Escape') {
       setShowSuggestions(false)
@@ -1006,11 +1005,6 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
       setImageAttachments([])
       resetVoiceGestureState()
       clearSTT()
-    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 't') {
-      e.preventDefault()
-      if (hasVariants) {
-        cycleVariant()
-      }
     }
   }
 
@@ -1112,6 +1106,11 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
   const { setShowDialog, hasForSession: hasPermissionsForSession } = usePermissions()
   const hasPendingPermissionForSession = hasPermissionsForSession(sessionID)
   const { hasVariants, currentVariant, cycleVariant } = useVariants(opcodeUrl, directory)
+  useShortcutAction('variantCycle', () => {
+    if (hasVariants) {
+      cycleVariant()
+    }
+  })
   const showStopButton = isSessionActive
   const hideSecondaryButtons = isMobile && isSessionActive
   const showMobileScrollButton = isMobile && showScrollButton

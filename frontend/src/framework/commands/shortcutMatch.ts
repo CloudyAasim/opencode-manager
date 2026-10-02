@@ -21,6 +21,15 @@ const KEY_ALIASES: Readonly<Record<string, string>> = {
 
 const MODIFIER_KEYS: ReadonlySet<string> = new Set(['Control', 'Meta', 'Alt', 'Shift'])
 
+export function parseModifierShortcut(event: KeyboardEvent): string {
+  const keys: string[] = []
+  if (event.ctrlKey) keys.push('Ctrl')
+  if (event.metaKey) keys.push('Cmd')
+  if (event.altKey) keys.push('Alt')
+  if (event.shiftKey) keys.push('Shift')
+  return keys.join('+')
+}
+
 export function parseEventShortcut(event: KeyboardEvent): string {
   const keys: string[] = []
   if (event.ctrlKey) keys.push('Ctrl')

@@ -1,29 +1,12 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useSettings } from './useSettings'
-import { DEFAULT_LEADER_KEY } from '@/api/types/settings'
+import { DEFAULT_DIRECT_SHORTCUTS, DEFAULT_LEADER_KEY } from '@/api/types/settings'
 import { matchesUserShortcut, normalizeShortcut, parseEventShortcut } from '@/framework/commands/shortcutMatch'
+import { getShortcutAction } from '@/framework/commands/shortcutRegistry'
 
-const DEFAULT_DIRECT_SHORTCUTS = ['submit', 'abort']
 const LEADER_TIMEOUT = 1500
 
-interface ShortcutActions {
-  openModelDialog?: () => void
-  openSessions?: () => void
-  sessions?: () => void
-  newSession?: () => void
-  closeSession?: () => void
-  toggleSidebar?: () => void
-  submitPrompt?: () => void
-  abortSession?: () => void
-  toggleMode?: () => void
-  undo?: () => void
-  redo?: () => void
-  compact?: () => void
-  fork?: () => void
-  openSettings?: () => void
-}
-
-export function useKeyboardShortcuts(actions: ShortcutActions = {}) {
+export function useKeyboardShortcuts(actions: Record<string, (() => void) | undefined> = {}) {
   const { preferences } = useSettings()
   const [leaderActive, setLeaderActive] = useState(false)
   const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -41,50 +24,10 @@ export function useKeyboardShortcuts(actions: ShortcutActions = {}) {
   }, [])
 
   const executeAction = useCallback((action: string, e: KeyboardEvent) => {
+    const run = actionsRef.current[action] ?? getShortcutAction(action)
+    if (!run) return
     e.preventDefault()
-    const currentActions = actionsRef.current
-    
-    switch (action) {
-      case 'selectModel':
-        currentActions.openModelDialog?.()
-        break
-      case 'sessions':
-        currentActions.openSessions?.()
-        break
-      case 'newSession':
-        currentActions.newSession?.()
-        break
-      case 'closeSession':
-        currentActions.closeSession?.()
-        break
-      case 'toggleSidebar':
-        currentActions.toggleSidebar?.()
-        break
-      case 'submit':
-        currentActions.submitPrompt?.()
-        break
-      case 'abort':
-        currentActions.abortSession?.()
-        break
-      case 'toggleMode':
-        currentActions.toggleMode?.()
-        break
-      case 'undo':
-        currentActions.undo?.()
-        break
-      case 'redo':
-        currentActions.redo?.()
-        break
-      case 'compact':
-        currentActions.compact?.()
-        break
-      case 'fork':
-        currentActions.fork?.()
-        break
-      case 'settings':
-        currentActions.openSettings?.()
-        break
-    }
+    run()
   }, [])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -101,9 +44,9 @@ export function useKeyboardShortcuts(actions: ShortcutActions = {}) {
       return
     }
     
-    const target = e.target as HTMLElement
-    const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true'
-    const isFileEditor = target.getAttribute('data-file-editor') === 'true'
+    const target = e.target instanceof HTMLElement ? e.target : null
+    const isInInput = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.contentEditable === 'true'
+    const isFileEditor = target?.getAttribute('data-file-editor') === 'true'
     
     if (isFileEditor) return
 
@@ -140,9 +83,6 @@ export function useKeyboardShortcuts(actions: ShortcutActions = {}) {
     })?.[0]
     
     if (directAction) {
-      if (isInInput && directAction !== 'submit' && directAction !== 'abort') {
-        return
-      }
       executeAction(directAction, e)
     }
   }, [leaderActive, clearLeaderTimeout, executeAction])

@@ -44,7 +44,7 @@ describe('KeyboardShortcuts layout', () => {
     render(<KeyboardShortcuts />)
     const row = screen.getByText('custom Action').parentElement!.parentElement!
     fireEvent.click(within(row).getByRole('button', { name: 'Requires leader key (click to make direct)' }))
-    expect(updateSettings).toHaveBeenCalledWith({ directShortcuts: ['submit', 'abort', 'customAction'] })
+    expect(updateSettings).toHaveBeenCalledWith({ directShortcuts: ['submit', 'variantCycle', 'customAction'] })
     fireEvent.click(within(row).getByTitle('Clear shortcut'))
     expect(updateSettings).toHaveBeenCalledWith({ keyboardShortcuts: expect.objectContaining({ customAction: '' }) })
     expect(within(row).getByRole('button', { name: 'Not set' })).toBeInTheDocument()

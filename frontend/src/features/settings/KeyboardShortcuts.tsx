@@ -2,20 +2,10 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useSettings } from '@/hooks/useSettings'
 import { useMobile } from '@/hooks/useMobile'
 import { Loader2, X } from 'lucide-react'
-import { DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_LEADER_KEY } from '@/api/types/settings'
+import { DEFAULT_DIRECT_SHORTCUTS, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_LEADER_KEY } from '@/api/types/settings'
+import { ALL_KEYBOARD_ACTIONS, CONVERSATION_ACTIONS, NAVIGATION_ACTIONS } from '@/framework/commands/keyboardActions'
+import { normalizeShortcut, parseEventShortcut, parseModifierShortcut } from '@/framework/commands/shortcutMatch'
 import { useI18n } from '@/lib/i18n'
-
-const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
-const CMD_KEY = isMac ? 'Cmd' : 'Ctrl'
-
-const normalizeShortcut = (shortcut: string): string => {
-  return shortcut.replace(/Cmd/g, CMD_KEY)
-}
-
-const DEFAULT_DIRECT_SHORTCUTS = ['submit', 'abort']
-
-const CONVERSATION_ACTIONS = ['submit', 'abort', 'toggleMode', 'undo', 'redo', 'compact', 'fork', 'selectModel', 'variantCycle']
-const NAVIGATION_ACTIONS = ['settings', 'sessions', 'newSession', 'closeSession', 'toggleSidebar']
 
 const formatShortcutLabel = (action: string): string => {
   return action.replace(/([A-Z])/g, ' $1').trim()
@@ -30,7 +20,7 @@ const buildShortcutGroups = (
   shortcuts: Record<string, string>,
   titles: { conversationActions: string; navigation: string },
 ): ShortcutGroup[] => {
-  const knownActions = new Set([...CONVERSATION_ACTIONS, ...NAVIGATION_ACTIONS])
+  const knownActions = new Set(ALL_KEYBOARD_ACTIONS)
   const unknownActions = Object.keys(shortcuts).filter((action) => !knownActions.has(action))
   return [
     {
@@ -188,55 +178,29 @@ export function KeyboardShortcuts() {
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault()
 
-      const keys = []
-      if (e.ctrlKey) keys.push('Ctrl')
-      if (e.metaKey) keys.push('Cmd')
-      if (e.altKey) keys.push('Alt')
-      if (e.shiftKey) keys.push('Shift')
+      const shortcut = parseEventShortcut(e)
+      if (!shortcut) {
+        setCurrentKeys(parseModifierShortcut(e))
+        return
+      }
 
-      const mainKey = e.key
-      if (!['Control', 'Meta', 'Alt', 'Shift'].includes(mainKey)) {
-        let displayKey = mainKey
-        if (mainKey === ' ') displayKey = 'Space'
-        else if (mainKey === 'ArrowUp') displayKey = 'Up'
-        else if (mainKey === 'ArrowDown') displayKey = 'Down'
-        else if (mainKey === 'ArrowLeft') displayKey = 'Left'
-        else if (mainKey === 'ArrowRight') displayKey = 'Right'
-        else if (mainKey === 'Enter') displayKey = 'Return'
-        else if (mainKey === 'Escape') displayKey = 'Esc'
-        else if (mainKey === 'Tab') displayKey = 'Tab'
-        else if (mainKey === 'Backspace') displayKey = 'Backspace'
-        else if (mainKey === 'Delete') displayKey = 'Delete'
-        else if (mainKey.length === 1) displayKey = mainKey.toUpperCase()
-
-        keys.push(displayKey)
-
-        if (keys.length > 0) {
-          const shortcut = keys.join('+')
-
-          if (recordingLeader) {
-            setTempLeaderKey(shortcut)
-            setRecordingLeader(false)
-            setCurrentKeys('')
-            updateSettingsRef.current({ leaderKey: shortcut })
-          } else if (recordingKey) {
-            setTempShortcuts(prev => ({ ...prev, [recordingKey]: shortcut }))
-            setRecordingKey(null)
-            setCurrentKeys('')
-            updateSettingsRef.current({
-              keyboardShortcuts: { ...shortcutsRef.current, [recordingKey]: shortcut }
-            })
-          }
-        }
-      } else {
-        setCurrentKeys(keys.join('+'))
+      if (recordingLeader) {
+        setTempLeaderKey(shortcut)
+        setRecordingLeader(false)
+        setCurrentKeys('')
+        updateSettingsRef.current({ leaderKey: shortcut })
+      } else if (recordingKey) {
+        setTempShortcuts(prev => ({ ...prev, [recordingKey]: shortcut }))
+        setRecordingKey(null)
+        setCurrentKeys('')
+        updateSettingsRef.current({
+          keyboardShortcuts: { ...shortcutsRef.current, [recordingKey]: shortcut }
+        })
       }
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['Control', 'Meta', 'Alt', 'Shift'].includes(e.key)) {
-        setCurrentKeys('')
-      }
+      setCurrentKeys(parseModifierShortcut(e))
     }
 
     document.addEventListener('keydown', handleKeyDown)
