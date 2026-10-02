@@ -370,29 +370,42 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     prevPermissionCountRef.current = permissionCount
   }, [allPermissions.length, showPermissionDialog])
 
+  // Take the prompt off screen before the round trip, not after. On a slow
+  // link, waiting first leaves the dialog sitting there for seconds after
+  // you tapped Allow, and the whole thing feels dead. The removal is local
+  // state; if the send fails it goes back, and the periodic reconcile would
+  // bring it back anyway.
   const respondToPermission = useCallback(async (permissionID: string, sessionID: string, response: PermissionResponse) => {
     const client = getClient(sessionID)
     if (!client) throw new Error('No client found for session')
 
-    if (response === 'reject') {
-      const permission = (permissionsBySession[sessionID] ?? []).find(p => p.id === permissionID)
-      if (permission?.tool) {
-        optimisticallyErrorToolPart(queryClient, sessionID, permission.tool.messageID, permission.tool.callID, 'Permission denied')
-      }
+    const permission = (permissionsBySession[sessionID] ?? []).find(p => p.id === permissionID)
+    if (response === 'reject' && permission?.tool) {
+      optimisticallyErrorToolPart(queryClient, sessionID, permission.tool.messageID, permission.tool.callID, 'Permission denied')
     }
 
-    await client.respondToPermission(permissionID, response)
     removePermission(permissionID, sessionID)
-  }, [getClient, permissionsBySession, queryClient, removePermission])
+    try {
+      await client.respondToPermission(permissionID, response)
+    } catch (error) {
+      if (permission) addPermission(permission)
+      throw error
+    }
+  }, [getClient, permissionsBySession, queryClient, removePermission, addPermission])
 
   const replyToQuestion = useCallback(async (requestID: string, answers: string[][]) => {
     const question = Object.values(questionsBySession).flat().find(q => q.id === requestID)
     if (!question) throw new Error('Question not found')
     const client = getClient(question.sessionID)
     if (!client) throw new Error('No client found for session')
-    await client.replyToQuestion(requestID, answers)
     removeQuestion(requestID, question.sessionID)
-  }, [getClient, questionsBySession, removeQuestion])
+    try {
+      await client.replyToQuestion(requestID, answers)
+    } catch (error) {
+      addQuestion(question)
+      throw error
+    }
+  }, [getClient, questionsBySession, removeQuestion, addQuestion])
 
   const rejectQuestion = useCallback(async (requestID: string) => {
     const question = Object.values(questionsBySession).flat().find(q => q.id === requestID)
@@ -404,9 +417,14 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       optimisticallyErrorToolPart(queryClient, question.sessionID, question.tool.messageID, question.tool.callID, 'Question rejected')
     }
 
-    await client.rejectQuestion(requestID)
     removeQuestion(requestID, question.sessionID)
-  }, [getClient, questionsBySession, queryClient, removeQuestion])
+    try {
+      await client.rejectQuestion(requestID)
+    } catch (error) {
+      addQuestion(question)
+      throw error
+    }
+  }, [getClient, questionsBySession, queryClient, removeQuestion, addQuestion])
 
   const getPermissionForCallID = useCallback((callID: string, sessionID: string): PermissionRequest | null => {
     const perms = permissionsBySession[sessionID] ?? []

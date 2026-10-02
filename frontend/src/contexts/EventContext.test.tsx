@@ -130,6 +130,7 @@ function Harness() {
       <button onClick={navigateToCurrent}>Navigate</button>
       <button onClick={() => current && reject(current.id)}>Dismiss</button>
       <button onClick={() => current && reply(current.id, [['Yes']])}>Reply</button>
+      <button onClick={() => permissions.current && permissions.respond(permissions.current.id, permissions.current.sessionID, 'allow')}>Allow Permission</button>
       <button onClick={() => permissions.current && permissions.respond(permissions.current.id, permissions.current.sessionID, 'reject')}>Reject Permission</button>
     </div>
   )
@@ -374,6 +375,70 @@ describe('EventProvider questions', () => {
       expect(screen.getByTestId('count')).toHaveTextContent('0')
       expect(screen.getByTestId('current')).toHaveTextContent('none')
     })
+  })
+
+  it('dismisses the question before the reply finishes', async () => {
+    let release!: () => void
+    const inFlight = new Promise<void>((resolve) => { release = resolve })
+    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion])
+    mocks.replyToQuestion.mockReturnValue(inFlight)
+
+    render(<Harness />, { wrapper: createWrapper() })
+
+    await userEvent.click(screen.getByText('Sync'))
+    expect(screen.getByTestId('current')).toHaveTextContent('question-1')
+
+    await userEvent.click(screen.getByText('Reply'))
+
+    // gone from the screen while the request is still in the air
+    expect(screen.getByTestId('current')).toHaveTextContent('none')
+    expect(mocks.replyToQuestion).toHaveBeenCalled()
+
+    release()
+    await waitFor(() => expect(mocks.replyToQuestion).toHaveBeenCalled())
+  })
+
+  it('brings the question back when the reply fails', async () => {
+    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion])
+    mocks.replyToQuestion.mockRejectedValue(new Error('offline'))
+
+    render(<Harness />, { wrapper: createWrapper() })
+
+    await userEvent.click(screen.getByText('Sync'))
+    await userEvent.click(screen.getByText('Reply'))
+
+    await waitFor(() => expect(screen.getByTestId('current')).toHaveTextContent('question-1'))
+  })
+
+  it('takes the permission off screen before the answer is sent', async () => {
+    let release!: () => void
+    const inFlight = new Promise<void>((resolve) => { release = resolve })
+    mocks.listPendingPermissions.mockResolvedValue([pendingPermission])
+    mocks.respondToPermission.mockReturnValue(inFlight)
+
+    render(<Harness />, { wrapper: createWrapper() })
+
+    await userEvent.click(screen.getByText('Sync Permissions'))
+    expect(screen.getByTestId('permission-count')).toHaveTextContent('1')
+
+    await userEvent.click(screen.getByText('Allow Permission'))
+
+    expect(screen.getByTestId('permission-count')).toHaveTextContent('0')
+    expect(mocks.respondToPermission).toHaveBeenCalled()
+
+    release()
+  })
+
+  it('brings the permission back when answering fails', async () => {
+    mocks.listPendingPermissions.mockResolvedValue([pendingPermission])
+    mocks.respondToPermission.mockRejectedValue(new Error('offline'))
+
+    render(<Harness />, { wrapper: createWrapper() })
+
+    await userEvent.click(screen.getByText('Sync Permissions'))
+    await userEvent.click(screen.getByText('Allow Permission'))
+
+    await waitFor(() => expect(screen.getByTestId('permission-count')).toHaveTextContent('1'))
   })
 
   it('adds a pending question received via the global monitor onEvent', async () => {
