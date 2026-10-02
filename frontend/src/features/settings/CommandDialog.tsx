@@ -1,12 +1,11 @@
 import { useForm } from "react-hook-form";
+import { DialogLayout } from '@/components/ui/dialog-layout'
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -102,13 +101,9 @@ export function CommandDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6">
-        <DialogHeader className="p-4 sm:p-6 border-b flex flex-row items-center justify-between space-y-0">
-          <DialogTitle>
-            {editingCommand ? t("settingsPanels.commandDialog.editTitle") : t("settingsPanels.commandDialog.createTitle")}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="p-2 flex-1 overflow-y-auto sm:p-4">
+        <DialogLayout
+          title={editingCommand ? t("settingsPanels.commandDialog.editTitle") : t("settingsPanels.commandDialog.createTitle")}
+        >
           <Form {...form}>
             <div className="space-y-4">
               <FormField
@@ -249,7 +244,7 @@ export function CommandDialog({
               />
             </div>
           </Form>
-        </div>
+        </DialogLayout>
 
         <DialogFooter className="p-3 sm:p-4 border-t gap-2 pb-4">
           <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import { DialogLayout } from '@/components/ui/dialog-layout'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -127,11 +128,7 @@ export function SkillInstallDialog({ open, onOpenChange, onInstalled }: SkillIns
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent mobileFullscreen className="sm:max-w-lg sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
-        <DialogHeader className="p-4 sm:p-6 border-b flex flex-row items-center justify-between space-y-0">
-          <DialogTitle>{t('settingsPanels.skillInstall.title')}</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+        <DialogLayout title={t('settingsPanels.skillInstall.title')}>
           <div className="space-y-4">
             <Tabs value={sourceType} onValueChange={(v) => setSourceType(v as 'github' | 'upload')}>
               <TabsList className="grid w-full grid-cols-2">
@@ -214,7 +211,7 @@ export function SkillInstallDialog({ open, onOpenChange, onInstalled }: SkillIns
               </Alert>
             )}
           </div>
-        </div>
+        </DialogLayout>
 
         <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end pb-4 p-3">
           <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">

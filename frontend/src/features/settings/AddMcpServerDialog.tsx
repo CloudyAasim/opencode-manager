@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { DialogLayout } from '@/components/ui/dialog-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
@@ -171,11 +172,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6">
-        <DialogHeader className="p-4 sm:p-6 border-b flex flex-row items-center justify-between space-y-0">
-          <DialogTitle>{t('settingsPanels.addMcpServer.title')}</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+        <DialogLayout title={t('settingsPanels.addMcpServer.title')}>
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="serverId">{t('settingsPanels.addMcpServer.serverId')}</Label>
@@ -356,7 +353,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
               <Label htmlFor="enabled">{t('settingsPanels.addMcpServer.connectImmediately')}</Label>
             </div>
           </div>
-        </div>
+        </DialogLayout>
 
         <DialogFooter className="p-3 sm:p-4 border-t gap-2 pb-4">
           <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
