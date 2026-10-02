@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Schedules } from '../Schedules'
+import { RepoSchedulesView } from '../RepoSchedulesView'
 
 const mocks = vi.hoisted(() => ({
   useScheduleTarget: vi.fn(),
@@ -117,7 +117,7 @@ const renderSchedules = (repoId: string, initialEntry = `/repos/${repoId}/schedu
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/repos/:id/schedules" element={<Schedules />} />
+        <Route path="/repos/:id/schedules" element={<RepoSchedulesView />} />
       </Routes>
     </MemoryRouter>,
     { wrapper: createWrapper() }
