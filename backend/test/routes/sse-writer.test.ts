@@ -156,7 +156,6 @@ describe('createQueuedSSEWriter', () => {
   describe('frame dropping at queue capacity', () => {
     it('drops frames beyond MAX_QUEUED_FRAMES when write is blocked', async () => {
       const deferreds: (() => void)[] = []
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const write = vi.fn((_chunk: Uint8Array) => {
         return new Promise<void>((resolve) => {
           deferreds.push(resolve)

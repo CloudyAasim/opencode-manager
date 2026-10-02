@@ -29,7 +29,10 @@ export default defineConfig([
     },
   },
   {
-    files: ['test/**/*.ts'],
+    // by name, not by directory. A test that lives beside the code it covers
+    // - src/routes/repos.test.ts - is still a test, and under `test/**` it was
+    // linted as production code, which is where 29 `any`s came from.
+    files: ['**/*.test.ts', '**/*.spec.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
     },
