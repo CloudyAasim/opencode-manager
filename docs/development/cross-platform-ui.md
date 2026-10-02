@@ -18,8 +18,13 @@ produces small binaries, and reuses the existing web UI unchanged.
 ```
 frontend/        React + Vite UI (shared by web, desktop and Android)
 backend/         Bun + Hono API
-src-tauri/       Tauri v2 shell (desktop + Android)
 ```
+
+> **There is no `src-tauri/` in the repository.** The Tauri target below is a
+> direction, not something that has been scaffolded: there is no
+> `tauri.conf.*` anywhere in the tree and no Tauri dependency in any
+> `package.json`. The desktop and Android shells have to be initialised before
+> the build commands work. (Checked at `f26e2ee`.)
 
 ## Building
 
@@ -46,16 +51,24 @@ The UI stays on **shadcn/ui + Tailwind** (already used) and follows the
 chat-first application shell popularised by mature clients such as LobeChat,
 Jan, and Open WebUI, adapted to a cloud workspace:
 
-- **Left sidebar** — collapses; primary spaces: Workspace, Assistant, Repos,
-  Schedules, Files; account + settings pinned at the bottom.
+- **Top bar** — the *only* navigation surface, at every width. Primary spaces:
+  Projects, Assistant, Files, Schedules, Settings, Terminal (Terminal is
+  permission-gated); account and logout are pushed conditionally. Items,
+  their visibility and their targets are all derived in one place,
+  `frontend/src/framework/navigation/navModel.ts`.
+- **No sidebar, no bottom tab bar.** Both existed and both were removed: with
+  every entry carrying a text label, four labelled buttons plus the repo
+  switcher do not fit below 1024px, which is exactly the iPad portrait band.
+  The shell switches to an overflow sheet below the `expanded` breakpoint
+  (1024px) rather than at 768px.
 - **Main pane** — the active surface: chat console for sessions/assistant,
   list/grid for repos and schedules.
 - **Right context panel** — files, diffs, tool calls and session details,
   toggled per surface instead of modal-heavy dialogs.
 - **Command palette** — `Ctrl/Cmd-K` for navigation and actions.
 - **Composer** — bottom-pinned, multi-line, with model/agent selectors.
-- **Mobile** — bottom tab bar, safe-area insets, full-screen sheets instead of
-  side panels, `minSdk 34`.
+- **Mobile** — safe-area insets, full-screen sheets instead of side panels,
+  `minSdk 34`. Navigation collapses into the same top bar.
 
 Design tokens live in `frontend/src/index.css`; components in
 `frontend/src/components/ui` are the single source of visual truth.
@@ -69,7 +82,9 @@ Design tokens live in `frontend/src/index.css`; components in
 
 ## Phases
 
-1. Application shell (sidebar + main + context panel) and command palette.
+1. Application shell (top bar + main + context panel) and command palette —
+   done, and the sidebar / bottom-tab-bar parts were dropped rather than
+   finished.
 2. Chat console redesign (message grouping, composer, tool/diff rendering).
 3. Repos and schedules list/grid redesign.
 4. Settings as a two-pane surface.

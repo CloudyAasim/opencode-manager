@@ -94,9 +94,13 @@ This repo uses pnpm workspaces for `shared`, `backend`, and `frontend`.
 ```bash
 pnpm install
 pnpm dev
+pnpm typecheck        # tsc -b - the check that actually reads the code
 pnpm lint
-pnpm typecheck
-pnpm test
+pnpm test             # cli + backend + frontend vitest (no browser)
+
+pnpm --filter frontend exec vitest run src/test/architecture   # architecture gates
+pnpm --filter frontend exec vitest run                         # frontend unit tests
+pnpm --filter frontend test:e2e                                 # real browser
 ```
 
 See the [Development Guide](https://chriswritescode-dev.github.io/opencode-manager/development/setup/) for local setup, scripts, database notes, and testing.
