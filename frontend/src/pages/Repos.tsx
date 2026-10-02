@@ -7,15 +7,15 @@ import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
-import { useDialogParam } from "@/hooks/useDialogParam";
 import { Plus } from "lucide-react";
 import { useI18n } from '@/lib/i18n'
+import { useLayer } from '@/framework/layer/useLayer'
 
 export function Repos() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [addRepoOpen, setAddRepoOpen] = useDialogParam('addRepo');
-  const [fileBrowserOpen, setFileBrowserOpen] = useDialogParam('files');
+  const [addRepoOpen, setAddRepoOpen] = useLayer('addRepo');
+  const [fileBrowserOpen, setFileBrowserOpen] = useLayer('files');
 
   useSidebarAction('new-repo', () => {
     setAddRepoOpen(true);

@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
   useVisualViewport: vi.fn(),
   useKeyboardShortcuts: vi.fn(),
   useAutoScroll: vi.fn(),
-  useDialogParam: vi.fn(),
+  useLayer: vi.fn(),
   useSidebarAction: vi.fn(),
   RepoSkillsDialog: vi.fn(() => null),
 }))
@@ -74,8 +74,8 @@ vi.mock('@/hooks/useAutoScroll', () => ({
   useAutoScroll: vi.fn(() => ({ scrollToBottom: vi.fn() })),
 }))
 
-vi.mock('@/hooks/useDialogParam', () => ({
-  useDialogParam: vi.fn(() => [false, vi.fn()]),
+vi.mock('@/framework/layer/useLayer', () => ({
+  useLayer: vi.fn(() => [false, vi.fn()]),
 }))
 
 vi.mock('@/hooks/useSidebarAction', () => ({
@@ -200,7 +200,7 @@ describe('SessionDetail assistant loading at repoId=0', () => {
     mocks.useVisualViewport.mockReturnValue({ keyboardHeight: 0 })
     mocks.useKeyboardShortcuts.mockReturnValue({ leaderActive: false })
     mocks.useAutoScroll.mockReturnValue({ scrollToBottom: vi.fn() })
-    mocks.useDialogParam.mockReturnValue([false, vi.fn()])
+    mocks.useLayer.mockReturnValue([false, vi.fn()])
     mocks.useSidebarAction.mockReturnValue(undefined)
   })
 

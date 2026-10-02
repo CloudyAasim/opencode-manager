@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { renderHook, act, render, screen } from '@testing-library/react'
 import { MemoryRouter, useNavigate } from 'react-router-dom'
-import { useDialogParam } from './useDialogParam'
+import { useLayer } from './useLayer'
 import { LayerProvider } from '@/framework/layer/LayerProvider'
 import { describe, it, expect } from 'vitest'
 
-describe('useDialogParam', () => {
+describe('layer stack', () => {
   const createWrapper = (initialEntries?: string[]) => {
     return function wrapper({ children }: { children: React.ReactNode }) {
       return (
@@ -18,19 +18,19 @@ describe('useDialogParam', () => {
 
   it('returns false when dialog param does not match name', () => {
     const wrapper = createWrapper()
-    const { result } = renderHook(() => useDialogParam('mcp'), { wrapper })
+    const { result } = renderHook(() => useLayer('mcp'), { wrapper })
     expect(result.current[0]).toBe(false)
   })
 
   it('returns true when dialog param matches name', () => {
     const wrapper = createWrapper(['/?dialog=mcp'])
-    const { result } = renderHook(() => useDialogParam('mcp'), { wrapper })
+    const { result } = renderHook(() => useLayer('mcp'), { wrapper })
     expect(result.current[0]).toBe(true)
   })
 
   it('opening clears mobileTab', () => {
     const wrapper = createWrapper(['/?mobileTab=more'])
-    const { result } = renderHook(() => useDialogParam('mcp'), { wrapper })
+    const { result } = renderHook(() => useLayer('mcp'), { wrapper })
 
     expect(result.current[0]).toBe(false)
 
@@ -43,7 +43,7 @@ describe('useDialogParam', () => {
 
   it('closing removes dialog param', () => {
     const wrapper = createWrapper(['/?dialog=mcp&other=value'])
-    const { result } = renderHook(() => useDialogParam('mcp'), { wrapper })
+    const { result } = renderHook(() => useLayer('mcp'), { wrapper })
 
     expect(result.current[0]).toBe(true)
 
@@ -56,10 +56,10 @@ describe('useDialogParam', () => {
 
   it('isOpen is true only when dialog exactly matches name', () => {
     const wrapper1 = createWrapper(['/?dialog=skills'])
-    const { result: result1 } = renderHook(() => useDialogParam('mcp'), { wrapper: wrapper1 })
+    const { result: result1 } = renderHook(() => useLayer('mcp'), { wrapper: wrapper1 })
 
     const wrapper2 = createWrapper(['/?dialog=skills'])
-    const { result: result2 } = renderHook(() => useDialogParam('skills'), { wrapper: wrapper2 })
+    const { result: result2 } = renderHook(() => useLayer('skills'), { wrapper: wrapper2 })
 
     expect(result1.current[0]).toBe(false)
     expect(result2.current[0]).toBe(true)
@@ -67,8 +67,8 @@ describe('useDialogParam', () => {
 
   it('concurrent different names do not interfere on first paint', () => {
     const wrapper = createWrapper(['/?dialog=mcp'])
-    const { result: result1 } = renderHook(() => useDialogParam('mcp'), { wrapper })
-    const { result: result2 } = renderHook(() => useDialogParam('skills'), { wrapper })
+    const { result: result1 } = renderHook(() => useLayer('mcp'), { wrapper })
+    const { result: result2 } = renderHook(() => useLayer('skills'), { wrapper })
 
     expect(result1.current[0]).toBe(true)
     expect(result2.current[0]).toBe(false)
@@ -78,8 +78,8 @@ describe('useDialogParam', () => {
     const wrapper = createWrapper()
     const { result } = renderHook(
       () => ({
-        mcp: useDialogParam('mcp'),
-        skills: useDialogParam('skills'),
+        mcp: useLayer('mcp'),
+        skills: useLayer('skills'),
       }),
       { wrapper },
     )
@@ -101,8 +101,8 @@ describe('useDialogParam', () => {
     const wrapper = createWrapper()
     const { result } = renderHook(
       () => ({
-        mcp: useDialogParam('mcp'),
-        skills: useDialogParam('skills'),
+        mcp: useLayer('mcp'),
+        skills: useLayer('skills'),
       }),
       { wrapper },
     )
@@ -126,8 +126,8 @@ describe('useDialogParam', () => {
     const wrapper = createWrapper()
     const { result } = renderHook(
       () => ({
-        mcp: useDialogParam('mcp'),
-        skills: useDialogParam('skills'),
+        mcp: useLayer('mcp'),
+        skills: useLayer('skills'),
       }),
       { wrapper },
     )
@@ -152,7 +152,7 @@ describe('useDialogParam', () => {
 
   it('open pushes so browser back closes the dialog', () => {
     function DialogPushHarness() {
-      const [isOpen, setOpen] = useDialogParam('test')
+      const [isOpen, setOpen] = useLayer('test')
       const navigate = useNavigate()
       const [step, setStep] = useState<'start' | 'opened' | 'back'>('start')
       const handled = useRef(false)
@@ -200,8 +200,8 @@ describe('useDialogParam', () => {
 
   it('browser back pops only the top layer and reveals the one beneath', () => {
     function StackHarness() {
-      const [mcpOpen] = useDialogParam('mcp')
-      const [skillsOpen, setSkillsOpen] = useDialogParam('skills')
+      const [mcpOpen] = useLayer('mcp')
+      const [skillsOpen, setSkillsOpen] = useLayer('skills')
       const navigate = useNavigate()
 
       return (

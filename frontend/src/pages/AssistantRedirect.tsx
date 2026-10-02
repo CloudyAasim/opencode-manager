@@ -3,7 +3,6 @@ import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getRepo, initializeAssistantMode } from "@/api/repos"
 import { useCreateSession } from "@/hooks/useOpenCode"
-import { useDialogParam } from "@/hooks/useDialogParam"
 import { useSidebarAction } from "@/hooks/useSidebarAction"
 import { useSSE } from "@/hooks/useSSE"
 import { OPENCODE_API_ENDPOINT } from "@/config"
@@ -19,16 +18,17 @@ import { PendingActionsGroup } from "@/features/notifications/PendingActionsGrou
 import { useI18n } from "@/lib/i18n"
 import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
 import { Plus } from "lucide-react"
+import { useLayer } from '@/framework/layer/useLayer'
 
 export function AssistantRedirect() {
   const navigate = useNavigate()
   const { t } = useI18n()
   const repoId = 0
-  const [fileBrowserOpen, setFileBrowserOpen] = useDialogParam('files')
-  const [mcpDialogOpen, setMcpDialogOpen] = useDialogParam('mcp')
-  const [skillsDialogOpen, setSkillsDialogOpen] = useDialogParam('skills')
-  const [sourceControlOpen, setSourceControlOpen] = useDialogParam('sourceControl')
-  const [resetPermissionsOpen, setResetPermissionsOpen] = useDialogParam('resetPermissions')
+  const [fileBrowserOpen, setFileBrowserOpen] = useLayer('files')
+  const [mcpDialogOpen, setMcpDialogOpen] = useLayer('mcp')
+  const [skillsDialogOpen, setSkillsDialogOpen] = useLayer('skills')
+  const [sourceControlOpen, setSourceControlOpen] = useLayer('sourceControl')
+  const [resetPermissionsOpen, setResetPermissionsOpen] = useLayer('resetPermissions')
 
   const opcodeUrl = OPENCODE_API_ENDPOINT
   const { data: repo, isLoading: repoLoading, error: repoError } = useQuery({
