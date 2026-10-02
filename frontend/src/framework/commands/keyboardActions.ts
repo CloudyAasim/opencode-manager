@@ -25,7 +25,7 @@ export const NAVIGATION_ACTIONS: readonly string[] = [
   'sessions',
   'newSession',
   'closeSession',
-  'toggleSidebar',
+  'toggleFileBrowser',
 ]
 
 export const ALL_KEYBOARD_ACTIONS: readonly string[] = [

@@ -549,7 +549,7 @@ export function SessionDetail() {
     undo: handleUndo,
     redo: handleRedo,
     fork: handleFork,
-    toggleSidebar: () => setFileBrowserOpen(!fileBrowserOpen),
+    toggleFileBrowser: () => setFileBrowserOpen(!fileBrowserOpen),
     abort: () => {
       if (sessionId) {
         abortSession.mutate(sessionId);

@@ -78,7 +78,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: Record<string, string> = {
   sessions: 'S',
   newSession: 'N',
   closeSession: 'W',
-  toggleSidebar: 'B',
+  toggleFileBrowser: 'B',
   selectModel: 'M',
   variantCycle: `${CMD_KEY}+T`,
 };
@@ -139,6 +139,28 @@ export const DEFAULT_GIT_IDENTITY: GitIdentity = {
   email: '',
 };
 
+// The sidebar is gone; the action kept its name and the settings panel kept
+// showing it, so B was labelled "toggle Sidebar" while it opened the file
+// browser. Preferences are a persisted per-user record, so a rename alone would
+// drop the binding for anyone who had moved it.
+const RENAMED_ACTIONS: Record<string, string> = { toggleSidebar: 'toggleFileBrowser' };
+
+const renameActionInList = (actions: string[] | undefined): string[] | undefined =>
+  actions?.map((action) => RENAMED_ACTIONS[action] ?? action);
+
+const renameActionsInMap = (shortcuts: Record<string, string>): Record<string, string> => {
+  const renamed: Record<string, string> = {};
+  for (const [action, chord] of Object.entries(shortcuts)) {
+    const replacement = RENAMED_ACTIONS[action];
+    if (replacement) {
+      renamed[replacement] = chord;
+      continue;
+    }
+    renamed[action] = chord;
+  }
+  return renamed
+};
+
 export const UserPreferencesSchema = z.object({
   theme: z.enum(["dark", "light", "system"]),
   mode: z.enum(["plan", "build"]),
@@ -150,8 +172,8 @@ export const UserPreferencesSchema = z.object({
   showReasoning: z.boolean(),
   simpleChatMode: z.boolean(),
   leaderKey: z.string().optional(),
-  directShortcuts: z.array(z.string()).optional(),
-  keyboardShortcuts: z.record(z.string(), z.string()),
+  directShortcuts: z.array(z.string()).optional().transform(renameActionInList),
+  keyboardShortcuts: z.record(z.string(), z.string()).transform(renameActionsInMap),
   customCommands: z.array(CustomCommandSchema),
   gitCredentials: z.array(GitCredentialSchema).optional(),
   defaultGitCredentialId: z.string().optional(),
