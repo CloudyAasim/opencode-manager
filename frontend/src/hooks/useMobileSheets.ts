@@ -3,13 +3,13 @@ import { useUrlParams } from './useUrlParams'
 
 type MobileSheetKey = 'repos' | 'files' | 'notifications' | 'more'
 
-interface UseMobileTabBarReturn {
+interface UseMobileSheetsReturn {
   openSheet: MobileSheetKey | null
   open: (key: MobileSheetKey) => void
   close: () => void
 }
 
-export function useMobileTabBar(): UseMobileTabBarReturn {
+export function useMobileSheets(): UseMobileSheetsReturn {
   const { searchParams, updateParams } = useUrlParams()
 
   const openSheet = useMemo<MobileSheetKey | null>(() => {

@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { useMobileTabBar } from '@/hooks/useMobileTabBar'
+import { useMobileSheets } from '@/hooks/useMobileSheets'
 import { useMobile } from '@/hooks/useMobile'
 import { useI18n } from '@/lib/i18n'
 
@@ -18,7 +18,7 @@ const MoreDrawer = lazy(() =>
 
 export function MobileSheetHost() {
   const isMobile = useMobile()
-  const { openSheet, close } = useMobileTabBar()
+  const { openSheet, close } = useMobileSheets()
   const { t } = useI18n()
 
   if (!isMobile) return null

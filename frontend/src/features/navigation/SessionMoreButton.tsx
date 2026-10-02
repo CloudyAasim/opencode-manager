@@ -1,10 +1,10 @@
 import { MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useMobileTabBar } from '@/hooks/useMobileTabBar'
+import { useMobileSheets } from '@/hooks/useMobileSheets'
 import { useI18n } from '@/lib/i18n'
 
 export function SessionMoreButton() {
-  const { open } = useMobileTabBar()
+  const { open } = useMobileSheets()
   const { t } = useI18n()
 
   return (

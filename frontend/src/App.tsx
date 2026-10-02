@@ -1,7 +1,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Suspense, lazy, useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { Toaster } from 'sonner'
 import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
@@ -22,7 +22,7 @@ import { BuiltinCommands } from './framework/commands/BuiltinCommands'
 import { InspectorCommands } from './framework/commands/InspectorCommands'
 import { useTheme } from './hooks/useTheme'
 import { useRightEdgeSwipe, useSwipeBack } from './hooks/useMobile'
-import { useMobileTabBar } from '@/hooks/useMobileTabBar'
+import { useMobileSheets } from '@/hooks/useMobileSheets'
 import { useDesktop } from './hooks/useDesktop'
 import { TTSProvider } from './contexts/TTSContext'
 import { AuthProvider } from './contexts/AuthContext'
@@ -35,14 +35,6 @@ import { onNotificationClick } from '@/lib/serviceWorker'
 import { useAuth } from '@/hooks/useAuth'
 import { useServerHealth } from '@/hooks/useServerHealth'
 import { usePrefetchRoutes } from '@/hooks/usePrefetchRoutes'
-
-const MobileTabBar = lazy(() =>
-  import('@/features/navigation/MobileTabBar').then((m) => ({ default: m.MobileTabBar })),
-)
-
-const DesktopSidebar = lazy(() =>
-  import('@/features/navigation/DesktopSidebar').then((m) => ({ default: m.DesktopSidebar })),
-)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,7 +103,7 @@ function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const rootRef = useRef<HTMLDivElement>(null)
-  const { openSheet, open } = useMobileTabBar()
+  const { openSheet, open } = useMobileSheets()
   const isDesktop = useDesktop()
   useTheme()
 
@@ -192,17 +184,7 @@ function AppShell() {
               rootRef={rootRef}
               chrome={isAuthenticated}
               header={<TopBar />}
-              rail={
-                <Suspense fallback={null}>
-                  <DesktopSidebar />
-                </Suspense>
-              }
               main={<Outlet />}
-              bottom={
-                <Suspense fallback={null}>
-                  <MobileTabBar />
-                </Suspense>
-              }
               status={<StatusBar />}
               inspector={<Inspector />}
             />

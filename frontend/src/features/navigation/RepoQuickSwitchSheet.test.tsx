@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RepoQuickSwitchSheet } from './RepoQuickSwitchSheet'
 import { listRepos } from '@/api/repos'
-import { useMobileTabBar } from '@/hooks/useMobileTabBar'
+import { useMobileSheets } from '@/hooks/useMobileSheets'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
 
 vi.mock('@/api/repos')
@@ -32,7 +32,7 @@ function LocationSpy() {
 }
 
 function MobileSheetHarness() {
-  const { close } = useMobileTabBar()
+  const { close } = useMobileSheets()
   return (
     <>
       <RepoQuickSwitchSheet isOpen onClose={close} />

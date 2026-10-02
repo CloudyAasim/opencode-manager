@@ -2,24 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import { renderHook, act, render, screen } from '@testing-library/react'
 import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { describe, it, expect } from 'vitest'
-import { useMobileTabBar } from './useMobileTabBar'
+import { useMobileSheets } from './useMobileSheets'
 import { renderHookWithRouter, createRouterWrapper } from '@/test/test-utils'
 
-describe('useMobileTabBar', () => {
+describe('useMobileSheets', () => {
   it('returns null for openSheet when no mobileTab param is present', () => {
-    const { result } = renderHookWithRouter(() => useMobileTabBar())
+    const { result } = renderHookWithRouter(() => useMobileSheets())
     expect(result.current.openSheet).toBeNull()
   })
 
   it('returns the correct openSheet when mobileTab param is set', () => {
-    const { result } = renderHook(() => useMobileTabBar(), {
+    const { result } = renderHook(() => useMobileSheets(), {
       wrapper: createRouterWrapper(['/?mobileTab=repos']),
     })
     expect(result.current.openSheet).toBe('repos')
   })
 
   it('open sets the mobileTab param', () => {
-    const { result } = renderHookWithRouter(() => useMobileTabBar())
+    const { result } = renderHookWithRouter(() => useMobileSheets())
     act(() => {
       result.current.open('files')
     })
@@ -27,7 +27,7 @@ describe('useMobileTabBar', () => {
   })
 
   it('close removes the mobileTab param', () => {
-    const { result } = renderHook(() => useMobileTabBar(), {
+    const { result } = renderHook(() => useMobileSheets(), {
       wrapper: createRouterWrapper(['/?mobileTab=notifications']),
     })
     expect(result.current.openSheet).toBe('notifications')
@@ -38,7 +38,7 @@ describe('useMobileTabBar', () => {
   })
 
   it('resolves invalid values to null', () => {
-    const { result } = renderHook(() => useMobileTabBar(), {
+    const { result } = renderHook(() => useMobileSheets(), {
       wrapper: createRouterWrapper(['/?mobileTab=invalid']),
     })
     expect(result.current.openSheet).toBeNull()
@@ -47,7 +47,7 @@ describe('useMobileTabBar', () => {
   it('handles all valid MobileSheetKey values', () => {
     const validKeys = ['repos', 'files', 'notifications', 'more'] as const
     validKeys.forEach((key) => {
-      const { result } = renderHook(() => useMobileTabBar(), {
+      const { result } = renderHook(() => useMobileSheets(), {
         wrapper: createRouterWrapper([`/?mobileTab=${key}`]),
       })
       expect(result.current.openSheet).toBe(key)
@@ -55,7 +55,7 @@ describe('useMobileTabBar', () => {
   })
 
   it('returns stable openSheet identity across rerenders when search is unchanged', () => {
-    const { result, rerender } = renderHook(() => useMobileTabBar(), {
+    const { result, rerender } = renderHook(() => useMobileSheets(), {
       wrapper: createRouterWrapper(['/?mobileTab=repos']),
     })
     const firstOpenSheet = result.current.openSheet
@@ -64,7 +64,7 @@ describe('useMobileTabBar', () => {
   })
 
   it('open and close callbacks maintain stable identity across rerenders', () => {
-    const { result, rerender } = renderHookWithRouter(() => useMobileTabBar())
+    const { result, rerender } = renderHookWithRouter(() => useMobileSheets())
     const firstOpen = result.current.open
     const firstClose = result.current.close
     rerender()
@@ -73,7 +73,7 @@ describe('useMobileTabBar', () => {
   })
 
   it('open callback identity is stable across location.search changes', () => {
-    const { result, rerender } = renderHook(() => useMobileTabBar(), {
+    const { result, rerender } = renderHook(() => useMobileSheets(), {
       wrapper: createRouterWrapper(['/?foo=1']),
     })
     const firstOpen = result.current.open
@@ -83,7 +83,7 @@ describe('useMobileTabBar', () => {
 
   it('open (push) then navigate(-1) sets openSheet to null', () => {
     function Harness() {
-      const { openSheet, open } = useMobileTabBar()
+      const { openSheet, open } = useMobileSheets()
       const navigate = useNavigate()
       const [step, setStep] = useState<'start' | 'pushed' | 'back'>('start')
       const handled = useRef(false)

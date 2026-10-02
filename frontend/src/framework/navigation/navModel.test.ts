@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { buildMoreItems, buildNavModel, isNavItemActive } from './moreDrawerItems'
+import { buildMoreItems, buildNavModel, isNavItemActive } from './navModel'
 
-const RAIL_KEYS = ['projects', 'assistant', 'files', 'schedules', 'settings', 'logout']
+const GLOBAL_KEYS = ['projects', 'assistant', 'files', 'schedules', 'settings', 'logout']
 const TOOL_KEYS = ['mcp', 'skills', 'source-control', 'schedules', 'reset-permissions']
 
 function keys(items: ReturnType<typeof buildMoreItems>) {
@@ -9,9 +9,9 @@ function keys(items: ReturnType<typeof buildMoreItems>) {
 }
 
 describe('buildNavModel', () => {
-  it('returns the fixed global rail', () => {
+  it('returns the fixed global set', () => {
     const { items } = buildNavModel()
-    expect(keys(items)).toEqual(RAIL_KEYS)
+    expect(keys(items)).toEqual(GLOBAL_KEYS)
   })
 
   it('routes projects and assistant to their pages', () => {
@@ -39,16 +39,16 @@ describe('buildNavModel', () => {
 })
 
 describe('buildMoreItems', () => {
-  it('returns only the global rail outside a project', () => {
-    expect(keys(buildMoreItems('/'))).toEqual(RAIL_KEYS)
-    expect(keys(buildMoreItems('/schedules'))).toEqual(RAIL_KEYS)
-    expect(keys(buildMoreItems('/unknown/path'))).toEqual(RAIL_KEYS)
+  it('returns only the global set outside a project', () => {
+    expect(keys(buildMoreItems('/'))).toEqual(GLOBAL_KEYS)
+    expect(keys(buildMoreItems('/schedules'))).toEqual(GLOBAL_KEYS)
+    expect(keys(buildMoreItems('/unknown/path'))).toEqual(GLOBAL_KEYS)
   })
 
   it('adds project tooling inside a project', () => {
     for (const path of ['/repos/42', '/repos/42/sessions/abc', '/repos/42/assistant', '/assistant']) {
       // the project already has its own Schedules, so the global one steps aside
-      const withoutGlobalSchedules = RAIL_KEYS.filter((key) => key !== 'schedules')
+      const withoutGlobalSchedules = GLOBAL_KEYS.filter((key) => key !== 'schedules')
       expect(keys(buildMoreItems(path))).toEqual([...TOOL_KEYS, ...withoutGlobalSchedules])
     }
   })
@@ -71,7 +71,7 @@ describe('buildMoreItems', () => {
     expect(assistantSchedules?.to).toBe('/repos/0/schedules')
   })
 
-  it('marks the bottom bar destinations and nothing else', () => {
+  it('marks the destinations that stay inline, and nothing else', () => {
     const { items } = buildNavModel()
     expect(items.filter((item) => item.primary).map((item) => item.key)).toEqual([
       'projects',

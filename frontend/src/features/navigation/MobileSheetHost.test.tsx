@@ -1,8 +1,8 @@
 import { vi } from 'vitest'
 
 vi.mock('@/hooks/useMobile')
-vi.mock('@/hooks/useMobileTabBar', () => ({
-  useMobileTabBar: vi.fn(),
+vi.mock('@/hooks/useMobileSheets', () => ({
+  useMobileSheets: vi.fn(),
 }))
 vi.mock('@/features/file-browser/FileBrowserSheet', () => ({
   FileBrowserSheet: ({ isOpen, basePath, repoName }: { isOpen: boolean; basePath: string; repoName: string }) =>
@@ -26,13 +26,13 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { MobileSheetHost } from './MobileSheetHost'
 import { useMobile } from '@/hooks/useMobile'
-import { useMobileTabBar } from '@/hooks/useMobileTabBar'
+import { useMobileSheets } from '@/hooks/useMobileSheets'
 
 describe('MobileSheetHost', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useMobile).mockReturnValue(true)
-    vi.mocked(useMobileTabBar).mockReturnValue({
+    vi.mocked(useMobileSheets).mockReturnValue({
       openSheet: null,
       open: vi.fn(),
       close: vi.fn(),
@@ -59,7 +59,7 @@ describe('MobileSheetHost', () => {
   })
 
   it('renders RepoQuickSwitchSheet when mobileTab=repos', async () => {
-    vi.mocked(useMobileTabBar).mockReturnValue({
+    vi.mocked(useMobileSheets).mockReturnValue({
       openSheet: 'repos',
       open: vi.fn(),
       close: vi.fn(),
@@ -73,7 +73,7 @@ describe('MobileSheetHost', () => {
   })
 
   it('renders FileBrowserSheet with correct props when mobileTab=files', async () => {
-    vi.mocked(useMobileTabBar).mockReturnValue({
+    vi.mocked(useMobileSheets).mockReturnValue({
       openSheet: 'files',
       open: vi.fn(),
       close: vi.fn(),
@@ -90,7 +90,7 @@ describe('MobileSheetHost', () => {
   })
 
   it('renders NotificationsSheet when mobileTab=notifications', async () => {
-    vi.mocked(useMobileTabBar).mockReturnValue({
+    vi.mocked(useMobileSheets).mockReturnValue({
       openSheet: 'notifications',
       open: vi.fn(),
       close: vi.fn(),
@@ -104,7 +104,7 @@ describe('MobileSheetHost', () => {
   })
 
   it('renders MoreDrawer when mobileTab=more', async () => {
-    vi.mocked(useMobileTabBar).mockReturnValue({
+    vi.mocked(useMobileSheets).mockReturnValue({
       openSheet: 'more',
       open: vi.fn(),
       close: vi.fn(),
@@ -119,7 +119,7 @@ describe('MobileSheetHost', () => {
 
   it('closes sheet when onClose is called', async () => {
     const mockClose = vi.fn()
-    vi.mocked(useMobileTabBar).mockReturnValue({
+    vi.mocked(useMobileSheets).mockReturnValue({
       openSheet: 'repos',
       open: vi.fn(),
       close: mockClose,

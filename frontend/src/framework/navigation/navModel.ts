@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Bot, CalendarClock, Folder, FolderGit2, GitCommitHorizontal, LogOut, Plug, Settings, ShieldOff, Sparkles, TerminalSquare } from 'lucide-react'
 import { getAssistantPath, isAssistantPath } from '@/lib/navigation'
 
-export interface MoreDrawerItem {
+export interface NavItem {
   key: string
   label: string
   labelKey?: string
@@ -10,7 +10,7 @@ export interface MoreDrawerItem {
   to?: string
   dialog?: string
   danger?: boolean
-  /** Stays in the bottom bar on a phone. Everything else lives in the overflow. */
+  /** Stays inline in the top bar. Everything else lives under More. */
   primary?: boolean
   /** Owns its own idea of "this is the screen I am on", so no other file
    *  has to guess it from the path. */
@@ -18,7 +18,7 @@ export interface MoreDrawerItem {
 }
 
 export interface NavModel {
-  items: MoreDrawerItem[]
+  items: NavItem[]
 }
 
 export interface NavModelOptions {
@@ -26,14 +26,14 @@ export interface NavModelOptions {
   terminalAllowed?: boolean
 }
 
-export function isNavItemActive(item: MoreDrawerItem, pathname: string): boolean {
+export function isNavItemActive(item: NavItem, pathname: string): boolean {
   if (item.matches) return item.matches(pathname)
   if (item.to) return pathname === item.to
   return false
 }
 
 export function buildNavModel(options: NavModelOptions = {}): NavModel {
-  const items: MoreDrawerItem[] = [
+  const items: NavItem[] = [
     {
       key: 'projects',
       label: 'Projects',
@@ -86,7 +86,7 @@ export function buildNavModel(options: NavModelOptions = {}): NavModel {
   return { items }
 }
 
-function projectToolItems(pathname: string): MoreDrawerItem[] {
+export function buildProjectToolItems(pathname: string): NavItem[] {
   const match = /^\/repos\/(\d+)(?:\/(?:sessions\/[^/]+|assistant))?$/.exec(pathname)
   const isAssistant = pathname.startsWith('/assistant')
   if (!match && !isAssistant) return []
@@ -101,8 +101,8 @@ function projectToolItems(pathname: string): MoreDrawerItem[] {
   ]
 }
 
-export function buildMoreItems(pathname: string, options: NavModelOptions = {}): MoreDrawerItem[] {
-  const tools = projectToolItems(pathname)
+export function buildMoreItems(pathname: string, options: NavModelOptions = {}): NavItem[] {
+  const tools = buildProjectToolItems(pathname)
   // Inside a project the repo's Schedules is the one that matters. Showing the
   // global one next to it produced two rows both reading "Schedules".
   const insideProject = tools.some((item) => item.key === 'schedules')
