@@ -18,6 +18,8 @@ export const shell = {
       repo: 'Project',
       view: 'View',
     },
+    sessionCreateFailed: 'Failed to create new session: {{error}}',
+    commandFailed: 'Command failed: {{error}}',
   },
   status: {
     healthy: 'Healthy',

@@ -94,6 +94,12 @@ export const schedules = {
       promptPlaceholder: 'The full prompt sent to the agent when the schedule runs.',
       create: 'Create template',
     },
+    toast: {
+      createFailed: 'Failed to create template: {{error}}',
+      updateFailed: 'Failed to update template: {{error}}',
+      deleteFailed: 'Failed to delete template: {{error}}',
+    },
+
   },
   runs: {
     selectRun: 'Select a run to inspect logs and output.',
@@ -295,5 +301,12 @@ export const schedules = {
     deleted: 'Schedule deleted',
     runCancelled: 'Schedule run cancelled',
     runDeleted: 'Run deleted',
+    createFailed: 'Failed to create schedule: {{error}}',
+    updateFailed: 'Failed to update schedule: {{error}}',
+    deleteFailed: 'Failed to delete schedule: {{error}}',
+    runFailed: 'Failed to run schedule: {{error}}',
+    cancelRunFailed: 'Failed to cancel schedule run: {{error}}',
+    clearRunsFailed: 'Failed to clear run history: {{error}}',
+    deleteRunFailed: 'Failed to delete run: {{error}}',
   },
 }

@@ -41,6 +41,8 @@ export const ui = {
     creatingArchive: 'Creating ZIP archive, please wait...',
     downloadStarting: 'Download starting...',
     downloadFailed: 'Download failed',
+    saveFailed: 'Failed to save {{filename}}',
+    unsupportedDevice: '{{filename}} cannot be saved from this device',
     cancel: 'Cancel',
     download: 'Download',
   },

@@ -147,6 +147,7 @@ export const repo = {
     created: 'Workspace created',
     createFailed: 'Failed to create workspace',
     deleteFailed: 'Failed to delete workspaces',
+    deletePartial: 'Deleted {{deleted}}, failed {{failed}}',
   },
   directoryPicker: {
     selectFolder: 'Select Folder',

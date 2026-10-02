@@ -8,6 +8,7 @@ import {
 } from '@/api/prompt-templates'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
+import { messageOf } from '@/lib/messageOf'
 
 export function usePromptTemplates() {
   return useQuery({
@@ -29,7 +30,7 @@ export function useCreatePromptTemplate() {
       showToast.success(t('schedules.promptTemplates.created'))
     },
     onError: (error) => {
-      showToast.error(`Failed to create template: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.promptTemplates.toast.createFailed', { error: messageOf(error) }))
     },
   })
 }
@@ -45,7 +46,7 @@ export function useUpdatePromptTemplate() {
       showToast.success(t('schedules.promptTemplates.updated'))
     },
     onError: (error) => {
-      showToast.error(`Failed to update template: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.promptTemplates.toast.updateFailed', { error: messageOf(error) }))
     },
   })
 }
@@ -60,7 +61,7 @@ export function useDeletePromptTemplate() {
       showToast.success(t('schedules.promptTemplates.deleted'))
     },
     onError: (error) => {
-      showToast.error(`Failed to delete template: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.promptTemplates.toast.deleteFailed', { error: messageOf(error) }))
     },
   })
 }

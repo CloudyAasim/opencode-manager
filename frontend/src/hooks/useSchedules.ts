@@ -17,6 +17,7 @@ import {
 } from '@/api/schedules'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
+import { messageOf } from '@/lib/messageOf'
 import type { ListAllRunsParams, ScheduleJobWithRepo, ScheduleRunWithContext } from '@/api/schedules'
 
 export function useAllSchedules() {
@@ -104,7 +105,7 @@ export function useCreateRepoSchedule() {
       showToast.success(t('schedules.toast.created'))
     },
     onError: (error: unknown) => {
-      showToast.error(`Failed to create schedule: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.toast.createFailed', { error: messageOf(error) }))
     },
   })
 }
@@ -125,7 +126,7 @@ export function useUpdateRepoSchedule() {
       showToast.success(t('schedules.toast.updated'))
     },
     onError: (error: unknown) => {
-      showToast.error(`Failed to update schedule: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.toast.updateFailed', { error: messageOf(error) }))
     },
   })
 }
@@ -144,12 +145,13 @@ export function useDeleteRepoSchedule() {
       showToast.success(t('schedules.toast.deleted'))
     },
     onError: (error: unknown) => {
-      showToast.error(`Failed to delete schedule: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.toast.deleteFailed', { error: messageOf(error) }))
     },
   })
 }
 
 export function useRunRepoSchedule() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -166,7 +168,7 @@ export function useRunRepoSchedule() {
       showToast.success(run.status === 'running' ? 'Schedule started' : 'Schedule run completed')
     },
     onError: (error: unknown) => {
-      showToast.error(`Failed to run schedule: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.toast.runFailed', { error: messageOf(error) }))
     },
   })
 }
@@ -189,12 +191,13 @@ export function useCancelRepoScheduleRun() {
       showToast.success(t('schedules.toast.runCancelled'))
     },
     onError: (error) => {
-      showToast.error(`Failed to cancel schedule run: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.toast.cancelRunFailed', { error: messageOf(error) }))
     },
   })
 }
 
 export function useClearRepoScheduleRuns() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -207,7 +210,7 @@ export function useClearRepoScheduleRuns() {
       showToast.success(result.cleared > 0 ? `Cleared ${result.cleared} run${result.cleared === 1 ? '' : 's'}` : 'No runs to clear')
     },
     onError: (error: unknown) => {
-      showToast.error(`Failed to clear run history: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.toast.clearRunsFailed', { error: messageOf(error) }))
     },
   })
 }
@@ -226,7 +229,7 @@ export function useDeleteRepoScheduleRun() {
       showToast.success(t('schedules.toast.runDeleted'))
     },
     onError: (error: unknown) => {
-      showToast.error(`Failed to delete run: ${error instanceof Error ? error.message : String(error)}`)
+      showToast.error(t('schedules.toast.deleteRunFailed', { error: messageOf(error) }))
     },
   })
 }

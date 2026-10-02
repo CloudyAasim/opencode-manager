@@ -147,6 +147,7 @@ export const repo = {
     created: '工作区已创建',
     createFailed: '创建工作区失败',
     deleteFailed: '删除工作区失败',
+    deletePartial: '已删除 {{deleted}} 个，失败 {{failed}} 个',
   },
   directoryPicker: {
     selectFolder: '选择文件夹',

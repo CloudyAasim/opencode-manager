@@ -89,6 +89,12 @@ export const schedules = {
       promptPlaceholder: '计划运行时发送给智能体的完整提示词。',
       create: '创建模板',
     },
+    toast: {
+      createFailed: '创建模板失败：{{error}}',
+      updateFailed: '更新模板失败：{{error}}',
+      deleteFailed: '删除模板失败：{{error}}',
+    },
+
   },
   runs: {
     selectRun: '选择一个运行以查看日志和输出。',
@@ -286,6 +292,13 @@ export const schedules = {
     updated: '计划已更新',
     deleted: '计划已删除',
     runCancelled: '计划运行已取消',
-    runDeleted: '运行已删除',
+    runDeleted: '运行记录已删除',
+    createFailed: '创建计划失败：{{error}}',
+    updateFailed: '更新计划失败：{{error}}',
+    deleteFailed: '删除计划失败：{{error}}',
+    runFailed: '运行计划失败：{{error}}',
+    cancelRunFailed: '取消计划运行失败：{{error}}',
+    clearRunsFailed: '清空运行历史失败：{{error}}',
+    deleteRunFailed: '删除运行记录失败：{{error}}',
   },
 }

@@ -18,6 +18,8 @@ export const shell = {
       repo: '项目',
       view: '视图',
     },
+    sessionCreateFailed: '创建会话失败：{{error}}',
+    commandFailed: '命令执行失败：{{error}}',
   },
   status: {
     healthy: '正常',

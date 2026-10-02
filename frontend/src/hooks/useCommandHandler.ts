@@ -5,6 +5,7 @@ import { useCreateSession } from '@/hooks/useOpenCode'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
+import { messageOf } from '@/lib/messageOf'
 import type { components } from '@/api/opencode-types'
 import { useSessionStatus } from '@/stores/sessionStatusStore'
 
@@ -91,7 +92,7 @@ export function useCommandHandler({
               }
             }
           } catch (error) {
-            showToast.error(`Failed to create new session: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            showToast.error(t('shell.commands.sessionCreateFailed', { error: messageOf(error) }))
           }
           break
         }
@@ -153,7 +154,7 @@ export function useCommandHandler({
         }
       }
     } catch (error) {
-      showToast.error(`Command failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      showToast.error(t('shell.commands.commandFailed', { error: messageOf(error) }))
       setSessionStatus(sessionID, { type: 'idle' })
     } finally {
       setLoading(false)

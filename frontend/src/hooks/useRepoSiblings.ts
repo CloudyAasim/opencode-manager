@@ -33,7 +33,7 @@ export function useDeleteRepoWorkspaces(repoId: number | undefined) {
       } else if (deleted === 0) {
         showToast.error(t('repo.workspaceManager.deleteFailed'))
       } else {
-        showToast.error(`Deleted ${deleted}, failed ${failed}`)
+        showToast.error(t('repo.workspaceManager.deletePartial', { deleted, failed }))
       }
     },
     onError: () => {

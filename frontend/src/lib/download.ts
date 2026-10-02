@@ -1,3 +1,4 @@
+import { i18n } from '@/lib/i18n'
 import { fetchWrapperBlob } from '@/api/fetchWrapper'
 import { showToast } from './toast'
 
@@ -26,7 +27,7 @@ async function saveViaShareSheet(blob: Blob, filename: string): Promise<boolean>
   const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' })
 
   if (!navigator.canShare?.({ files: [file] })) {
-    showToast.error(`${filename} cannot be saved from this device`)
+    showToast.error(i18n.t('ui.downloadDialog.unsupportedDevice', { filename }))
     return false
   }
 
@@ -42,7 +43,7 @@ async function saveViaShareSheet(blob: Blob, filename: string): Promise<boolean>
       })
       return false
     }
-    showToast.error(`Failed to save ${filename}`)
+    showToast.error(i18n.t('ui.downloadDialog.saveFailed', { filename }))
     return false
   }
 }
@@ -63,7 +64,7 @@ export async function saveFileFromUrl(url: string, filename: string): Promise<bo
     try {
       return await saveFile(await fetchWrapperBlob(url), filename)
     } catch {
-      showToast.error(`Failed to save ${filename}`)
+      showToast.error(i18n.t('ui.downloadDialog.saveFailed', { filename }))
       return false
     }
   }
