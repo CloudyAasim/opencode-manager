@@ -30,7 +30,11 @@ export default defineConfig([
       // useMutation options object silently replace a rollback handler.
       // TypeScript says nothing about this; only this rule does.
       'no-dupe-keys': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      // This was a warning for a long time and was called a baseline. It is
+      // not: it caught a useCallback that kept speaking the previous language
+      // after the user switched, because t captures the language it was
+      // created with. A rule that finds real bugs does not get to stay advice.
+      'react-hooks/exhaustive-deps': 'error',
     },
   },
   {

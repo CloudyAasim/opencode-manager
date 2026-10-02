@@ -326,7 +326,7 @@ export function SessionDetail() {
     }
     setActiveTab('workspaces');
     setCreateWorkspaceOpen(false);
-  }, [createWorkspace, setActiveTab]);
+  }, [createWorkspace, setActiveTab, setCreateWorkspaceOpen]);
 
   const handleOpenWorkspaceSelector = useCallback(() => {
     if (workspaceSiblings.length === 0) {
@@ -335,7 +335,7 @@ export function SessionDetail() {
     }
     setActiveTab('workspaces');
     setWorkspaceSelectorOpen(true);
-  }, [workspaceSiblings.length, setActiveTab]);
+  }, [workspaceSiblings.length, setActiveTab, setCreateWorkspaceOpen, setWorkspaceSelectorOpen]);
 
   const currentBranch = repo?.currentBranch || repo?.branch || DEFAULT_REPO_BRANCH;
 
@@ -432,7 +432,7 @@ export function SessionDetail() {
     isStreamingResponse,
   });
 
-  const handleShowSessionsDialog = useCallback(() => setSessionsDialogOpen(true), []);
+  const handleShowSessionsDialog = useCallback(() => setSessionsDialogOpen(true), [setSessionsDialogOpen]);
   const handleShowHelpDialog = useCallback(() => openSettings(), [openSettings]);
 
   const handleMinimizeQuestion = useCallback((question: QuestionRequest) => {

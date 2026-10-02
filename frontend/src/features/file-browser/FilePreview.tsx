@@ -199,7 +199,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
     } finally {
       setIsSaving(false)
     }
-  }, [saveFileContent])
+  }, [saveFileContent, t])
 
   const handleFullMarkdownContentChange = useCallback((content: string) => {
     void persistMarkdownContent(content, setFullContent)
