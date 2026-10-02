@@ -36,6 +36,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useServerHealth } from '@/hooks/useServerHealth'
 import { usePrefetchRoutes } from '@/hooks/usePrefetchRoutes'
 
+const MobileTabBar = lazy(() =>
+  import('@/features/navigation/MobileTabBar').then((m) => ({ default: m.MobileTabBar })),
+)
+
 const DesktopSidebar = lazy(() =>
   import('@/features/navigation/DesktopSidebar').then((m) => ({ default: m.DesktopSidebar })),
 )
@@ -194,6 +198,11 @@ function AppShell() {
                 </Suspense>
               }
               main={<Outlet />}
+              bottom={
+                <Suspense fallback={null}>
+                  <MobileTabBar />
+                </Suspense>
+              }
               status={<StatusBar />}
               inspector={<Inspector />}
             />

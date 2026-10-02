@@ -15,6 +15,7 @@ export const navigation = {
   newRepo: '新建项目',
   allSchedules: '全部定时任务',
   repos: '项目',
+  menu: '菜单',
   more: '更多',
   jobs: '任务',
   detail: '详情',

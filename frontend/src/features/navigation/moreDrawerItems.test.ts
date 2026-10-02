@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { buildMoreItems, buildNavModel } from './moreDrawerItems'
+import { buildMoreItems, buildNavModel, isNavItemActive } from './moreDrawerItems'
 
-const RAIL_KEYS = ['projects', 'assistant', 'files', 'settings', 'logout']
+const RAIL_KEYS = ['projects', 'assistant', 'files', 'schedules', 'settings', 'logout']
 const TOOL_KEYS = ['mcp', 'skills', 'source-control', 'schedules', 'reset-permissions']
 
 function keys(items: ReturnType<typeof buildMoreItems>) {
@@ -47,7 +47,19 @@ describe('buildMoreItems', () => {
 
   it('adds project tooling inside a project', () => {
     for (const path of ['/repos/42', '/repos/42/sessions/abc', '/repos/42/assistant', '/assistant']) {
-      expect(keys(buildMoreItems(path))).toEqual([...TOOL_KEYS, ...RAIL_KEYS])
+      // the project already has its own Schedules, so the global one steps aside
+      const withoutGlobalSchedules = RAIL_KEYS.filter((key) => key !== 'schedules')
+      expect(keys(buildMoreItems(path))).toEqual([...TOOL_KEYS, ...withoutGlobalSchedules])
+    }
+  })
+
+  it('never shows two rows both reading Schedules', () => {
+    for (const path of ['/', '/repos/42', '/repos/42/sessions/abc', '/assistant', '/unknown']) {
+      const labels = buildMoreItems(path).map((item) => item.labelKey ?? item.label)
+      expect(
+        labels.filter((label) => label === 'navigation.schedules'),
+        'two Schedules rows in ' + path,
+      ).toHaveLength(1)
     }
   })
 
@@ -57,6 +69,27 @@ describe('buildMoreItems', () => {
 
     const assistantSchedules = buildMoreItems('/assistant').find((item) => item.key === 'schedules')
     expect(assistantSchedules?.to).toBe('/repos/0/schedules')
+  })
+
+  it('marks the bottom bar destinations and nothing else', () => {
+    const { items } = buildNavModel()
+    expect(items.filter((item) => item.primary).map((item) => item.key)).toEqual([
+      'projects',
+      'assistant',
+      'files',
+      'schedules',
+    ])
+  })
+
+  it('decides what is current from the item, not from a route switch', () => {
+    const byKey = Object.fromEntries(buildNavModel().items.map((item) => [item.key, item]))
+    expect(isNavItemActive(byKey.projects!, '/')).toBe(true)
+    expect(isNavItemActive(byKey.projects!, '/files')).toBe(false)
+    expect(isNavItemActive(byKey.assistant!, '/assistant')).toBe(true)
+    expect(isNavItemActive(byKey.assistant!, '/repos/3/assistant')).toBe(true)
+    expect(isNavItemActive(byKey.files!, '/files')).toBe(true)
+    // a route nobody planned for highlights nothing - and hides nothing
+    expect(isNavItemActive(byKey.schedules!, '/repos/3/sessions/s1')).toBe(false)
   })
 
   it('marks reset permissions as dangerous', () => {

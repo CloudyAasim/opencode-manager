@@ -15,6 +15,7 @@ export const navigation = {
   newRepo: 'New Project',
   allSchedules: 'All Schedules',
   repos: 'Projects',
+  menu: 'Menu',
   more: 'More',
   jobs: 'Jobs',
   detail: 'Detail',

@@ -4,8 +4,7 @@ import { useSidebarCollapsed } from '@/hooks/useSidebarCollapsed'
 import { useAuth } from '@/hooks/useAuth'
 import { useTerminalAllowed } from '@/hooks/useTerminalAllowed'
 import { useUrlParams } from '@/hooks/useUrlParams'
-import { buildNavModel, type MoreDrawerItem } from '@/features/navigation/moreDrawerItems'
-import { isAssistantPath } from '@/lib/navigation'
+import { buildNavModel, isNavItemActive, type MoreDrawerItem } from '@/features/navigation/moreDrawerItems'
 import { useI18n } from '@/lib/i18n'
 import { Sidebar, SidebarItem } from '@/components/ui/sidebar'
 
@@ -30,14 +29,7 @@ export function DesktopSidebar() {
 
   const { items } = buildNavModel({ isAdmin: user?.role === 'admin', terminalAllowed })
 
-  const isItemActive = (item: MoreDrawerItem) => {
-    if (item.key === 'projects') return location.pathname === '/'
-    if (item.key === 'assistant') return isAssistantPath(location.pathname)
-    if (item.key === 'terminal') return location.pathname === '/terminal'
-    if (item.key === 'settings') return location.pathname === '/settings'
-    if (item.key === 'files') return location.pathname === '/files'
-    return false
-  }
+  const isItemActive = (item: MoreDrawerItem) => isNavItemActive(item, location.pathname)
 
   const handleItemClick = (item: MoreDrawerItem) => {
     if (item.to) {
