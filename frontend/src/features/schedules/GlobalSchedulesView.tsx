@@ -13,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CalendarClock, Loader2, Plus, ArrowLeft, Play, Pencil, Trash2, Pause, PlayCircle, Clock3, History, SlidersHorizontal } from 'lucide-react'
+import { CalendarClock, Plus, ArrowLeft, Play, Pencil, Trash2, Pause, PlayCircle, Clock3, History, SlidersHorizontal } from 'lucide-react'
 
 import { useScheduleUrlState } from '@/hooks/useScheduleUrlState'
 import type { ScheduleTab } from '@/hooks/useScheduleUrlState'
@@ -292,9 +292,7 @@ export function GlobalSchedulesView() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading className="min-h-screen bg-background" size="lg" />
     )
   }
 

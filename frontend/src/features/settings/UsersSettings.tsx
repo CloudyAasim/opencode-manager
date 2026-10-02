@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, CheckCircle, KeyRound, Loader2, RefreshCw, ShieldCheck, Trash2, UserPlus } from 'lucide-react'
 import { adminUsersApi, type ManagedUser, type UserRole } from '@/api/adminUsers'
@@ -248,9 +249,7 @@ export function UsersSettings() {
         </CardHeader>
         <CardContent className="space-y-2">
           {usersQuery.isLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
+            <PanelLoading className="py-6" size="sm" />
           ) : usersQuery.isError ? (
             <p className="py-3 text-center text-sm text-destructive">{t('settings.users.loadFailed')}</p>
           ) : users.length === 0 ? (

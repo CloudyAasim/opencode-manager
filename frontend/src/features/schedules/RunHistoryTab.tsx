@@ -1,4 +1,5 @@
 import type { ScheduleJob, ScheduleRun } from '@opencode-manager/shared/types'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { History, Loader2, Trash2 } from 'lucide-react'
@@ -42,9 +43,7 @@ export function RunHistoryTab({
   if (!selectedJob) {
     if (selectedRunLoading) {
       return (
-        <div className="flex min-h-0 flex-1 h-full items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <PanelLoading className="min-h-0 flex-1 h-full" size="lg" />
       )
     }
     return (

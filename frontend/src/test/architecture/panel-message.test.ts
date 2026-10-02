@@ -14,11 +14,12 @@ const MESSAGE_OWNER = 'components/ui/panel-message.tsx'
 const LOADING_OWNER = 'components/ui/panel-loading.tsx'
 
 // "Nothing here" and "that did not work" were drawn out by hand in every tab of
-// the source-control feature. Loading had already been given a component in the
-// previous round, but a second padding variant was still being hand-written.
+// the source-control feature. Loading already had a component, but the rule
+// guarding it was written against the paddings it had seen so far.
 const HAND_ROLLED_MESSAGE = /<div className="text-center py-12 text-muted-foreground">/
-const HAND_ROLLED_LOADING =
-  /<div className="flex items-center justify-center py-(?:8|12)">\s*\n\s*<Loader2/
+// A centred box whose first child is a spinner.
+const HAND_ROLLED_SPINNER =
+  /<div className="[^"]*\bitems-center\b[^"]*\bjustify-center\b[^"]*"[^>]*>\s*<Loader2/
 
 describe('面板的三态各只有一个组件', () => {
   it('门禁看得见两个组件', () => {
@@ -40,17 +41,35 @@ describe('面板的三态各只有一个组件', () => {
     ).toEqual([])
   })
 
-  it('没有人再自己画转圈的加载块', () => {
+  it('没有人再自己画"面板正在加载"的那一个转圈', () => {
+    // A centred box whose first child is a spinner is a panel saying "still
+    // working". The padding on that box is a free choice, which is exactly
+    // why an earlier version of this rule, written against the two paddings
+    // it had already seen, let fifteen of them through.
     const offenders = SOURCES.filter(
-      (source) => source.rel !== LOADING_OWNER && HAND_ROLLED_LOADING.test(source.text),
+      (source) => source.rel !== LOADING_OWNER && HAND_ROLLED_SPINNER.test(source.text),
     ).map((source) => source.rel)
     expect(
       offenders,
       [
-        `这些文件自己画了加载块：${offenders.length} 处`,
+        `这些文件自己画了居中的加载转圈：${offenders.length} 处`,
         ...offenders,
-        '用 <PanelLoading />。上一轮清了 py-12 那一族，py-8 这一族漏了。',
+        '用 <PanelLoading />，外层间距用 className 传。',
       ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('类名里没有拼不出来的东西', () => {
+    // A regex that strips one class can quietly eat another: removing "flex"
+    // with \bflex\b also takes the "flex" out of "flex-1" and leaves "-1",
+    // which is not a Tailwind class. Nothing renders, nothing errors.
+    const bogus = /(?:^|[\s"])-[\d]+(?:[\s"]|$)/
+    const offenders = SOURCES.filter((source) =>
+      source.text.split('\n').some((line) => bogus.test(line) && line.includes('className')),
+    ).map((source) => source.rel)
+    expect(
+      offenders,
+      `这些文件的 className 里有拼不出来的片段：${offenders.join(', ')}`,
     ).toEqual([])
   })
 

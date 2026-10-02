@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useLocation, useParams } from 'react-router-dom'
 import type { CreateScheduleJobRequest, ScheduleJob } from '@opencode-manager/shared/types'
 import {
@@ -26,7 +27,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { getReturnToPath } from '@/lib/navigation'
 import { useI18n } from '@/lib/i18n'
-import { CalendarClock, Loader2, Plus } from 'lucide-react'
+import { CalendarClock, Plus } from 'lucide-react'
 
 export function RepoSchedulesView() {
   const { t } = useI18n()
@@ -138,9 +139,7 @@ export function RepoSchedulesView() {
 
   if (scheduleTargetLoading || jobsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading className="min-h-screen bg-background" size="lg" />
     )
   }
 

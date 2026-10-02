@@ -255,10 +255,7 @@ export function McpOAuthDialog({
           )}
 
           {step === 'loading' && (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">{t('settingsPanels.mcpOAuth.preparing')}</span>
-            </div>
+            <PanelLoading className="py-6" size="sm" label={t('settingsPanels.mcpOAuth.preparing')} />
           )}
 
           {step === 'ready' && authUrl && (

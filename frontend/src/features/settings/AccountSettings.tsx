@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { Edit2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -134,9 +135,7 @@ export function AccountSettings() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading className="p-8" size="md" />
     )
   }
 
@@ -303,9 +302,7 @@ export function AccountSettings() {
               </div>
 
               {passkeysLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
+                <PanelLoading className="py-4" size="sm" />
               ) : passkeys && passkeys.length > 0 ? (
                 <div className="space-y-2">
                   {passkeys.map((pk) => (

@@ -186,9 +186,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
 
       <div className="flex-1 overflow-y-auto relative">
         {switchBranchMutation.isPending && (
-          <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
+          <PanelLoading className="absolute inset-0 bg-background/50 z-10" size="sm" />
         )}
         {filteredBranches.length > 0 ? (
           <div className="py-1">

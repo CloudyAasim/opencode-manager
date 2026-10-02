@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useQuery } from '@tanstack/react-query'
 import { browseDirectory } from '@/api/filesystem'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Folder, FolderGit2, ChevronUp, Loader2 } from 'lucide-react'
+import { Folder, FolderGit2, ChevronUp } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 interface DirectoryPickerDialogProps {
@@ -57,9 +58,7 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
 
         <div className="mx-4 sm:mx-6 mb-4 min-h-0 overflow-y-auto rounded border border-border bg-muted">
           {isLoading ? (
-            <div className="flex h-[240px] items-center justify-center text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
+            <PanelLoading className="h-[240px] text-muted-foreground" size="sm" />
           ) : isError ? (
             <div className="flex h-[240px] items-center justify-center px-4 text-center text-sm text-destructive">
               {error instanceof Error ? error.message : t('repo.directoryPicker.loadFailed')}

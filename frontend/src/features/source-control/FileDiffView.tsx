@@ -1,6 +1,6 @@
 import { useFileDiff, useCommitFileDiff } from "@/api/git";
+import { PanelLoading } from '@/components/ui/panel-loading'
 import {
-  Loader2,
   FileText,
   FilePlus,
   FileX,
@@ -237,9 +237,7 @@ export function FileDiffView({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading className="h-full py-8" size="md" />
     );
   }
 

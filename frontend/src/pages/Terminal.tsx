@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, TerminalSquare } from 'lucide-react'
+import { PanelLoading } from '@/components/ui/panel-loading'
+import { TerminalSquare } from 'lucide-react'
 import { terminalApi } from '@/api/terminal'
 import { useI18n } from '@/lib/i18n'
 import { TerminalView } from '@/features/terminal/TerminalView'
@@ -41,9 +42,7 @@ export function TerminalPage() {
       </div>
 
       {configQuery.isLoading ? (
-        <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <PanelLoading className="flex-1" size="md" />
       ) : configQuery.isError ? (
         <div className="p-4">
           <Alert variant="destructive">

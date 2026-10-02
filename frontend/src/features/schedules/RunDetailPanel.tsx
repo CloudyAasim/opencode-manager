@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScheduleRunMarkdown } from '@/features/schedules/ScheduleRunMarkdown'
@@ -20,9 +21,7 @@ export function RunDetailPanel({ repoId, activeRun, selectedRunLoading, onCancel
 
   if (selectedRunLoading && !activeRun) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading className="h-full" size="md" />
     )
   }
 
@@ -56,14 +55,14 @@ export function RunDetailPanel({ repoId, activeRun, selectedRunLoading, onCancel
       )}
       <TabsContent value="log" className="mt-0 min-h-0 flex-1 overflow-y-auto px-0 py-3 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
         {selectedRunLoading && !activeRun ? (
-          <div className="flex items-center justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <PanelLoading className="p-4" size="md" />
         ) : (
           <pre className="whitespace-pre-wrap break-words text-sm font-mono leading-6">{activeRun.logText ?? t('schedules.runs.noLogText')}</pre>
         )}
       </TabsContent>
       <TabsContent value="response" className="mt-0 min-h-0 flex-1 flex flex-col overflow-hidden">
         {selectedRunLoading && !activeRun ? (
-          <div className="flex items-center justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <PanelLoading className="p-4" size="md" />
         ) : activeRun.responseText ? (
           <div className="min-h-0 flex-1 overflow-y-auto px-0 py-2 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
             <ScheduleRunMarkdown content={activeRun.responseText} />
@@ -74,7 +73,7 @@ export function RunDetailPanel({ repoId, activeRun, selectedRunLoading, onCancel
       </TabsContent>
       <TabsContent value="error" className="mt-0 min-h-0 flex-1 overflow-y-auto px-0 py-3 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
         {selectedRunLoading && !activeRun ? (
-          <div className="flex items-center justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <PanelLoading className="p-4" size="md" />
         ) : (
           <pre className={`whitespace-pre-wrap break-words text-sm font-mono leading-6 ${activeRun.status === 'cancelled' ? 'text-muted-foreground' : 'text-red-300'}`}>{activeRun.errorText ?? t('schedules.runs.noErrorRecorded')}</pre>
         )}

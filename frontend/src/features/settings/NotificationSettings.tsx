@@ -1,4 +1,5 @@
 import { useNotifications } from "@/hooks/useNotifications";
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { Loader2, BellOff, Trash2, Send, Monitor } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -244,9 +245,7 @@ export function NotificationSettings() {
             </h2>
 
             {isLoadingSubscriptions ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
+              <PanelLoading className="py-4" size="md" />
             ) : subscriptions.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {t("settingsPanels.notifications.noDevices")}

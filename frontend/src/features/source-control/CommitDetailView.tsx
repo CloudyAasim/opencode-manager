@@ -1,6 +1,7 @@
 import { useCommitDetails } from '@/api/git'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { PanelMessage } from '@/components/ui/panel-message'
-import { Loader2, GitCommit, ArrowLeft } from 'lucide-react'
+import { GitCommit, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GitFlatFileList } from './GitFlatFileList'
 import { FileDiffView } from '@/features/source-control/FileDiffView'
@@ -20,9 +21,7 @@ export function CommitDetailView({ repoId, commitHash, onBack, onFileSelect, sel
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading className="h-full py-12" size="md" />
     )
   }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { Badge } from '@/components/ui/badge'
 import { History, Loader2, XCircle, CheckCircle2, Ban, ChevronDown, Trash2 } from 'lucide-react'
 import type { ScheduleRun } from '@opencode-manager/shared/types'
@@ -59,9 +60,7 @@ export function RunHistoryCards({
 
   if (runsLoading) {
     return (
-      <div className="flex items-center justify-center p-6">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading className="p-6" size="md" />
     )
   }
 
