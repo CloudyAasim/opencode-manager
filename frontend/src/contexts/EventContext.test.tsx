@@ -128,10 +128,10 @@ function Harness() {
       <button onClick={() => syncForSession('/repo', 'session-1')}>Sync</button>
       <button onClick={() => permissions.syncForSession('/repo', 'session-1')}>Sync Permissions</button>
       <button onClick={navigateToCurrent}>Navigate</button>
-      <button onClick={() => current && reject(current.id)}>Dismiss</button>
-      <button onClick={() => current && reply(current.id, [['Yes']])}>Reply</button>
-      <button onClick={() => permissions.current && permissions.respond(permissions.current.id, permissions.current.sessionID, 'allow')}>Allow Permission</button>
-      <button onClick={() => permissions.current && permissions.respond(permissions.current.id, permissions.current.sessionID, 'reject')}>Reject Permission</button>
+      <button onClick={() => { if (current) void reject(current.id).catch(() => {}) }}>Dismiss</button>
+      <button onClick={() => { if (current) void reply(current.id, [['Yes']]).catch(() => {}) }}>Reply</button>
+      <button onClick={() => { const p = permissions.current; if (p) void permissions.respond(p.id, p.sessionID, 'allow').catch(() => {}) }}>Allow Permission</button>
+      <button onClick={() => { const p = permissions.current; if (p) void permissions.respond(p.id, p.sessionID, 'reject').catch(() => {}) }}>Reject Permission</button>
     </div>
   )
 }
