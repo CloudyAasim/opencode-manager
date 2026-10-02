@@ -9,6 +9,7 @@ interface ShellFrameProps {
   main: ReactNode
   bottom: ReactNode
   status: ReactNode
+  chrome?: boolean
 }
 
 export function ShellFrame({
@@ -19,8 +20,17 @@ export function ShellFrame({
   main,
   bottom,
   status,
+  chrome = true,
 }: ShellFrameProps) {
   const isDesktop = useDesktop()
+
+  if (!chrome) {
+    return (
+      <div ref={rootRef} className="flex h-dvh w-full min-w-0 flex-col bg-background">
+        {main}
+      </div>
+    )
+  }
 
   return (
     <div ref={rootRef} className="flex h-dvh w-full min-w-0 flex-col bg-background">

@@ -106,6 +106,7 @@ function PermissionDialogWrapper() {
 }
 
 function AppShell() {
+  const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -176,58 +177,61 @@ function AppShell() {
   )
 
   return (
-    <AuthProvider>
-      <EventProvider>
-        <LayerProvider>
-          <CommandProvider>
-            <InspectorProvider>
-              <FileBrowserInspectorTab />
-              <SourceControlInspectorTab />
-              <TerminalInspectorTab />
-              <InspectorCommands />
-              <BuiltinCommands />
-              <CommandPalette />
-              <ShellFrame
-                rootRef={rootRef}
-                header={<TopBar />}
-                rail={
-                  <Suspense fallback={null}>
-                    <DesktopSidebar />
-                  </Suspense>
-                }
-                main={<Outlet />}
-                bottom={
-                  <Suspense fallback={null}>
-                    <MobileTabBar />
-                  </Suspense>
-                }
-                status={<StatusBar />}
-                inspector={<Inspector />}
-              />
-              <MobileSheetHost />
-              <PermissionDialogWrapper />
-              <SSHHostKeyDialogWrapper />
-              <HealthMonitor />
-              <RoutePrefetcher />
-              <VersionNotifier />
-              <PwaUpdatePrompt />
-            </InspectorProvider>
-            <Toaster
-              position={isDesktop ? 'bottom-right' : 'top-center'}
-              offset={isDesktop ? undefined : '64px'}
-              expand={false}
-              richColors
-              closeButton
-              duration={2500}
+    <EventProvider>
+      <LayerProvider>
+        <CommandProvider>
+          <InspectorProvider>
+            <FileBrowserInspectorTab />
+            <SourceControlInspectorTab />
+            <TerminalInspectorTab />
+            <InspectorCommands />
+            <BuiltinCommands />
+            <CommandPalette />
+            <ShellFrame
+              rootRef={rootRef}
+              chrome={isAuthenticated}
+              header={<TopBar />}
+              rail={
+                <Suspense fallback={null}>
+                  <DesktopSidebar />
+                </Suspense>
+              }
+              main={<Outlet />}
+              bottom={
+                <Suspense fallback={null}>
+                  <MobileTabBar />
+                </Suspense>
+              }
+              status={<StatusBar />}
+              inspector={<Inspector />}
             />
-          </CommandProvider>
-        </LayerProvider>
-      </EventProvider>
-    </AuthProvider>
+            <MobileSheetHost />
+            <PermissionDialogWrapper />
+            <SSHHostKeyDialogWrapper />
+            <HealthMonitor />
+            <RoutePrefetcher />
+            <VersionNotifier />
+            <PwaUpdatePrompt />
+          </InspectorProvider>
+          <Toaster
+            position={isDesktop ? 'bottom-right' : 'top-center'}
+            offset={isDesktop ? undefined : '64px'}
+            expand={false}
+            richColors
+            closeButton
+            duration={2500}
+          />
+        </CommandProvider>
+      </LayerProvider>
+    </EventProvider>
   )
 }
 
-const router = createAppRouter(<AppShell />)
+const router = createAppRouter(
+  <AuthProvider>
+    <AppShell />
+  </AuthProvider>,
+)
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
