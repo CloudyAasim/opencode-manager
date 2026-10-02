@@ -133,11 +133,6 @@ export function parseNetworkError(error: unknown): ParsedError {
   }
 }
 
-export function getErrorMessage(error: OpenCodeError | undefined | null): string {
-  const parsed = parseOpenCodeError(error)
-  return parsed ? `${parsed.title}: ${parsed.message}` : ''
-}
-
 export function getOpenCodeApiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof FetchError) {
     let message = error.detail || error.message || fallback
