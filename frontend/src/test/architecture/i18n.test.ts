@@ -55,6 +55,18 @@ const FILES = graph.files.filter((file) => {
 })
 
 describe('翻译键契约', () => {
+  it('门禁本身在看文件', () => {
+    // A rule whose subject set is empty passes without looking at anything.
+    // That is not a hypothetical: this filter once read
+    //   rel.endsWith('.ts') && rel.endsWith('.tsx')
+    // which no string can satisfy, so the assertions below ran over zero
+    // files and still reported success.
+    expect(
+      FILES.length,
+      `i18n 门禁只匹配到 ${FILES.length} 个文件，等于什么都没看`,
+    ).toBeGreaterThan(100)
+  })
+
   it('字面量翻译键在英文包中必须存在', () => {
     const offenders: string[] = []
     for (const file of FILES) {

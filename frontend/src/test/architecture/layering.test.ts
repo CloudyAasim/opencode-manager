@@ -70,6 +70,23 @@ function render(title: string, offenders: string[]): string {
 }
 
 describe('frontend 分层契约', () => {
+  it('每一层都真的存在文件', () => {
+    const sizes = LAYERS.map((layer) => ({
+      layer,
+      files: graph.files.filter((file) => layerOf(file) === layer).length,
+    }))
+    const empty = sizes.filter((entry) => entry.files === 0).map((entry) => entry.layer)
+    expect(
+      empty,
+      [
+        `这些层在图里一个文件都没有，对应的规则会空转：${empty.join('、')}`,
+        '规则扫不到东西时永远是绿的。',
+        ...sizes.map((entry) => `  ${entry.layer.padEnd(10)} ${entry.files} 个文件`),
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+
   it('components 不得依赖 pages', () => {
     const offenders = offendingLayers('components', ['pages'])
     expect(offenders, render('components -> pages', offenders)).toEqual([])
