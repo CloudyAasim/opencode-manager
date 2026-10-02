@@ -8,6 +8,7 @@ import { oauthApi } from '@/api/oauth'
 import type { Provider, Model } from '@/api/providers'
 import type { OAuthAuthorizeResponse } from '@/api/oauth'
 import type { ReactNode } from 'react'
+import { showErrorToast } from '@/lib/error-toast'
 
 vi.mock('@/api/providers', () => ({
   getProviders: vi.fn(),
@@ -17,6 +18,10 @@ vi.mock('@/api/providers', () => ({
     set: vi.fn(),
     delete: vi.fn(),
   },
+}))
+
+vi.mock('@/lib/error-toast', () => ({
+  showErrorToast: vi.fn(),
 }))
 
 vi.mock('@/api/oauth', () => ({
@@ -276,5 +281,36 @@ describe('ProviderSettings', () => {
     await screen.findByText('No OAuth-capable providers available.')
 
     expect(screen.queryByText('Anthropic')).not.toBeInTheDocument()
+  })
+
+  it('keeps the confirm dialog open and says so when the delete fails', async () => {
+    const user = userEvent.setup()
+    vi.mocked(providerCredentialsApi.delete).mockRejectedValue(new Error('nope'))
+    renderSettings()
+
+    await screen.findByText('Anthropic')
+
+    await user.click(screen.getByRole('button', { name: 'Disconnect' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
+
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalled())
+    // still there: a failed delete must not look like a completed one
+    expect(screen.getByRole('button', { name: 'Confirm delete' })).toBeInTheDocument()
+    expect(vi.mocked(showErrorToast).mock.calls[0]?.[1]).toBe('Could not remove the credentials')
+  })
+
+  it('closes the confirm dialog once the delete lands', async () => {
+    const user = userEvent.setup()
+    vi.mocked(providerCredentialsApi.delete).mockResolvedValue(undefined)
+    renderSettings()
+
+    await screen.findByText('Anthropic')
+
+    await user.click(screen.getByRole('button', { name: 'Disconnect' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Confirm delete' })).not.toBeInTheDocument()
+    })
   })
 })

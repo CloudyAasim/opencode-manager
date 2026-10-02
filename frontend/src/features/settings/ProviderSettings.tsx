@@ -14,6 +14,7 @@ import { OAuthAuthorizeDialog } from './OAuthAuthorizeDialog'
 import { OAuthCallbackDialog } from './OAuthCallbackDialog'
 import { ApiKeyDialog } from '@/features/settings/ApiKeyDialog'
 import { invalidateProviderCaches } from '@/lib/queryInvalidation'
+import { showErrorToast } from '@/lib/error-toast'
 import { useI18n } from '@/lib/i18n'
 
 export function ProviderSettings() {
@@ -62,10 +63,14 @@ export function ProviderSettings() {
   }
 
   const handleDeleteConfirm = () => {
-    if (deleteTarget) {
-      deleteCredentialMutation.mutate(deleteTarget)
-      setDeleteTarget(null)
-    }
+    if (!deleteTarget) return
+    // The dialog carries a spinner, so let it stay open until the delete
+    // actually lands - closing it up front meant a failure looked identical
+    // to a success.
+    deleteCredentialMutation.mutate(deleteTarget, {
+      onSuccess: () => setDeleteTarget(null),
+      onError: (error) => showErrorToast(error, t('settingsPanels.provider.removeCredentialsFailed')),
+    })
   }
 
   const handleDeleteCancel = () => {

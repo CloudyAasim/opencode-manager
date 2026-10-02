@@ -302,6 +302,7 @@ export const settingsPanels = {
     removeCredentialsTitle: 'Remove Credentials',
     removeCredentialsDescription:
       'Are you sure you want to remove credentials for {{name}}?',
+    removeCredentialsFailed: 'Could not remove the credentials',
     thisProvider: 'this provider',
     models_one: '{{count}} model',
     models_other: '{{count}} models',
@@ -792,6 +793,7 @@ export const settingsPanels = {
     connectImmediately: 'Connect immediately after adding',
     cancel: 'Cancel',
     add: 'Add MCP Server',
+    addFailed: 'Could not add the MCP server',
     commandRequired: 'Command is required for local MCP servers',
     urlRequired: 'URL is required for remote MCP servers',
   },
@@ -888,6 +890,8 @@ export const settingsPanels = {
     passwordMin: 'Password must be at least 8 characters',
     clearing: 'Clearing...',
     clearStored: 'Clear stored password',
+    saveFailed: 'Could not save the password',
+    clearFailed: 'Could not clear the stored password',
   },
   managerToken: {
     title: 'Manager Internal Token',
@@ -896,7 +900,10 @@ export const settingsPanels = {
     rotateWarning:
       'Rotating will invalidate the existing token. Any plugin or client using it must be updated. Click Rotate again to confirm.',
     copy: 'Copy token',
+    copyFailed: 'Could not copy the token',
     rotate: 'Rotate token',
+    rotateSucceeded: 'Token rotated',
+    rotateFailed: 'Could not rotate the token',
   },
   server: {
     maintenance: 'Server maintenance',

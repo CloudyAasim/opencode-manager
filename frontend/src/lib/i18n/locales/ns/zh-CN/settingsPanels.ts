@@ -289,6 +289,7 @@ export const settingsPanels = {
     removeCredentialsFor: '移除 {{name}} 的凭据',
     removeCredentialsTitle: '移除凭据',
     removeCredentialsDescription: '确定要移除 {{name}} 的凭据吗？',
+    removeCredentialsFailed: '移除凭据失败',
     thisProvider: '此提供商',
     models_one: '{{count}} 个模型',
     models_other: '{{count}} 个模型',
@@ -771,6 +772,7 @@ export const settingsPanels = {
     connectImmediately: '添加后立即连接',
     cancel: '取消',
     add: '添加 MCP 服务器',
+    addFailed: '添加 MCP 服务器失败',
     commandRequired: '本地 MCP 服务器需要命令',
     urlRequired: '远程 MCP 服务器需要 URL',
   },
@@ -863,6 +865,8 @@ export const settingsPanels = {
     passwordMin: '密码必须至少为 8 个字符',
     clearing: '正在清除...',
     clearStored: '清除已存储的密码',
+    saveFailed: '保存密码失败',
+    clearFailed: '清除已存储的密码失败',
   },
   managerToken: {
     title: '管理器内部令牌',
@@ -871,7 +875,10 @@ export const settingsPanels = {
     rotateWarning:
       '轮换将使用现有令牌失效。任何使用它的插件或客户端都必须更新。再次点击轮换以确认。',
     copy: '复制令牌',
+    copyFailed: '复制令牌失败',
     rotate: '轮换令牌',
+    rotateSucceeded: '令牌已轮换',
+    rotateFailed: '轮换令牌失败',
   },
   server: {
     maintenance: '服务器维护',

@@ -11,6 +11,7 @@ import { useMcpServers } from '@/hooks/useMcpServers'
 import { settingsApi } from '@/api/settings'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useI18n } from '@/lib/i18n'
+import { showErrorToast } from '@/lib/error-toast'
 
 interface AddMcpServerDialogProps {
   open: boolean
@@ -129,6 +130,11 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mcp-status'] })
       handleClose()
+    },
+    // The validation above throws translated messages on purpose. Without
+    // this they were thrown into nowhere.
+    onError: (error) => {
+      showErrorToast(error, t('settingsPanels.addMcpServer.addFailed'))
     },
   })
 

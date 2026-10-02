@@ -6,6 +6,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle, Check, Copy, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { SettingsDisclosure } from './SettingsDisclosure'
 import { useI18n } from '@/lib/i18n'
+import { showErrorToast } from '@/lib/error-toast'
+import { showToast } from '@/lib/toast'
 
 interface ManagerTokenSettingsProps {
   isOpen?: boolean
@@ -28,8 +30,8 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
       await navigator.clipboard.writeText(token)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch {
-    void 0
+    } catch (error) {
+      showErrorToast(error, t('settingsPanels.managerToken.copyFailed'))
     }
   }
 
@@ -39,7 +41,10 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
       setTimeout(() => setConfirmRotate(false), 4000)
       return
     }
-    rotate.mutate()
+    rotate.mutate(undefined, {
+      onSuccess: () => showToast.success(t('settingsPanels.managerToken.rotateSucceeded')),
+      onError: (error) => showErrorToast(error, t('settingsPanels.managerToken.rotateFailed')),
+    })
     setConfirmRotate(false)
   }
 

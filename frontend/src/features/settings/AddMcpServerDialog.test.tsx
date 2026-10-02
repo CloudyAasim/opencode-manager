@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AddMcpServerDialog } from './AddMcpServerDialog'
 import { makeOpenCodeConfigFile } from '@/test/fixtures/opencode-config'
+import { showErrorToast } from '@/lib/error-toast'
 
 const {
   mockGetOpenCodeConfig,
@@ -28,6 +29,10 @@ vi.mock('@/hooks/useMcpServers', () => ({
 
 vi.mock('@/lib/toast', () => ({
   showToast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), loading: vi.fn(), warning: vi.fn(), dismiss: vi.fn() },
+}))
+
+vi.mock('@/lib/error-toast', () => ({
+  showErrorToast: vi.fn(),
 }))
 
 const config = makeOpenCodeConfigFile()
@@ -88,5 +93,42 @@ describe('AddMcpServerDialog', () => {
     expect(onUpdate.mock.calls[0]).toHaveLength(1)
     expect((content.mcp as Record<string, unknown>).filesystem).toBeDefined()
     expect(mockUpdateOpenCodeConfig).not.toHaveBeenCalled()
+  })
+
+  it('shows the validation error it throws instead of throwing it into nowhere', async () => {
+    const onUpdate = vi.fn<(content: Record<string, unknown>) => Promise<void>>().mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    renderDialog(onUpdate)
+
+    // a local server needs a command; the dialog already knows this
+    await user.type(screen.getByLabelText('Server ID'), 'filesystem')
+    await user.click(screen.getByRole('button', { name: 'Add MCP Server' }))
+
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalled())
+    const [error, fallback] = vi.mocked(showErrorToast).mock.calls[0]
+    expect((error as Error).message).toBe('Command is required for local MCP servers')
+    expect(fallback).toBe('Could not add the MCP server')
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(mockAddServerAsync).not.toHaveBeenCalled()
+  })
+
+  it('keeps the dialog open when adding fails', async () => {
+    const onUpdate = vi.fn<(content: Record<string, unknown>) => Promise<void>>()
+      .mockRejectedValue(new Error('server said no'))
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AddMcpServerDialog open onOpenChange={onOpenChange} onUpdate={onUpdate} />
+      </QueryClientProvider>,
+    )
+
+    await user.type(screen.getByLabelText('Server ID'), 'filesystem')
+    await user.type(screen.getByLabelText('Command'), 'npx server-filesystem /tmp')
+    await user.click(screen.getByRole('button', { name: 'Add MCP Server' }))
+
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalled())
+    expect(onOpenChange).not.toHaveBeenCalledWith(false)
   })
 })

@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle, CheckCircle2, Eye, EyeOff, XCircle } from 'lucide-react'
 import { SettingsDisclosure } from './SettingsDisclosure'
 import { useI18n } from '@/lib/i18n'
+import { showErrorToast } from '@/lib/error-toast'
 
 interface OpenCodeServerAuthSettingsProps {
   isOpen?: boolean
@@ -22,11 +23,18 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
   const handleToggle = onToggle ?? (() => setUncontrolledOpen((open) => !open))
 
   const handleSave = () => {
-    if (password.length >= 8) {
-      setPassword.mutate(password)
-      setPasswordValue('')
-      setShowPassword(false)
-    }
+    if (password.length < 8) return
+    // Clear the field only once the server has it. Wiping it the moment the
+    // click lands means a failed save takes the password with it.
+    setPassword.mutate(password, {
+      onSuccess: () => {
+        setPasswordValue('')
+        setShowPassword(false)
+      },
+      onError: (error) => {
+        showErrorToast(error, t('settingsPanels.serverAuth.saveFailed'))
+      },
+    })
   }
 
   const getStatusText = () => {
@@ -98,7 +106,9 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
       {status?.source === 'db' && (
         <Button
           variant="outline"
-          onClick={() => clearPassword.mutate()}
+          onClick={() => clearPassword.mutate(undefined, {
+            onError: (error) => showErrorToast(error, t('settingsPanels.serverAuth.clearFailed')),
+          })}
           disabled={clearPassword.isPending}
         >
           {clearPassword.isPending ? t('settingsPanels.serverAuth.clearing') : t('settingsPanels.serverAuth.clearStored')}
