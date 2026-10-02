@@ -18,7 +18,6 @@ import {
 import { useRepoActivity } from '@/hooks/useRepoActivity'
 import { useScheduleTarget } from '@/hooks/useScheduleTarget'
 import { useScheduleUrlState } from '@/hooks/useScheduleUrlState'
-import { useSidebarAction } from '@/hooks/useSidebarAction'
 import { ScheduleJobDialog, JobsTab, JobDetailTab, RunHistoryTab, ScheduleTabMenu } from '@/features/schedules'
 import { toUpdateScheduleRequest } from '@/features/schedules/schedule-utils'
 import { Header } from '@/components/ui/header'
@@ -72,10 +71,6 @@ export function RepoSchedulesView() {
 
   const [clearRunsOpen, setClearRunsOpen] = useState(false)
   const [runToDelete, setRunToDelete] = useState<number | null>(null)
-
-  useSidebarAction('new-schedule', () => {
-    openNewJob()
-  })
 
   const clearableRuns = useMemo(() => (runs ?? []).filter((run) => run.status !== 'running'), [runs])
   const clearableWorktrees = useMemo(() => clearableRuns.filter((run) => run.worktreePath).length, [clearableRuns])

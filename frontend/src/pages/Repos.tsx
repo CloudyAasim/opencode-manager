@@ -6,7 +6,6 @@ import { FileBrowserSheet } from "@/features/file-browser/FileBrowserSheet";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup";
-import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { Plus } from "lucide-react";
 import { useI18n } from '@/lib/i18n'
 import { useLayer } from '@/framework/layer/useLayer'
@@ -16,10 +15,6 @@ export function Repos() {
   const navigate = useNavigate();
   const [addRepoOpen, setAddRepoOpen] = useLayer('addRepo');
   const [fileBrowserOpen, setFileBrowserOpen] = useLayer('files');
-
-  useSidebarAction('new-repo', () => {
-    setAddRepoOpen(true);
-  });
 
   return (
     <div className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col">

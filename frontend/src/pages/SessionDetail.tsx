@@ -66,7 +66,6 @@ import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
 import { MEDIA } from '@/framework/shell/breakpoints';
 import { percentOfContainer, pixelDeltaInverted, useDragResize } from '@/framework/shell/useDragResize';
 import { useDesktop } from "@/hooks/useDesktop";
-import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/features/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
@@ -481,10 +480,6 @@ export function SessionDetail() {
       showToast.error(t('session.actions.createFailed'));
     }
   }, [createSession, navigate, repoId, sessionRouteSuffix, t]);
-
-  useSidebarAction('new-session', () => {
-    handleNewSession();
-  });
 
   const handleCompact = useCallback(async () => {
     if (!opcodeUrl || !sessionId) return;

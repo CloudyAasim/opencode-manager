@@ -23,7 +23,6 @@ const mocks = vi.hoisted(() => ({
   useKeyboardShortcuts: vi.fn(),
   useAutoScroll: vi.fn(),
   useLayer: vi.fn(),
-  useSidebarAction: vi.fn(),
 }))
 
 vi.mock('@/hooks/useOpenCode', () => ({
@@ -79,9 +78,6 @@ vi.mock('@/framework/layer/useLayer', () => ({
   useLayer: vi.fn(() => [false, vi.fn()]),
 }))
 
-vi.mock('@/hooks/useSidebarAction', () => ({
-  useSidebarAction: vi.fn(() => {}),
-}))
 
 vi.mock('@/hooks/useAutoPlayLastResponse', () => ({
   getAssistantText: vi.fn(() => ''),
@@ -213,7 +209,6 @@ describe('SessionDetail todo-header integration', () => {
     mocks.useKeyboardShortcuts.mockReturnValue({ leaderActive: false })
     mocks.useAutoScroll.mockReturnValue({ scrollToBottom: vi.fn() })
     mocks.useLayer.mockReturnValue([false, vi.fn()])
-    mocks.useSidebarAction.mockReturnValue(undefined)
   })
 
   const createQueryClient = () =>

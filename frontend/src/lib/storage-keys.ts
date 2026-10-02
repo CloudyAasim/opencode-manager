@@ -3,7 +3,6 @@ export const STORAGE_KEYS = {
   sessionRailWidth: 'ocm.sessionRailWidth',
   chatPanelWidth: 'ocm.chatPanelWidth',
   fileTreeWidth: 'ocm.fileTreeWidth',
-  sidebarCollapsed: 'oc:sidebar:collapsed',
   locale: 'ocm.locale',
   fileSplitPct: 'ocm.fileSplitPct',
   inspectorOpen: 'ocm.inspectorOpen',

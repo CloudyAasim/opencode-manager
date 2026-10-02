@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => ({
   useUpdateRepoSchedule: vi.fn(),
   useCreateRepoSchedule: vi.fn(),
   useScheduleUrlState: vi.fn(),
-  useSidebarAction: vi.fn(),
   navigate: vi.fn(),
 }))
 
@@ -35,7 +34,6 @@ vi.mock('@/hooks/useSchedules', () => ({
 }))
 
 vi.mock('@/hooks/useScheduleUrlState', () => ({ useScheduleUrlState: mocks.useScheduleUrlState }))
-vi.mock('@/hooks/useSidebarAction', () => ({ useSidebarAction: mocks.useSidebarAction }))
 
 const job = {
   id: 'job-1',
@@ -68,7 +66,6 @@ function renderView() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.useSidebarAction.mockReturnValue({})
   mocks.useCancelRepoScheduleRun.mockReturnValue({ mutate: vi.fn(), isPending: false })
   mocks.useRunRepoSchedule.mockReturnValue({ mutate: vi.fn(), isPending: false })
   mocks.useUpdateRepoSchedule.mockReturnValue({ mutate: vi.fn(), isPending: false })

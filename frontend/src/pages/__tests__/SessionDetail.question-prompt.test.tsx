@@ -18,7 +18,6 @@ const mocks = vi.hoisted(() => ({
   useMobile: vi.fn(),
   useAutoScroll: vi.fn(),
   useLayer: vi.fn(),
-  useSidebarAction: vi.fn(),
   useSessionStatusForSession: vi.fn(),
 }))
 
@@ -86,9 +85,6 @@ vi.mock('@/framework/layer/useLayer', () => ({
   useLayer: vi.fn(() => [false, vi.fn()]),
 }))
 
-vi.mock('@/hooks/useSidebarAction', () => ({
-  useSidebarAction: vi.fn(() => {}),
-}))
 
 vi.mock('@/hooks/useAutoPlayLastResponse', () => ({
   getAssistantText: vi.fn(() => ''),
@@ -226,7 +222,6 @@ describe('SessionDetail question prompt session scoping', () => {
     mocks.useMobile.mockReturnValue(false)
     mocks.useAutoScroll.mockReturnValue({ scrollToBottom: vi.fn() })
     mocks.useLayer.mockReturnValue([false, vi.fn()])
-    mocks.useSidebarAction.mockReturnValue(undefined)
     mocks.useSessionStatusForSession.mockReturnValue({ type: 'idle' })
   })
 

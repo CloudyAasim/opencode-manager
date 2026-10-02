@@ -3,7 +3,6 @@ import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getRepo, initializeAssistantMode } from "@/api/repos"
 import { useCreateSession } from "@/hooks/useOpenCode"
-import { useSidebarAction } from "@/hooks/useSidebarAction"
 import { useSSE } from "@/hooks/useSSE"
 import { OPENCODE_API_ENDPOINT } from "@/config"
 import { Button } from "@/components/ui/button"
@@ -42,10 +41,6 @@ export function AssistantRedirect() {
   const handleCreateSession = async () => {
     await createSessionMutation.mutateAsync({ agent: undefined })
   }
-
-  useSidebarAction('new-session', () => {
-    handleCreateSession()
-  })
 
   return (
     <div className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
