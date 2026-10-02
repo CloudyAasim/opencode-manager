@@ -120,14 +120,17 @@ describe('翻译键契约', () => {
       ].join('\n'),
     ).toBeGreaterThan(0)
 
+    // This loop only has `key`. It used to reach for `file` in the failure
+    // message, and because resolveKey had always been true the branch had
+    // never run - so the one time it had something to report, it threw a
+    // ReferenceError instead of naming the key. A guard nobody has ever
+    // seen fire is not a guard.
     const offenders: string[] = []
     for (const key of prefixes) {
-      {
-        const head = key.split('*')[0]!.replace(/\.$/, '')
-        if (!head) continue
-        if (!resolveKey(en, head)) {
-          offenders.push(`${fileRel(file)}  ->  ${key}`)
-        }
+      const head = key.split('*')[0]!.replace(/\.$/, '')
+      if (!head) continue
+      if (!resolveKey(en, head)) {
+        offenders.push(`${head}  (模板键前缀，来源见下方 allTemplateKeyPrefixes)`)
       }
     }
     expect(offenders, `模板键的静态前缀解析不到：${offenders.length} 处\n  ${offenders.join('\n  ')}`).toEqual([])

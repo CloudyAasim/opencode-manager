@@ -11,19 +11,12 @@ import { home } from './ns/en/home'
 
 export const en = {
   common: {
-    save: 'Save',
     cancel: 'Cancel',
-    create: 'Create',
     delete: 'Delete',
     edit: 'Edit',
     close: 'Close',
     confirm: 'Confirm',
     back: 'Back',
-    loading: 'Loading...',
-    refresh: 'Refresh',
-    retry: 'Retry',
-    actions: 'Actions',
-    error: 'Error',
     unknown: 'Unknown',
   },
   auth: {
@@ -37,7 +30,6 @@ export const en = {
     password: 'Password',
     emailInvalid: 'Invalid email address',
     passwordRequired: 'Password is required',
-    signInFailed: 'Sign in failed',
   },
   register: {
     createAccount: 'Create Account',
@@ -55,15 +47,12 @@ export const en = {
     passwordMin: 'Password must be at least 8 characters',
     alreadyHaveAccount: 'Already have an account?',
     signIn: 'Sign in',
-    signUpFailed: 'Sign up failed',
   },
   setup: {
-    createAdminAccount: 'Create Admin Account',
     disabledTitle: 'Administrator setup required',
     disabledDescription:
       'Self-registration is disabled on this server. Set ADMIN_EMAIL and ADMIN_PASSWORD in the environment, restart the container, then sign in with those credentials.',
     goToSignIn: 'Go to sign in',
-    needAdmin: 'An administrator must create your account.',
   },
   terminal: {
     title: 'Terminal',
@@ -133,8 +122,6 @@ export const en = {
       role: 'Role',
       roleAdmin: 'Administrator',
       roleUser: 'User',
-      createdAt: 'Created',
-      actions: 'Actions',
       you: 'You',
       empty: 'No users yet.',
       newPassword: 'New password',
@@ -182,7 +169,6 @@ export const en = {
       cwd: 'Working directory',
       ipAddress: 'IP address',
       exitCode: 'Exit',
-      reason: 'Reason',
       size: 'Output',
       active: 'Active',
       prune: 'Prune older than 30 days',

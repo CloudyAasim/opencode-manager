@@ -87,9 +87,6 @@ export const session = {
     assistant: '助手',
     sessionsDialogTitle: '会话',
   },
-  workspace: {
-    title: '工作区',
-  },
   route: {
     loadingRepository: '正在加载项目…',
     repositoryNotFound: '未找到项目',

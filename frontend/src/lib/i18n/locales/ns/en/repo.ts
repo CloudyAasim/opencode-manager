@@ -1,9 +1,5 @@
 export const repo = {
-  addRepo: 'Project',
   addRepository: 'Add Project',
-  allSchedules: 'All Schedules',
-  openFiles: 'Open files',
-  selectSessionHint: 'Select a session on the left, or start a new one.',
   info: {
     directory: 'Directory',
     changes: 'Changes',
@@ -14,7 +10,6 @@ export const repo = {
   workspaceRoot: 'Workspace Root',
   back: 'Back',
   cancel: 'Cancel',
-  close: 'Close',
   create: 'Create',
   creating: 'Creating...',
   cloning: 'Cloning...',
@@ -26,15 +21,11 @@ export const repo = {
   save: 'Save',
   unknown: 'Unknown',
   worktree: 'Worktree',
-  worktreeTab: 'WT: {{branch}}',
   workspaces: 'Workspaces',
   workspace: 'Workspace',
   createWorkspace: 'Create Workspace',
   createWorkspaceDescription: 'Create an OpenCode worktree workspace for this repository.',
   createWorkspaceHint: 'OpenCode will create and manage a git worktree workspace.',
-  notFound: 'Project not found',
-  cloningRepository: 'Cloning project...',
-  notReady: 'Project not ready',
   card: {
     stagedSuffix: '{{count}}s',
   },
@@ -221,13 +212,6 @@ export const repo = {
     persistentMemory: 'Persistent memory',
     localCommand: 'Local: {{command}}',
   },
-  lsp: {
-    title: 'LSP Servers',
-    active: 'Active',
-    error: 'Error',
-    empty: 'No LSP servers active',
-    emptyHint: 'LSP servers will activate automatically when you open files',
-  },
   addDialog: {
     type: 'Repository Type',
     remote: 'Remote',
@@ -273,23 +257,13 @@ export const repo = {
   },
   unlink: 'Unlink',
   fileBrowser: {
-    title: 'File Browser',
-    searchPlaceholder: 'Search',
     selectFileToPreview: 'Select a file to preview',
-    dropFiles: 'Drop files or folders here to upload',
     noFiles: 'No files in this directory',
     refresh: 'Refresh',
     units: {
       bytes: 'Bytes',
     },
     uploading: 'Uploading {{current}} of {{total}}',
-    upload: {
-      cancelled: 'Upload Cancelled',
-      complete: 'Upload Complete',
-      uploading: 'Uploading...',
-      filesCount: '{{current}} / {{total}} files',
-      failedCount: '{{n}} file(s) failed:',
-    },
     create: {
       title: 'Create New',
       file: 'File',

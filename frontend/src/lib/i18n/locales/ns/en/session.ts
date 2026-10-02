@@ -87,9 +87,6 @@ export const session = {
     assistant: 'Assistant',
     sessionsDialogTitle: 'Sessions',
   },
-  workspace: {
-    title: 'Workspace',
-  },
   route: {
     loadingRepository: 'Loading repository...',
     repositoryNotFound: 'Repository not found',

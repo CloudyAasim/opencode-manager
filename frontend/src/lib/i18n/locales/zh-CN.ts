@@ -13,19 +13,12 @@ import type { en } from './en'
 
 export const zhCN: DeepString<typeof en> = {
   common: {
-    save: '保存',
     cancel: '取消',
-    create: '创建',
     delete: '删除',
     edit: '编辑',
     close: '关闭',
     confirm: '确认',
     back: '返回',
-    loading: '加载中…',
-    refresh: '刷新',
-    retry: '重试',
-    actions: '操作',
-    error: '错误',
     unknown: '未知',
   },
   auth: {
@@ -39,7 +32,6 @@ export const zhCN: DeepString<typeof en> = {
     password: '密码',
     emailInvalid: '邮箱地址无效',
     passwordRequired: '请输入密码',
-    signInFailed: '登录失败',
   },
   register: {
     createAccount: '创建账号',
@@ -57,15 +49,12 @@ export const zhCN: DeepString<typeof en> = {
     passwordMin: '密码至少需要 8 个字符',
     alreadyHaveAccount: '已有账号？',
     signIn: '登录',
-    signUpFailed: '注册失败',
   },
   setup: {
-    createAdminAccount: '创建管理员账号',
     disabledTitle: '需要管理员初始化',
     disabledDescription:
       '本服务器已关闭自助注册。请设置环境变量 ADMIN_EMAIL 与 ADMIN_PASSWORD，重启容器后使用该账号登录。',
     goToSignIn: '前往登录',
-    needAdmin: '你的账号需要由管理员创建。',
   },
   terminal: {
     title: '终端',
@@ -134,8 +123,6 @@ export const zhCN: DeepString<typeof en> = {
       role: '角色',
       roleAdmin: '管理员',
       roleUser: '普通用户',
-      createdAt: '创建时间',
-      actions: '操作',
       you: '你',
       empty: '暂无用户。',
       newPassword: '新密码',
@@ -182,7 +169,6 @@ export const zhCN: DeepString<typeof en> = {
       cwd: '工作目录',
       ipAddress: 'IP 地址',
       exitCode: '退出码',
-      reason: '结束原因',
       size: '输出量',
       active: '进行中',
       prune: '清理 30 天前记录',

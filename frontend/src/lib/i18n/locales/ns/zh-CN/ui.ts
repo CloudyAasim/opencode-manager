@@ -57,7 +57,6 @@ export const ui = {
     tryAgain: '重试',
   },
   header: {
-    openCodeLogoAlt: 'OpenCode',
     settings: '设置',
   },
   multiSelect: {

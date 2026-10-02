@@ -1,9 +1,5 @@
 export const repo = {
-  addRepo: '项目',
   addRepository: '添加项目',
-  allSchedules: '所有定时任务',
-  openFiles: '打开文件',
-  selectSessionHint: '从左侧选择会话，或新建一个会话开始。',
   info: {
     directory: '目录',
     changes: '改动',
@@ -14,7 +10,6 @@ export const repo = {
   workspaceRoot: '工作区根目录',
   back: '返回',
   cancel: '取消',
-  close: '关闭',
   create: '创建',
   creating: '创建中…',
   cloning: '克隆中…',
@@ -26,15 +21,11 @@ export const repo = {
   save: '保存',
   unknown: '未知',
   worktree: '工作树',
-  worktreeTab: '工作树: {{branch}}',
   workspaces: '工作区',
   workspace: '工作区',
   createWorkspace: '创建工作区',
   createWorkspaceDescription: '为此项目创建一个 OpenCode 工作树工作区。',
   createWorkspaceHint: 'OpenCode 将创建并管理一个 git 工作树工作区。',
-  notFound: '未找到项目',
-  cloningRepository: '正在克隆项目…',
-  notReady: '项目尚未就绪',
   card: {
     stagedSuffix: '{{count}} 个已暂存',
   },
@@ -221,13 +212,6 @@ export const repo = {
     persistentMemory: '持久记忆',
     localCommand: '本地：{{command}}',
   },
-  lsp: {
-    title: 'LSP 服务器',
-    active: '活跃',
-    error: '错误',
-    empty: '没有活跃的 LSP 服务器',
-    emptyHint: '打开文件时 LSP 服务器会自动激活',
-  },
   addDialog: {
     type: '项目类型',
     remote: '远程',
@@ -273,23 +257,13 @@ export const repo = {
   },
   unlink: '解除关联',
   fileBrowser: {
-    title: '文件浏览器',
-    searchPlaceholder: '搜索',
     selectFileToPreview: '选择文件以预览',
-    dropFiles: '将文件或文件夹拖放到此处以上传',
     noFiles: '此目录中没有文件',
     refresh: '刷新',
     units: {
       bytes: '字节',
     },
     uploading: '正在上传第 {{current}} / {{total}} 个',
-    upload: {
-      cancelled: '上传已取消',
-      complete: '上传完成',
-      uploading: '上传中…',
-      filesCount: '{{current}} / {{total}} 个文件',
-      failedCount: '{{n}} 个文件失败：',
-    },
     create: {
       title: '新建',
       file: '文件',
