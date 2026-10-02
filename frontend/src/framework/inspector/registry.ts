@@ -20,11 +20,6 @@ export function useInspectorRegistry(): InspectorRegistryValue {
   return registry
 }
 
-export function useInspectorTabs(): InspectorTabDefinition[] {
-  const tabs = useContext(InspectorTabList)
-  return useMemo(() => [...tabs.values()], [tabs])
-}
-
 export function useRegisterInspectorTab(tab: InspectorTabDefinition): void {
   const { register } = useInspectorRegistry()
   useEffect(() => register(tab), [register, tab])

@@ -4,7 +4,6 @@ export const BREAKPOINT = {
   expanded: 1024,
 } as const
 
-export type BreakpointName = keyof typeof BREAKPOINT
 
 export const MEDIA = {
   compactUp: `(min-width: ${BREAKPOINT.compact}px)`,
@@ -14,9 +13,3 @@ export const MEDIA = {
 } as const
 
 export type BreakpointLayout = 'narrow' | 'medium' | 'wide'
-
-export function layoutForWidth(width: number): BreakpointLayout {
-  if (width >= BREAKPOINT.expanded) return 'wide'
-  if (width >= BREAKPOINT.layout) return 'medium'
-  return 'narrow'
-}

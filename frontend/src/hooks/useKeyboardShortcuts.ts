@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useSettings } from './useSettings'
 import { DEFAULT_LEADER_KEY } from '@/api/types/settings'
-import { normalizeShortcut, parseEventShortcut } from '@/framework/commands/shortcutMatch'
+import { matchesUserShortcut, normalizeShortcut, parseEventShortcut } from '@/framework/commands/shortcutMatch'
 
 const DEFAULT_DIRECT_SHORTCUTS = ['submit', 'abort']
 const LEADER_TIMEOUT = 1500
@@ -114,7 +114,7 @@ export function useKeyboardShortcuts(actions: ShortcutActions = {}) {
       const action = Object.entries(shortcuts).find(([actionName, keys]) => {
         if (directShortcuts.includes(actionName)) return false
         if (!keys) return false
-        return normalizeShortcut(keys) === shortcut
+        return matchesUserShortcut(e, keys)
       })?.[0]
       
       if (action) {
@@ -136,7 +136,7 @@ export function useKeyboardShortcuts(actions: ShortcutActions = {}) {
     const directAction = Object.entries(shortcuts).find(([actionName, keys]) => {
       if (!directShortcuts.includes(actionName)) return false
       if (!keys) return false
-      return normalizeShortcut(keys) === shortcut
+      return matchesUserShortcut(e, keys)
     })?.[0]
     
     if (directAction) {
