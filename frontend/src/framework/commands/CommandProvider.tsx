@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useLayer } from '@/framework/layer/useLayer'
 import { CommandList, CommandRegistry } from './commandRegistry'
+import { matchesShortcut, PALETTE_SHORTCUTS } from './shortcutMatch'
 import { COMMAND_PALETTE_LAYER, type AppCommand } from './types'
 
 export function CommandProvider({ children }: { children: ReactNode }) {
@@ -25,14 +26,22 @@ export function CommandProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'k') return
-      if (!event.metaKey && !event.ctrlKey) return
-      event.preventDefault()
-      setLayer(true)
+      if (PALETTE_SHORTCUTS.some((chord) => matchesShortcut(event, chord))) {
+        event.preventDefault()
+        setLayer(true)
+        return
+      }
+      for (const command of commands.values()) {
+        if (!command.shortcut) continue
+        if (!matchesShortcut(event, command.shortcut)) continue
+        event.preventDefault()
+        command.run()
+        return
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [setLayer])
+  }, [setLayer, commands])
 
   const registry = useMemo(() => ({ register }), [register])
 

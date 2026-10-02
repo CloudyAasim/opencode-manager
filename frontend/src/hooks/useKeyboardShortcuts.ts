@@ -1,40 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useSettings } from './useSettings'
 import { DEFAULT_LEADER_KEY } from '@/api/types/settings'
-
-const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
-
-const normalizeShortcut = (shortcut: string): string => {
-  return shortcut.replace(/Cmd/g, isMac ? 'Cmd' : 'Ctrl')
-}
-
-const parseEventShortcut = (e: KeyboardEvent): string => {
-  const keys = []
-  if (e.ctrlKey) keys.push('Ctrl')
-  if (e.metaKey) keys.push('Cmd')
-  if (e.altKey) keys.push('Alt')
-  if (e.shiftKey) keys.push('Shift')
-  
-  const mainKey = e.key
-  if (!['Control', 'Meta', 'Alt', 'Shift'].includes(mainKey)) {
-    let displayKey = mainKey
-    if (mainKey === ' ') displayKey = 'Space'
-    else if (mainKey === 'ArrowUp') displayKey = 'Up'
-    else if (mainKey === 'ArrowDown') displayKey = 'Down'
-    else if (mainKey === 'ArrowLeft') displayKey = 'Left'
-    else if (mainKey === 'ArrowRight') displayKey = 'Right'
-    else if (mainKey === 'Enter') displayKey = 'Return'
-    else if (mainKey === 'Escape') displayKey = 'Esc'
-    else if (mainKey === 'Tab') displayKey = 'Tab'
-    else if (mainKey === 'Backspace') displayKey = 'Backspace'
-    else if (mainKey === 'Delete') displayKey = 'Delete'
-    else if (mainKey.length === 1) displayKey = mainKey.toUpperCase()
-    
-    keys.push(displayKey)
-    return keys.join('+')
-  }
-  return ''
-}
+import { normalizeShortcut, parseEventShortcut } from '@/framework/commands/shortcutMatch'
 
 const DEFAULT_DIRECT_SHORTCUTS = ['submit', 'abort']
 const LEADER_TIMEOUT = 1500

@@ -11,5 +11,6 @@ export interface AppCommand {
   label?: string
   groupLabel?: string
   keywords?: readonly string[]
+  shortcut?: string
   run: () => void
 }

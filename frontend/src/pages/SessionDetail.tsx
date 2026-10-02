@@ -65,7 +65,6 @@ import { PendingActionsGroup } from "@/features/notifications/PendingActionsGrou
 import { SourceControlPanel, ChangesTab } from "@/features/source-control";
 import { SessionSendErrorBanner } from "@/features/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
-import { useDialogParam } from "@/hooks/useDialogParam";
 import { MEDIA } from '@/framework/shell/breakpoints';
 import { useDesktop } from "@/hooks/useDesktop";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
@@ -74,6 +73,7 @@ import { useI18n } from "@/lib/i18n";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
 import { usePersistentJSONState } from "@/hooks/usePersistentJSONState";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { useLayer } from '@/framework/layer/useLayer'
 import {
   SESSION_RAIL_WIDTH_MIN,
   SESSION_RAIL_WIDTH_MAX,
@@ -134,13 +134,13 @@ export function SessionDetail() {
   const isDesktop = useDesktop();
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const promptInputRef = useRef<PromptInputHandle>(null);
-  const [sessionsDialogOpen, setSessionsDialogOpen] = useDialogParam('sessions');
-  const [fileBrowserOpen, setFileBrowserOpen] = useDialogParam('files');
-  const [lspDialogOpen, setLspDialogOpen] = useDialogParam('lsp');
-  const [mcpDialogOpen, setMcpDialogOpen] = useDialogParam('mcp');
-  const [skillsDialogOpen, setSkillsDialogOpen] = useDialogParam('skills');
-  const [sourceControlOpen, setSourceControlOpen] = useDialogParam('sourceControl');
-  const [resetPermissionsOpen, setResetPermissionsOpen] = useDialogParam('resetPermissions');
+  const [sessionsDialogOpen, setSessionsDialogOpen] = useLayer('sessions');
+  const [fileBrowserOpen, setFileBrowserOpen] = useLayer('files');
+  const [lspDialogOpen, setLspDialogOpen] = useLayer('lsp');
+  const [mcpDialogOpen, setMcpDialogOpen] = useLayer('mcp');
+  const [skillsDialogOpen, setSkillsDialogOpen] = useLayer('skills');
+  const [sourceControlOpen, setSourceControlOpen] = useLayer('sourceControl');
+  const [resetPermissionsOpen, setResetPermissionsOpen] = useLayer('resetPermissions');
   const [railWidth, setRailWidth] = usePersistentNumberState({
     storageKey: STORAGE_KEYS.sessionRailWidth,
     defaultValue: SESSION_RAIL_WIDTH_DEFAULT,
@@ -298,8 +298,8 @@ export function SessionDetail() {
   const { data: siblings } = useRepoSiblings(repoId);
   const createWorkspace = useCreateRepoWorkspace(repoId);
   const deleteWorkspaces = useDeleteRepoWorkspaces(repoId);
-  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useDialogParam('createWorkspace');
-  const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useDialogParam('workspaceSelector');
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useLayer('createWorkspace');
+  const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useLayer('workspaceSelector');
   const [activeWorkspaceDirectory, setActiveWorkspaceDirectory] = useState<string | undefined>();
 
   const workspaceSiblings = useMemo(
