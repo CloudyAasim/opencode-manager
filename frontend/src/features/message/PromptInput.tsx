@@ -1111,6 +1111,18 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
       cycleVariant()
     }
   })
+  // The send button and the shortcut must agree, including the two ways
+  // the button refuses to act: a pending permission and a disabled send.
+  const handleSubmitPress = () => {
+    if (hasPendingPermissionForSession) {
+      setShowDialog(true)
+      return
+    }
+    if (!prompt.trim() && imageAttachments.length === 0) return
+    if (isPromptSubmitPending && !isStreamingResponse) return
+    handleSubmit()
+  }
+  useShortcutAction('submit', handleSubmitPress)
   const showStopButton = isSessionActive
   const hideSecondaryButtons = isMobile && isSessionActive
   const showMobileScrollButton = isMobile && showScrollButton
@@ -1381,8 +1393,7 @@ return (
             renderVoiceButton('mobile')
           )}
             <button
-              data-submit-prompt
-              onClick={hasPendingPermissionForSession ? () => setShowDialog(true) : handleSubmit}
+              onClick={handleSubmitPress}
               disabled={hasPendingPermissionForSession ? false : ((!prompt.trim() && imageAttachments.length === 0) || (isPromptSubmitPending && !isStreamingResponse))}
               className={`px-4 md:px-5 py-1.5 md:py-2 rounded-lg text-sm font-medium transition-colors dark:border flex-shrink-0 min-w-[52px] ${
                 hasPendingPermissionForSession

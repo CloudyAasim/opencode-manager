@@ -546,12 +546,6 @@ export function SessionDetail() {
   }, [navigate, isAssistantSession])
 
   const { leaderActive } = useKeyboardShortcuts({
-    selectModel: () => {
-      const modelSelectTrigger = document.querySelector(
-        "[data-model-select-trigger]",
-      ) as HTMLElement;
-      modelSelectTrigger?.click();
-    },
     sessions: () => setSessionsDialogOpen(true),
     settings: openSettings,
     newSession: handleNewSession,
@@ -561,18 +555,6 @@ export function SessionDetail() {
     redo: handleRedo,
     fork: handleFork,
     toggleSidebar: () => setFileBrowserOpen(!fileBrowserOpen),
-    toggleMode: () => {
-      const modeButton = document.querySelector(
-        "[data-toggle-mode]",
-      ) as HTMLButtonElement;
-      modeButton?.click();
-    },
-    submit: () => {
-      const submitButton = document.querySelector(
-        "[data-submit-prompt]",
-      ) as HTMLButtonElement;
-      submitButton?.click();
-    },
     abort: () => {
       if (sessionId) {
         abortSession.mutate(sessionId);

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { useI18n } from '@/lib/i18n'
+import { useShortcutAction } from '@/framework/commands/shortcutRegistry'
 import type { Model, Provider } from '@/api/providers'
 
 interface ModelQuickSelectProps {
@@ -430,6 +431,14 @@ export function ModelQuickSelect({
     }
   }
 
+  // The session page used to click [data-model-select-trigger] from
+  // outside. The picker owns its own shortcut now.
+  useShortcutAction('selectModel', () => {
+    if (!disabled) {
+      handleOpenChange(true)
+    }
+  })
+
   const handleProviderSelect = (providerID: string) => {
     setSelectedProviderId(providerID)
     setSearchQuery('')
@@ -554,7 +563,7 @@ export function ModelQuickSelect({
 
   return (
     <>
-      <span onClick={() => !disabled && handleOpenChange(true)} data-model-select-trigger>
+      <span onClick={() => !disabled && handleOpenChange(true)}>
         {children}
       </span>
       <BottomSheet

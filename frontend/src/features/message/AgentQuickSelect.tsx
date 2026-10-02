@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Check } from 'lucide-react'
 
 const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAgents } from '@/hooks/useOpenCode'
+import { useShortcutAction } from '@/framework/commands/shortcutRegistry'
 import { getAgentStyleVars } from '@/lib/agent-colors'
 import { useI18n } from '@/lib/i18n'
 
@@ -76,9 +77,11 @@ export function AgentQuickSelect({
     : getAgentStyleVars(currentAgent, findAgentColor(agents, currentAgent))
   const displayName = isBashMode ? t('misc.agentQuickSelect.bash') : capitalize(currentAgent)
 
+  const [open, setOpen] = useState(false)
+  useShortcutAction('toggleMode', () => setOpen(true))
+
   const buttonContent = (
     <button
-      data-toggle-mode
       style={styleVars as React.CSSProperties}
       className="px-2 md:px-3.5 py-1 h-[36px] rounded-lg text-sm font-medium border min-w-[56px] max-w-[80px] md:max-w-[100px] flex-shrink-0 flex items-center justify-center transition-all duration-200 active:scale-95 hover:scale-105 shadow-md text-[var(--agent-color-light)] dark:text-[var(--agent-color-dark)] bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] hover:bg-[var(--agent-bg-hover-light)] dark:hover:bg-[var(--agent-bg-hover-dark)] hover:border-[var(--agent-border-hover-light)] dark:hover:border-[var(--agent-border-hover-dark)] shadow-[var(--agent-shadow-light)] dark:shadow-[var(--agent-shadow-dark)] hover:shadow-[var(--agent-shadow-hover-light)] dark:hover:shadow-[var(--agent-shadow-hover-dark)]"
     >
@@ -87,7 +90,7 @@ export function AgentQuickSelect({
   )
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         {buttonContent}
       </DropdownMenuTrigger>
