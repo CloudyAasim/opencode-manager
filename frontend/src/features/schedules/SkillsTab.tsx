@@ -1,8 +1,9 @@
 import { Label } from '@/components/ui/label'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { MultiSelect } from '@/components/ui/multi-select'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 type SkillsTabProps = {
@@ -35,9 +36,7 @@ export function SkillsTab({
         </div>
 
         {skillsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <PanelLoading className="py-8" size="md" />
         ) : skills.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-card/50 p-6 text-center">
             <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />

@@ -1,4 +1,5 @@
 import { useGitLog } from '@/api/git'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { GitCommit, AlertCircle, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -43,20 +44,17 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
 
   if (error) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">{t('misc.commitsTab.loadFailed')}</p>
-        <p className="text-xs mt-1">{error.message}</p>
-      </div>
+      <PanelMessage
+        icon={<AlertCircle />}
+        title={t('misc.commitsTab.loadFailed')}
+        detail={error.message}
+      />
     )
   }
 
   if (!data?.commits || data.commits.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <GitCommit className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">{t('misc.commitsTab.noCommits')}</p>
-      </div>
+      <PanelMessage icon={<GitCommit />} title={t('misc.commitsTab.noCommits')} />
     )
   }
 

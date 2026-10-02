@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Check, Download } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -82,9 +83,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
         </DialogHeader>
 
         {isLoading && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <PanelLoading className="py-8" size="md" />
         )}
 
         {error && (

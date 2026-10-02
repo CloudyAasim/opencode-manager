@@ -1,9 +1,10 @@
 import { Switch } from '@/components/ui/switch'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { Loader2, XCircle, AlertCircle, Plug, Shield, Key, RefreshCw, ChevronDown } from 'lucide-react'
+import { XCircle, AlertCircle, Plug, Shield, Key, RefreshCw, ChevronDown } from 'lucide-react'
 import type { McpStatus, McpServerConfig } from '@/api/mcp'
 import { useI18n } from '@/lib/i18n'
 
@@ -98,10 +99,7 @@ export function RepoMcpServerList({
           <p className="text-xs mt-1">{t('repo.mcp.noServersHint')}</p>
         </div>
       ) : isLoadingStatus ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
-          <span className="ml-2 text-sm text-muted-foreground">{t('repo.loading')}</span>
-        </div>
+        <PanelLoading className="py-8" size="sm" label={t('repo.loading')} />
       ) : (
         <div className="space-y-3">
           {serverIds.map((serverId) => {

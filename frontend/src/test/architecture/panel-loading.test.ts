@@ -48,6 +48,6 @@ describe('加载态只有一个组件', () => {
   it('加载态有可读的名字', () => {
     const owner = SOURCES.find((source) => source.rel === OWNER)!.text
     expect(owner, '转圈动画对读屏软件是静默的').toMatch(/role="status"/)
-    expect(owner, '缺少 aria-label').toMatch(/aria-label=\{t\('ui\.panelLoading\.label'\)\}/)
+    expect(owner, '缺少 aria-label').toMatch(/aria-label=\{[^}]*ui\.panelLoading\.label/)
   })
 })

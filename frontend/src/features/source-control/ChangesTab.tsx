@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { useGitStatus } from '@/api/git'
 import { useGit } from '@/hooks/useGit'
@@ -71,11 +72,11 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
 
   if (error) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">{t('misc.changesTab.loadFailed')}</p>
-        <p className="text-xs mt-1">{error.message}</p>
-      </div>
+      <PanelMessage
+        icon={<AlertCircle />}
+        title={t('misc.changesTab.loadFailed')}
+        detail={error.message}
+      />
     )
   }
 
@@ -121,10 +122,7 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
               )}
             </>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">{t('misc.changesTab.noChanges')}</p>
-            </div>
+            <PanelMessage icon={<FileText />} title={t('misc.changesTab.noChanges')} />
           )}
         </div>
 

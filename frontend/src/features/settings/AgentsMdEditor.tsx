@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Save, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -77,9 +78,7 @@ export function AgentsMdEditor() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <PanelLoading className="py-8" size="md" />
     )
   }
 

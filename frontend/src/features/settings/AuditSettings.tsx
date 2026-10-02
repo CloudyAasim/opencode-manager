@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, CheckCircle, History, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import { auditApi } from '@/api/audit'
@@ -151,9 +152,7 @@ export function AuditSettings() {
         </CardHeader>
         <CardContent className="p-0">
           {auditQuery.isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
+            <PanelLoading className="py-8" size="sm" />
           ) : auditQuery.isError ? (
             <p className="py-6 text-center text-sm text-destructive">{t('settings.audit.loadFailed')}</p>
           ) : entries.length === 0 ? (

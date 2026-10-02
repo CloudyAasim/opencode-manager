@@ -1,5 +1,6 @@
 import { createContext, Fragment, useContext, type ReactNode } from 'react'
-import { MoreHorizontal, Loader2, AlertCircle } from 'lucide-react'
+import { PanelLoading } from '@/components/ui/panel-loading'
+import { MoreHorizontal, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DESKTOP_MEDIA_QUERY, useMediaQuery } from '@/hooks/useMediaQuery'
 import {
@@ -63,10 +64,7 @@ export function SettingsList({
   const { t } = useI18n()
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
-        <span className="ml-2 text-sm text-muted-foreground">{loadingLabel ?? t('ui.settingsList.loading')}</span>
-      </div>
+      <PanelLoading className="py-8" size="sm" label={loadingLabel ?? t('ui.settingsList.loading')} />
     )
   }
 

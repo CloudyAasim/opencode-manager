@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listBranches, switchBranch, GitAuthError, getRepo } from '@/api/repos'
@@ -93,11 +94,11 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
 
   if (error) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">{t('misc.branches.loadFailed')}</p>
-        <p className="text-xs mt-1">{error.message}</p>
-      </div>
+      <PanelMessage
+        icon={<AlertCircle />}
+        title={t('misc.branches.loadFailed')}
+        detail={error.message}
+      />
     )
   }
 
@@ -233,14 +234,12 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
             })}
           </div>
         ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <GitBranch className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            {searchQuery.trim() ? (
-              <p className="text-sm">{t('misc.branches.noMatch', { query: searchQuery.trim() })}</p>
-            ) : (
-              <p className="text-sm">{t('misc.branches.noBranches')}</p>
-            )}
-          </div>
+          <PanelMessage
+            icon={<GitBranch />}
+            title={searchQuery.trim()
+              ? t('misc.branches.noMatch', { query: searchQuery.trim() })
+              : t('misc.branches.noBranches')}
+          />
         )}
       </div>
 

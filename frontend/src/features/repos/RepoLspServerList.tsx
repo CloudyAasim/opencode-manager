@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, AlertCircle, Code, Loader2 } from 'lucide-react'
+import { PanelLoading } from '@/components/ui/panel-loading'
+import { CheckCircle2, AlertCircle, Code } from 'lucide-react'
 import type { LspStatus } from '@/api/opencode'
 import { useI18n } from '@/lib/i18n'
 
@@ -35,10 +36,7 @@ export function RepoLspServerList({ isLoading, data }: RepoLspServerListProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
-        <span className="ml-2 text-sm text-muted-foreground">{t('repo.loading')}</span>
-      </div>
+      <PanelLoading className="py-8" size="sm" label={t('repo.loading')} />
     )
   }
 

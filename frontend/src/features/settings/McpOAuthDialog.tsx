@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -289,10 +290,7 @@ export function McpOAuthDialog({
 
           {step === 'waiting' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                <span className="ml-2 text-sm text-muted-foreground">{t('settingsPanels.mcpOAuth.waiting')}</span>
-              </div>
+              <PanelLoading className="py-4" size="sm" label={t('settingsPanels.mcpOAuth.waiting')} />
               <p className="text-xs text-center text-muted-foreground">
                 {t('settingsPanels.mcpOAuth.waitingDescription')}
               </p>
@@ -322,10 +320,7 @@ export function McpOAuthDialog({
 
           {step === 'popup_closed' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                <span className="ml-2 text-sm text-muted-foreground">{t('settingsPanels.mcpOAuth.checkingStatus')}</span>
-              </div>
+              <PanelLoading className="py-4" size="sm" label={t('settingsPanels.mcpOAuth.checkingStatus')} />
               <p className="text-sm text-muted-foreground">
                 {t('settingsPanels.mcpOAuth.popupClosedDescription', { code: t('settingsPanels.mcpOAuth.codeParam') })}
               </p>

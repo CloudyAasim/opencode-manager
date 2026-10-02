@@ -1,4 +1,5 @@
 import { useCommitDetails } from '@/api/git'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { Loader2, GitCommit, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GitFlatFileList } from './GitFlatFileList'
@@ -27,15 +28,17 @@ export function CommitDetailView({ repoId, commitHash, onBack, onFileSelect, sel
 
   if (error || !commit) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <GitCommit className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">{t('misc.commitDetail.loadFailed')}</p>
-        <p className="text-xs mt-1">{error?.message}</p>
-        <Button variant="outline" size="sm" onClick={onBack} className="mt-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t('misc.commitDetail.backToCommits')}
-        </Button>
-      </div>
+      <PanelMessage
+        icon={<GitCommit />}
+        title={t('misc.commitDetail.loadFailed')}
+        detail={error?.message}
+        action={
+          <Button variant="outline" size="sm" onClick={onBack} className="mt-4">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            {t('misc.commitDetail.backToCommits')}
+          </Button>
+        }
+      />
     )
   }
 
