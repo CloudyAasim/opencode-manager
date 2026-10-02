@@ -113,10 +113,13 @@ export function AccountSettings() {
   }
 
   const handleDeleteConfirm = () => {
-    if (deletePasskeyId) {
-      deletePasskeyMutation.mutate(deletePasskeyId)
-      setDeletePasskeyId(null)
-    }
+    if (!deletePasskeyId) return
+    // The dialog renders deletePasskeyMutation.isPending, so closing it here
+    // would throw that spinner away and leave the user with no feedback at
+    // all until the passkey list silently changes - or does not.
+    deletePasskeyMutation.mutate(deletePasskeyId, {
+      onSuccess: () => setDeletePasskeyId(null),
+    })
   }
 
   const handleDeleteCancel = () => {
