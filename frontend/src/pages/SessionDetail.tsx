@@ -68,6 +68,7 @@ import { SourceControlPanel, ChangesTab } from "@/features/source-control";
 import { SessionSendErrorBanner } from "@/features/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
 import { MEDIA } from '@/framework/shell/breakpoints';
+import { percentOfContainer, pixelDeltaInverted, useDragResize } from '@/framework/shell/useDragResize';
 import { useDesktop } from "@/hooks/useDesktop";
 import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/features/navigation/SessionMoreButton";
@@ -162,7 +163,8 @@ export function SessionDetail() {
         <div
           role="separator"
           aria-orientation="vertical"
-          onMouseDown={startTreeResize}
+          onMouseDown={startTreeResize.onMouseDown}
+          onTouchStart={startTreeResize.onTouchStart}
           className="w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
         />
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -226,44 +228,18 @@ export function SessionDetail() {
     },
   ]
 
-  const startTreeResize = useCallback((event: React.MouseEvent) => {
-    event.preventDefault()
-    const container = filesPanelRef.current
-    if (!container) return
-    const rect = container.getBoundingClientRect()
-    const onMove = (moveEvent: MouseEvent) => {
-      const percentage = ((moveEvent.clientX - rect.left) / rect.width) * 100
-      setTreeWidth(percentage)
-    }
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }, [setTreeWidth])
+  const startTreeResize = useDragResize({
+    containerRef: filesPanelRef,
+    getValue: () => treeWidth,
+    setValue: setTreeWidth,
+    toValue: percentOfContainer,
+  })
 
-  const startPanelResize = useCallback((event: React.MouseEvent | React.TouchEvent) => {
-    event.preventDefault()
-    const startX = 'touches' in event ? event.touches[0]?.clientX ?? 0 : event.clientX
-    const startWidth = panelWidth
-    const onMove = (moveEvent: MouseEvent | TouchEvent) => {
-      const currentX = 'touches' in moveEvent
-        ? moveEvent.touches[0]?.clientX ?? startX
-        : (moveEvent as MouseEvent).clientX
-      setPanelWidth(startWidth - (currentX - startX))
-    }
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove as EventListener)
-      window.removeEventListener('mouseup', onUp)
-      window.removeEventListener('touchmove', onMove as EventListener)
-      window.removeEventListener('touchend', onUp)
-    }
-    window.addEventListener('mousemove', onMove as EventListener)
-    window.addEventListener('mouseup', onUp)
-    window.addEventListener('touchmove', onMove as EventListener, { passive: false })
-    window.addEventListener('touchend', onUp)
-  }, [panelWidth, setPanelWidth])
+  const startPanelResize = useDragResize({
+    getValue: () => panelWidth,
+    setValue: setPanelWidth,
+    toValue: pixelDeltaInverted,
+  })
 
   const handlePanelResizeKey = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'ArrowLeft') {
@@ -925,7 +901,8 @@ export function SessionDetail() {
           onOpenChange={setRightPanelOpen}
           isDesktop={isDesktop}
           width={panelWidth}
-          onResizeStart={startPanelResize}
+          onResizeStart={startPanelResize.onMouseDown}
+          onResizeTouchStart={startPanelResize.onTouchStart}
           onResizeKey={handlePanelResizeKey}
           tabs={sessionPanelTabs}
           defaultTabIds={DEFAULT_PANEL_TAB_IDS}

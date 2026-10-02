@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
 import { usePersistentNumberState } from '@/hooks/usePersistentNumberState'
 import type { StorageKey } from '@/lib/storage-keys'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { MEDIA } from '@/framework/shell/breakpoints'
+import { percentOfContainer, useDragResize } from '@/framework/shell/useDragResize'
 import { cn } from '@/lib/utils'
 
 export const RESIZABLE_SPLIT_MIN_PCT = 15
@@ -38,7 +39,6 @@ export function ResizableSplit({
 }: ResizableSplitProps) {
   const isWide = useMediaQuery(MEDIA.layoutUp)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [dragging, setDragging] = useState(false)
   const [pct, setPct] = usePersistentNumberState({
     storageKey,
     defaultValue: RESIZABLE_SPLIT_DEFAULT_PCT,
@@ -46,43 +46,12 @@ export function ResizableSplit({
     max: RESIZABLE_SPLIT_MAX_PCT,
   })
 
-  const applyFromClientX = useCallback(
-    (clientX: number) => {
-      const node = containerRef.current
-      if (!node) return
-      const rect = node.getBoundingClientRect()
-      if (rect.width === 0) return
-      setPct(clampPct(((clientX - rect.left) / rect.width) * 100))
-    },
-    [setPct],
-  )
-
-  useEffect(() => {
-    if (!dragging) return
-
-    const onMove = (event: MouseEvent | TouchEvent) => {
-      event.preventDefault()
-      const clientX = 'touches' in event ? (event.touches[0]?.clientX ?? 0) : event.clientX
-      applyFromClientX(clientX)
-    }
-    const onUp = () => setDragging(false)
-
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    window.addEventListener('touchmove', onMove, { passive: false })
-    window.addEventListener('touchend', onUp)
-    document.body.style.userSelect = 'none'
-    document.body.style.cursor = 'col-resize'
-
-    return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      window.removeEventListener('touchmove', onMove)
-      window.removeEventListener('touchend', onUp)
-      document.body.style.userSelect = ''
-      document.body.style.cursor = ''
-    }
-  }, [dragging, applyFromClientX])
+  const startResize = useDragResize({
+    containerRef,
+    getValue: () => pct,
+    setValue: (next) => setPct(clampPct(next)),
+    toValue: percentOfContainer,
+  })
 
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
@@ -136,23 +105,17 @@ export function ResizableSplit({
           aria-valuemin={RESIZABLE_SPLIT_MIN_PCT}
           aria-valuemax={RESIZABLE_SPLIT_MAX_PCT}
           tabIndex={0}
-          onMouseDown={(event) => {
-            event.preventDefault()
-            setDragging(true)
-          }}
-          onTouchStart={(event) => {
-            event.preventDefault()
-            setDragging(true)
-          }}
+          onMouseDown={startResize.onMouseDown}
+          onTouchStart={startResize.onTouchStart}
           onDoubleClick={() => setPct(RESIZABLE_SPLIT_DEFAULT_PCT)}
           onKeyDown={onKeyDown}
           className={cn(
             'w-1.5 shrink-0 cursor-col-resize touch-none bg-border/40 transition-colors',
             'hover:bg-primary/40 focus-visible:bg-primary/50 focus-visible:outline-none',
-            dragging && 'bg-primary/50',
+            startResize.dragging && 'bg-primary/50',
           )}
           data-testid="split-handle"
-          data-dragging={dragging || undefined}
+          data-dragging={startResize.dragging || undefined}
         />
         <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', secondaryClassName)}>
           {secondary}

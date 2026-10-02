@@ -1,5 +1,6 @@
-import { useCallback, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { usePersistentNumberState } from '@/hooks/usePersistentNumberState'
+import { pixelDelta, useDragResize } from '@/framework/shell/useDragResize'
 import { useDesktop } from '@/hooks/useDesktop'
 import { useI18n } from '@/lib/i18n'
 import { STORAGE_KEYS } from '@/lib/storage-keys'
@@ -25,23 +26,11 @@ export function SessionRail({ open, onClose, children }: SessionRailProps) {
     max: SESSION_RAIL_WIDTH_MAX,
   })
 
-  const startResize = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault()
-      const startX = event.clientX
-      const startWidth = width
-      const onMove = (moveEvent: MouseEvent) => {
-        setWidth(startWidth + moveEvent.clientX - startX)
-      }
-      const onUp = () => {
-        window.removeEventListener('mousemove', onMove)
-        window.removeEventListener('mouseup', onUp)
-      }
-      window.addEventListener('mousemove', onMove)
-      window.addEventListener('mouseup', onUp)
-    },
-    [width, setWidth],
-  )
+  const startResize = useDragResize({
+    getValue: () => width,
+    setValue: setWidth,
+    toValue: pixelDelta,
+  })
 
   if (!open) return null
 
@@ -65,7 +54,8 @@ export function SessionRail({ open, onClose, children }: SessionRailProps) {
         <div
           role="separator"
           aria-orientation="vertical"
-          onMouseDown={startResize}
+          onMouseDown={startResize.onMouseDown}
+          onTouchStart={startResize.onTouchStart}
           className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
         />
       )}

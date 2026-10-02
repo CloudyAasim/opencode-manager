@@ -30,6 +30,7 @@ function panel(overrides: Partial<Parameters<typeof SessionPanel>[0]> = {}) {
     isDesktop: true,
     width: 420,
     onResizeStart: vi.fn(),
+    onResizeTouchStart: vi.fn(),
     onResizeKey: vi.fn(),
     tabs: TABS,
     defaultTabIds: ['files', 'review', 'info'],

@@ -23,7 +23,8 @@ interface SessionPanelProps {
   onOpenChange: (open: boolean) => void
   isDesktop: boolean
   width: number
-  onResizeStart: (event: React.MouseEvent | React.TouchEvent) => void
+  onResizeStart: (event: React.MouseEvent) => void
+  onResizeTouchStart: (event: React.TouchEvent) => void
   onResizeKey: (event: React.KeyboardEvent) => void
   tabs: readonly SessionPanelTab[]
   defaultTabIds: readonly string[]
@@ -42,6 +43,7 @@ export function SessionPanel({
   isDesktop,
   width,
   onResizeStart,
+  onResizeTouchStart,
   onResizeKey,
   tabs,
   defaultTabIds,
@@ -99,7 +101,7 @@ export function SessionPanel({
           aria-label={t('navigation.resizePanel')}
           tabIndex={0}
           onMouseDown={onResizeStart}
-          onTouchStart={onResizeStart}
+          onTouchStart={onResizeTouchStart}
           onKeyDown={onResizeKey}
           className="absolute inset-y-0 z-20 hidden w-2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/40 md:block"
           style={{ right: width }}
