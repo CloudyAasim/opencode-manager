@@ -403,4 +403,33 @@ describe('SettingsDialog', () => {
 
     expect(screen.getAllByLabelText('Close').length).toBeGreaterThan(0)
   })
+
+  it('桌面标签和移动端菜单来自同一份清单', () => {
+    stubMatchMedia(true)
+    render(
+      <MemoryRouter initialEntries={['/?settings=open']}>
+        <SettingsDialog />
+      </MemoryRouter>
+    )
+
+    // Labels are read back off the rendered tabs, so this does not depend on
+    // any wording. What it pins is the thing the old duplication broke: the two
+    // views used to enumerate the panels separately, and drifting apart meant
+    // a setting quietly stopped appearing on one of them.
+    const tabLabels = within(screen.getByRole('tablist'))
+      .getAllByRole('tab')
+      .map((tab) => (tab.textContent ?? '').trim())
+    expect(tabLabels.length).toBeGreaterThan(5)
+
+    const mobileContainer = document.querySelector('.sm\\:hidden') as HTMLElement
+    const labelOf = (button: HTMLElement) =>
+      tabLabels.find((label) => (button.textContent ?? '').trim().startsWith(label))
+
+    const menuOrder = within(mobileContainer)
+      .getAllByRole('button')
+      .map((button) => labelOf(button as HTMLElement))
+      .filter((label): label is string => label !== undefined)
+
+    expect(menuOrder).toEqual(tabLabels)
+  })
 })

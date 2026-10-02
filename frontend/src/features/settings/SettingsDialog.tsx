@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { GeneralSettings } from '@/features/settings/GeneralSettings'
 import { GitSettings } from '@/features/settings/GitSettings'
 import { KeyboardShortcuts } from '@/features/settings/KeyboardShortcuts'
@@ -24,6 +24,7 @@ import { useSettingsDialog, isSettingsContentTab, type SettingsContentTab } from
 import { useOptionalAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/lib/i18n'
 import { DESKTOP_MEDIA_QUERY, useMediaQuery } from '@/hooks/useMediaQuery'
+import { cn } from '@/lib/utils'
 
 type SettingsView = 'menu' | SettingsContentTab
 
@@ -117,20 +118,33 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
     return () => document.removeEventListener('keydown', handleKeyDown, { capture: true })
   }, [isOpen, close, isVersionDialogOpen])
 
-  const menuItems: Array<{ id: SettingsContentTab; icon: LucideIcon; label: string; description: string }> = [
-    { id: 'account', icon: User, label: t('settings.menu.account.label'), description: t('settings.menu.account.description') },
-    { id: 'general', icon: Settings2, label: t('settings.menu.general.label'), description: t('settings.menu.general.description') },
-    { id: 'notifications', icon: Bell, label: t('settings.menu.notifications.label'), description: t('settings.menu.notifications.description') },
-    { id: 'voice', icon: Volume2, label: t('settings.menu.voice.label'), description: t('settings.menu.voice.description') },
-    { id: 'git', icon: GitBranch, label: t('settings.menu.git.label'), description: t('settings.menu.git.description') },
-    { id: 'shortcuts', icon: Keyboard, label: t('settings.menu.shortcuts.label'), description: t('settings.menu.shortcuts.description') },
-    { id: 'opencode', icon: Code, label: t('settings.menu.opencode.label'), description: t('settings.menu.opencode.description') },
-    { id: 'logs', icon: ScrollText, label: t('settings.menu.logs.label'), description: t('settings.menu.logs.description') },
-    { id: 'providers', icon: Key, label: t('settings.menu.providers.label'), description: t('settings.menu.providers.description') },
+  // The panel lives next to its menu entry. It used to be written out a
+  // second time for the mobile view, so adding a setting meant editing two
+  // places, and forgetting the second one meant it silently never showed
+  // up on a phone.
+  const menuItems: Array<{
+    id: SettingsContentTab
+    icon: LucideIcon
+    label: string
+    description: string
+    contentClassName?: string
+    // Both trees live in the DOM at once, so a panel that only makes
+    // sense on one of them has to know which one is asking.
+    render: (surface: 'desktop' | 'mobile') => ReactNode
+  }> = [
+    { id: 'account', icon: User, label: t('settings.menu.account.label'), description: t('settings.menu.account.description'), contentClassName: 'max-w-7xl', render: () => <AccountSettings /> },
+    { id: 'general', icon: Settings2, label: t('settings.menu.general.label'), description: t('settings.menu.general.description'), contentClassName: 'max-w-4xl', render: () => <GeneralSettings /> },
+    { id: 'notifications', icon: Bell, label: t('settings.menu.notifications.label'), description: t('settings.menu.notifications.description'), contentClassName: 'max-w-7xl', render: () => <NotificationSettings /> },
+    { id: 'voice', icon: Volume2, label: t('settings.menu.voice.label'), description: t('settings.menu.voice.description'), contentClassName: 'max-w-7xl', render: () => <VoiceSettings /> },
+    { id: 'git', icon: GitBranch, label: t('settings.menu.git.label'), description: t('settings.menu.git.description'), contentClassName: 'max-w-7xl', render: () => <GitSettings /> },
+    { id: 'shortcuts', icon: Keyboard, label: t('settings.menu.shortcuts.label'), description: t('settings.menu.shortcuts.description'), contentClassName: 'max-w-7xl', render: () => <KeyboardShortcuts /> },
+    { id: 'opencode', icon: Code, label: t('settings.menu.opencode.label'), description: t('settings.menu.opencode.description'), render: () => <OpenCodeSettings onOpenVersionDialog={() => setIsVersionDialogOpen(true)} /> },
+    { id: 'logs', icon: ScrollText, label: t('settings.menu.logs.label'), description: t('settings.menu.logs.description'), contentClassName: 'h-full min-h-0', render: (surface) => ((surface === 'desktop') === isDesktop ? <LogsViewer /> : null) },
+    { id: 'providers', icon: Key, label: t('settings.menu.providers.label'), description: t('settings.menu.providers.description'), contentClassName: 'max-w-7xl', render: () => <ProviderSettings /> },
     ...(user?.role === 'admin'
       ? [
-          { id: 'users' as const, icon: Users, label: t('settings.menu.users.label'), description: t('settings.menu.users.description') },
-          { id: 'audit' as const, icon: History, label: t('settings.menu.audit.label'), description: t('settings.menu.audit.description') },
+          { id: 'users' as const, icon: Users, label: t('settings.menu.users.label'), description: t('settings.menu.users.description'), contentClassName: 'max-w-7xl', render: () => <UsersSettings /> },
+          { id: 'audit' as const, icon: History, label: t('settings.menu.audit.label'), description: t('settings.menu.audit.description'), contentClassName: 'max-w-7xl', render: () => <AuditSettings /> },
         ]
       : []),
   ]
@@ -186,23 +200,15 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
             </TabsList>
 
             <div className={`@container min-h-0 min-w-0 flex-1 p-6 ${activeTab === 'logs' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-              <TabsContent key="account" value="account" className="mt-0 px-0 max-w-7xl"><AccountSettings /></TabsContent>
-              <TabsContent key="general" value="general" className="mt-0 px-0 max-w-4xl"><GeneralSettings /></TabsContent>
-              <TabsContent key="notifications" value="notifications" className="mt-0 px-0 max-w-7xl"><NotificationSettings /></TabsContent>
-              <TabsContent key="voice" value="voice" className="mt-0 px-0 max-w-7xl"><VoiceSettings /></TabsContent>
-              <TabsContent key="git" value="git" className="mt-0 px-0 max-w-7xl"><GitSettings /></TabsContent>
-              <TabsContent key="shortcuts" value="shortcuts" className="mt-0 px-0 max-w-7xl"><KeyboardShortcuts /></TabsContent>
-              <TabsContent key="opencode" value="opencode" className="mt-0 px-0">
-                <OpenCodeSettings onOpenVersionDialog={() => setIsVersionDialogOpen(true)} />
-              </TabsContent>
-              <TabsContent key="logs" value="logs" className="mt-0 h-full min-h-0 px-0">{isDesktop && <LogsViewer />}</TabsContent>
-              <TabsContent key="providers" value="providers" className="mt-0 px-0 max-w-7xl"><ProviderSettings /></TabsContent>
-              {user?.role === 'admin' && (
-                <TabsContent key="users" value="users" className="mt-0 px-0 max-w-7xl"><UsersSettings /></TabsContent>
-              )}
-              {user?.role === 'admin' && (
-                <TabsContent key="audit" value="audit" className="mt-0 px-0 max-w-7xl"><AuditSettings /></TabsContent>
-              )}
+              {menuItems.map((item) => (
+                <TabsContent
+                  key={item.id}
+                  value={item.id}
+                  className={cn('mt-0 px-0', item.contentClassName)}
+                >
+                  {item.render('desktop')}
+                </TabsContent>
+              ))}
             </div>
           </Tabs>
         </div>
@@ -260,19 +266,13 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                </div>
              )}
 
-             {mobileView === 'account' && <div key="account"><AccountSettings /></div>}
-             {mobileView === 'general' && <div key="general"><GeneralSettings /></div>}
-             {mobileView === 'notifications' && <div key="notifications"><NotificationSettings /></div>}
-             {mobileView === 'voice' && <div key="voice"><VoiceSettings /></div>}
-             {mobileView === 'git' && <div key="git"><GitSettings /></div>}
-              {mobileView === 'shortcuts' && <div key="shortcuts"><KeyboardShortcuts /></div>}
-                {mobileView === 'opencode' && (
-                   <OpenCodeSettings key="opencode" onOpenVersionDialog={() => setIsVersionDialogOpen(true)} />
-                )}
-              {mobileView === 'providers' && <div key="providers"><ProviderSettings /></div>}
-              {mobileView === 'users' && user?.role === 'admin' && <div key="users"><UsersSettings /></div>}
-              {mobileView === 'audit' && user?.role === 'admin' && <div key="audit"><AuditSettings /></div>}
-              {mobileView === 'logs' && !isDesktop && <div key="logs" className="h-full min-h-0"><LogsViewer /></div>}
+              {menuItems.map((item) => (
+                mobileView === item.id && (
+                  <div key={item.id} className={item.id === 'logs' ? 'h-full min-h-0' : undefined}>
+                    {item.render('mobile')}
+                  </div>
+                )
+              ))}
            </div>
         </div>
 
