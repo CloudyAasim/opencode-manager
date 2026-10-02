@@ -1,7 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { useOpenCodeClient } from './useOpenCode'
 
-export function useLSPStatus(opcodeUrl: string | null | undefined, directory?: string) {
+interface UseLSPStatusOptions {
+  enabled?: boolean
+}
+
+export function useLSPStatus(
+  opcodeUrl: string | null | undefined,
+  directory?: string,
+  { enabled = true }: UseLSPStatusOptions = {},
+) {
   const client = useOpenCodeClient(opcodeUrl, directory)
 
   return useQuery({
@@ -10,7 +18,7 @@ export function useLSPStatus(opcodeUrl: string | null | undefined, directory?: s
       if (!client) throw new Error('Missing client')
       return client.getLSPStatus()
     },
-    enabled: !!client,
+    enabled: !!client && enabled,
     refetchInterval: 60000,
     staleTime: 10000,
     refetchOnWindowFocus: true,

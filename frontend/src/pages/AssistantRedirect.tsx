@@ -9,26 +9,16 @@ import { OPENCODE_API_ENDPOINT } from "@/config"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/ui/header"
 import { SessionList } from "@/features/session/SessionList"
-import { FileBrowserSheet } from "@/features/file-browser/FileBrowserSheet"
-import { RepoMcpDialog } from "@/features/repos/RepoMcpDialog"
-import { RepoSkillsDialog } from "@/features/repos/RepoSkillsDialog"
-import { SourceControlPanel } from "@/features/source-control"
-import { ResetPermissionsDialog } from "@/features/repos/ResetPermissionsDialog"
+import { RepoOverlays } from "@/features/repos/RepoOverlays"
 import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup"
 import { useI18n } from "@/lib/i18n"
 import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
 import { Plus } from "lucide-react"
-import { useLayer } from '@/framework/layer/useLayer'
 
 export function AssistantRedirect() {
   const navigate = useNavigate()
   const { t } = useI18n()
   const repoId = 0
-  const [fileBrowserOpen, setFileBrowserOpen] = useLayer('files')
-  const [mcpDialogOpen, setMcpDialogOpen] = useLayer('mcp')
-  const [skillsDialogOpen, setSkillsDialogOpen] = useLayer('skills')
-  const [sourceControlOpen, setSourceControlOpen] = useLayer('sourceControl')
-  const [resetPermissionsOpen, setResetPermissionsOpen] = useLayer('resetPermissions')
 
   const opcodeUrl = OPENCODE_API_ENDPOINT
   const { data: repo, isLoading: repoLoading, error: repoError } = useQuery({
@@ -89,28 +79,15 @@ export function AssistantRedirect() {
         )}
       </div>
       {assistantDirectory && (
-        <>
-          <FileBrowserSheet isOpen={fileBrowserOpen} onClose={() => setFileBrowserOpen(false)} basePath={repo?.localPath} repoName={t('misc.assistant.repoName')} repoId={repoId} />
-          <RepoMcpDialog open={mcpDialogOpen} onOpenChange={setMcpDialogOpen} directory={assistantDirectory} />
-          {assistantDirectory && opcodeUrl ? (
-            <RepoSkillsDialog
-              open={skillsDialogOpen}
-              onOpenChange={setSkillsDialogOpen}
-              repoId={repoId}
-              sessionId="assistant-session"
-              opcodeUrl={opcodeUrl}
-              directory={assistantDirectory}
-            />
-          ) : (
-            <RepoSkillsDialog
-              open={skillsDialogOpen}
-              onOpenChange={setSkillsDialogOpen}
-              repoId={repoId}
-            />
-          )}
-          <SourceControlPanel repoId={repoId} isOpen={sourceControlOpen} onClose={() => setSourceControlOpen(false)} currentBranch={repo?.currentBranch || repo?.branch || DEFAULT_REPO_BRANCH} repoName={t('misc.assistant.repoName')} />
-          <ResetPermissionsDialog open={resetPermissionsOpen} onOpenChange={setResetPermissionsOpen} repoId={repoId} />
-        </>
+        <RepoOverlays
+          repoId={repoId}
+          opcodeUrl={opcodeUrl}
+          directory={assistantDirectory}
+          basePath={repo?.localPath}
+          repoName={t('misc.assistant.repoName')}
+          currentBranch={repo?.currentBranch || repo?.branch || DEFAULT_REPO_BRANCH}
+          sessionId={opcodeUrl ? 'assistant-session' : undefined}
+        />
       )}
     </div>
   )

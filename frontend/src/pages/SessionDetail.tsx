@@ -11,7 +11,6 @@ import { SessionList } from "@/features/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
 import { FetchError } from '@/api/fetchWrapper'
 
-import { FileBrowserSheet } from "@/features/file-browser/FileBrowserSheet";
 import { FileTreeExplorer } from "@/features/file-browser/FileTreeExplorer";
 import { FilePreview } from "@/features/file-browser/FilePreview";
 import { FileDiffView } from "@/features/source-control/FileDiffView";
@@ -51,10 +50,7 @@ import { getMessagesContentVersion } from "./sessionContentVersion";
 import { showToast } from "@/lib/toast";
 import { getRepoDisplayName } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { RepoMcpDialog } from "@/features/repos/RepoMcpDialog";
-import { ResetPermissionsDialog } from "@/features/repos/ResetPermissionsDialog";
-import { RepoLspDialog } from "@/features/repos/RepoLspDialog";
-import { RepoSkillsDialog } from "@/features/repos/RepoSkillsDialog";
+import { RepoOverlays } from "@/features/repos/RepoOverlays";
 import { createOpenCodeClient } from "@/api/opencode";
 import { usePermissions, useQuestions } from "@/contexts/EventContext";
 import { useSessionStatusForSession } from "@/stores/sessionStatusStore";
@@ -64,7 +60,7 @@ import { MinimizedQuestionIndicator } from "@/features/session/MinimizedQuestion
 import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup";
 import { SessionPanel, type SessionPanelTab } from "@/features/session/SessionPanel";
 import { SessionRail } from "@/features/session/SessionRail";
-import { SourceControlPanel, ChangesTab } from "@/features/source-control";
+import { ChangesTab } from "@/features/source-control";
 import { SessionSendErrorBanner } from "@/features/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
 import { MEDIA } from '@/framework/shell/breakpoints';
@@ -112,11 +108,9 @@ export function SessionDetail() {
   const promptInputRef = useRef<PromptInputHandle>(null);
   const [sessionsDialogOpen, setSessionsDialogOpen] = useLayer('sessions');
   const [fileBrowserOpen, setFileBrowserOpen] = useLayer('files');
-  const [lspDialogOpen, setLspDialogOpen] = useLayer('lsp');
-  const [mcpDialogOpen, setMcpDialogOpen] = useLayer('mcp');
-  const [skillsDialogOpen, setSkillsDialogOpen] = useLayer('skills');
-  const [sourceControlOpen, setSourceControlOpen] = useLayer('sourceControl');
-  const [resetPermissionsOpen, setResetPermissionsOpen] = useLayer('resetPermissions');
+  const [, setMcpDialogOpen] = useLayer('mcp');
+  const [, setSkillsDialogOpen] = useLayer('skills');
+  const [, setSourceControlOpen] = useLayer('sourceControl');
   const [rightPanelOpen, setRightPanelOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(() =>
     typeof window === 'undefined' || typeof window.matchMedia !== 'function'
@@ -610,9 +604,8 @@ export function SessionDetail() {
   }, [sessionId, updateSession]);
 
   const handleFileBrowserClose = useCallback(() => {
-    setFileBrowserOpen(false)
     setSelectedFilePath(undefined)
-  }, [setFileBrowserOpen]);
+  }, []);
 
   const handleChildSessionClick = useCallback((childSessionId: string) => {
     navigate(`/repos/${repoId}/sessions/${childSessionId}${sessionRouteSuffix}`)
@@ -930,52 +923,17 @@ export function SessionDetail() {
         </DialogContent>
       </Dialog>
 
-      <FileBrowserSheet
-        isOpen={fileBrowserOpen}
-        onClose={handleFileBrowserClose}
-        basePath={workspaceBasePath}
-        repoName={workspaceDisplayName}
+      <RepoOverlays
         repoId={repoId}
-        initialSelectedFile={selectedFilePath}
-      />
-
-      <RepoLspDialog
-        open={lspDialogOpen}
-        onOpenChange={setLspDialogOpen}
         opcodeUrl={opcodeUrl}
         directory={repoDirectory}
-      />
-
-      {opcodeUrl && sessionId && (
-        <RepoSkillsDialog
-          open={skillsDialogOpen}
-          onOpenChange={setSkillsDialogOpen}
-          repoId={repoId}
-          sessionId={sessionId}
-          opcodeUrl={opcodeUrl}
-          directory={repoDirectory}
-          onSkillLoaded={(skill) => showToast.success(t('session.actions.loadedSkill', { name: skill.name }))}
-        />
-      )}
-
-      <RepoMcpDialog
-        open={mcpDialogOpen}
-        onOpenChange={setMcpDialogOpen}
-        directory={repoDirectory}
-      />
-
-      <SourceControlPanel
-        repoId={repoId}
-        isOpen={sourceControlOpen}
-        onClose={() => setSourceControlOpen(false)}
-        currentBranch={currentBranch}
+        basePath={workspaceBasePath}
         repoName={workspaceDisplayName}
-      />
-
-      <ResetPermissionsDialog
-        open={resetPermissionsOpen}
-        onOpenChange={setResetPermissionsOpen}
-        repoId={repoId}
+        currentBranch={currentBranch}
+        sessionId={sessionId}
+        initialSelectedFile={selectedFilePath}
+        onFileBrowserClosed={handleFileBrowserClose}
+        onSkillLoaded={(skill) => showToast.success(t('session.actions.loadedSkill', { name: skill.name }))}
       />
 
       {!isAssistantSession && (

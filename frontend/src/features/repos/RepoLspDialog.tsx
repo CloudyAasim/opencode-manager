@@ -12,7 +12,7 @@ interface RepoLspDialogProps {
 
 export function RepoLspDialog({ open, onOpenChange, opcodeUrl, directory }: RepoLspDialogProps) {
   const { t } = useI18n()
-  const { isLoading, data } = useLSPStatus(opcodeUrl, directory)
+  const { isLoading, data } = useLSPStatus(opcodeUrl, directory, { enabled: open })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

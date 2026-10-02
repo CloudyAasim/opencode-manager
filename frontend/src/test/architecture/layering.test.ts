@@ -164,6 +164,10 @@ const CROSS_FEATURE_DIALOG: ReadonlySet<string> = new Set([
   'features/navigation/RepoQuickSwitchSheet.tsx -> features/repos/AddRepoDialog.tsx',
   'features/source-control/BranchesTab.tsx -> features/repos/CreateWorktreeDialog.tsx',
   'features/repos/RepoRowActions.tsx -> features/source-control/SourceControlPanel.tsx',
+  // The repo overlay cluster is mounted from one place so the five
+  // pages and features that used to wire it by hand cannot drift apart.
+  'features/repos/RepoOverlays.tsx -> features/file-browser/FileBrowserSheet.tsx',
+  'features/repos/RepoOverlays.tsx -> features/source-control/index.ts',
 ])
 
 const MIGRATION_BACK_REFERENCE_BASELINE = 0
