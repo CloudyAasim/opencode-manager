@@ -6,10 +6,9 @@ import { z } from 'zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Loader2, Github, KeyRound, Mail } from 'lucide-react'
 import type { AuthConfig } from '@/lib/auth-loaders'
-import { AuthShell, AuthCard, AuthError, AuthField, AuthSubmit } from '@/framework/shell/AuthShell'
+import { AuthCard, AuthError, AuthField, AuthInput, AuthShell, AuthSubmit } from '@/framework/shell/AuthShell'
 
 type LoginFormData = z.infer<ReturnType<typeof createLoginSchema>>
 
@@ -192,19 +191,17 @@ export function Login() {
         {hasCredentials && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <AuthField id="email" label={t('auth.email')} error={errors.email?.message}>
-              <Input
+              <AuthInput
                 id="email"
                 type="email"
-                className="bg-input border-border focus:border-primary"
                 {...register('email')}
                 aria-invalid={!!errors.email}
               />
             </AuthField>
             <AuthField id="password" label={t('auth.password')} error={errors.password?.message}>
-              <Input
+              <AuthInput
                 id="password"
                 type="password"
-                className="bg-input border-border focus:border-primary"
                 {...register('password')}
                 aria-invalid={!!errors.password}
               />

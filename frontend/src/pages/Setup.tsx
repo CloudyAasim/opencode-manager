@@ -6,10 +6,9 @@ import { Link, useLoaderData } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { UserPlus, ShieldAlert } from 'lucide-react'
 import type { AuthConfig } from '@/lib/auth-loaders'
-import { AuthShell, AuthCard, AuthError, AuthField, AuthSubmit } from '@/framework/shell/AuthShell'
+import { AuthCard, AuthError, AuthField, AuthInput, AuthShell, AuthSubmit } from '@/framework/shell/AuthShell'
 
 type SetupFormData = z.infer<ReturnType<typeof createSetupSchema>>
 
@@ -75,31 +74,28 @@ export function Setup() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <AuthField id="name" label={t('register.name')} error={errors.name?.message}>
-              <Input
+              <AuthInput
                 id="name"
                 type="text"
                 placeholder={t('register.namePlaceholder')}
-                className="bg-input border-border focus:border-primary"
                 {...register('name')}
                 aria-invalid={!!errors.name}
               />
             </AuthField>
             <AuthField id="email" label={t('auth.email')} error={errors.email?.message}>
-              <Input
+              <AuthInput
                 id="email"
                 type="email"
                 placeholder="admin@example.com"
-                className="bg-input border-border focus:border-primary"
                 {...register('email')}
                 aria-invalid={!!errors.email}
               />
             </AuthField>
             <AuthField id="password" label={t('auth.password')} error={errors.password?.message}>
-              <Input
+              <AuthInput
                 id="password"
                 type="password"
                 placeholder={t('register.passwordPlaceholder')}
-                className="bg-input border-border focus:border-primary"
                 {...register('password')}
                 aria-invalid={!!errors.password}
               />

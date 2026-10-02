@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { LanguageToggle } from '@/components/LanguageToggle'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useI18n } from '@/lib/i18n'
 import { AlertCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface AuthShellProps {
   subtitle?: ReactNode
@@ -50,6 +52,17 @@ interface AuthFieldProps {
   label: string
   error?: string
   children: ReactNode
+}
+
+// The auth inputs restyle the shared Input: input-coloured surface,
+// a border that matches the rest of the form, and a focus ring that also
+// shows on mouse focus rather than keyboard focus only. All three pages
+// spelled that out on every field, which is how the three of them drifted
+// apart in the first place.
+const AUTH_INPUT_CLASS = 'bg-input border-border focus:border-primary'
+
+export function AuthInput({ className, ...props }: ComponentProps<typeof Input>) {
+  return <Input className={cn(AUTH_INPUT_CLASS, className)} {...props} />
 }
 
 export function AuthField({ id, label, error, children }: AuthFieldProps) {

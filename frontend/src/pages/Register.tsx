@@ -5,10 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/lib/i18n'
-import { Input } from '@/components/ui/input'
 import { UserPlus } from 'lucide-react'
 import type { AuthConfig } from '@/lib/auth-loaders'
-import { AuthShell, AuthCard, AuthError, AuthField, AuthSubmit } from '@/framework/shell/AuthShell'
+import { AuthCard, AuthError, AuthField, AuthInput, AuthShell, AuthSubmit } from '@/framework/shell/AuthShell'
 
 type RegisterFormData = z.infer<ReturnType<typeof createRegisterSchema>>
 
@@ -83,31 +82,28 @@ export function Register() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <AuthField id="name" label={t('register.name')} error={errors.name?.message}>
-            <Input
+            <AuthInput
               id="name"
               type="text"
               placeholder={t('register.namePlaceholder')}
-              className="bg-input border-border focus:border-primary"
               {...register('name')}
               aria-invalid={!!errors.name}
             />
           </AuthField>
           <AuthField id="email" label={t('auth.email')} error={errors.email?.message}>
-            <Input
+            <AuthInput
               id="email"
               type="email"
               placeholder={t('register.emailPlaceholder')}
-              className="bg-input border-border focus:border-primary"
               {...register('email')}
               aria-invalid={!!errors.email}
             />
           </AuthField>
           <AuthField id="password" label={t('auth.password')} error={errors.password?.message}>
-            <Input
+            <AuthInput
               id="password"
               type="password"
               placeholder={t('register.passwordPlaceholder')}
-              className="bg-input border-border focus:border-primary"
               {...register('password')}
               aria-invalid={!!errors.password}
             />
@@ -117,11 +113,10 @@ export function Register() {
             label={t('register.confirmPassword')}
             error={errors.confirmPassword?.message}
           >
-            <Input
+            <AuthInput
               id="confirmPassword"
               type="password"
               placeholder={t('register.confirmPasswordPlaceholder')}
-              className="bg-input border-border focus:border-primary"
               {...register('confirmPassword')}
               aria-invalid={!!errors.confirmPassword}
             />
