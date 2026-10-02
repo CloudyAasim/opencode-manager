@@ -63,6 +63,7 @@ import { QuestionPrompt } from "@/features/session/QuestionPrompt";
 import { MinimizedQuestionIndicator } from "@/features/session/MinimizedQuestionIndicator";
 import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup";
 import { SessionPanel, type SessionPanelTab } from "@/features/session/SessionPanel";
+import { SessionRail } from "@/features/session/SessionRail";
 import { SourceControlPanel, ChangesTab } from "@/features/source-control";
 import { SessionSendErrorBanner } from "@/features/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
@@ -75,9 +76,6 @@ import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useLayer } from '@/framework/layer/useLayer'
 import {
-  SESSION_RAIL_WIDTH_MIN,
-  SESSION_RAIL_WIDTH_MAX,
-  SESSION_RAIL_WIDTH_DEFAULT,
   CHAT_PANEL_WIDTH_MIN,
   CHAT_PANEL_WIDTH_MAX,
   CHAT_PANEL_WIDTH_DEFAULT,
@@ -118,12 +116,6 @@ export function SessionDetail() {
   const [skillsDialogOpen, setSkillsDialogOpen] = useLayer('skills');
   const [sourceControlOpen, setSourceControlOpen] = useLayer('sourceControl');
   const [resetPermissionsOpen, setResetPermissionsOpen] = useLayer('resetPermissions');
-  const [railWidth, setRailWidth] = usePersistentNumberState({
-    storageKey: STORAGE_KEYS.sessionRailWidth,
-    defaultValue: SESSION_RAIL_WIDTH_DEFAULT,
-    min: SESSION_RAIL_WIDTH_MIN,
-    max: SESSION_RAIL_WIDTH_MAX,
-  })
   const [rightPanelOpen, setRightPanelOpen] = useState(false)
   const [railOpen, setRailOpen] = useState(() =>
     typeof window === 'undefined' || typeof window.matchMedia !== 'function'
@@ -250,21 +242,6 @@ export function SessionDetail() {
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
   }, [setTreeWidth])
-
-  const startRailResize = useCallback((event: React.MouseEvent) => {
-    event.preventDefault()
-    const startX = event.clientX
-    const startWidth = railWidth
-    const onMove = (moveEvent: MouseEvent) => {
-      setRailWidth(startWidth + moveEvent.clientX - startX)
-    }
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }, [railWidth, setRailWidth])
 
   const startPanelResize = useCallback((event: React.MouseEvent | React.TouchEvent) => {
     event.preventDefault()
@@ -812,41 +789,18 @@ export function SessionDetail() {
       </div>
 
       <div className="relative flex flex-1 min-h-0">
-        {opcodeUrl && railOpen && (
-          <>
-            {!isDesktop && (
-              <button
-                type="button"
-                aria-label={t('navigation.close')}
-                onClick={() => setRailOpen(false)}
-                className="absolute inset-0 z-30 bg-black/40 transition-opacity duration-200 md:hidden"
-              />
-            )}
-            <aside
-              className="absolute inset-y-0 left-0 z-40 flex w-[82%] max-w-xs shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-auto md:max-w-none md:bg-transparent md:shadow-none"
-              style={isDesktop ? { width: railWidth } : undefined}
-            >
-              <div className="min-h-0 flex-1 overflow-hidden">
-                <SessionList
-                  opcodeUrl={opcodeUrl}
-                  directory={repoDirectory}
-                  activeSessionID={sessionId || undefined}
-                  onSelectSession={(sessionID) => {
-                    navigate(`/repos/${repoId}/sessions/${sessionID}${sessionRouteSuffix}`)
-                    if (!isDesktop) setRailOpen(false)
-                  }}
-                />
-              </div>
-            </aside>
-            {isDesktop && (
-              <div
-                role="separator"
-                aria-orientation="vertical"
-                onMouseDown={startRailResize}
-                className="hidden md:block w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
-              />
-            )}
-          </>
+        {opcodeUrl && (
+          <SessionRail open={railOpen} onClose={() => setRailOpen(false)}>
+            <SessionList
+              opcodeUrl={opcodeUrl}
+              directory={repoDirectory}
+              activeSessionID={sessionId || undefined}
+              onSelectSession={(sessionID) => {
+                navigate(`/repos/${repoId}/sessions/${sessionID}${sessionRouteSuffix}`)
+                if (!isDesktop) setRailOpen(false)
+              }}
+            />
+          </SessionRail>
         )}
         <div className="relative flex-1 overflow-hidden flex flex-col">
         <div key={sessionId} data-testid="session-message-scroll" ref={messageContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-subtle [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]" style={{ paddingBottom: promptOverlayHeight + inputBottomOffset + PROMPT_OVERLAY_CLEARANCE_PX }}>
