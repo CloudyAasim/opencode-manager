@@ -15,6 +15,7 @@ import type {
   OpenCodeDirectoryFileInfo,
 } from './types/settings'
 import { API_BASE_URL } from '@/config'
+import { REQUEST_TIMEOUTS } from './timeouts'
 import { fetchWrapper, FetchError } from './fetchWrapper'
 
 const DEFAULT_USER_ID = 'default'
@@ -156,6 +157,8 @@ export const settingsApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ version }),
+      // runs the installer, which the server allows two minutes for
+      timeout: REQUEST_TIMEOUTS.versionInstall,
     })
   },
 
@@ -171,6 +174,8 @@ export const settingsApi = {
     return fetchWrapper(`${API_BASE_URL}/api/settings/opencode-upgrade`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      // runs `opencode upgrade`, which the server allows 90s for
+      timeout: REQUEST_TIMEOUTS.openCodeUpgrade,
     })
   },
 

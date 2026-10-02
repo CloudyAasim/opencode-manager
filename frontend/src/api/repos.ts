@@ -1,6 +1,7 @@
 import type { Repo } from './types'
 import { FetchError, fetchWrapper, fetchWrapperVoid, fetchWrapperBlob } from './fetchWrapper'
 import { API_BASE_URL } from '@/config'
+import { REQUEST_TIMEOUTS } from './timeouts'
 import { saveFile } from '@/lib/download'
 import type { DiscoverReposResponse, AssistantModeStatus, AssistantModeInitRequest } from '@opencode-manager/shared/types'
 
@@ -19,6 +20,8 @@ export async function createRepo(options: CreateRepoOptions = {}): Promise<Repo>
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
+    // a URL spends up to five minutes inside `git clone` on the server
+    timeout: REQUEST_TIMEOUTS.clone,
   })
 }
 
