@@ -123,6 +123,17 @@ export function setRepoGitStatusCaches(queryClient: QueryClient, repoId: number,
   )
 }
 
+/** What the file list looks like right now, so a failed optimistic write can put it back. */
+export function getRepoGitStatus(queryClient: QueryClient, repoId: number): GitStatusResponse | undefined {
+  return queryClient.getQueryData<GitStatusResponse>(['gitStatus', repoId])
+}
+
+/** A refetch landing mid-write would stomp the local guess. Stop it first. */
+export async function cancelRepoGitStatus(queryClient: QueryClient, repoId: number) {
+  await queryClient.cancelQueries({ queryKey: ['gitStatus', repoId] })
+  await queryClient.cancelQueries({ queryKey: ['reposGitStatus'] })
+}
+
 const repoGitInvalidationTimers = new WeakMap<QueryClient, Map<number, ReturnType<typeof setTimeout>>>()
 
 export function invalidateRepoGitCachesDebounced(queryClient: QueryClient, repoId: number, delayMs = 200) {

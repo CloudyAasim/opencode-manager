@@ -2,7 +2,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { gitFetch, gitPull, gitPush, gitCommit, gitStageFiles, gitUnstageFiles, gitDiscardFiles, fetchGitLog, fetchGitDiff, gitReset, getApiErrorMessage, fetchGitStatus } from '@/api/git'
 import { createBranch, switchBranch } from '@/api/repos'
 import { showToast } from '@/lib/toast'
-import { invalidateRepoGitCaches, setRepoGitStatusCaches } from '@/lib/queryInvalidation'
+import {
+  cancelRepoGitStatus,
+  getRepoGitStatus,
+  invalidateRepoGitCaches,
+  setRepoGitStatusCaches,
+} from '@/lib/queryInvalidation'
+import { withStagedPaths, withoutPaths } from '@/lib/gitStatus'
 import { useI18n } from '@/lib/i18n'
 
 export function useGit(repoId: number | undefined, onError?: (error: unknown) => void) {
@@ -74,12 +80,24 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
       if (!repoId) throw new Error('No repo ID')
       return gitStageFiles(repoId, paths)
     },
+    onMutate: async (paths) => {
+      if (!repoId) return { previous: undefined }
+      await cancelRepoGitStatus(queryClient, repoId)
+      const previous = getRepoGitStatus(queryClient, repoId)
+      if (previous) {
+        setRepoGitStatusCaches(queryClient, repoId, withStagedPaths(previous, paths, true))
+      }
+      return { previous }
+    },
+    onError: (error, _paths, context) => {
+      if (context?.previous) setRepoGitStatusCaches(queryClient, repoId!, context.previous)
+      handleError(error)
+    },
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false, invalidateRepoMeta: false })
       showToast.success(t('misc.sourceControl.filesStaged'))
     },
-    onError: handleError,
   })
 
   const unstageFilesMutation = useMutation({
@@ -87,12 +105,24 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
       if (!repoId) throw new Error('No repo ID')
       return gitUnstageFiles(repoId, paths)
     },
+    onMutate: async (paths) => {
+      if (!repoId) return { previous: undefined }
+      await cancelRepoGitStatus(queryClient, repoId)
+      const previous = getRepoGitStatus(queryClient, repoId)
+      if (previous) {
+        setRepoGitStatusCaches(queryClient, repoId, withStagedPaths(previous, paths, false))
+      }
+      return { previous }
+    },
+    onError: (error, _paths, context) => {
+      if (context?.previous) setRepoGitStatusCaches(queryClient, repoId!, context.previous)
+      handleError(error)
+    },
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false, invalidateRepoMeta: false })
       showToast.success(t('misc.sourceControl.filesUnstaged'))
     },
-    onError: handleError,
   })
 
   const discardFilesMutation = useMutation({
@@ -100,11 +130,23 @@ export function useGit(repoId: number | undefined, onError?: (error: unknown) =>
       if (!repoId) throw new Error('No repo ID')
       return gitDiscardFiles(repoId, paths, staged)
     },
+    onMutate: async ({ paths }) => {
+      if (!repoId) return { previous: undefined }
+      await cancelRepoGitStatus(queryClient, repoId)
+      const previous = getRepoGitStatus(queryClient, repoId)
+      if (previous) {
+        setRepoGitStatusCaches(queryClient, repoId, withoutPaths(previous, paths))
+      }
+      return { previous }
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previous) setRepoGitStatusCaches(queryClient, repoId!, context.previous)
+      handleError(error)
+    },
     onSuccess: (data) => {
       if (repoId) setRepoGitStatusCaches(queryClient, repoId, data)
       invalidateRepoGitCaches(queryClient, repoId, { invalidateStatus: false, invalidateRepoMeta: false })
     },
-    onError: handleError,
   })
 
   const log = useMutation({

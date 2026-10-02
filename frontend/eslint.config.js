@@ -26,6 +26,10 @@ export default defineConfig([
     },
     rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+      // A preset was turning this off, which let a duplicate onError in a
+      // useMutation options object silently replace a rollback handler.
+      // TypeScript says nothing about this; only this rule does.
+      'no-dupe-keys': 'error',
       'react-hooks/exhaustive-deps': 'warn',
     },
   },

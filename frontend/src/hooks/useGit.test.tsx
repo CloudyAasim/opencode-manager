@@ -37,6 +37,8 @@ vi.mock('../lib/toast', () => ({
 const mockInvalidateQueries = vi.fn()
 const mockSetQueryData = vi.fn()
 const mockSetQueriesData = vi.fn()
+const mockCancelQueries = vi.fn()
+const mockGetQueryData = vi.fn()
 
 const mockGitStatus: GitStatusResponse = {
   branch: 'main',
@@ -54,6 +56,8 @@ vi.mock('@tanstack/react-query', async () => {
       invalidateQueries: mockInvalidateQueries,
       setQueryData: mockSetQueryData,
       setQueriesData: mockSetQueriesData,
+      cancelQueries: mockCancelQueries,
+      getQueryData: mockGetQueryData,
     }))
   }
 })
@@ -74,6 +78,10 @@ describe('useGit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockInvalidateQueries.mockClear()
+    // no cached status means nothing to guess at, which is what the rest of
+    // this file relies on
+    mockGetQueryData.mockReturnValue(undefined)
+    mockCancelQueries.mockResolvedValue(undefined)
     vi.mocked(gitApi.gitFetch).mockResolvedValue(mockGitStatus)
     vi.mocked(gitApi.gitPull).mockResolvedValue(mockGitStatus)
     vi.mocked(gitApi.gitPush).mockResolvedValue(mockGitStatus)
@@ -291,6 +299,121 @@ describe('useGit', () => {
       })
 
       expect(toast.showToast.error).toHaveBeenCalledWith('Unstage failed')
+    })
+  })
+
+  describe('optimistic file-list writes', () => {
+    const withFiles: GitStatusResponse = {
+      branch: 'main',
+      ahead: 0,
+      behind: 0,
+      files: [
+        { path: 'a.txt', status: 'modified', staged: false },
+        { path: 'b.txt', status: 'modified', staged: true },
+      ],
+      hasChanges: true,
+    }
+
+    // every cache write goes through setQueryData(['gitStatus', 1], data)
+    const statusWrites = () =>
+      mockSetQueryData.mock.calls
+        .filter((call) => call[0][0] === 'gitStatus')
+        .map((call) => call[1] as GitStatusResponse)
+
+    it('moves the file locally before the server answers', async () => {
+      mockGetQueryData.mockReturnValue(withFiles)
+      let release!: (value: GitStatusResponse) => void
+      vi.mocked(gitApi.gitStageFiles).mockReturnValue(new Promise((r) => { release = r }))
+
+      const { result } = renderHook(() => useGit(1), { wrapper: createWrapper() })
+      result.current.stageFiles.mutate(['a.txt'])
+
+      await waitFor(() => expect(statusWrites().length).toBeGreaterThan(0))
+      const local = statusWrites().at(-1)!
+      expect(local.files.map((f) => f.staged)).toEqual([true, true])
+      // the request is still in flight at this point
+      expect(gitApi.gitStageFiles).toHaveBeenCalled()
+      release(mockGitStatus)
+    })
+
+    it('puts the previous status back when staging fails', async () => {
+      mockGetQueryData.mockReturnValue(withFiles)
+      vi.mocked(gitApi.gitStageFiles).mockRejectedValue('nope')
+
+      const { result } = renderHook(() => useGit(1), { wrapper: createWrapper() })
+      await result.current.stageFiles.mutateAsync(['a.txt']).catch(() => {})
+
+      // the last thing written must be the untouched snapshot
+      expect(statusWrites().at(-1), 'rollback must be the last write').toBe(withFiles)
+      expect(toast.showToast.error).toHaveBeenCalledWith('nope')
+    })
+
+    it('unstages locally and rolls back the same way', async () => {
+      mockGetQueryData.mockReturnValue(withFiles)
+      let release!: (value: GitStatusResponse) => void
+      vi.mocked(gitApi.gitUnstageFiles).mockReturnValue(new Promise((r) => { release = r }))
+
+      const { result } = renderHook(() => useGit(1), { wrapper: createWrapper() })
+      result.current.unstageFiles.mutate(['b.txt'])
+
+      await waitFor(() => expect(statusWrites().length).toBeGreaterThan(0))
+      expect(statusWrites().at(-1)!.files.map((f) => f.staged)).toEqual([false, false])
+      release(mockGitStatus)
+    })
+
+    it('drops the file locally and can bring it back', async () => {
+      mockGetQueryData.mockReturnValue(withFiles)
+      let release!: (value: GitStatusResponse) => void
+      vi.mocked(gitApi.gitDiscardFiles).mockReturnValue(new Promise((r) => { release = r }))
+
+      const { result } = renderHook(() => useGit(1), { wrapper: createWrapper() })
+      result.current.discardFiles.mutate({ paths: ['a.txt'], staged: false })
+
+      await waitFor(() => expect(statusWrites().length).toBeGreaterThan(0))
+      const local = statusWrites().at(-1)!
+      expect(local.files.map((f) => f.path)).toEqual(['b.txt'])
+      expect(local.hasChanges).toBe(true)
+      release(mockGitStatus)
+    })
+
+    it('emptying the list flips hasChanges so the empty state shows', async () => {
+      mockGetQueryData.mockReturnValue(withFiles)
+      let release!: (value: GitStatusResponse) => void
+      vi.mocked(gitApi.gitDiscardFiles).mockReturnValue(new Promise((r) => { release = r }))
+
+      const { result } = renderHook(() => useGit(1), { wrapper: createWrapper() })
+      result.current.discardFiles.mutate({ paths: ['a.txt', 'b.txt'], staged: false })
+
+      await waitFor(() => expect(statusWrites().length).toBeGreaterThan(0))
+      const local = statusWrites().at(-1)!
+      expect(local.files).toEqual([])
+      expect(local.hasChanges).toBe(false)
+      release(mockGitStatus)
+    })
+
+    it('does not guess when there is no cached status to guess from', async () => {
+      mockGetQueryData.mockReturnValue(undefined)
+      vi.mocked(gitApi.gitStageFiles).mockResolvedValue(mockGitStatus)
+
+      const { result } = renderHook(() => useGit(1), { wrapper: createWrapper() })
+      await result.current.stageFiles.mutateAsync(['a.txt'])
+
+      // only the server's own answer may be written
+      expect(statusWrites()).toEqual([mockGitStatus])
+    })
+
+    it('stops an in-flight refetch from stomping the local guess', async () => {
+      mockGetQueryData.mockReturnValue(withFiles)
+      let release!: (value: GitStatusResponse) => void
+      vi.mocked(gitApi.gitStageFiles).mockReturnValue(new Promise((r) => { release = r }))
+
+      const { result } = renderHook(() => useGit(1), { wrapper: createWrapper() })
+      result.current.stageFiles.mutate(['a.txt'])
+
+      await waitFor(() => expect(mockCancelQueries).toHaveBeenCalled())
+      expect(mockCancelQueries).toHaveBeenCalledWith({ queryKey: ['gitStatus', 1] })
+      expect(mockCancelQueries).toHaveBeenCalledWith({ queryKey: ['reposGitStatus'] })
+      release(mockGitStatus)
     })
   })
 })
