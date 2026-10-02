@@ -9,8 +9,21 @@ const FRONTEND_SRC = path.resolve(__dirname, '../..')
 const graph = buildImportGraph(FRONTEND_SRC, [['@', FRONTEND_SRC]])
 const fileRel = (file: string) => relativeTo(graph, file)
 
-const LOOKUP = /\bt\(\s*'([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)'/g
-const LABEL_KEY = /\blabelKey:\s*'([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)'/g
+// Both quote styles. The old expression demanded a single quote and this
+// app writes 72 call sites as t("..."), so the "every literal key must
+// exist" rule was not looking at a third of them.
+//
+// Known gap, deliberately left open: a key that only ever appears as one
+// branch of a ternary, as an argument to a helper, as `tRef.current('k')`
+// or as a value in an object literal is still not checked. Widening the
+// expression to "any quoted dotted string under a known namespace" was
+// measured and rejected - it reports 95 false positives, because
+// api/opencode-types.ts is full of SSE event names like `session.list`
+// and `message.updated` that share a namespace with the locale files and
+// are not translation keys at all. Closing that gap needs a way to tell the
+// two apart that is not a file exclusion list.
+const LOOKUP = /\bt\(\s*(['"])([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)\1/g
+const LABEL_KEY = /\blabelKey:\s*(['"])([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)\1/g
 // A key assembled inside a template literal, e.g.
 // t(`settings.users.errors.${raw}`). The old expression demanded a bare
 // identifier followed by dotted words, which no call site here
@@ -38,7 +51,7 @@ function keysIn(file: string): string[] {
   const source = fs.readFileSync(file, 'utf8')
   const found = new Set<string>()
   for (const re of [LOOKUP, LABEL_KEY]) {
-    for (const match of source.matchAll(re)) found.add(match[1]!)
+    for (const match of source.matchAll(re)) found.add(match[2]!)
   }
   return [...found].sort()
 }
