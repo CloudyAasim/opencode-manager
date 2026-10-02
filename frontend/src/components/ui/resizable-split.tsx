@@ -12,7 +12,7 @@ export const RESIZABLE_SPLIT_KEYBOARD_STEP = 2
 
 interface ResizableSplitProps {
   primary: ReactNode
-  secondary: ReactNode
+  secondary?: ReactNode
   storageKey: StorageKey
   primaryLabel: string
   secondaryLabel: string
@@ -107,9 +107,11 @@ export function ResizableSplit({
     return (
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         <div className={cn('min-h-0 flex-1', primaryClassName)}>{primary}</div>
-        <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', secondaryClassName)}>
-          {secondary}
-        </div>
+        {secondary ? (
+          <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', secondaryClassName)}>
+            {secondary}
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -118,38 +120,45 @@ export function ResizableSplit({
 
   return (
     <div ref={containerRef} className={cn('flex min-h-0 flex-1', className)}>
-      <div className={cn('min-w-0 min-h-0', primaryClassName)} style={{ width: `${width}%` }}>
+      <div
+        className={cn('min-w-0 min-h-0', primaryClassName)}
+        style={{ width: secondary ? `${width}%` : '100%' }}
+      >
         {primary}
       </div>
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label={`${primaryLabel} / ${secondaryLabel}`}
-        aria-valuenow={Math.round(width)}
-        aria-valuemin={RESIZABLE_SPLIT_MIN_PCT}
-        aria-valuemax={RESIZABLE_SPLIT_MAX_PCT}
-        tabIndex={0}
-        onMouseDown={(event) => {
-          event.preventDefault()
-          setDragging(true)
-        }}
-        onTouchStart={(event) => {
-          event.preventDefault()
-          setDragging(true)
-        }}
-        onDoubleClick={() => setPct(RESIZABLE_SPLIT_DEFAULT_PCT)}
-        onKeyDown={onKeyDown}
-        className={cn(
-          'w-1.5 shrink-0 cursor-col-resize touch-none bg-border/40 transition-colors',
-          'hover:bg-primary/40 focus-visible:bg-primary/50 focus-visible:outline-none',
-          dragging && 'bg-primary/50',
-        )}
-        data-testid="split-handle"
-        data-dragging={dragging || undefined}
-      />
-      <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', secondaryClassName)}>
-        {secondary}
-      </div>
+      {secondary ? (
+        <>
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={`${primaryLabel} / ${secondaryLabel}`}
+          aria-valuenow={Math.round(width)}
+          aria-valuemin={RESIZABLE_SPLIT_MIN_PCT}
+          aria-valuemax={RESIZABLE_SPLIT_MAX_PCT}
+          tabIndex={0}
+          onMouseDown={(event) => {
+            event.preventDefault()
+            setDragging(true)
+          }}
+          onTouchStart={(event) => {
+            event.preventDefault()
+            setDragging(true)
+          }}
+          onDoubleClick={() => setPct(RESIZABLE_SPLIT_DEFAULT_PCT)}
+          onKeyDown={onKeyDown}
+          className={cn(
+            'w-1.5 shrink-0 cursor-col-resize touch-none bg-border/40 transition-colors',
+            'hover:bg-primary/40 focus-visible:bg-primary/50 focus-visible:outline-none',
+            dragging && 'bg-primary/50',
+          )}
+          data-testid="split-handle"
+          data-dragging={dragging || undefined}
+        />
+        <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', secondaryClassName)}>
+          {secondary}
+        </div>
+          </>
+      ) : null}
     </div>
   )
 }

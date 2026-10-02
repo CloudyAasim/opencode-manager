@@ -82,6 +82,31 @@ test.describe('files page on a phone', () => {
     expect(afterScroll).toBeLessThan(120)
   })
 
+  test('the list fills the screen instead of half of it', async ({ page }) => {
+    await signIn(page)
+    await installApiMocks(page, { repos: [REPO] })
+    await mockListing(page, directory(MANY_FILES))
+
+    await page.goto('/files')
+    const scroller = page.locator('[data-testid="file-list-scroller"]')
+    await expect(scroller).toBeVisible()
+
+    const geometry = await page.evaluate(() => {
+      const node = document.querySelector('[data-testid="file-list-scroller"]') as HTMLElement
+      const bottom = node.getBoundingClientRect().bottom
+      return {
+        height: Math.round(node.getBoundingClientRect().height),
+        gapToViewportBottom: Math.round(window.innerHeight - bottom),
+        viewport: window.innerHeight,
+      }
+    })
+
+    // The tab bar overlays, so some gap is expected. Before the fix the list
+    // was confined to the top third and this gap was over 400px.
+    expect(geometry.gapToViewportBottom).toBeLessThanOrEqual(100)
+    expect(geometry.height).toBeGreaterThanOrEqual(geometry.viewport * 0.6)
+  })
+
   test('the back control leaves the files page', async ({ page }) => {
     await signIn(page)
     await installApiMocks(page, { repos: [REPO] })
