@@ -95,6 +95,10 @@ export const repo = {
     clear: 'Clear',
   },
   download: {
+    label: 'Download',
+    noPath: 'There is nothing to download here yet',
+    started: 'Download started',
+    failed: 'Download failed',
     repositoryTitle: 'Download Repository',
     repositoryDescription: 'This will create a ZIP archive of the entire repository.',
     currentDirectory: 'Current Directory',
@@ -266,6 +270,7 @@ export const repo = {
     },
     added: 'Repository added',
   },
+  unlink: 'Unlink',
   fileBrowser: {
     title: 'File Browser',
     searchPlaceholder: 'Search',
@@ -276,6 +281,7 @@ export const repo = {
     units: {
       bytes: 'Bytes',
     },
+    uploading: 'Uploading {{current}} of {{total}}',
     upload: {
       cancelled: 'Upload Cancelled',
       complete: 'Upload Complete',
@@ -293,8 +299,9 @@ export const repo = {
       folderNamePlaceholder: 'Folder name',
     },
     actions: {
-      download: 'Download',
       copy: 'Duplicate',
+      more: 'More actions',
+      download: 'Download',
       copyName: 'New name',
       rename: 'Rename',
       delete: 'Delete',
@@ -318,6 +325,8 @@ export const repo = {
     disableLineWrap: 'Disable line wrap',
     enableLineWrap: 'Enable line wrap',
     errors: {
+      copy: 'Copy failed: {{status}}',
+      copyGeneric: 'Copy failed',
       loadFiles: 'Failed to load files: {{status}}',
       loadFilesGeneric: 'Failed to load files',
       loadFile: 'Failed to load file: {{status}}',

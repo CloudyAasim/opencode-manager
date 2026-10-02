@@ -10,6 +10,7 @@ export const shell = {
   },
   commands: {
     title: '命令面板',
+    repoItem: '项目',
     placeholder: '搜索命令',
     empty: '没有匹配的命令',
     group: {

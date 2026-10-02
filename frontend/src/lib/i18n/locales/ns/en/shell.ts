@@ -10,6 +10,7 @@ export const shell = {
   },
   commands: {
     title: 'Command palette',
+    repoItem: 'Project',
     placeholder: 'Search commands',
     empty: 'No matching command',
     group: {

@@ -13,13 +13,20 @@ const LOOKUP = /\bt\(\s*'([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)'/g
 const LABEL_KEY = /\blabelKey:\s*'([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)'/g
 const VARIABLE_KEY = /\bt\(\s*`([a-zA-Z][A-Za-z0-9_]*)(\.[A-Za-z0-9_]*)\$\{[^}]*\}([A-Za-z0-9_.]*)`/g
 
-function resolveKey(bundle: unknown, key: string): boolean {
+function has(bundle: unknown, key: string): boolean {
   return key
     .split('.')
     .reduce<unknown>(
       (acc, part) => (acc === null || typeof acc !== 'object' ? undefined : (acc as Record<string, unknown>)[part]),
       bundle,
     ) !== undefined
+}
+
+// i18next resolves a `count` argument to the _one / _other suffixed keys, so a
+// key that never appears verbatim can still be perfectly translated.
+function resolveKey(bundle: unknown, key: string): boolean {
+  if (has(bundle, key)) return true
+  return has(bundle, `${key}_one`) && has(bundle, `${key}_other`)
 }
 
 function keysIn(file: string): string[] {
@@ -42,7 +49,9 @@ function templateKeyPrefixes(file: string): string[] {
 
 const FILES = graph.files.filter((file) => {
   const rel = fileRel(file)
-  return !rel.includes('/test') && !rel.startsWith('test/') && rel.endsWith('.ts') && rel.endsWith('.tsx')
+  if (rel.includes('/test') || rel.startsWith('test/')) return false
+  if (rel.includes('.test.') || rel.includes('.spec.')) return false
+  return rel.endsWith('.ts') || rel.endsWith('.tsx')
 })
 
 describe('翻译键契约', () => {

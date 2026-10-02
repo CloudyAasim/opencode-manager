@@ -41,4 +41,5 @@ export const navigation = {
   remove: '移除面板',
   tapToView: '点击查看',
   workspaceRoot: '工作区根目录',
+  resizePanel: '调整面板宽度',
 }

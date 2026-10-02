@@ -41,4 +41,5 @@ export const navigation = {
   remove: 'Remove panel',
   tapToView: 'Tap to view',
   workspaceRoot: 'Workspace Root',
+  resizePanel: 'Resize panel',
 }

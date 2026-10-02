@@ -95,6 +95,10 @@ export const repo = {
     clear: '清除',
   },
   download: {
+    label: '下载',
+    noPath: '这里暂时没有可下载的内容',
+    started: '已开始下载',
+    failed: '下载失败',
     repositoryTitle: '下载项目',
     repositoryDescription: '这将创建一个包含整个项目的 ZIP 压缩包。',
     currentDirectory: '当前目录',
@@ -266,6 +270,7 @@ export const repo = {
     },
     added: '项目已添加',
   },
+  unlink: '解除关联',
   fileBrowser: {
     title: '文件浏览器',
     searchPlaceholder: '搜索',
@@ -276,6 +281,7 @@ export const repo = {
     units: {
       bytes: '字节',
     },
+    uploading: '正在上传第 {{current}} / {{total}} 个',
     upload: {
       cancelled: '上传已取消',
       complete: '上传完成',
@@ -293,8 +299,9 @@ export const repo = {
       folderNamePlaceholder: '文件夹名称',
     },
     actions: {
-      download: '下载',
       copy: '复制',
+      more: '更多操作',
+      download: '下载',
       copyName: '新名称',
       rename: '重命名',
       delete: '删除',
@@ -318,6 +325,8 @@ export const repo = {
     disableLineWrap: '禁用自动换行',
     enableLineWrap: '启用自动换行',
     errors: {
+      copy: '复制失败：{{status}}',
+      copyGeneric: '复制失败',
       loadFiles: '加载文件失败：{{status}}',
       loadFilesGeneric: '加载文件失败',
       loadFile: '加载文件失败：{{status}}',
@@ -332,8 +341,8 @@ export const repo = {
       renameGeneric: '重命名失败',
     },
     diff: {
-      loadFailed: '加载差异失败',
       copy: '复制差异',
+      loadFailed: '加载差异失败',
       binary: '二进制文件 —— 无法显示差异',
       noChanges: '没有可显示的更改',
     },

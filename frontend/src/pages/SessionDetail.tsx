@@ -62,6 +62,7 @@ import type { QuestionRequest } from "@/api/types";
 import { QuestionPrompt } from "@/features/session/QuestionPrompt";
 import { MinimizedQuestionIndicator } from "@/features/session/MinimizedQuestionIndicator";
 import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup";
+import { SessionPanel, type SessionPanelTab } from "@/features/session/SessionPanel";
 import { SourceControlPanel, ChangesTab } from "@/features/source-control";
 import { SessionSendErrorBanner } from "@/features/session/SessionSendErrorBanner";
 import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
@@ -71,7 +72,6 @@ import { useSidebarAction } from "@/hooks/useSidebarAction";
 import { SessionMoreButton } from "@/features/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
-import { usePersistentJSONState } from "@/hooks/usePersistentJSONState";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useLayer } from '@/framework/layer/useLayer'
 import {
@@ -87,37 +87,14 @@ import {
   DEFAULT_REPO_BRANCH,
 } from "@/lib/repo-constants";
 
-type PanelTab = 'files' | 'review' | 'info' | 'terminal'
-const ALL_PANEL_TABS: PanelTab[] = ['files', 'review', 'info', 'terminal']
-const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
-  files: 'navigation.files',
-  review: 'navigation.sourceControl',
-  info: 'navigation.detail',
-  terminal: 'navigation.terminal',
-}
-
-const DEFAULT_PANEL_TABS: PanelTab[] = ['files', 'review', 'info']
-
-function isPanelTabs(value: unknown): value is PanelTab[] {
-  if (!Array.isArray(value)) return false
-  const valid = value.filter((tab): tab is PanelTab => (ALL_PANEL_TABS as string[]).includes(tab as string))
-  return valid.length > 0 && valid.length === value.length
-}
-
-function PanelTabIcon({ tab }: { tab: PanelTab }) {
-  const cls = 'h-3.5 w-3.5'
-  if (tab === 'review') return <GitPullRequest className={cls} />
-  if (tab === 'info') return <Info className={cls} />
-  if (tab === 'terminal') return <TerminalSquare className={cls} />
-  return <Folder className={cls} />
-}
-
 const compareMessageIds = (id1: string, id2: string): number => {
   const num1 = parseInt(id1, 10)
   const num2 = parseInt(id2, 10)
   if (!isNaN(num1) && !isNaN(num2)) return num1 - num2
   return id1.localeCompare(id2)
 }
+
+const DEFAULT_PANEL_TAB_IDS = ['files', 'review', 'info'] as const
 
 const PENDING_ACTION_SYNC_INTERVAL_MS = 30000
 const PROMPT_OVERLAY_CLEARANCE_PX = 16
@@ -166,12 +143,6 @@ export function SessionDetail() {
     const resolved = await resolvePreviewFile(file)
     if (!file.isDirectory) setPanelFile(resolved)
   }, [])
-  const [panelTabs, setPanelTabs] = usePersistentJSONState<PanelTab[]>({
-    storageKey: STORAGE_KEYS.chatPanelTabs,
-    defaultValue: DEFAULT_PANEL_TABS,
-    validate: isPanelTabs,
-  })
-  const [rightTab, setRightTab] = useState<PanelTab>('files')
   const [panelFile, setPanelFile] = useState<FileInfo | null>(null)
   const [treeWidth, setTreeWidth] = usePersistentNumberState({
     storageKey: STORAGE_KEYS.fileTreeWidth,
@@ -181,18 +152,87 @@ export function SessionDetail() {
   })
   const filesPanelRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!panelTabs.includes(rightTab)) setRightTab(panelTabs[0])
-  }, [panelTabs, rightTab])
-
-  const removePanelTab = useCallback((tab: PanelTab) => {
-    setPanelTabs((tabs) => (tabs.length > 1 ? tabs.filter((existing) => existing !== tab) : tabs))
-  }, [setPanelTabs])
-
-  const addPanelTab = useCallback((tab: PanelTab) => {
-    setPanelTabs((tabs) => (tabs.includes(tab) ? tabs : [...tabs, tab]))
-    setRightTab(tab)
-  }, [setPanelTabs])
+  const sessionPanelTabs: SessionPanelTab[] = [
+    {
+      id: 'files',
+      labelKey: 'navigation.files',
+      icon: Folder,
+      render: () => (
+      <div ref={filesPanelRef} className="flex h-full min-h-0">
+        <div className="min-h-0 overflow-hidden" style={{ width: `${treeWidth}%` }}>
+          <FileTreeExplorer
+            rootPath={repoDirectory ?? ''}
+            selectedPath={panelFile?.path}
+            onSelectFile={handleSelectPanelFile}
+            className="h-full"
+          />
+        </div>
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onMouseDown={startTreeResize}
+          className="w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
+        />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {panelFile && !panelFile.isDirectory ? (
+            <FilePreview key={panelFile.path} file={panelFile} />
+          ) : (
+            <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
+              {t('repo.fileBrowser.selectFileToPreview')}
+            </div>
+          )}
+        </div>
+      </div>
+      ),
+    },
+    {
+      id: 'review',
+      labelKey: 'navigation.sourceControl',
+      icon: GitPullRequest,
+      render: () => (
+      <div className="h-full overflow-y-auto">
+        {reviewFile ? (
+          <FileDiffView
+            repoId={repoId}
+            filePath={reviewFile.path}
+            includeStaged={reviewFile.staged}
+            onBack={() => setReviewFile(null)}
+            isMobile={false}
+          />
+        ) : (
+          <ChangesTab
+            repoId={repoId}
+            onFileSelect={(path, staged) => setReviewFile({ path, staged })}
+            isMobile={false}
+          />
+        )}
+      </div>
+      ),
+    },
+    {
+      id: 'info',
+      labelKey: 'navigation.detail',
+      icon: Info,
+      render: () => (
+      <ProjectInfoPanel
+        repoId={repoId}
+        name={workspaceDisplayName}
+        directory={repoDirectory}
+        branch={repo?.currentBranch || repo?.branch}
+      />
+      ),
+    },
+    {
+      id: 'terminal',
+      labelKey: 'navigation.terminal',
+      icon: TerminalSquare,
+      render: () => (
+      <div className="h-full min-h-0">
+        <TerminalView className="h-full" cwd={repoDirectory} />
+      </div>
+      ),
+    },
+  ]
 
   const startTreeResize = useCallback((event: React.MouseEvent) => {
     event.preventDefault()
@@ -926,136 +966,17 @@ export function SessionDetail() {
           </div>
         )}
         </div>
-        {rightPanelOpen && (
-          <>
-          {isDesktop && (
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              aria-label={t('navigation.resizePanel')}
-              tabIndex={0}
-              onMouseDown={startPanelResize}
-              onTouchStart={startPanelResize}
-              onKeyDown={handlePanelResizeKey}
-              className="absolute inset-y-0 z-20 hidden w-2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/40 md:block"
-              style={{ right: panelWidth }}
-            />
-          )}
-          {!isDesktop && (
-            <button
-              type="button"
-              aria-label={t('navigation.close')}
-              onClick={() => setRightPanelOpen(false)}
-              className="absolute inset-0 z-30 bg-black/40 transition-opacity duration-200 md:hidden"
-            />
-          )}
-          <aside
-            className="absolute inset-x-0 bottom-0 z-40 flex max-h-[78vh] shrink-0 flex-col overflow-hidden rounded-t-xl border-t border-border bg-card shadow-[0_-12px_32px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out md:inset-y-0 md:right-0 md:left-auto md:z-auto md:max-h-none md:w-auto md:rounded-none md:border-l md:border-t-0 md:bg-transparent md:shadow-none"
-            style={isDesktop ? { width: panelWidth } : undefined}
-          >
-            <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2 py-1.5 scrollbar-thin">
-              {panelTabs.map((tab) => (
-                <div key={tab} className="group flex shrink-0 items-center">
-                  <Button
-                    variant={rightTab === tab ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className={cn('h-7 gap-1 px-2', panelTabs.length > 1 && 'rounded-r-none')}
-                    onClick={() => setRightTab(tab)}
-                  >
-                    <PanelTabIcon tab={tab} />
-                    {t(PANEL_TAB_LABEL_KEY[tab])}
-                  </Button>
-                  {panelTabs.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removePanelTab(tab)}
-                      aria-label={t('navigation.remove')}
-                      className="h-7 rounded-r-md px-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label={t('navigation.add')} title={t('navigation.add')}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {ALL_PANEL_TABS.filter((tab) => !panelTabs.includes(tab)).map((tab) => (
-                    <DropdownMenuItem key={tab} onClick={() => addPanelTab(tab)}>
-                      <span className="mr-2"><PanelTabIcon tab={tab} /></span>
-                      {t(PANEL_TAB_LABEL_KEY[tab])}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button variant="ghost" size="icon" className="ml-auto h-7 w-7 shrink-0" onClick={() => setRightPanelOpen(false)} aria-label={t('navigation.close')}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-hidden">
-              {rightTab === 'files' && (
-                <div ref={filesPanelRef} className="flex h-full min-h-0">
-                  <div className="min-h-0 overflow-hidden" style={{ width: `${treeWidth}%` }}>
-                    <FileTreeExplorer
-                      rootPath={repoDirectory ?? ''}
-                      selectedPath={panelFile?.path}
-                      onSelectFile={handleSelectPanelFile}
-                      className="h-full"
-                    />
-                  </div>
-                  <div
-                    role="separator"
-                    aria-orientation="vertical"
-                    onMouseDown={startTreeResize}
-                    className="w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/40"
-                  />
-                  <div className="min-h-0 flex-1 overflow-y-auto">
-                    {panelFile && !panelFile.isDirectory ? (
-                      <FilePreview key={panelFile.path} file={panelFile} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
-                        {t('repo.fileBrowser.selectFileToPreview')}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {rightTab === 'review' && (
-                <div className="h-full overflow-y-auto">
-                  {reviewFile ? (
-                    <FileDiffView
-                      repoId={repoId}
-                      filePath={reviewFile.path}
-                      includeStaged={reviewFile.staged}
-                      onBack={() => setReviewFile(null)}
-                      isMobile={false}
-                    />
-                  ) : (
-                    <ChangesTab repoId={repoId} onFileSelect={(path, staged) => setReviewFile({ path, staged })} isMobile={false} />
-                  )}
-                </div>
-              )}
-              {rightTab === 'info' && (
-                <ProjectInfoPanel
-                  repoId={repoId}
-                  name={workspaceDisplayName}
-                  directory={repoDirectory}
-                  branch={repo?.currentBranch || repo?.branch}
-                />
-              )}
-              {rightTab === 'terminal' && (
-                <div className="h-full min-h-0">
-                  <TerminalView className="h-full" cwd={repoDirectory} />
-                </div>
-              )}
-            </div>
-          </aside>
-          </>
-        )}
+        <SessionPanel
+          open={rightPanelOpen}
+          onOpenChange={setRightPanelOpen}
+          isDesktop={isDesktop}
+          width={panelWidth}
+          onResizeStart={startPanelResize}
+          onResizeKey={handlePanelResizeKey}
+          tabs={sessionPanelTabs}
+          defaultTabIds={DEFAULT_PANEL_TAB_IDS}
+          storageKey={STORAGE_KEYS.chatPanelTabs}
+        />
       </div>
 
       {/* Sessions Dialog */}
