@@ -7,7 +7,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useDesktop } from '@/hooks/useDesktop'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { MEDIA } from './breakpoints'
 import { useMobileSheets } from '@/hooks/useMobileSheets'
 import { useAuth } from '@/hooks/useAuth'
 import { useTerminalAllowed } from '@/hooks/useTerminalAllowed'
@@ -30,7 +31,9 @@ export function TopBar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useI18n()
-  const isDesktop = useDesktop()
+  // 768px 摆不下标题、仓库切换器和四个带文字的入口，到 1024px 才摊得开。
+  // 窄于这一档就收成一颗按钮，别让标签一个个截成 'Assis…'。
+  const spreadOut = useMediaQuery(MEDIA.expandedUp)
   const { user, logout } = useAuth()
   const terminalAllowed = useTerminalAllowed()
   const { updateParams } = useUrlParams()
@@ -61,7 +64,7 @@ export function TopBar() {
       <RepoSwitcher />
 
       <div className="flex min-w-0 flex-1 items-center gap-0.5">
-        {isDesktop &&
+        {spreadOut &&
           primary.map((item) => {
             const active = isNavItemActive(item, location.pathname)
             return (
@@ -84,7 +87,7 @@ export function TopBar() {
           })}
       </div>
 
-      {isDesktop ? (
+      {spreadOut ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
