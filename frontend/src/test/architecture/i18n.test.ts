@@ -11,7 +11,12 @@ const fileRel = (file: string) => relativeTo(graph, file)
 
 const LOOKUP = /\bt\(\s*'([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)'/g
 const LABEL_KEY = /\blabelKey:\s*'([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)'/g
-const VARIABLE_KEY = /\bt\(\s*`([a-zA-Z][A-Za-z0-9_]*)(\.[A-Za-z0-9_]*)\$\{[^}]*\}([A-Za-z0-9_.]*)`/g
+// A key assembled inside a template literal, e.g.
+// t(`settings.users.errors.${raw}`). The old expression demanded a bare
+// identifier followed by dotted words, which no call site here
+// satisfies - so the test that used it passed over an empty set and
+// proved nothing at all.
+const VARIABLE_KEY = /\bt\(\s*`([^`$]*)\$\{[^}]*\}([^`]*)`/g
 
 function has(bundle: unknown, key: string): boolean {
   return key
@@ -38,11 +43,15 @@ function keysIn(file: string): string[] {
   return [...found].sort()
 }
 
+function allTemplateKeyPrefixes(): string[] {
+  return [...new Set(FILES.flatMap(templateKeyPrefixes))].sort()
+}
+
 function templateKeyPrefixes(file: string): string[] {
   const source = fs.readFileSync(file, 'utf8')
   const found = new Set<string>()
   for (const match of source.matchAll(VARIABLE_KEY)) {
-    found.add(`${match[1]}${match[2]}*${match[3]}`)
+    found.add(`${match[1]}*${match[2]}`)
   }
   return [...found].sort()
 }
@@ -87,9 +96,20 @@ describe('翻译键契约', () => {
   })
 
   it('模板拼接的翻译键，其静态前缀必须存在', () => {
+    const prefixes = allTemplateKeyPrefixes()
+    expect(
+      prefixes.length,
+      [
+        '一个模板拼接的翻译键都没扫到，这条断言在空集上通过。',
+        '它上一版就是这样：正则要求字面量部分以裸标识符开头，',
+        '而代码里写的是 t(`settings.users.errors.${raw}`)，',
+        '于是这条门禁一直在证明一件不存在的事。',
+      ].join('\n'),
+    ).toBeGreaterThan(0)
+
     const offenders: string[] = []
-    for (const file of FILES) {
-      for (const key of templateKeyPrefixes(file)) {
+    for (const key of prefixes) {
+      {
         const head = key.split('*')[0]!.replace(/\.$/, '')
         if (!head) continue
         if (!resolveKey(en, head)) {
