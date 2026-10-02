@@ -7,7 +7,6 @@ interface ShellFrameProps {
   rail: ReactNode
   inspector: ReactNode
   main: ReactNode
-  bottom: ReactNode
   status: ReactNode
   chrome?: boolean
 }
@@ -18,7 +17,6 @@ export function ShellFrame({
   rail,
   inspector,
   main,
-  bottom,
   status,
   chrome = true,
 }: ShellFrameProps) {
@@ -40,7 +38,6 @@ export function ShellFrame({
         <div className="flex min-w-0 flex-1 flex-col">{main}</div>
         {inspector}
       </div>
-      {!isDesktop && bottom}
       {status}
     </div>
   )

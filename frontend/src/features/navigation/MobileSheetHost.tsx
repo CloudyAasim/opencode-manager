@@ -43,7 +43,7 @@ export function MobileSheetHost() {
         aria-label={t('navigation.more')}
         title={t('navigation.more')}
         onClick={() => open('more')}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+68px)] right-3 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/95 text-foreground shadow-lg backdrop-blur transition-colors active:bg-accent"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-3 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/95 text-foreground shadow-lg backdrop-blur transition-colors active:bg-accent"
       >
         <Menu className="h-5 w-5" />
       </button>

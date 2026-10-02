@@ -39,9 +39,6 @@ import { usePrefetchRoutes } from '@/hooks/usePrefetchRoutes'
 const DesktopSidebar = lazy(() =>
   import('@/features/navigation/DesktopSidebar').then((m) => ({ default: m.DesktopSidebar })),
 )
-const MobileTabBar = lazy(() =>
-  import('@/features/navigation/MobileTabBar').then((m) => ({ default: m.MobileTabBar })),
-)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -197,11 +194,6 @@ function AppShell() {
                 </Suspense>
               }
               main={<Outlet />}
-              bottom={
-                <Suspense fallback={null}>
-                  <MobileTabBar />
-                </Suspense>
-              }
               status={<StatusBar />}
               inspector={<Inspector />}
             />

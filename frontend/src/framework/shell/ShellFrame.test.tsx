@@ -14,7 +14,6 @@ function frame(chrome: boolean) {
       rail={<div data-testid="rail" />}
       inspector={<div data-testid="inspector" />}
       main={<div data-testid="main" />}
-      bottom={<div data-testid="bottom" />}
       status={<div data-testid="status" />}
     />,
   )

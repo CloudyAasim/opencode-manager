@@ -16,6 +16,11 @@ const APP = SOURCES.filter((source) => !source.rel.startsWith('test/') && !sourc
 const READ = /const\s*\[([^\],]+),\s*(\w+)\]\s*=\s*useLayer\('([^']+)'\)/g
 // a component that only wants the value
 const READ_ONLY = /const\s*\[\s*,\s*(\w+)\]\s*=\s*useLayer\('([^']+)'\)/g
+// A layer can also be opened by putting its name in the ?dialog= parameter -
+// LayerProvider seeds the whole stack from it and syncs back. Counting only
+// setX() calls once made me conclude a dialog was unreachable when the drawer
+// reached it exactly this way.
+const VIA_URL = /dialog:\s*'([^']+)'/g
 
 function layers(): Map<string, { readers: string[]; openers: string[] }> {
   const found = new Map<string, { readers: string[]; openers: string[] }>()
@@ -39,6 +44,11 @@ function layers(): Map<string, { readers: string[]; openers: string[] }> {
       if (new RegExp(`\\b${setter}\\s*\\(`).test(source.text)) record.openers.push(source.rel)
     }
   }
+  for (const source of APP) {
+    for (const match of source.text.matchAll(VIA_URL)) {
+      entry(match[1]!).openers.push(source.rel)
+    }
+  }
   return found
 }
 
@@ -57,7 +67,8 @@ describe('每层都得有人打开', () => {
       [
         `这些层有人读、没人写，也就是挂着一个永远打不开的弹层：${dead.length} 处`,
         ...dead,
-        '读它的地方只配了层，没给任何入口。',
+        '读它的地方只配了层，没有 setX(...) 调用，',
+        '也没有任何地方用 ?dialog=<name> 把它打开。',
         '要么给它一个入口，要么把弹层删掉——挂着打不开的东西只是把债务藏起来。',
       ].join('\n'),
     ).toEqual([])
