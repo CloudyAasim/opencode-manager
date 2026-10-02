@@ -109,6 +109,8 @@ export function GitSettings() {
   }
 
   const saveCredential = async (credential: GitCredential, options: GitCredentialSaveOptions) => {
+    const previousCredentials = gitCredentials
+    const previousDefaultGitCredentialId = defaultGitCredentialId
     let newCredentials: GitCredential[]
     const nextCredential = ensureCredentialId(credential)
     const nextDefaultGitCredentialId = options.makeDefault ? nextCredential.id : defaultGitCredentialId === nextCredential.id ? undefined : defaultGitCredentialId
@@ -132,11 +134,15 @@ export function GitSettings() {
         }
       )
     } catch {
+      setGitCredentials(previousCredentials)
+      setDefaultGitCredentialId(previousDefaultGitCredentialId)
       showToast.error(t('settingsPanels.git.credentialSaveFailed'))
     }
   }
 
   const removeCredential = async (index: number) => {
+    const previousCredentials = gitCredentials
+    const previousDefaultGitCredentialId = defaultGitCredentialId
     const removedCredentialId = gitCredentials[index]?.id
     const newCredentials = gitCredentials.filter((_, i) => i !== index)
     const nextDefaultGitCredentialId = newCredentials.some((credential) => credential.id === defaultGitCredentialId)
@@ -154,6 +160,8 @@ export function GitSettings() {
         }
       )
     } catch {
+      setGitCredentials(previousCredentials)
+      setDefaultGitCredentialId(previousDefaultGitCredentialId)
       showToast.error(t('settingsPanels.git.credentialDeleteFailed'))
     }
   }

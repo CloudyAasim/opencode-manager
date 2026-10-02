@@ -260,3 +260,208 @@ const MUST_MOVE_THE_LIST_NOW: ReadonlyArray<readonly [string, string]> = [
   [USE_GIT, '暂存把文件移过暂存线'],
   ['hooks/useSessionPins.ts', '置顶把会话移到列表最前'],
 ]
+
+
+/**
+ * Everything above is built on `useMutation({ ... })`, so it can only see the
+ * react-query spelling of an optimistic write. GitSettings never used that
+ * spelling: it wrote the new credential list straight into component state and
+ * let the request catch up. A failed save then left the panel showing a list
+ * the server had never accepted, with nothing to put it right - the same defect
+ * the rules above were written to prevent, reached a different way.
+ *
+ * What counts as an optimistic write cannot be read off a single line. A status
+ * flag is not a prediction: there is nothing to put back. So a candidate needs
+ * all three of these, and the third is the one that carries the meaning:
+ *
+ *   1. setX(local) where local is not a literal
+ *   2. before the first await of the enclosing function, with no `return` in
+ *      between - a branch that returns never reaches the request at all
+ *   3. that same local is handed to the awaited call, i.e. it is the payload
+ *
+ * (3) is what separates mirroring the server from holding UI state.
+ * `setSelectedCommit(hash)` is not a prediction - the server does not care
+ * which commit you are looking at. `setGitCredentials(newCredentials)` is,
+ * because `newCredentials` is what gets saved.
+ */
+const LITERALS = new Set(['true', 'false', 'null', 'undefined', 'NaN', 'Infinity'])
+const SETTER = /^[ \t]*(set[A-Z]\w*)\(\s*([A-Za-z_$][\w$]*)\s*\)[ \t]*;?[ \t]*$/gm
+const AWAIT_CALL = /await\s+([A-Za-z_$][\w$.]*)\s*\(/g
+const RETURNS = /(?<![\w$])return(?![\w$])/
+const SETTER_CALL = (name: string) => new RegExp(`\\b${name}\\s*\\(`)
+
+function matchBrace(text: string, open: number): number {
+  let depth = 0
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === '{') depth++
+    else if (text[i] === '}') {
+      depth--
+      if (depth === 0) return i
+    }
+  }
+  return -1
+}
+
+function enclosingOpen(text: string, pos: number): number {
+  let depth = 0
+  for (let i = pos - 1; i >= 0; i--) {
+    if (text[i] === '}') depth++
+    else if (text[i] === '{') {
+      if (depth === 0) return i
+      depth--
+    }
+  }
+  return -1
+}
+
+/** Comments and string bodies can contain braces, so take them out first. */
+function bare(text: string): string {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/[^\n]*/g, ' ')
+    .replace(/'(?:[^'\\\n]|\\.)*'/g, "''")
+    .replace(/"(?:[^"\\\n]|\\.)*"/g, '""')
+    .replace(/`(?:[^`\\]|\\.)*`/g, '``')
+}
+
+interface HandRolled {
+  rel: string
+  setter: string
+  value: string
+  /** the text between the first await and the end of the function */
+  after: string
+}
+
+function handRolledWrites(): HandRolled[] {
+  return ALL_FILES.flatMap((rel) => detect(bare(read(rel)), rel))
+}
+
+function detect(code: string, rel: string): HandRolled[] {
+  const out: HandRolled[] = []
+  {
+    for (const sm of code.matchAll(SETTER)) {
+      const setter = sm[1]!
+      const value = sm[2]!
+      if (LITERALS.has(value)) continue
+      const open = enclosingOpen(code, sm.index)
+      if (open === -1) continue
+      const close = matchBrace(code, open)
+      if (close === -1) continue
+      const tail = code.slice(sm.index + sm[0].length, close)
+      const at = tail.indexOf('await')
+      if (at === -1) continue
+      if (RETURNS.test(tail.slice(0, at))) continue
+      const after = tail.slice(at)
+      if (!after.includes('catch')) continue
+      const sent = [...after.matchAll(AWAIT_CALL)].some((am) => {
+        const argOpen = sm.index + sm[0].length + at + am.index + am[0].length - 1
+        const argClose = matchBrace(code, argOpen)
+        if (argClose === -1) return false
+        return new RegExp(`\\b${value}\\b`).test(code.slice(argOpen + 1, argClose))
+      })
+      if (!sent) continue
+      if (SETTER_CALL(setter).test(after)) continue
+      out.push({ rel, setter, value, after })
+    }
+  }
+  return out
+}
+
+/**
+ * Every candidate gets a decision written down, because whether a local value
+ * is worth putting back is a judgement about who owns it - the server or the
+ * person typing. That cannot be derived, so it is declared here and enforced:
+ * a new hand-rolled optimistic write has to be given a decision rather than
+ * quietly inheriting one.
+ */
+const DECIDED: Array<[string, string, 'rollback' | 'draft', string]> = [
+  [
+    'features/settings/GitSettings.tsx',
+    'setGitCredentials',
+    'rollback',
+    "the credential list belongs to the server - a failed save left the panel showing a deletion that never happened",
+  ],
+  [
+    'features/settings/GitSettings.tsx',
+    'setDefaultGitCredentialId',
+    'rollback',
+    'same write, and the default pointer has to go back with it',
+  ],
+  [
+    'features/file-browser/FilePreview.tsx',
+    'setContent',
+    'draft',
+    'the text the person just typed, held locally so a failed save does not throw their work away - the right answer there is the toast, not the rollback',
+  ],
+  [
+    'features/file-browser/FilePreview.tsx',
+    'setEditContent',
+    'draft',
+    'the same typed text, second slot; the unsaved marker depends on it staying put',
+  ],
+  [
+    'features/settings/OAuthAuthorizeDialog.tsx',
+    'setSelectedMethodIndex',
+    'draft',
+    'which method the user picked is theirs, not the server\'s - and on failure the selection has to stay so they can try again',
+  ],
+]
+
+describe('手写的乐观写也要认账', () => {
+  it('量法自己还认得出一处手写乐观写', () => {
+    // Asserting the live defect is still there would go red the moment it is
+    // fixed, which is backwards: a self-check has to survive its own fix. So
+    // the detector is handed a sample written here instead.
+    const sample = `
+      const saveThing = async (next: string[]) => {
+        const previous = things
+        setThings(next)
+        try {
+          await api.save({ things: next })
+        } catch {
+          setThings(previous)
+        }
+      }`
+    expect(detect(bare(sample), 'sample.tsx').map((h) => h.setter)).toEqual([])
+    // and the same shape without the rollback must be reported
+    const broken = sample.replace('setThings(previous)', '')
+    expect(detect(bare(broken), 'sample.tsx').map((h) => h.setter)).toEqual(['setThings'])
+  })
+
+  it('每一处都得有决定，不许默默继承', () => {
+    const undecided = handRolledWrites()
+      .filter((h) => !DECIDED.some(([rel, setter]) => rel === h.rel && setter === h.setter))
+      .map((h) => `${h.rel}  ${h.setter}(${h.value})`)
+    expect(
+      undecided,
+      [
+        `这些手写乐观写还没有决定：${undecided.length} 处`,
+        ...undecided,
+        '要么回滚，要么说清为什么不用回滚 —— 凭什么归服务端所有、凭什么归用户所有，是要人判断的。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('决定写"回滚"的，探测器就不该再报它', () => {
+    // The detector's whole output is "a local write that nobody puts back", so
+    // a site that does put it back cannot appear in it. This is what makes the
+    // 'rollback' half of the table mean something.
+    const found = handRolledWrites()
+    const offenders = DECIDED.filter(([, , verdict]) => verdict === 'rollback')
+      .filter(([rel, setter]) => found.some((h) => h.rel === rel && h.setter === setter))
+      .map(([rel, setter]) => `${rel}  ${setter}  - 标了要回滚，失败路径上却没放回去`)
+    expect(offenders, '这些乐观写标了要回滚，实际没回滚').toEqual([])
+  })
+
+  it('GitSettings 那两处写回滚的，现在真的认不出来了', () => {
+    // The defect this round started from, pinned by name: if it ever comes back,
+    // both the detection and the verdict are still wired up.
+    const found = handRolledWrites().filter((h) => h.rel === 'features/settings/GitSettings.tsx')
+    expect(found.map((h) => h.setter)).toEqual([])
+  })
+
+  it('决定不是空的，两种都有', () => {
+    expect(DECIDED.some(([, , v]) => v === 'rollback'), '一个"要回滚"的例子都没有').toBe(true)
+    expect(DECIDED.some(([, , v]) => v === 'draft'), '一个"是草稿"的例子都没有').toBe(true)
+  })
+})
