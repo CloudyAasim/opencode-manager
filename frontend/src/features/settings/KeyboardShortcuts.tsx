@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { SettingsPanel } from '@/features/settings/SettingsPanel'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { useSettings } from '@/hooks/useSettings'
 import { useMobile } from '@/hooks/useMobile'
@@ -235,17 +236,17 @@ export function KeyboardShortcuts() {
 
   if (isMobile) {
     return (
-      <div className="bg-card border border-border rounded-lg p-6">
+      <SettingsPanel title={t('settingsPanels.shortcuts.title')}>
         <h2 className="text-lg font-semibold text-foreground mb-4">{t('settingsPanels.shortcuts.title')}</h2>
         <p className="text-sm text-muted-foreground">
           {t('settingsPanels.shortcuts.mobileUnavailable')}
         </p>
-      </div>
+      </SettingsPanel>
     )
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
+      <SettingsPanel title={t('settingsPanels.shortcuts.title')}>
       <h2 className="text-lg font-semibold text-foreground mb-6">{t('settingsPanels.shortcuts.title')}</h2>
 
       <div className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-border">
@@ -294,6 +295,6 @@ export function KeyboardShortcuts() {
       <p className="mt-6 text-sm text-muted-foreground">
         {t('settingsPanels.shortcuts.footer')}
       </p>
-    </div>
+    </SettingsPanel>
   )
 }

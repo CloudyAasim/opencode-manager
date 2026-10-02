@@ -1,4 +1,5 @@
 import { useNotifications } from "@/hooks/useNotifications";
+import { SettingsPanel } from '@/features/settings/SettingsPanel'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { Loader2, BellOff, Trash2, Send, Monitor } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -29,49 +30,40 @@ export function NotificationSettings() {
 
   if (!isSupported) {
     return (
-      <div className="bg-card border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          {t("settingsPanels.notifications.title")}
-        </h2>
+      <SettingsPanel title={t("settingsPanels.notifications.title")}>
         <div className="flex items-center gap-3 text-muted-foreground">
           <BellOff className="h-5 w-5" />
           <p className="text-sm">
             {t("settingsPanels.notifications.unsupported")}
           </p>
         </div>
-      </div>
+      </SettingsPanel>
     );
   }
 
   if (!isAvailable) {
     return (
-      <div className="bg-card border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          {t("settingsPanels.notifications.title")}
-        </h2>
+      <SettingsPanel title={t("settingsPanels.notifications.title")}>
         <div className="flex items-center gap-3 text-muted-foreground">
           <BellOff className="h-5 w-5" />
           <p className="text-sm">
             {t("settingsPanels.notifications.unavailable")}
           </p>
         </div>
-      </div>
+      </SettingsPanel>
     );
   }
 
   if (permission === "denied") {
     return (
-      <div className="bg-card border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          {t("settingsPanels.notifications.title")}
-        </h2>
+      <SettingsPanel title={t("settingsPanels.notifications.title")}>
         <div className="flex items-center gap-3 text-yellow-500">
           <BellOff className="h-5 w-5" />
           <p className="text-sm">
             {t("settingsPanels.notifications.denied")}
           </p>
         </div>
-      </div>
+      </SettingsPanel>
     );
   }
 

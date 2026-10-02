@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SettingsPanel } from '@/features/settings/SettingsPanel'
 import { useDebouncedFormAutoSave } from '@/hooks/useDebouncedFormAutoSave'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -194,31 +195,28 @@ export function TTSSettings() {
   }
   
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-foreground">{t('settingsPanels.tts.title')}</h2>
-        {/* Show auto-save status instead of save button */}
-        <div className="flex items-center gap-2 text-sm">
-          {saveStatus === 'saving' && (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground">{t('settingsPanels.tts.saving')}</span>
-            </>
-          )}
-          {saveStatus === 'saved' && (
-            <>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-green-600">{t('settingsPanels.tts.saved')}</span>
-            </>
-          )}
-          {saveStatus === 'idle' && isDirty && isValid && (
-            <span className="text-amber-600">{t('settingsPanels.tts.unsavedChanges')}</span>
-          )}
-          {saveStatus === 'idle' && !isDirty && (
-            <span className="text-muted-foreground">{t('settingsPanels.tts.allChangesSaved')}</span>
-          )}
-        </div>
-      </div>
+    <SettingsPanel title={t('settingsPanels.tts.title')} actions={
+      <>
+        {saveStatus === 'saving' && (
+        <>
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <span className="text-muted-foreground">{t('settingsPanels.tts.saving')}</span>
+      </>
+            )}
+            {saveStatus === 'saved' && (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-green-600">{t('settingsPanels.tts.saved')}</span>
+              </>
+            )}
+            {saveStatus === 'idle' && isDirty && isValid && (
+              <span className="text-amber-600">{t('settingsPanels.tts.unsavedChanges')}</span>
+            )}
+            {saveStatus === 'idle' && !isDirty && (
+              <span className="text-muted-foreground">{t('settingsPanels.tts.allChangesSaved')}</span>
+            )}
+      </>
+      }>
       
       <Form {...form}>
         <form className="space-y-6">
@@ -633,6 +631,6 @@ export function TTSSettings() {
           )}
         </form>
       </Form>
-    </div>
+    </SettingsPanel>
   )
 }

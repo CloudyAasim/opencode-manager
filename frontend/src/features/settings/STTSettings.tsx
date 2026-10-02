@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { SettingsPanel } from '@/features/settings/SettingsPanel'
 import { useDebouncedFormAutoSave } from '@/hooks/useDebouncedFormAutoSave'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -173,24 +174,22 @@ export function STTSettings() {
   const canTest = canTestBuiltin || canTestExternal
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-foreground">{t('settingsPanels.stt.title')}</h2>
-        <div className="flex items-center gap-2 text-sm">
-          {saveStatus === 'saved' && (
-            <>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-green-600">{t('settingsPanels.stt.saved')}</span>
-            </>
-          )}
-          {saveStatus === 'idle' && isDirty && isValid && (
-            <span className="text-amber-600">{t('settingsPanels.stt.unsavedChanges')}</span>
-          )}
-          {saveStatus === 'idle' && !isDirty && (
-            <span className="text-muted-foreground">{t('settingsPanels.stt.allChangesSaved')}</span>
-          )}
-        </div>
-      </div>
+    <SettingsPanel title={t('settingsPanels.stt.title')} actions={
+      <>
+        {saveStatus === 'saved' && (
+        <>
+        <CheckCircle2 className="h-4 w-4 text-green-500" />
+        <span className="text-green-600">{t('settingsPanels.stt.saved')}</span>
+      </>
+            )}
+            {saveStatus === 'idle' && isDirty && isValid && (
+              <span className="text-amber-600">{t('settingsPanels.stt.unsavedChanges')}</span>
+            )}
+            {saveStatus === 'idle' && !isDirty && (
+              <span className="text-muted-foreground">{t('settingsPanels.stt.allChangesSaved')}</span>
+            )}
+      </>
+      }>
 
       <Form {...form}>
         <form className="space-y-6">
@@ -463,6 +462,6 @@ export function STTSettings() {
           )}
         </form>
       </Form>
-    </div>
+    </SettingsPanel>
   )
 }
