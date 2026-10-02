@@ -19,6 +19,7 @@ import { TerminalInspectorTab } from './features/terminal/InspectorTab'
 import { CommandProvider } from './framework/commands/CommandProvider'
 import { CommandPalette } from './framework/commands/CommandPalette'
 import { BuiltinCommands } from './framework/commands/BuiltinCommands'
+import { InspectorCommands } from './framework/commands/InspectorCommands'
 import { useTheme } from './hooks/useTheme'
 import { useRightEdgeSwipe, useSwipeBack } from './hooks/useMobile'
 import { useMobileTabBar } from '@/hooks/useMobileTabBar'
@@ -183,33 +184,34 @@ function AppShell() {
               <FileBrowserInspectorTab />
               <SourceControlInspectorTab />
               <TerminalInspectorTab />
+              <InspectorCommands />
+              <BuiltinCommands />
+              <CommandPalette />
+              <ShellFrame
+                rootRef={rootRef}
+                header={<TopBar />}
+                rail={
+                  <Suspense fallback={null}>
+                    <DesktopSidebar />
+                  </Suspense>
+                }
+                main={<Outlet />}
+                bottom={
+                  <Suspense fallback={null}>
+                    <MobileTabBar />
+                  </Suspense>
+                }
+                status={<StatusBar />}
+                inspector={<Inspector />}
+              />
+              <MobileSheetHost />
+              <PermissionDialogWrapper />
+              <SSHHostKeyDialogWrapper />
+              <HealthMonitor />
+              <RoutePrefetcher />
+              <VersionNotifier />
+              <PwaUpdatePrompt />
             </InspectorProvider>
-            <BuiltinCommands />
-            <CommandPalette />
-            <ShellFrame
-              rootRef={rootRef}
-              header={<TopBar />}
-              rail={
-                <Suspense fallback={null}>
-                  <DesktopSidebar />
-                </Suspense>
-              }
-              main={<Outlet />}
-              bottom={
-                <Suspense fallback={null}>
-                  <MobileTabBar />
-                </Suspense>
-              }
-              status={<StatusBar />}
-              inspector={<Inspector />}
-            />
-            <MobileSheetHost />
-            <PermissionDialogWrapper />
-            <SSHHostKeyDialogWrapper />
-            <HealthMonitor />
-            <RoutePrefetcher />
-            <VersionNotifier />
-            <PwaUpdatePrompt />
             <Toaster
               position={isDesktop ? 'bottom-right' : 'top-center'}
               offset={isDesktop ? undefined : '64px'}

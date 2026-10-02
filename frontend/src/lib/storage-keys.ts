@@ -8,6 +8,7 @@ export const STORAGE_KEYS = {
   fileSplitPct: 'ocm.fileSplitPct',
   inspectorOpen: 'ocm.inspectorOpen',
   inspectorWidth: 'ocm.inspectorWidth',
+  inspectorTab: 'ocm.inspectorTab',
 } as const
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]

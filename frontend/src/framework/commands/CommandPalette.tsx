@@ -99,7 +99,7 @@ export function CommandPalette() {
               >
                 <span className="truncate">{entry.label}</span>
                 <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                  {t(`shell.commands.group.${entry.command.group}`)}
+                  {entry.command.groupLabel ?? t(`shell.commands.group.${entry.command.group}`)}
                 </span>
               </button>
             </li>

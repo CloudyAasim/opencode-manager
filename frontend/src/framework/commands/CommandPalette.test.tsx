@@ -140,3 +140,20 @@ describe('command palette', () => {
     await waitFor(() => expect(optionLabels()).toEqual([]))
   })
 })
+
+describe('command groups owned by a feature', () => {
+  it('prefers a command-supplied group label over the framework translation', async () => {
+    renderPalette([
+      { ...FILES, id: 'files.refresh', group: 'files', groupLabel: 'Files', label: 'Refresh listing' },
+      { ...FILES, id: 'nav.repos', group: 'navigate', label: 'Repos' },
+    ])
+    await openPalette()
+
+    const rows = [...document.querySelectorAll('ul li button')].map((node) => node.textContent ?? '')
+    const refresh = rows.find((row) => row.includes('Refresh listing'))
+    const repos = rows.find((row) => row.includes('Repos'))
+
+    expect(refresh).toContain('Files')
+    expect(repos).not.toContain('Files')
+  })
+})
