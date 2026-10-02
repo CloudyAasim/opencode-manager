@@ -38,8 +38,8 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
     status: mcpStatus, 
     isLoading: isLoadingStatus,
     refetch: refetchStatus,
-    connect,
-    disconnect,
+    connectAsync,
+    disconnectAsync,
     removeAuthAsync,
     isRemovingAuth
   } = useMcpServers()
@@ -50,7 +50,7 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
       
       const currentStatus = mcpStatus?.[serverId]
       if (currentStatus?.status === 'connected') {
-        await disconnect(serverId)
+        await disconnectAsync(serverId)
       }
       
       const currentMcp = (config.content?.mcp as Record<string, McpServerConfig>) || {}
@@ -96,15 +96,15 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
     setTogglingServerId(serverId)
     try {
       if (currentStatus.status === 'connected') {
-        await disconnect(serverId)
-      } else if (currentStatus.status === 'disabled') {
-        await connect(serverId)
-      } else if (currentStatus.status === 'failed') {
-        await connect(serverId)
+        await disconnectAsync(serverId)
+      } else {
+        await connectAsync(serverId)
       }
+    } catch {
+      // connectAsync / disconnectAsync reject here; the hook toasts the reason
     } finally {
+      // their own onSuccess already invalidates ['mcp-status'], so no refetch here
       setTogglingServerId(null)
-      refetchStatus()
     }
   }
 

@@ -187,6 +187,8 @@ export const repo = {
     noDirectory: '未提供目录',
     noServerId: '未提供服务器 ID',
     serverUrlNotFound: '未找到服务器 URL',
+    statusLoadFailed: '加载 MCP 服务器失败',
+    retry: '重试',
     noServers: '此位置未配置 MCP 服务器',
     noServersHint: '可在设置或项目的 opencode.json 中添加',
     optionsTitle: '点击查看选项',

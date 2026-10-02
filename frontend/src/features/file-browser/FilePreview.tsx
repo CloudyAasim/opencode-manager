@@ -349,6 +349,8 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       setIsSaving(true)
       try {
         await virtualizedRef.current.save()
+      } catch (err) {
+        showToast.error(t('repo.fileBrowser.saveFailed'), { description: err instanceof Error ? err.message : String(err) })
       } finally {
         setIsSaving(false)
       }

@@ -21,6 +21,7 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
   const [localStatus, setLocalStatus] = useState<Record<string, McpStatus>>({})
   const [mcpServers, setMcpServers] = useState<Record<string, McpServerConfig>>({})
   const [isLoadingStatus, setIsLoadingStatus] = useState(false)
+  const [statusError, setStatusError] = useState<Error | null>(null)
   const [hasFetchedStatus, setHasFetchedStatus] = useState(false)
   const [removeAuthConfirmServer, setRemoveAuthConfirmServer] = useState<string | null>(null)
   const [authDialogServerId, setAuthDialogServerId] = useState<string | null>(null)
@@ -31,6 +32,7 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
     if (!directory) return
     
     setIsLoadingStatus(true)
+    setStatusError(null)
     try {
       const [status, config] = await Promise.all([
         mcpApi.getStatusFor(directory),
@@ -39,6 +41,8 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
       setLocalStatus(status)
       setMcpServers((config.mcp as Record<string, McpServerConfig>) || {})
       setHasFetchedStatus(true)
+    } catch (error) {
+      setStatusError(error instanceof Error ? error : new Error(String(error)))
     } finally {
       setIsLoadingStatus(false)
     }
@@ -150,6 +154,8 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
 
         <RepoMcpServerList
           hasFetchedStatus={hasFetchedStatus}
+          statusError={statusError}
+          onRetry={() => { void fetchStatus() }}
           serverIds={serverIds}
           isLoadingStatus={isLoadingStatus}
           localStatus={localStatus}

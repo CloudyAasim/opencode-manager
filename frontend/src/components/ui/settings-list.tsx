@@ -1,5 +1,6 @@
 import { createContext, Fragment, useContext, type ReactNode } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { MoreHorizontal, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DESKTOP_MEDIA_QUERY, useMediaQuery } from '@/hooks/useMediaQuery'
@@ -70,11 +71,12 @@ export function SettingsList({
 
   if (error) {
     return (
-      <div className="text-center py-6 text-muted-foreground">
-        <AlertCircle className="w-10 h-10 mx-auto mb-3 opacity-50 text-red-500" />
-        <p className="text-sm">{errorTitle ?? t('ui.settingsList.failedToLoad')}</p>
-        <p className="text-xs mt-1">{error.message}</p>
-      </div>
+      <PanelMessage
+        icon={<AlertCircle className="text-red-500" />}
+        title={errorTitle ?? t('ui.settingsList.failedToLoad')}
+        detail={error.message}
+        className="py-6"
+      />
     )
   }
 

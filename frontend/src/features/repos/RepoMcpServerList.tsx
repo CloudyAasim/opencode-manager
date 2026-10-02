@@ -1,5 +1,6 @@
 import { Switch } from '@/components/ui/switch'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -11,6 +12,8 @@ import { useI18n } from '@/lib/i18n'
 
 interface RepoMcpServerListProps {
   hasFetchedStatus: boolean
+  statusError: Error | null
+  onRetry: () => void
   serverIds: string[]
   isLoadingStatus: boolean
   localStatus: Record<string, McpStatus>
@@ -29,6 +32,8 @@ interface RepoMcpServerListProps {
 
 export function RepoMcpServerList({
   hasFetchedStatus,
+  statusError,
+  onRetry,
   serverIds,
   isLoadingStatus,
   localStatus,
@@ -92,12 +97,25 @@ export function RepoMcpServerList({
 
   return (
     <div className="px-4 sm:px-6 py-3 sm:py-4 flex-1 overflow-y-auto min-h-0">
-      {hasFetchedStatus && serverIds.length === 0 ? (
-        <div className="text-center py-6 text-muted-foreground">
-          <Plug className="w-10 h-10 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">{t('repo.mcp.noServers')}</p>
-          <p className="text-xs mt-1">{t('repo.mcp.noServersHint')}</p>
-        </div>
+      {statusError ? (
+        <PanelMessage
+          icon={<AlertCircle className="text-red-500" />}
+          title={t('repo.mcp.statusLoadFailed')}
+          detail={statusError.message}
+          action={
+            <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+              <RefreshCw className="h-3 w-3 mr-1" />
+              {t('repo.mcp.retry')}
+            </Button>
+          }
+        />
+      ) : hasFetchedStatus && serverIds.length === 0 ? (
+        <PanelMessage
+          icon={<Plug />}
+          title={t('repo.mcp.noServers')}
+          detail={t('repo.mcp.noServersHint')}
+          className="py-6"
+        />
       ) : isLoadingStatus ? (
         <PanelLoading className="py-8" size="sm" label={t('repo.loading')} />
       ) : (

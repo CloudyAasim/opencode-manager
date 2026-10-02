@@ -187,6 +187,8 @@ export const repo = {
     noDirectory: 'No directory provided',
     noServerId: 'No server ID',
     serverUrlNotFound: 'Server URL not found',
+    statusLoadFailed: 'Failed to load MCP servers',
+    retry: 'Retry',
     noServers: 'No MCP servers configured for this location',
     noServersHint: "Add them in Settings or in the project's opencode.json",
     optionsTitle: 'Click for options',
