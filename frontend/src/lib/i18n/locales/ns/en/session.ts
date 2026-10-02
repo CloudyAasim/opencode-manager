@@ -24,6 +24,7 @@ export const session = {
     actionsAria: 'Session actions',
     unpin: 'Unpin',
     pinToTop: 'Pin to top',
+    pinFailed: 'Could not pin the session',
   },
   editTitle: {
     label: 'Change session title',

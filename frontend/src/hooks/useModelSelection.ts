@@ -3,6 +3,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useConfig } from './useOpenCode'
 import { useOpenCodeClient } from './useOpenCode'
 import { useModelStore, modelExists, type ModelSelection } from '@/stores/modelStore'
+import { showErrorToast } from '@/lib/error-toast'
+import { useI18n } from '@/lib/i18n'
 import { addOpenCodeRecentModel, getOpenCodeModelState, getProviders, removeOpenCodeRecentModel, toggleOpenCodeFavoriteModel, type OpenCodeModelState } from '@/api/providers'
 
 interface UseModelSelectionResult {
@@ -31,6 +33,7 @@ export function useModelSelection(
   const { data: config } = useConfig(opcodeUrl, directory)
   const client = useOpenCodeClient(opcodeUrl, directory)
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   
   const { data: providersData } = useQuery({
     queryKey: ['opencode', 'providers', opcodeUrl, directory],
@@ -63,8 +66,8 @@ export function useModelSelection(
       queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], state)
       queryClient.invalidateQueries({ queryKey: [...modelStateQueryKey, opcodeUrl, directory] })
     },
-    onError: () => {
-      void 0
+    onError: (error) => {
+      showErrorToast(error, t('misc.modelQuickSelect.addToFavoritesFailed'))
     },
   })
 
@@ -75,8 +78,8 @@ export function useModelSelection(
       queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], state)
       queryClient.invalidateQueries({ queryKey: [...modelStateQueryKey, opcodeUrl, directory] })
     },
-    onError: () => {
-      void 0
+    onError: (error) => {
+      showErrorToast(error, t('misc.modelQuickSelect.removeFromRecentFailed'))
     },
   })
 

@@ -24,6 +24,7 @@ export const session = {
     actionsAria: '会话操作',
     unpin: '取消置顶',
     pinToTop: '置顶',
+    pinFailed: '置顶失败',
   },
   editTitle: {
     label: '修改会话标题',

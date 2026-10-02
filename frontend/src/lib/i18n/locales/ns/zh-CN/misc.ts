@@ -27,6 +27,8 @@ export const misc = {
     removeFromRecent: '从最近使用中移除',
     removeFromFavorites: '取消收藏',
     addToFavorites: '添加收藏',
+    addToFavoritesFailed: '添加收藏失败',
+    removeFromRecentFailed: '从最近使用中移除失败',
     modelCountOne: '{{n}} 个模型',
     modelCountOther: '{{n}} 个模型',
     searchModels: '搜索模型...',

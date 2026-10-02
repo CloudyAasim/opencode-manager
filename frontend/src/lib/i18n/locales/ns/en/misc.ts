@@ -27,6 +27,8 @@ export const misc = {
     removeFromRecent: 'Remove from recent',
     removeFromFavorites: 'Remove from favorites',
     addToFavorites: 'Add to favorites',
+    addToFavoritesFailed: 'Could not add to favorites',
+    removeFromRecentFailed: 'Could not remove from recent',
     modelCountOne: '{{n}} model',
     modelCountOther: '{{n}} models',
     searchModels: 'Search models...',

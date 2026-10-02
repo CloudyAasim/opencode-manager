@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listSessionPins, toggleSessionPin } from '@/api/sessionPins'
+import { showErrorToast } from '@/lib/error-toast'
+import { useI18n } from '@/lib/i18n'
+import { withToggledPin } from '@/lib/sessionPins'
 import type { SessionPin, ToggleSessionPinRequest } from '@opencode-manager/shared/schemas'
 
 export const SESSION_PINS_QUERY_KEY = ['session-pins'] as const
@@ -14,8 +17,25 @@ export function useSessionPins() {
 
 export function useToggleSessionPin() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   return useMutation({
     mutationFn: (input: ToggleSessionPinRequest) => toggleSessionPin(input),
+    onMutate: async (input) => {
+      // a refetch landing here would put the row back where it was
+      await queryClient.cancelQueries({ queryKey: SESSION_PINS_QUERY_KEY })
+      const previous = queryClient.getQueryData<SessionPin[]>(SESSION_PINS_QUERY_KEY)
+      if (previous) {
+        queryClient.setQueryData(
+          SESSION_PINS_QUERY_KEY,
+          withToggledPin(previous, input, Date.now()),
+        )
+      }
+      return { previous }
+    },
+    onError: (error, _input, context) => {
+      if (context?.previous) queryClient.setQueryData(SESSION_PINS_QUERY_KEY, context.previous)
+      showErrorToast(error, t('session.card.pinFailed'))
+    },
     onSuccess: (pins: SessionPin[]) => {
       queryClient.setQueryData(SESSION_PINS_QUERY_KEY, pins)
     },
