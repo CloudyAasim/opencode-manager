@@ -161,11 +161,6 @@ export const misc = {
     refreshDescription: '刷新以加载最新更改。',
     refresh: '刷新',
   },
-  version: {
-    updateAvailable: 'OpenCode Manager v{{version}} 已发布',
-    newVersionReady: '新版本已准备好安装。',
-    viewRelease: '查看发布说明',
-  },
   assistant: {
     title: '助手',
     repoName: '助手',

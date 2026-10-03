@@ -107,7 +107,6 @@ export const zhCN: DeepString<typeof en> = {
       expandDiffs: '展开差异',
       expandDiffsDescription: '编辑操作默认展开文件差异',
       saving: '保存中…',
-      updateAvailable: '可升级到 {{version}}',
     },
     users: {
       title: '用户',

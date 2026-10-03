@@ -106,7 +106,6 @@ export const en = {
       expandDiffs: 'Expand diffs',
       expandDiffsDescription: 'Show file diffs expanded by default for edit operations',
       saving: 'Saving...',
-      updateAvailable: '{{version}} available',
     },
     users: {
       title: 'Users',

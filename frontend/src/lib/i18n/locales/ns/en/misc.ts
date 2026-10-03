@@ -162,11 +162,6 @@ export const misc = {
     refreshDescription: 'Refresh to load the latest changes.',
     refresh: 'Refresh',
   },
-  version: {
-    updateAvailable: 'OpenCode Manager v{{version}} is available',
-    newVersionReady: 'A new version is ready to install.',
-    viewRelease: 'View Release',
-  },
   assistant: {
     title: 'Assistant',
     repoName: 'Assistant',

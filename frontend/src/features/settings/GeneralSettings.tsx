@@ -27,21 +27,9 @@ export function GeneralSettings() {
           {isVersionLoading ? (
             <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
           ) : versionInfo?.currentVersion ? (
-            <>
-              <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded">
-                {versionInfo.currentVersion}
-              </span>
-              {versionInfo.updateAvailable && versionInfo.latestVersion && (
-                <a
-                  href={versionInfo.releaseUrl ?? ''}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-medium text-green-500 hover:text-green-400 transition-colors"
-                >
-                  {t('settings.general.updateAvailable', { version: `v${versionInfo.latestVersion}` })}
-                </a>
-              )}
-            </>
+            <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded">
+              {versionInfo.currentVersion}
+            </span>
           ) : (
             <span>{t('common.unknown')}</span>
           )}

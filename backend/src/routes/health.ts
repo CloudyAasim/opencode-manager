@@ -3,54 +3,6 @@ import type { Database } from 'bun:sqlite'
 import { readFile } from 'fs/promises'
 import { opencodeServerManager } from '../services/opencode-single-server'
 import type { OpenCodeSupervisor } from '../services/opencode-supervisor'
-import { compareVersions } from '../utils/version-utils'
-import { githubFetch } from '../utils/github'
-
-const GITHUB_REPO_OWNER = 'chriswritescode-dev'
-const GITHUB_REPO_NAME = 'opencode-manager'
-
-interface CachedRelease {
-  tagName: string
-  htmlUrl: string
-  name: string
-  fetchedAt: number
-}
-
-let cachedRelease: CachedRelease | null = null
-const CACHE_TTL_MS = 60 * 60 * 1000
-
-async function fetchLatestRelease(): Promise<CachedRelease | null> {
-  if (cachedRelease && Date.now() - cachedRelease.fetchedAt < CACHE_TTL_MS) {
-    return cachedRelease
-  }
-
-  try {
-    const response = await githubFetch(
-      `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/latest`,
-    )
-
-    if (!response.ok) {
-      return cachedRelease
-    }
-
-    const data = await response.json() as { tag_name?: string; html_url?: string; name?: string }
-    const tagName = data.tag_name ?? '0.0.0'
-    const htmlUrl = data.html_url ?? ''
-    const name = data.name ?? tagName
-
-    cachedRelease = {
-      tagName,
-      htmlUrl,
-      name,
-      fetchedAt: Date.now()
-    }
-
-    return cachedRelease
-  } catch {
-    return cachedRelease
-  }
-}
-
 const opencodeManagerVersionPromise = (async (): Promise<string | null> => {
   try {
     const packageUrl = new URL('../../../package.json', import.meta.url)
@@ -137,9 +89,11 @@ export function createHealthRoutes(db: Database, openCodeSupervisor?: OpenCodeSu
     }
   })
 
+  // Reports which build this is. It no longer asks a GitHub repository
+    // whether a newer one exists: this deployment is not that repository, so
+    // the answer could not be acted on.
   app.get('/version', async (c) => {
     const currentVersion = await opencodeManagerVersionPromise
-    const latestRelease = await fetchLatestRelease()
 
     if (!currentVersion) {
       return c.json({
@@ -151,25 +105,13 @@ export function createHealthRoutes(db: Database, openCodeSupervisor?: OpenCodeSu
       })
     }
 
-    if (!latestRelease) {
-      return c.json({
-        currentVersion,
-        latestVersion: null,
-        updateAvailable: false,
-        releaseUrl: null,
-        releaseName: null
-      })
-    }
-
-    const latestVersion = latestRelease.tagName.replace(/^v/, '')
-    const isUpdateAvailable = compareVersions(currentVersion, latestVersion) < 0
 
     return c.json({
       currentVersion,
-      latestVersion,
-      updateAvailable: isUpdateAvailable,
-      releaseUrl: latestRelease.htmlUrl,
-      releaseName: latestRelease.name
+      latestVersion: null,
+      updateAvailable: false,
+      releaseUrl: null,
+      releaseName: null,
     })
   })
 

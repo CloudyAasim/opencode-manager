@@ -65,13 +65,16 @@ describe('GeneralSettings', () => {
 
   it('renders the compact heading row with version info and associated preference rows', () => {
     mockUseSettings()
+    // Even when a payload still carries an upgrade, the panel shows the build
+    // it is running and nothing else: this deployment does not release to the
+    // repository that answer used to come from, so the offer was noise.
     mockVersionInfo({ latestVersion: '1.3.0', updateAvailable: true, releaseUrl: 'https://example.com/release' })
     render(<GeneralSettings />)
 
     expect(screen.getByRole('heading', { name: 'General Preferences' })).toBeInTheDocument()
     expect(screen.getByText('OpenCode Manager')).toBeInTheDocument()
     expect(screen.getByText('v1.2.3')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'v1.3.0 available' })).toHaveAttribute('href', 'https://example.com/release')
+    expect(screen.queryByRole('link', { name: /available|update/i })).not.toBeInTheDocument()
 
     expect(screen.getByLabelText('Theme')).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Simple chat mode' })).not.toBeChecked()

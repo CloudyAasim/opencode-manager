@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useCallback } from 'react'
 import { Toaster } from 'sonner'
-import { VersionNotifier } from './components/VersionNotifier'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
 import { MobileSheetHost } from '@/features/navigation/MobileSheetHost'
 import { createAppRouter } from './routes'
@@ -209,8 +208,7 @@ function AppShell() {
             <SSHHostKeyDialogWrapper />
             <HealthMonitor />
             <RoutePrefetcher />
-            <VersionNotifier />
-            <PwaUpdatePrompt />
+                  <PwaUpdatePrompt />
           </InspectorProvider>
           <Toaster
             position={isDesktop ? 'bottom-right' : 'top-center'}
