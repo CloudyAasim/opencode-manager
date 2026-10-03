@@ -11,6 +11,7 @@ describe('repo worktree helpers', () => {
   let baseRepoPath: string
   let originRepoPath: string
   let worktreePath: string
+  let removableWorktreePath: string
   let tmpDir: string
   const env = process.env as Record<string, string>
 
@@ -19,6 +20,7 @@ describe('repo worktree helpers', () => {
     originRepoPath = path.join(tmpDir, 'origin.git')
     baseRepoPath = path.join(tmpDir, 'base')
     worktreePath = path.join(tmpDir, 'feature-x')
+    removableWorktreePath = path.join(tmpDir, 'feature-removable')
 
     // Init bare origin
     execSync(`git init --bare "${originRepoPath}"`, { env })
@@ -69,15 +71,22 @@ describe('repo worktree helpers', () => {
 
   describe('removeWorktree', () => {
     it('removes a worktree directory and prunes the worktree entry', async () => {
-      expect(existsSync(worktreePath)).toBe(true)
+      // This test used to remove the directory the createWorktreeSafely test
+      // made and merely assert it was there first, so it only passed when that
+      // sibling test happened to run earlier. Give this block its own
+      // worktree instead of inheriting one: shuffled order put this block
+      // first and existsSync() was false.
+      await createWorktreeSafely(baseRepoPath, removableWorktreePath, 'feature/removable', env)
 
-      await removeWorktree(baseRepoPath, worktreePath)
+      expect(existsSync(removableWorktreePath)).toBe(true)
 
-      expect(existsSync(worktreePath)).toBe(false)
+      await removeWorktree(baseRepoPath, removableWorktreePath)
+
+      expect(existsSync(removableWorktreePath)).toBe(false)
 
       // Verify pruning — the removed worktree should not appear in the list
       const worktreeList = execSync(`git -C "${baseRepoPath}" worktree list`, { encoding: 'utf-8' })
-      expect(worktreeList).not.toContain(worktreePath)
+      expect(worktreeList).not.toContain(removableWorktreePath)
     })
   })
 })

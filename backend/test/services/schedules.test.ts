@@ -195,6 +195,17 @@ function resetServiceMocks() {
   Reflect.get(ScheduleService, 'activeRuns').clear()
   Reflect.get(ScheduleService, 'activeTeardowns')?.clear()
 
+  // Runs are inline (no worktree) unless a test asks for one. The worktree
+  // block's tests swap prepare() for a real worktree context, and
+  // vi.clearAllMocks() does not undo an implementation - so without this the
+  // next block inherited a worktree directory, resolved its model against
+  // /workspace/worktrees/... and never saw the session.idle events that were
+  // emitted for repo.fullPath.
+  mocks.stubWorktreeManager.prepare.mockReset()
+  mocks.stubWorktreeManager.finalize.mockReset()
+  mocks.stubWorktreeManager.prepare.mockResolvedValue(null)
+  mocks.stubWorktreeManager.finalize.mockResolvedValue({ commitHash: null })
+
   mocks.getRepoById.mockReturnValue(repo)
   mocks.getScheduleJobById.mockReturnValue(job)
   mocks.getRunningScheduleRunByJob.mockReturnValue(null)

@@ -1,19 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest'
 
-const createOpenCodeClientMock = vi.hoisted(() => vi.fn(() => ({
-  forward: vi.fn().mockResolvedValue(new Response(null, { status: 200 })),
-  forwardRaw: vi.fn(),
-  getJson: vi.fn(),
-  postJson: vi.fn(),
-  setProviderAuth: vi.fn(),
-  deleteProviderAuth: vi.fn(),
-})))
+// The default implementations are also re-applied by
+// resetModuleMocksToFactoryDefaults() below, so keep them as named factories
+// instead of inlining them in the vi.fn() constructors.
+const { createOpenCodeClientMock, createDefaultOpenCodeClient } = vi.hoisted(() => {
+  const createDefaultOpenCodeClient = () => ({
+    forward: vi.fn().mockResolvedValue(new Response(null, { status: 200 })),
+    forwardRaw: vi.fn(),
+    getJson: vi.fn(),
+    postJson: vi.fn(),
+    setProviderAuth: vi.fn(),
+    deleteProviderAuth: vi.fn(),
+  })
+  return { createOpenCodeClientMock: vi.fn(createDefaultOpenCodeClient), createDefaultOpenCodeClient }
+})
 
-const spawnMock = vi.hoisted(() => vi.fn(() => ({
-  pid: 4194305,
-  stderr: null as unknown,
-  on: vi.fn(),
-})))
+const { spawnMock, createDefaultSpawnResult } = vi.hoisted(() => {
+  const createDefaultSpawnResult = () => ({
+    pid: 4194305,
+    stderr: null as unknown,
+    on: vi.fn(),
+  })
+  return { spawnMock: vi.fn(createDefaultSpawnResult), createDefaultSpawnResult }
+})
 
 const spawnSyncMock = vi.hoisted(() => vi.fn())
 
@@ -126,10 +135,16 @@ vi.mock('../../src/utils/logger', () => ({
 const mkdirMock = fs.mkdir as any
 const accessMock = fs.access as any
 const readFileMock = fs.readFile as any
+const statMock = fs.stat as any
+const writeFileMock = fs.writeFile as any
+const renameMock = fs.rename as any
+const chmodMock = fs.chmod as any
+const unlinkMock = fs.unlink as any
 const readdirMock = fs.readdir as any
 const rmMock = fs.rm as any
 const execSyncMock = execSync as any
 const childSpawnSyncMock = spawnSync as any
+const accessSyncMock = accessSync as ReturnType<typeof vi.fn>
 const readdirSyncMock = readdirSync as any
 
 const routeVersionProbeThroughExecSyncStub = () => {
@@ -141,7 +156,55 @@ const routeVersionProbeThroughExecSyncStub = () => {
   })
 }
 
-beforeEach(routeVersionProbeThroughExecSyncStub)
+// vi.clearAllMocks() drops call history but KEEPS implementations, and the
+// mockReturnValueOnce()/mockImplementationOnce() queues survive it as well. Every
+// module mock below therefore outlived the test that installed it, so a stub such
+// as the rejecting mkdir from the reinitializeBinDirectory block, or a custom
+// createOpenCodeClient, leaked into whatever test happened to run next - which is
+// why this file only passed in declaration order. Restore each mock to the
+// default declared in its vi.mock() factory before every test, so no block can
+// poison the next one and the file becomes order-independent.
+const resetModuleMocksToFactoryDefaults = () => {
+  vi.clearAllMocks()
+
+  accessSyncMock.mockReset()
+  accessSyncMock.mockImplementation(() => {
+    const error = new Error('ENOENT: no such file or directory') as NodeJS.ErrnoException
+    error.code = 'ENOENT'
+    throw error
+  })
+  readdirSyncMock.mockReset()
+  readdirSyncMock.mockReturnValue([])
+  readFileSyncMock.mockReset()
+
+  mkdirMock.mockReset()
+  mkdirMock.mockResolvedValue(undefined)
+  accessMock.mockReset()
+  readFileMock.mockReset()
+  statMock.mockReset()
+  writeFileMock.mockReset()
+  renameMock.mockReset()
+  chmodMock.mockReset()
+  unlinkMock.mockReset()
+  readdirMock.mockReset()
+  readdirMock.mockResolvedValue([])
+  rmMock.mockReset()
+  rmMock.mockResolvedValue(undefined)
+
+  execSyncMock.mockReset()
+  spawnMock.mockReset()
+  spawnMock.mockImplementation(createDefaultSpawnResult)
+  childSpawnSyncMock.mockReset()
+  routeVersionProbeThroughExecSyncStub()
+
+  createOpenCodeClientMock.mockReset()
+  createOpenCodeClientMock.mockImplementation(createDefaultOpenCodeClient)
+  installManagedPluginsMock.mockReset()
+  writeOpenCodeConfigFileMock.mockReset()
+  readOpenCodeConfigFileMock.mockReset()
+}
+
+beforeEach(resetModuleMocksToFactoryDefaults)
 
 // Reset singleton before any tests run to clear any polluted state from previous test files
 beforeAll(async () => {
@@ -502,7 +565,6 @@ describe('OpenCodeServerManager - server auth', () => {
   })
 
   it('spawns the verified OpenCode executable by absolute path when resolvable', async () => {
-    const accessSyncMock = accessSync as ReturnType<typeof vi.fn>
     const previousBin = process.env.OPENCODE_BIN
     process.env.OPENCODE_BIN = '/verified/bin/opencode'
     try {
@@ -530,7 +592,6 @@ describe('OpenCodeServerManager - server auth', () => {
   })
 
   it('prefers the user-installed OpenCode executable over the bundled executable', () => {
-    const accessSyncMock = accessSync as ReturnType<typeof vi.fn>
     const previousHome = process.env.HOME
     process.env.HOME = '/test/home'
     try {
@@ -1814,9 +1875,14 @@ describe('OpenCodeServerManager - server auth', () => {
       deleteProviderAuth: vi.fn(),
     }))
 
-    await manager.start()
+    try {
+      await manager.start()
 
-    expect(manager.isRestartPending()).toBe(true)
+      expect(manager.isRestartPending()).toBe(true)
+    } finally {
+      // this client implementation would otherwise survive into every later test
+      createOpenCodeClientMock.mockImplementation(createDefaultOpenCodeClient)
+    }
   })
 
   it('clears a restart request when no newer change arrives during startup', async () => {
@@ -2015,10 +2081,19 @@ describe('OpenCodeServerManager - reinitializeBinDirectory', () => {
     it('should handle directory creation failure gracefully', async () => {
       const { opencodeServerManager } = await import('../../src/services/opencode-single-server')
       const { logger } = await import('../../src/utils/logger')
-      
+
       mkdirMock.mockRejectedValue(new Error('Permission denied'))
 
-      await opencodeServerManager.reinitializeBinDirectory()
+      try {
+        await opencodeServerManager.reinitializeBinDirectory()
+      } finally {
+        // mkdirSafe() failing here is the point of the test, but the rejecting
+        // implementation has to go back: it also runs inside every production
+        // start() (via writeFileAtomic -> mkdirSafe), so leaving it installed
+        // made every later spawn fail to persist the child state marker.
+        mkdirMock.mockReset()
+        mkdirMock.mockResolvedValue(undefined)
+      }
 
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to initialize OpenCode bin directory:',

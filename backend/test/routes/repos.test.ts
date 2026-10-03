@@ -117,6 +117,13 @@ describe('Repo Routes', () => {
   })
 
   describe('POST /:id/access', () => {
+    beforeEach(() => {
+      // The 500 test in this block makes updateLastAccessed throw, and
+      // vi.clearAllMocks() resets calls but not implementations - so the 200
+      // test inherited the throw and got a 500 whenever it ran second.
+      vi.mocked(db.updateLastAccessed).mockReset()
+    })
+
     it('should return 404 when repo not found', async () => {
       vi.mocked(db.getRepoById).mockReturnValue(null)
 
