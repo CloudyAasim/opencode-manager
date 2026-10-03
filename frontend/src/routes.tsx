@@ -44,7 +44,7 @@ export const appRoutes: AppRoute[] = [
   },
   {
     path: '/assistant',
-    lazy: async () => ({ Component: (await import('./pages/AssistantRedirect')).AssistantRedirect }),
+    lazy: async () => ({ Component: (await import('./pages/SessionDetail')).SessionDetail }),
     loader: protectedLoader,
     prefetch: { group: 'authenticated', order: 4 },
   },
@@ -68,7 +68,7 @@ export const appRoutes: AppRoute[] = [
   },
   {
     path: '/repos/:id/assistant',
-    lazy: async () => ({ Component: (await import('./pages/AssistantRedirect')).AssistantRedirect }),
+    lazy: async () => ({ Component: (await import('./pages/SessionDetail')).SessionDetail }),
     loader: protectedLoader,
   },
   {

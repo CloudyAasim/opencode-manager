@@ -100,7 +100,10 @@ export function SessionDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const repoId = Number(id) || 0;
-  const isAssistantSession = new URLSearchParams(location.search).get('assistant') === '1';
+  // The assistant is a project (repo 0) reached without an :id in the path,
+  // so this covers both /assistant and /repos/0/assistant.
+  const isAssistantSession =
+    id === undefined || new URLSearchParams(location.search).get('assistant') === '1';
   const { preferences, updateSettings } = useSettings();
   const openSettings = useCallback(() => navigate('/settings'), [navigate]);
   const isDesktop = useDesktop();
@@ -400,9 +403,13 @@ export function SessionDetail() {
   const ensureSessionForNewConversation = useCallback(async () => {
     const created = await createSession.mutateAsync({ agent: undefined })
     if (!created?.id) throw new Error('The session could not be created')
-    navigate(projectSessionPath(repoId, created.id, activeTab), { replace: true })
+    navigate(
+      projectSessionPath(repoId, created.id, activeTab) +
+        (isAssistantSession ? '?assistant=1' : ''),
+      { replace: true },
+    )
     return created.id
-  }, [createSession, navigate, repoId, activeTab]);
+  }, [createSession, navigate, repoId, activeTab, isAssistantSession]);
   const { model, modelString } = useModelSelection(opcodeUrl, sessionDirectory);
   const isEditingMessage = useUIState((state) => state.isEditingMessage);
   const setActivePromptFileBasePath = useUIState((state) => state.setActivePromptFileBasePath);
