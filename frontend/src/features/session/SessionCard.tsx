@@ -24,6 +24,11 @@ interface SessionCardProps {
   isPinned?: boolean;
   onTogglePin?: () => void;
   onRename?: (title: string) => void;
+  draggable?: boolean;
+  isDragging?: boolean;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDropOn?: () => void;
   onSelect: (sessionID: string) => void;
   onToggleSelection: (selected: boolean) => void;
   onDelete: (e: React.MouseEvent) => void;
@@ -38,6 +43,11 @@ export const SessionCard = ({
   isPinned,
   onTogglePin,
   onRename,
+  draggable,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+  onDropOn,
   onSelect,
   onToggleSelection,
   onDelete,
@@ -74,7 +84,28 @@ export const SessionCard = ({
   };
 
   return (
-    <div className="relative" onClick={close}>
+    <div
+      className="relative"
+      onClick={close}
+      draggable={draggable}
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'move'
+        // Firefox will not start a drag without data set on it.
+        event.dataTransfer.setData('text/plain', session.id)
+        onDragStart?.()
+      }}
+      onDragEnd={() => onDragEnd?.()}
+      onDragOver={(event) => {
+        if (!draggable) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+      }}
+      onDrop={(event) => {
+        if (!draggable) return
+        event.preventDefault()
+        onDropOn?.()
+      }}
+    >
       <div
         className={`absolute top-0.5 right-0 bottom-0.5 w-20 bg-red-600 flex items-center justify-center rounded-r-lg transition-opacity ${
           !isSwipingBack && (isOpen || swipeOffset > 40) ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -88,9 +119,11 @@ export const SessionCard = ({
           <Trash2 className="w-5 h-5" />
         </button>
       </div>
-      <div ref={cardRef} style={swipeStyles}>
+      <div ref={cardRef} style={swipeStyles} className={isDragging ? 'opacity-40' : undefined}>
         <Card
           className={`p-2 cursor-pointer transition-all overflow-hidden ${
+            isDragging ? 'ring-2 ring-primary' : ''
+          } ${
             isOpen
               ? "rounded-none"
               : "rounded-r-lg"

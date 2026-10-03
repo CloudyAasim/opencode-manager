@@ -3,7 +3,7 @@ import { useSessionsAcrossDirectories, useDeleteSession, useCreateSession, useUp
 import type { DeleteSessionTarget } from "@/hooks/useOpenCode";
 import { useSessionPins, useToggleSessionPin } from '@/hooks/useSessionPins';
 import { buildSessionKey } from '@/lib/sessionKey';
-import { partitionSessions } from './session-partition';
+import { partitionSessions, parseSessionOrder, formatSessionOrder } from './session-partition';
 import { DeleteSessionDialog } from "./DeleteSessionDialog";
 import { SessionCard } from "./SessionCard";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Trash2, Pencil, X, Plus } from "lucide-react";
 import { useI18n } from '@/lib/i18n';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
 
 interface SessionListProps {
   opcodeUrl: string;
@@ -81,10 +82,38 @@ export const SessionList = ({
     return Array.from(uniqueSessions.values()).sort((a, b) => b.time.updated - a.time.updated);
   }, [sessions, directorySet, getSessionSelectionKey]);
 
+  const [userOrder, setUserOrder] = useState<string[]>([]);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserOrder(parseSessionOrder(window.localStorage.getItem(STORAGE_KEYS.sessionOrder)));
+  }, []);
+
   const { pinned: pinnedSessions, today: todaySessions, older: olderSessions } = useMemo(
-    () => partitionSessions(filteredSessions, pinnedKeys, getSessionSelectionKey),
-    [filteredSessions, pinnedKeys, getSessionSelectionKey],
+    () => partitionSessions(filteredSessions, pinnedKeys, getSessionSelectionKey, Date.now(), userOrder),
+    [filteredSessions, pinnedKeys, getSessionSelectionKey, userOrder],
   );
+
+  /** What is on screen, in the order it is on screen. */
+  const visibleSessions = useMemo(
+    () => [...pinnedSessions, ...todaySessions, ...olderSessions],
+    [pinnedSessions, todaySessions, olderSessions],
+  );
+
+  const moveSession = useCallback((fromKey: string, toKey: string) => {
+    const keys = visibleSessions.map((session) => getSessionSelectionKey(session));
+    const from = keys.indexOf(fromKey);
+    const to = keys.indexOf(toKey);
+    if (from === -1 || to === -1 || from === to) return;
+    keys.splice(to, 0, ...keys.splice(from, 1));
+    // keep whatever the user had arranged for sessions that are not on this
+    // screen, so one drag does not silently forget the rest
+    const onScreen = new Set(keys);
+    const kept = userOrder.filter((key) => !onScreen.has(key));
+    const next = [...keys, ...kept];
+    setUserOrder(next);
+    window.localStorage.setItem(STORAGE_KEYS.sessionOrder, formatSessionOrder(next));
+  }, [visibleSessions, getSessionSelectionKey, userOrder]);
 
   const handleRename = useCallback(
     (session: { id: string; directory?: string }, title: string) => {
@@ -236,10 +265,15 @@ export const SessionList = ({
   };
 
   const renderSessionCard = (session: (typeof filteredSessions)[number], isPinned: boolean) => {
-    const key = getSessionSelectionKey(session);
+    const key = getSessionSelectionKey(session)
     return (
       <SessionCard
         key={key}
+        draggable
+        isDragging={draggingKey === key}
+        onDragStart={() => setDraggingKey(key)}
+        onDragEnd={() => setDraggingKey(null)}
+        onDropOn={() => moveSession(draggingKey ?? key, key)}
         session={session}
         isSelected={selectedSessions.has(key)}
         isActive={activeSessionID === session.id}

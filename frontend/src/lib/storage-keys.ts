@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   inspectorWidth: 'ocm.inspectorWidth',
   inspectorTab: 'ocm.inspectorTab',
   inspectorTabOrder: 'ocm.inspectorTabOrder',
+  sessionOrder: 'ocm.sessionOrder',
 } as const
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]

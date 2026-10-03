@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { partitionSessions } from './session-partition'
+import { partitionSessions, parseSessionOrder, formatSessionOrder } from './session-partition'
 import type { Session } from '@/api/types'
 
 function createSession(id: string, updated: number, directory = '/test'): Session {
@@ -138,5 +138,85 @@ describe('partitionSessions', () => {
     expect(all).toHaveLength(sessions.length)
     const allIds = all.map((s) => s.id).sort()
     expect(allIds).toEqual(['normal-old', 'normal-today', 'pinned'])
+  })
+})
+
+
+/**
+ * The list was sorted by time.updated, descending. Recency is a fine default
+ * and a bad permanent answer - there was no way to put the session you actually
+ * work on at the top, and no way to keep it there.
+ *
+ * The order applies inside each partition. Dragging must not be able to move a
+ * pinned session down into "older": the grouping is a stronger statement than
+ * the order, and letting a drag undo it would make both meaningless.
+ */
+describe('会话顺序', () => {
+  const NOW = 1_700_000_000_000
+  const ago = (ms: number) => NOW - ms
+
+  const orderedSession = (id: string, updated: number, directory = '/w/a'): Session =>
+    ({
+      id,
+      directory,
+      projectID: 'p',
+      title: `Session ${id}`,
+      time: { created: updated - 10_000, updated },
+    } as unknown as Session)
+
+  const orderKey = (s: { id: string; directory?: string }) => `${s.directory ?? '/w/a'}:${s.id}`
+
+  it('存下来的顺序原样读回来', () => {
+    expect(parseSessionOrder('/w/a:s2,/w/a:s1')).toEqual(['/w/a:s2', '/w/a:s1'])
+    expect(parseSessionOrder(null)).toEqual([])
+    expect(parseSessionOrder('')).toEqual([])
+    expect(parseSessionOrder(' , /w/a:s1 ,, ')).toEqual(['/w/a:s1'])
+    expect(formatSessionOrder(['a', 'b'])).toBe('a,b')
+  })
+
+  it('没有存过顺序时还是按最近排', () => {
+    const s = [orderedSession('old', ago(90 * 60_000)), orderedSession('new', ago(60_000))]
+    const { today } = partitionSessions(s, new Set(), orderKey, NOW)
+    expect(today.map(orderKey)).toEqual(['/w/a:new', '/w/a:old'])
+  })
+
+  it('存过的顺序说了算', () => {
+    const s = [
+      orderedSession('a', ago(30_000)),
+      orderedSession('b', ago(10_000)),
+      orderedSession('c', ago(20_000)),
+    ]
+    const { today } = partitionSessions(s, new Set(), orderKey, NOW, ['/w/a:c', '/w/a:a', '/w/a:b'])
+    expect(today.map(orderKey)).toEqual(['/w/a:c', '/w/a:a', '/w/a:b'])
+  })
+
+  it('没被拖过的会话留在后面，不会因为缺席就被挤到底', () => {
+    const s = [
+      orderedSession('a', ago(30_000)),
+      orderedSession('b', ago(10_000)),
+      orderedSession('c', ago(20_000)),
+    ]
+    const { today } = partitionSessions(s, new Set(), orderKey, NOW, ['/w/a:c'])
+    expect(today.map(orderKey)).toEqual(['/w/a:c', '/w/a:b', '/w/a:a'])
+  })
+
+  it('拖动跨不了分组：置顶的会话不会被拖进"更早"', () => {
+    const pinned = new Set(['/w/a:pinned'])
+    const s = [
+      orderedSession('pinned', ago(30_000)),
+      orderedSession('today', ago(60_000)),
+      orderedSession('older', ago(3 * 24 * 60 * 60_000)),
+    ]
+    // the order asked for older first, but the grouping is the stronger claim
+    const result = partitionSessions(s, pinned, orderKey, NOW, ['/w/a:older', '/w/a:pinned'])
+    expect(result.pinned.map(orderKey)).toEqual(['/w/a:pinned'])
+    expect(result.today.map(orderKey)).toEqual(['/w/a:today'])
+    expect(result.older.map(orderKey)).toEqual(['/w/a:older'])
+  })
+
+  it('id 相同但目录不同的会话各自独立', () => {
+    const s = [orderedSession('same', ago(10_000), '/w/a'), orderedSession('same', ago(20_000), '/w/b')]
+    const { today } = partitionSessions(s, new Set(), orderKey, NOW, ['/w/b:same', '/w/a:same'])
+    expect(today.map(orderKey)).toEqual(['/w/b:same', '/w/a:same'])
   })
 })

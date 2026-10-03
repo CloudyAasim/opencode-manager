@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useCreateSession } from '@/hooks/useOpenCode'
 import { getRepo } from '@/api/repos'
 import { OPENCODE_API_ENDPOINT } from '@/config'
 import { projectSessionPath } from '@/lib/project-session-path'
@@ -11,18 +12,6 @@ import { getSessionListPath } from '@/lib/navigation'
 
 interface SessionListEnvelope {
   data?: Array<{ id?: string }>
-}
-
-async function createSession(directory: string): Promise<string | null> {
-  const response = await fetch(`${OPENCODE_API_ENDPOINT}/session`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ directory }),
-  })
-  if (!response.ok) return null
-  const session = (await response.json()) as { id?: string }
-  return session.id ?? null
 }
 
 export function RepoDetail() {
@@ -40,6 +29,23 @@ export function RepoDetail() {
   })
 
   const directory = repo?.fullPath
+  const navigateToSession = useCallback((sessionId: string | undefined) => {
+    // A create response without an id used to be filtered out by `if (created)`.
+    // Without this the router builds a path containing "undefined".
+    if (typeof sessionId !== 'string' || sessionId.length === 0) return
+    const current = contextRef.current
+    current.navigate(projectSessionPath(current.repoId, sessionId, current.activeTab), { replace: true })
+  }, [])
+
+  // Goes through the hook rather than a bare fetch, so the session list learns
+  // this session exists. A session created behind the cache's back is a session
+  // the list never shows.
+  const createSession = useCreateSession(OPENCODE_API_ENDPOINT, directory, (session) =>
+    navigateToSession(session.id),
+  )
+  const createSessionRef = useRef(createSession)
+  createSessionRef.current = createSession
+
   const contextRef = useRef({ repoId, activeTab, navigate, cloneStatus: repo?.cloneStatus })
   contextRef.current = { repoId, activeTab, navigate, cloneStatus: repo?.cloneStatus }
 
@@ -71,11 +77,7 @@ export function RepoDetail() {
       if (cloneStatus !== 'ready') return
 
       try {
-        const created = await createSession(directory)
-        if (created) {
-          const current = contextRef.current
-          current.navigate(projectSessionPath(current.repoId, created, current.activeTab), { replace: true })
-        }
+        await createSessionRef.current.mutateAsync({ agent: undefined })
       } catch {
         void 0
       }
@@ -94,26 +96,11 @@ export function RepoDetail() {
     )
   }
 
+  // No placeholder session list here any more. This route is a hop, not a
+  // place: it resolves the session to open and goes there. Drawing five
+  // skeleton rows that looked like a session list only made the hop visible.
   return (
-    <div className="flex h-dvh max-h-dvh flex-col bg-background">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
-        <div className="h-7 w-7 shrink-0 animate-pulse rounded-md bg-muted" />
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="h-3 w-28 animate-pulse rounded bg-muted" />
-          <div className="h-2.5 w-16 animate-pulse rounded bg-muted" />
-        </div>
-      </div>
-      <div className="flex flex-1 flex-col gap-3 overflow-hidden p-3">
-        {[0, 1, 2, 3, 4].map((row) => (
-          <div key={row} className="flex items-center gap-3 rounded-lg border border-border p-3">
-            <div className="h-8 w-8 shrink-0 animate-pulse rounded-md bg-muted" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="h-3 w-2/5 animate-pulse rounded bg-muted" />
-              <div className="h-2.5 w-3/5 animate-pulse rounded bg-muted" />
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="flex h-dvh max-h-dvh items-center justify-center bg-background">
       <span className="sr-only" role="status">{t('repo.loading')}</span>
     </div>
   )
