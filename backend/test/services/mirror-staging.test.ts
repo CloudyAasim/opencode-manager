@@ -97,6 +97,12 @@ describe('ensureMirrorTargetPath', () => {
 describe('createRepoRow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // vi.clearAllMocks() resets calls but not return values, so the two
+    // "does this row already exist?" lookups used to keep whatever the last
+    // test installed. A create* test that ran after "returns existing repo ..."
+    // got an early created:false and never reached createRepo. Default: none.
+    mockGetRepoByUrlAndBranch.mockReturnValue(null)
+    mockGetRepoByLocalPath.mockReturnValue(null)
     tmpRoot = path.join(os.tmpdir(), `mirror-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
     fs.mkdirSync(tmpRoot, { recursive: true })
   })

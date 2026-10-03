@@ -5,6 +5,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Booting src/index.ts is the heaviest thing in this suite: it runs
+    // migrations, warms the assistant workspace and starts the server manager.
+    // On a loaded runner that clears vitest's 5000ms default and fails a
+    // suite that is otherwise perfectly green - which is what the CI Test job
+    // did twice. The frontend already allows 20s for the same reason.
+    testTimeout: 20000,
+    hookTimeout: 20000,
     setupFiles: ['./test/setup.ts'],
     include: ['test/**/*.{test,spec}.{ts,tsx}', 'src/**/*.test.ts'],
     exclude: [

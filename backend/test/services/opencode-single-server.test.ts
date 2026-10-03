@@ -164,8 +164,14 @@ describe('OpenCodeServerManager - server auth', () => {
     readdirSyncMock.mockReturnValue([])
     forceProcessAttestation(true)
     resetProcessIdentityProvider()
-    const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
+    const { OpenCodeServerManager, opencodeServerManager } = await import('../../src/services/opencode-single-server')
     OpenCodeServerManager.resetInstance()
+    // resetInstance() only drops the static instance. The exported
+    // `opencodeServerManager` const is a separate, long-lived object, so a
+    // sibling test's setDatabase() stayed on it for the rest of the file - and
+    // getResolvedPassword() prefers a stored db password over ENV. Declare "no
+    // db" here so the env-password tests actually mean it.
+    opencodeServerManager.setDatabase(null as never)
   })
 
   afterEach(async () => {
@@ -1914,6 +1920,13 @@ describe('OpenCodeServerManager - server auth', () => {
 describe('OpenCodeServerManager - reinitializeBinDirectory', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // clearAllMocks() drops calls but not implementations, so the rejecting
+    // mkdirMock installed by "should handle directory creation failure
+    // gracefully" survived into every test that needs mkdir to succeed.
+    // mkdirSafe() rethrows non-permission errors, which aborts
+    // reinitializeBinDirectory() before it ever reaches `bun init -y`.
+    mkdirMock.mockReset()
+    mkdirMock.mockResolvedValue(undefined)
     process.env.WORKSPACE_PATH = '/test/workspace'
   })
 

@@ -22,7 +22,7 @@
     "typecheck:backend": "pnpm --filter backend typecheck",
     "test": "pnpm run test:cli && pnpm run test:backend && pnpm run test:frontend",
     "test:cli": "pnpm --filter @opencode-manager/ocm-cli test",
-    "test:frontend": "pnpm --filter frontend exec vitest run",
+    "test:frontend": "pnpm --filter frontend exec vitest run --sequence.shuffle=true",
     "test:backend": "pnpm --filter backend run test",
     "lint": "pnpm run lint:cli && pnpm run lint:frontend && pnpm run lint:backend",
     "lint:cli": "pnpm --filter @opencode-manager/ocm-cli lint",

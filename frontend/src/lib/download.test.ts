@@ -14,8 +14,42 @@ vi.mock('@/api/fetchWrapper', () => ({
   fetchWrapperBlob: vi.fn(),
 }))
 
+// Captured while the module is evaluated, before any test rewrites it.
+const ORIGINAL_USER_AGENT = navigator.userAgent
+
+function setUserAgent(value: string): void {
+  Object.defineProperty(navigator, 'userAgent', { value, configurable: true })
+}
+
+// jsdom implements no `matchMedia`, so any block that lets `isIosHomeScreenApp`
+// reach the display-mode query has to bring its own.
+function stubMatchMedia(matches: boolean): void {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: (query: string) => ({
+      media: query,
+      matches,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  })
+}
+
+// `setIosHomeScreenApp` overwrites a real global for the rest of the file, so
+// "outside iOS home screen apps" has to be re-declared by every block instead
+// of relying on being the first test that runs.
+function declareNonIosBrowser(): void {
+  setUserAgent(ORIGINAL_USER_AGENT)
+  stubMatchMedia(false)
+}
+
 function setIosHomeScreenApp(): void {
-  Object.defineProperty(navigator, 'userAgent', { value: 'iPhone', configurable: true })
+  setUserAgent('iPhone')
   Object.defineProperty(navigator, 'standalone', { value: true, configurable: true })
 }
 
@@ -24,6 +58,7 @@ describe('saveFile', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    declareNonIosBrowser()
     clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     vi.stubGlobal('URL', Object.assign(URL, {
       createObjectURL: vi.fn(() => 'blob:mock'),
@@ -34,6 +69,7 @@ describe('saveFile', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    setUserAgent(ORIGINAL_USER_AGENT)
     Reflect.deleteProperty(navigator, 'standalone')
     Reflect.deleteProperty(navigator, 'canShare')
     Reflect.deleteProperty(navigator, 'share')
@@ -93,11 +129,13 @@ describe('saveFile', () => {
 describe('saveFileFromUrl', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    declareNonIosBrowser()
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    setUserAgent(ORIGINAL_USER_AGENT)
     Reflect.deleteProperty(navigator, 'standalone')
   })
 

@@ -950,6 +950,13 @@ describe('GitService', () => {
     })
 
     it('returns early when no paths provided', async () => {
+      // The early return sits *after* the repo lookup, so this test needs a
+      // repo of its own. It used to borrow the mockReturnValue left behind by
+      // whichever discardChanges test ran last, and threw "Repository not
+      // found" whenever it ran first.
+      getRepoByIdMock.mockReturnValue({ id: 1, fullPath: '/path/to/repo' } as any)
+      executeCommandMock.mockClear()
+
       const result = await service.discardChanges(1, [], false, database)
 
       expect(executeCommandMock).not.toHaveBeenCalled()

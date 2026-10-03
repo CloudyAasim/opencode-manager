@@ -49,8 +49,11 @@ describe('mirror target resolution', () => {
 
   it('plans a new sibling worktree when the checked-out branch differs', async () => {
     const { planMirrorTarget } = await import('../../src/services/repo')
-    const plan = await planMirrorTarget(db, base, 'feature/x')
-    expect(plan).toMatchObject({ kind: 'new', localPath: 'my-app-feature-x', fullPath: join(tmpRoot, 'my-app-feature-x'), currentBranch: 'main' })
+    // A branch of this test's own. 'feature/x' was only unclaimed while the
+    // test that materialises it had not run yet, so the plan came back
+    // 'existing' as soon as that test went first.
+    const plan = await planMirrorTarget(db, base, 'feature/planned')
+    expect(plan).toMatchObject({ kind: 'new', localPath: 'my-app-feature-planned', fullPath: join(tmpRoot, 'my-app-feature-planned'), currentBranch: 'main' })
   })
 
   it('creates the worktree, the branch, and a worktree repo row without touching the base checkout', async () => {
@@ -76,18 +79,22 @@ describe('mirror target resolution', () => {
   })
 
   it('rejects a branch whose sanitized path is occupied by a worktree for another branch and preserves that worktree', async () => {
-    const { planMirrorTarget } = await import('../../src/services/repo')
+    const { ensureMirrorTarget, planMirrorTarget } = await import('../../src/services/repo')
     const { getRepoByLocalPath } = await import('../../src/db/queries')
 
-    const occupiedPath = join(tmpRoot, 'my-app-feature-x')
+    // Materialise the occupying worktree here. It used to be the one left
+    // behind by "creates the worktree, the branch, ...", so this test only
+    // had a worktree to preserve when that test happened to run first.
+    const { repo: owner } = await ensureMirrorTarget(db, base, 'feature/occupied')
+    const occupiedPath = owner.fullPath
     expect(existsSync(occupiedPath)).toBe(true)
 
-    await expect(planMirrorTarget(db, base, 'feature-x')).rejects.toThrow(/occupied by repo .* 'feature\/x' instead of 'feature-x'/)
+    await expect(planMirrorTarget(db, base, 'feature-occupied')).rejects.toThrow(/occupied by repo .* 'feature\/occupied' instead of 'feature-occupied'/)
 
-    const ownerRow = getRepoByLocalPath(db, 'my-app-feature-x')!
-    expect(ownerRow.branch).toBe('feature/x')
+    const ownerRow = getRepoByLocalPath(db, 'my-app-feature-occupied')!
+    expect(ownerRow.branch).toBe('feature/occupied')
     expect(existsSync(occupiedPath)).toBe(true)
-    expect(execSync(`git -C "${occupiedPath}" rev-parse --abbrev-ref HEAD`, { encoding: 'utf-8' }).trim()).toBe('feature/x')
+    expect(execSync(`git -C "${occupiedPath}" rev-parse --abbrev-ref HEAD`, { encoding: 'utf-8' }).trim()).toBe('feature/occupied')
   })
 
   it('rejects an existing row matching the branch when its directory has a different branch checked out', async () => {
@@ -137,9 +144,11 @@ describe('mirror target resolution', () => {
   })
 
   it('resolves the base directory name when asked from a worktree repo row', async () => {
-    const { planMirrorTarget } = await import('../../src/services/repo')
-    const { getRepoByLocalPath } = await import('../../src/db/queries')
-    const worktreeRepo = getRepoByLocalPath(db, 'my-app-feature-x')!
+    const { ensureMirrorTarget, planMirrorTarget } = await import('../../src/services/repo')
+    // Build this test's own worktree row. Reading the 'my-app-feature-x' row
+    // meant depending on another test having registered it, and this threw
+    // "Cannot read properties of null (reading 'fullPath')" when it ran first.
+    const { repo: worktreeRepo } = await ensureMirrorTarget(db, base, 'feature/base-name')
     const plan = await planMirrorTarget(db, worktreeRepo, 'other')
     expect(plan).toMatchObject({ kind: 'new', localPath: 'my-app-other' })
   })

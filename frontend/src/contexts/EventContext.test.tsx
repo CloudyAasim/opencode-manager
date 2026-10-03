@@ -160,6 +160,10 @@ describe('EventProvider questions', () => {
     mocks.listPendingQuestions.mockResolvedValue([])
     mocks.replyToQuestion.mockResolvedValue(undefined)
     mocks.rejectQuestion.mockResolvedValue(undefined)
+    // vi.clearAllMocks() keeps implementations, so every mock this block reads
+    // has to be re-declared here; a mockRejectedValue from an earlier test
+    // otherwise still rejects and restores the permission it just removed.
+    mocks.respondToPermission.mockResolvedValue(undefined)
     mocks.getHealth.mockReturnValue({ isConnected: false, isHealthy: false, lastEventAt: null, isStalled: false })
     mocks.subscribeGlobalMonitor.mockReturnValue({
       dispose: vi.fn(),

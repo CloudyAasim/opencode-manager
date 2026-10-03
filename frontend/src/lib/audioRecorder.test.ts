@@ -56,6 +56,29 @@ function createMockStream(tracks: MediaStreamTrack[] = [createMockTrack()]): Med
   } as unknown as MediaStream
 }
 
+// `AudioRecorder.finishRecording` takes an async speech-detection path as soon
+// as a AudioContext constructor exists, which defers the blob emission past a
+// synchronous assertion. jsdom ships none, so a block that expects the
+// synchronous path declares that absence instead of inheriting whatever the
+// no-speech block installed.
+function removeSpeechAnalysisGlobals(): void {
+  Reflect.deleteProperty(window, 'AudioContext')
+  Reflect.deleteProperty(window, 'webkitAudioContext')
+  Reflect.deleteProperty(Blob.prototype, 'arrayBuffer')
+}
+
+function captureProperty(target: object, key: string): PropertyDescriptor | undefined {
+  return Object.getOwnPropertyDescriptor(target, key)
+}
+
+function restoreProperty(target: object, key: string, descriptor: PropertyDescriptor | undefined): void {
+  if (descriptor) {
+    Object.defineProperty(target, key, descriptor)
+  } else {
+    Reflect.deleteProperty(target, key)
+  }
+}
+
 describe('AudioRecorder.isSupported', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -202,6 +225,8 @@ describe('AudioRecorder stop', () => {
   let onNoSpeech: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
+    removeSpeechAnalysisGlobals()
+
     FakeMediaRecorder._instances = []
     FakeMediaRecorder._supportedTypes = new Set(['audio/webm;codecs=opus'])
     Object.defineProperty(window, 'MediaRecorder', {
@@ -297,8 +322,15 @@ describe('AudioRecorder no-speech', () => {
   let recorder: AudioRecorder
   let onDataAvailable: ReturnType<typeof vi.fn>
   let onNoSpeech: ReturnType<typeof vi.fn>
+  let audioContextDescriptor: PropertyDescriptor | undefined
+  let webkitAudioContextDescriptor: PropertyDescriptor | undefined
+  let blobArrayBufferDescriptor: PropertyDescriptor | undefined
 
   beforeEach(async () => {
+    audioContextDescriptor = captureProperty(window, 'AudioContext')
+    webkitAudioContextDescriptor = captureProperty(window, 'webkitAudioContext')
+    blobArrayBufferDescriptor = captureProperty(Blob.prototype, 'arrayBuffer')
+
     FakeMediaRecorder._instances = []
     FakeMediaRecorder._supportedTypes = new Set(['audio/webm;codecs=opus'])
     Object.defineProperty(window, 'MediaRecorder', {
@@ -324,6 +356,9 @@ describe('AudioRecorder no-speech', () => {
   })
 
   afterEach(() => {
+    restoreProperty(window, 'AudioContext', audioContextDescriptor)
+    restoreProperty(window, 'webkitAudioContext', webkitAudioContextDescriptor)
+    restoreProperty(Blob.prototype, 'arrayBuffer', blobArrayBufferDescriptor)
     vi.restoreAllMocks()
   })
 

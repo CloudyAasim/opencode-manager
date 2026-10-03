@@ -341,7 +341,14 @@ describe('Repo Git Routes', () => {
     })
 
     it('should return 500 when git operation fails', async () => {
+      const { executeCommand } = await import('../../src/utils/process')
+      const executeCommandMock = executeCommand as MockedFunction<typeof executeCommand>
+
       ;(db.getRepoById as MockedFunction<typeof db.getRepoById>).mockReturnValue({ id: 1, fullPath: '/path/to/repo' } as any)
+      // State the failure here instead of inheriting it: vi.clearAllMocks()
+      // resets calls but not implementations, so this used to pass only
+      // because an earlier test had left a rejecting executeCommand behind.
+      executeCommandMock.mockRejectedValue(new Error('Git operation failed'))
       const response = await app.request('/1/git/discard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -372,7 +379,14 @@ describe('Repo Git Routes', () => {
     })
 
     it('should return 500 when git operation fails', async () => {
+      const { executeCommand } = await import('../../src/utils/process')
+      const executeCommandMock = executeCommand as MockedFunction<typeof executeCommand>
+
       ;(db.getRepoById as MockedFunction<typeof db.getRepoById>).mockReturnValue({ id: 1, fullPath: '/path/to/repo' } as any)
+      // Without a rejecting executeCommand, GitService.getCommitDetails()
+      // reads the empty output left by an earlier mockImplementation and
+      // returns null - a 404, not the 500 this test is about.
+      executeCommandMock.mockRejectedValue(new Error('Git operation failed'))
       const response = await app.request('/1/git/commit/abc123')
 
       expect(response.status).toBe(500)
@@ -408,7 +422,13 @@ describe('Repo Git Routes', () => {
     })
 
     it('should return 500 when git operation fails', async () => {
+      const { executeCommand } = await import('../../src/utils/process')
+      const executeCommandMock = executeCommand as MockedFunction<typeof executeCommand>
+
       ;(db.getRepoById as MockedFunction<typeof db.getRepoById>).mockReturnValue({ id: 1, fullPath: '/path/to/repo' } as any)
+      // Same story as the commit-details test above: a stale successful
+      // mockImplementation let getCommitDiff() build a diff and return 200.
+      executeCommandMock.mockRejectedValue(new Error('Git operation failed'))
       const response = await app.request('/1/git/commit/abc123/diff?path=file.ts')
 
       expect(response.status).toBe(500)

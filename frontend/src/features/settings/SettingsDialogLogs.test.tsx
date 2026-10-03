@@ -48,6 +48,21 @@ function makeResponse(entries: ManagerLogEntry[]) {
   }
 }
 
+// A stub has to put back exactly what it replaced. Deleting window.matchMedia
+// in afterEach takes the global with it, which only looks harmless because this
+// jsdom ships none - the next one might, and a sibling file relying on the real
+// one would break for a reason that has nothing to do with its own test.
+let originalMatchMedia: PropertyDescriptor | undefined
+
+function restoreMatchMedia(): void {
+  if (originalMatchMedia) {
+    Object.defineProperty(window, 'matchMedia', originalMatchMedia)
+  } else {
+    Reflect.deleteProperty(window, 'matchMedia')
+  }
+  originalMatchMedia = undefined
+}
+
 function stubMatchMedia(matches: boolean): void {
   const listeners = new Set<() => void>()
   const mediaQueryList = {
@@ -60,6 +75,7 @@ function stubMatchMedia(matches: boolean): void {
       listeners.delete(listener)
     },
   }
+  originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia')
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     writable: true,
@@ -104,7 +120,7 @@ describe('SettingsDialog live Logs view integration', () => {
   })
 
   afterEach(() => {
-    Reflect.deleteProperty(window, 'matchMedia')
+    restoreMatchMedia()
     vi.useRealTimers()
   })
 

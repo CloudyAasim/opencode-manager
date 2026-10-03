@@ -180,24 +180,38 @@ const baseRun: ScheduleRun = {
   workspaceId: null,
 }
 
+/**
+ * Everything ScheduleService needs before it will run a job, in one place.
+ *
+ * It used to live inline in the first describe block, and the worktree-isolation
+ * block below quietly depended on it: vi.clearAllMocks() resets calls but not
+ * return values, so those mocks stayed populated from whichever test ran last.
+ * Run that block on its own and all seven of its tests 404 on "Repo not found".
+ * A block that only works because another block ran first is a latent failure,
+ * not a passing test - so both blocks now state their own preconditions.
+ */
+function resetServiceMocks() {
+  vi.clearAllMocks()
+  Reflect.get(ScheduleService, 'activeRuns').clear()
+  Reflect.get(ScheduleService, 'activeTeardowns')?.clear()
+
+  mocks.getRepoById.mockReturnValue(repo)
+  mocks.getScheduleJobById.mockReturnValue(job)
+  mocks.getRunningScheduleRunByJob.mockReturnValue(null)
+  mocks.createScheduleRun.mockReturnValue(baseRun)
+  mocks.resolveOpenCodeModel.mockResolvedValue({ providerID: 'openai', modelID: 'gpt-5-mini' })
+  mocks.onEvent.mockReturnValue(vi.fn())
+  mocks.getScheduleRunById.mockReturnValue({
+    ...baseRun,
+    sessionId: 'ses-run-1',
+    sessionTitle: 'Scheduled: Weekly engineering summary',
+    logText: 'Run started. Waiting for assistant response...',
+  })
+}
+
 describe('ScheduleService', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    Reflect.get(ScheduleService, 'activeRuns').clear()
-    Reflect.get(ScheduleService, 'activeTeardowns')?.clear()
-
-    mocks.getRepoById.mockReturnValue(repo)
-    mocks.getScheduleJobById.mockReturnValue(job)
-    mocks.getRunningScheduleRunByJob.mockReturnValue(null)
-    mocks.createScheduleRun.mockReturnValue(baseRun)
-    mocks.resolveOpenCodeModel.mockResolvedValue({ providerID: 'openai', modelID: 'gpt-5-mini' })
-    mocks.onEvent.mockReturnValue(vi.fn())
-    mocks.getScheduleRunById.mockReturnValue({
-      ...baseRun,
-      sessionId: 'ses-run-1',
-      sessionTitle: 'Scheduled: Weekly engineering summary',
-      logText: 'Run started. Waiting for assistant response...',
-    })
+    resetServiceMocks()
   })
 
   it('starts a run immediately and completes it after polling session messages', async () => {
@@ -1261,6 +1275,10 @@ describe('ScheduleService worktree isolation', () => {
   }
 
   beforeEach(() => {
+    // Same preconditions as the block above, on purpose: this block used to
+    // inherit them and fail whenever it happened to run first.
+    resetServiceMocks()
+
     mocks.stubWorktreeManager.prepare.mockReset()
     mocks.stubWorktreeManager.finalize.mockReset()
     mocks.stubWorktreeManager.prepare.mockResolvedValue(null)
