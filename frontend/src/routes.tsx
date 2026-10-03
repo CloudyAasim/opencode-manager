@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { createBrowserRouter, type NonIndexRouteObject } from 'react-router-dom'
+import { RouterBootFallback } from '@/framework/shell/RouterBootFallback'
 import { RouteErrorBoundary } from '@/components/ui/route-error-boundary'
 import {
   loginLoader,
@@ -104,7 +105,12 @@ export const appRoutes: AppRoute[] = [
 
 export function createAppRouter(shell: ReactElement) {
   return createBrowserRouter([
-    { element: shell, errorElement: <RouteErrorBoundary />, children: appRoutes },
+    {
+      element: shell,
+      errorElement: <RouteErrorBoundary />,
+      HydrateFallback: RouterBootFallback,
+      children: appRoutes,
+    },
   ])
 }
 

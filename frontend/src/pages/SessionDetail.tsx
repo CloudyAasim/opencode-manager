@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { ContextUsageIndicator } from "@/features/session/ContextUsageIndicator";
 import { useSession, useAbortSession, useUpdateSession, useMessages, useCreateSession } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
+import { useAssistantMode } from "@/hooks/useAssistantMode";
 import { useRepoSiblings, useCreateRepoWorkspace, useDeleteRepoWorkspaces } from "@/hooks/useRepoSiblings";
 import { useWorktreeTab } from "@/hooks/useWorktreeTab";
 import { SessionRouteFallback } from "@/features/session/SessionRouteFallback";
@@ -297,6 +298,25 @@ export function SessionDetail() {
   });
 
   useRepoActivity(repoId, Boolean(repo));
+
+  // The assistant's directory and its skill files are created on demand, and
+  // until they exist the OpenCode server has nothing to serve for that
+  // directory: the stream never connects and the conversation never settles.
+  // useAssistantMode knew how to do this and nothing called it.
+  const {
+    status: assistantMode,
+    initialize: initializeAssistantMode,
+    isInitializing: isInitializingAssistant,
+  } = useAssistantMode(repoId);
+
+  useEffect(() => {
+    if (!isAssistantSession || isInitializingAssistant) return;
+    const files = assistantMode?.files;
+    if (!files) return;
+    if (Object.values(files).some((file) => !file.exists)) {
+      void initializeAssistantMode();
+    }
+  }, [isAssistantSession, assistantMode, isInitializingAssistant, initializeAssistantMode]);
 
   const { activeTab, setActiveTab } = useWorktreeTab();
   const { data: siblings } = useRepoSiblings(repoId);

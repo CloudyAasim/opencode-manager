@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   useVisualViewport: vi.fn(),
   useKeyboardShortcuts: vi.fn(),
   useAutoScroll: vi.fn(),
+  useAssistantMode: vi.fn(),
+  initializeAssistant: vi.fn(),
   commands: [
     { name: 'help', description: 'Show the help screen', template: '', agent: '', model: '', hints: [] },
     { name: 'init', description: 'Initialise the repository', template: '', agent: '', model: '', hints: [] },
@@ -93,6 +95,10 @@ vi.mock('@/hooks/useKeyboardShortcuts', () => ({
 
 vi.mock('@/hooks/useAutoScroll', () => ({
   useAutoScroll: mocks.useAutoScroll,
+}))
+
+vi.mock('@/hooks/useAssistantMode', () => ({
+  useAssistantMode: mocks.useAssistantMode,
 }))
 
 vi.mock('@/hooks/useAutoPlayLastResponse', () => ({
@@ -254,28 +260,12 @@ describe('会话界面上的命令与引用文件入口', () => {
     mocks.useVisualViewport.mockReturnValue({ keyboardHeight: 0 })
     mocks.useKeyboardShortcuts.mockReturnValue({ leaderActive: false })
     mocks.useAutoScroll.mockReturnValue({ scrollToBottom: vi.fn() })
+    mockAssistantMode({ agentsMd: { exists: true } })
   })
 
-  const createQueryClient = () =>
-    new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
-  const renderSessionDetail = async () => {
-    const result = render(
-      <MemoryRouter initialEntries={['/repos/1/sessions/session-1']}>
-        <LayerProvider>
-          <QueryClientProvider client={createQueryClient()}>
-            <Routes>
-              <Route path="/repos/:id/sessions/:sessionId" element={<SessionDetail />} />
-            </Routes>
-          </QueryClientProvider>
-        </LayerProvider>
-      </MemoryRouter>,
-    )
-    await waitFor(() => {
-      expect(screen.getByTestId('session-commands-trigger')).toBeInTheDocument()
-    })
-    return result
-  }
+
+
 
   it('命令和引用文件就在会话界面上，不用先去菜单里找', async () => {
     await renderSessionDetail()
@@ -330,5 +320,125 @@ describe('会话界面上的命令与引用文件入口', () => {
     // ...and what lands in the prompt is relative to it, not absolute.
     expect(useUIState.getState().pendingPromptFile?.path).toBe('src/App.tsx')
     expect(screen.queryByTestId('mention-file-browser')).not.toBeInTheDocument()
+  })
+})
+
+const createQueryClient = () =>
+  new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+const mockAssistantMode = (files: Record<string, { exists: boolean }>) => {
+  mocks.useAssistantMode.mockReturnValue({
+    status: { repoId: 0, files },
+    initialize: mocks.initializeAssistant,
+    isInitializing: false,
+    isLoading: false,
+    isError: false,
+    error: null,
+  })
+}
+
+const renderAssistantRoute = () =>
+  render(
+    <MemoryRouter initialEntries={['/repos/0/sessions/ses_a?assistant=1']}>
+      <LayerProvider>
+        <QueryClientProvider client={createQueryClient()}>
+          <Routes>
+            <Route path="/repos/:id/sessions/:sessionId" element={<SessionDetail />} />
+          </Routes>
+        </QueryClientProvider>
+      </LayerProvider>
+    </MemoryRouter>,
+  )
+
+const renderSessionDetail = async () => {
+  const result = render(
+    <MemoryRouter initialEntries={['/repos/1/sessions/session-1']}>
+      <LayerProvider>
+        <QueryClientProvider client={createQueryClient()}>
+          <Routes>
+            <Route path="/repos/:id/sessions/:sessionId" element={<SessionDetail />} />
+          </Routes>
+        </QueryClientProvider>
+      </LayerProvider>
+    </MemoryRouter>,
+  )
+  await waitFor(() => {
+    expect(screen.getByTestId('session-commands-trigger')).toBeInTheDocument()
+  })
+  return result
+}
+
+
+/**
+ * The assistant's directory and skill files are created on demand. Until they
+ * exist the server has nothing to serve for it, the event stream never
+ * connects, and the conversation screen sits on its skeleton for ever - which
+ * is what it did on the deployed site, twenty seconds and counting.
+ * useAssistantMode could do this the whole time and nothing called it.
+ */
+describe('助手模式的自动初始化', () => {
+  // Without this the call recorded by one case is still there for the next.
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAssistantMode({ agentsMd: { exists: true } })
+    mocks.useSession.mockReturnValue({ data: undefined, isLoading: false })
+    mocks.useMessages.mockReturnValue({ data: [], isLoading: false })
+    mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.usePermissions.mockReturnValue({
+      pendingCount: 0,
+      hasPermissionsForSession: vi.fn(() => false),
+      hasForSession: vi.fn(() => false),
+      setShowDialog: vi.fn(),
+      syncForSession: vi.fn(),
+    })
+    mocks.useQuestions.mockReturnValue({
+      current: null,
+      getForSession: vi.fn(() => null),
+      pendingCount: 0,
+      hasQuestionsForSession: vi.fn(() => false),
+      reply: vi.fn(),
+      reject: vi.fn(),
+      syncForSession: vi.fn(),
+    })
+    mocks.useConfig.mockReturnValue({ data: undefined, isLoading: false })
+    mocks.useSettings.mockReturnValue({
+      preferences: { expandToolCalls: false },
+      updateSettings: vi.fn(),
+    })
+    mocks.useSettingsDialog.mockReturnValue({ open: vi.fn() })
+    mocks.useMobile.mockReturnValue(false)
+    mocks.useVisualViewport.mockReturnValue({ keyboardHeight: 0 })
+    mocks.useKeyboardShortcuts.mockReturnValue({ leaderActive: false })
+    mocks.useAutoScroll.mockReturnValue({ scrollToBottom: vi.fn() })
+  })
+
+  it('目录还没建出来时，先把它建出来', async () => {
+    mockAssistantMode({
+      agentsMd: { exists: false },
+      opencodeJson: { exists: true },
+      defaultAgent: { exists: true },
+    })
+    renderAssistantRoute()
+
+    await waitFor(() => expect(mocks.initializeAssistant).toHaveBeenCalled())
+  })
+
+  it('已经初始化过就不再动它', async () => {
+    mockAssistantMode({
+      agentsMd: { exists: true },
+      opencodeJson: { exists: true },
+      defaultAgent: { exists: true },
+    })
+    renderAssistantRoute()
+
+    await screen.findByTestId('session-commands-trigger')
+    expect(mocks.initializeAssistant).not.toHaveBeenCalled()
+  })
+
+  it('非助手会话不会去初始化助手', async () => {
+    mockAssistantMode({ agentsMd: { exists: false } })
+    await renderSessionDetail()
+
+    expect(mocks.initializeAssistant).not.toHaveBeenCalled()
   })
 })

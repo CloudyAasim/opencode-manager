@@ -1,6 +1,8 @@
 import { vi } from 'vitest'
 
-vi.mock('@/hooks/useMobile')
+vi.mock('@/hooks/useMediaQuery', () => ({
+  useMediaQuery: vi.fn(),
+}))
 vi.mock('@/hooks/useMobileSheets', () => ({
   useMobileSheets: vi.fn(),
 }))
@@ -13,13 +15,13 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { MobileSheetHost } from './MobileSheetHost'
-import { useMobile } from '@/hooks/useMobile'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useMobileSheets } from '@/hooks/useMobileSheets'
 
 describe('MobileSheetHost', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useMobile).mockReturnValue(true)
+    vi.mocked(useMediaQuery).mockReturnValue(true)
     vi.mocked(useMobileSheets).mockReturnValue({
       openSheet: null,
       open: vi.fn(),
@@ -27,8 +29,29 @@ describe('MobileSheetHost', () => {
     })
   })
 
-  it('renders nothing when useMobile returns false', () => {
-    vi.mocked(useMobile).mockReturnValue(false)
+  /**
+   * The top bar shows its More button below `spacious` (1280). Mounting the
+   * drawer only on phones meant that between 768 and 1280 the button was on
+   * screen and clicking it did nothing at all. Found by clicking it.
+   */
+  it('mounts the drawer wherever the More button is visible', async () => {
+    vi.mocked(useMediaQuery).mockReturnValue(true)
+    vi.mocked(useMobileSheets).mockReturnValue({
+      openSheet: 'more',
+      open: vi.fn(),
+      close: vi.fn(),
+    })
+    render(
+      <MemoryRouter initialEntries={['/?mobileTab=more']}>
+        <MobileSheetHost />
+      </MemoryRouter>,
+    )
+    // lazy(), so it lands asynchronously
+    expect(await screen.findByTestId('more-drawer')).toBeInTheDocument()
+  })
+
+  it('renders nothing on a wide screen, where that button is not shown', () => {
+    vi.mocked(useMediaQuery).mockReturnValue(false)
     const { container } = render(
       <MemoryRouter>
         <MobileSheetHost />

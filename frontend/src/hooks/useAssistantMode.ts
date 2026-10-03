@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getAssistantModeStatus,
@@ -25,12 +26,19 @@ export function useAssistantMode(repoId?: number) {
     },
   })
 
+  // mutateAsync insists on its variable even though the request body is
+  // optional. Depending on the whole mutation result instead would be a lie:
+  // that object is new every render, so any effect that calls initialize would
+  // re-fire on every render. The function itself is the stable one.
+  const { mutateAsync: runInitialize } = initializeMutation
+  const initialize = useCallback(() => runInitialize(undefined), [runInitialize])
+
   return {
     status: statusQuery.data,
     isLoading: statusQuery.isLoading,
     isError: statusQuery.isError,
     error: statusQuery.error,
-    initialize: initializeMutation.mutateAsync,
+    initialize,
     isInitializing: initializeMutation.isPending,
   }
 }

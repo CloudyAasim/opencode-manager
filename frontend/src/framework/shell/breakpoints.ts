@@ -16,6 +16,7 @@ export const MEDIA = {
   expandedUp: `(min-width: ${BREAKPOINT.expanded}px)`,
   spaciousUp: `(min-width: ${BREAKPOINT.spacious}px)`,
   belowLayout: `(max-width: ${BREAKPOINT.layout - 1}px)`,
+  belowSpacious: `(max-width: ${BREAKPOINT.spacious - 1}px)`,
 } as const
 
 export type BreakpointLayout = 'narrow' | 'medium' | 'wide'
