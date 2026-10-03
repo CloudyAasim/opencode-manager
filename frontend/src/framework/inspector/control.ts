@@ -9,6 +9,8 @@ export interface InspectorControlValue {
   close: () => void
   toggle: () => void
   selectTab: (id: string) => void
+  /** Move the tab at `from` to index `to`, keeping the rest in order. */
+  moveTab: (from: number, to: number) => void
 }
 
 export const InspectorControl = createContext<InspectorControlValue | null>(null)

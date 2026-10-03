@@ -7,6 +7,7 @@ export const shell = {
     close: 'Close inspector',
     resize: 'Resize inspector',
     needProject: 'Open a project to see its changes',
+    reorder: 'Reorder {{tab}}',
   },
   commands: {
     title: 'Command palette',

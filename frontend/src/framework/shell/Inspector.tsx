@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,8 @@ const DEFAULT_WIDTH = 420
 export function Inspector() {
   const { t } = useI18n()
   const canSplit = useMediaQuery(MEDIA.expandedUp)
-  const { isOpen, activeTab, tabs, close, toggle, selectTab } = useInspectorControl()
+  const { isOpen, activeTab, tabs, close, toggle, selectTab, moveTab } = useInspectorControl()
+  const [dragging, setDragging] = useState<number | null>(null)
   const [width, setWidth] = usePersistentNumberState({
     storageKey: STORAGE_KEYS.inspectorWidth,
     defaultValue: DEFAULT_WIDTH,
@@ -76,10 +77,23 @@ export function Inspector() {
       <Tabs value={activeTab} onValueChange={selectTab} className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-1 border-b border-border px-2 py-1">
           <TabsList className="h-8">
-            {tabs.map((entry) => {
+            {tabs.map((entry, index) => {
               const Icon = entry.icon
               return (
-                <TabsTrigger key={entry.id} value={entry.id} className="gap-1.5 text-xs">
+                <TabsTrigger
+                  key={entry.id}
+                  value={entry.id}
+                  draggable
+                  onDragStart={() => setDragging(index)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => {
+                    if (dragging !== null) moveTab(dragging, index)
+                    setDragging(null)
+                  }}
+                  onDragEnd={() => setDragging(null)}
+                  aria-label={t('shell.inspector.reorder', { tab: t(entry.labelKey) })}
+                  className="gap-1.5 text-xs"
+                >
                   <Icon className="size-3.5" />
                   {t(entry.labelKey)}
                 </TabsTrigger>

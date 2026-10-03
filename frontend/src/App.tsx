@@ -16,6 +16,7 @@ import { InspectorProvider } from './framework/inspector/InspectorProvider'
 import { FileBrowserInspectorTab } from './features/file-browser/InspectorTab'
 import { SourceControlInspectorTab } from './features/source-control/InspectorTab'
 import { TerminalInspectorTab } from './features/terminal/InspectorTab'
+import { isProjectPath } from '@/lib/navigation'
 import { CommandProvider } from './framework/commands/CommandProvider'
 import { CommandPalette } from './framework/commands/CommandPalette'
 import { BuiltinCommands } from './framework/commands/BuiltinCommands'
@@ -74,6 +75,25 @@ function RoutePrefetcher() {
   const { isAuthenticated, user } = useAuth()
   usePrefetchRoutes(isAuthenticated, user?.role === 'admin')
   return null
+}
+
+// Files, source control and a terminal all need a project, so outside one
+// there is nothing to show - the panel used to be reachable everywhere and
+// opened onto an empty shell. The tabs register themselves, the commands are
+// built from those tabs, and the panel renders from them, so gating all four in
+// one place is what makes the shortcut disappear too.
+function ProjectInspector() {
+  const { pathname } = useLocation()
+  if (!isProjectPath(pathname)) return null
+  return (
+    <>
+      <FileBrowserInspectorTab />
+      <SourceControlInspectorTab />
+      <TerminalInspectorTab />
+      <InspectorCommands />
+      <Inspector />
+    </>
+  )
 }
 
 function PermissionDialogWrapper() {
@@ -174,10 +194,6 @@ function AppShell() {
       <LayerProvider>
         <CommandProvider>
           <InspectorProvider>
-            <FileBrowserInspectorTab />
-            <SourceControlInspectorTab />
-            <TerminalInspectorTab />
-            <InspectorCommands />
             <BuiltinCommands />
             <CommandPalette />
             <ShellFrame
@@ -186,7 +202,7 @@ function AppShell() {
               header={<TopBar />}
               main={<Outlet />}
               status={<StatusBar />}
-              inspector={<Inspector />}
+              inspector={<ProjectInspector />}
             />
             <MobileSheetHost />
             <PermissionDialogWrapper />

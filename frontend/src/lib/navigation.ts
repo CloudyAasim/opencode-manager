@@ -10,6 +10,12 @@ export function isAssistantPath(pathname: string): boolean {
   return pathname === '/assistant' || /^\/repos\/[^/]+\/assistant$/.test(pathname);
 }
 
+// The inspector holds files, source control and a terminal - all three need
+// a project. The Assistant is repo 0, so it counts as one.
+export function isProjectPath(pathname: string): boolean {
+  return pathname.startsWith('/repos/') || pathname === '/assistant'
+}
+
 export function getSessionListPath(isAssistantSession: boolean): string {
   if (isAssistantSession) {
     return getAssistantSessionListPath();
