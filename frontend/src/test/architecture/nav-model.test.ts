@@ -58,6 +58,46 @@ describe('导航只有顶栏一张脸', () => {
     expect(all, '还有人引用已删的导航组件').not.toMatch(/DesktopSidebar|MobileTabBar/)
   })
 
+  it('它当时占的那块地也没留下', () => {
+    // 底部栏在 4013308 删掉了，浮动按钮那 68px 偏移也跟着收了，可每个页面容器
+    // 上的 pb-[calc(env(safe-area-inset-bottom)+56px)] 留了下来：那是栏的高度。
+    // 栏没了，那 56px 就成了每个手机页面底部一条什么都看不见、也点不到的白边。
+    //
+    // 按值判，不按字符串凑。安全区之外多留的那一截取出来，要求不超过普通间距，
+    // 于是这条规则对以后新增的页面同样生效。真想恢复底部栏，先改这里。
+    const ORDINARY_GAP_PX = 20 // 1.25rem，p-4 那一档
+
+    const reservationPx = (classes: string) => {
+      const match = /safe-area-inset-bottom\)\s*\+\s*([\d.]+)(px|rem)/.exec(classes)
+      if (!match) return 0
+      return Number(match[1]) * (match[2] === 'rem' ? 16 : 1)
+    }
+
+    // 规则自己先证明是活的。对着历史上真实存在过的写法试一次：匹配不上就是
+    // 正则坏了，而不是"因为没人违规所以通过"的假绿。
+    expect(
+      reservationPx('pb-[calc(env(safe-area-inset-bottom)+56px)]'),
+      '规则连历史上那 56px 都认不出来，多半是正则写坏了',
+    ).toBe(56)
+
+    const classLists = SOURCES.flatMap((source) =>
+      [...source.text.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)].map(
+        (match) => ({ rel: source.rel, classes: match[1] ?? match[2] ?? '' }),
+      ),
+    )
+    expect(classLists.length, '一条 className 都没扫到，这门禁多半跑在空集上')
+      .toBeGreaterThan(500)
+
+    const overBudget = classLists
+      .filter((entry) => reservationPx(entry.classes) > ORDINARY_GAP_PX)
+      .map((entry) => `${entry.rel}: +${reservationPx(entry.classes)}px`)
+
+    expect(
+      [...new Set(overBudget)].sort(),
+      '又给已经不存在的底部栏留了空地',
+    ).toEqual([])
+  })
+
   it('渲染导航的只有顶栏和它的手机端抽屉', () => {
     const consumers = importersOf(MODEL)
     expect(consumers, `能渲染导航的文件多了一个：${consumers.join(', ')}`).toEqual(NAV_SURFACES)

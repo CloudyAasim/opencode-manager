@@ -31,7 +31,7 @@ export function Repos() {
           </Button>
         </Header.Actions>
       </Header>
-      <div className="container mx-auto flex-1 px-3 sm:px-4 pt-4 min-h-0 overflow-auto pb-[calc(env(safe-area-inset-bottom)+60px)] sm:pb-4">
+      <div className="container mx-auto flex-1 px-3 sm:px-4 pt-4 min-h-0 overflow-auto pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pb-4">
         <RepoList />
       </div>
       <AddRepoDialog open={addRepoOpen} onOpenChange={setAddRepoOpen} />

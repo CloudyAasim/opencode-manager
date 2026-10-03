@@ -48,7 +48,7 @@ export function FileBrowserPage({
     : getRepoRelativeDisplayPath(currentPath, basePath)
 
   return (
-    <div className="h-dvh max-h-dvh flex flex-col bg-background overflow-hidden pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
+    <div className="h-dvh max-h-dvh flex flex-col bg-background overflow-hidden pb-safe sm:pb-0">
       <FileBrowserHeader
         repoName={repoName}
         path={displayPath}
