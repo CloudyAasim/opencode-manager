@@ -62,7 +62,7 @@ export const appRoutes: AppRoute[] = [
   },
   {
     path: '/repos/:id',
-    lazy: async () => ({ Component: (await import('./pages/RepoDetail')).RepoDetail }),
+    lazy: async () => ({ Component: (await import('./pages/SessionDetail')).SessionDetail }),
     loader: protectedLoader,
     prefetch: { group: 'authenticated', order: 2 },
   },

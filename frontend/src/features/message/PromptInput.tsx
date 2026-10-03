@@ -69,6 +69,8 @@ interface PromptInputProps {
   opcodeUrl: string
   directory?: string
   sessionID: string
+  /** Called when there is no session yet; returns the real one. */
+  ensureSession?: () => Promise<string>
   showScrollButton?: boolean
   isSessionActive?: boolean
   isStreamingResponse?: boolean
@@ -84,6 +86,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
   opcodeUrl,
   directory,
   sessionID,
+  ensureSession,
   showScrollButton,
   isSessionActive = false,
   isStreamingResponse = false,
@@ -119,7 +122,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
   const pendingVoiceAutoSubmitRef = useRef(false)
   const ignoreVoiceClickUntilRef = useRef(0)
   const voiceStartRequestRef = useRef(0)
-  const handleSubmitRef = useRef<() => void>(() => {})
+  const handleSubmitRef = useRef<() => void | Promise<void>>(() => {})
   const promptRef = useRef(prompt)
   const attachedFilesRef = useRef(attachedFiles)
   const imageAttachmentsRef = useRef(imageAttachments)
@@ -152,6 +155,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
     ignoreVoiceClickUntilRef.current = 0
     setIsVoiceSwipeArmed(false)
     setIsVoiceAutoSendPending(false)
+
     setIsVoiceAutoSendWaitingForTranscript(false)
   }, [])
 
@@ -289,11 +293,22 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
 
   const addUserBashCommand = useUserBash((s) => s.addUserBashCommand)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!prompt.trim() && imageAttachments.length === 0) return
 
     pendingVoiceAutoSubmitRef.current = false
     setIsVoiceAutoSendPending(false)
+
+    // A project can be opened before any session exists. Creating one is
+    // the parent's call, so whatever id comes back is what we send to.
+    let target = sessionID
+    if (!target && ensureSession) {
+      try {
+        target = await ensureSession()
+      } catch {
+        return
+      }
+    }
 
     if (isStreamingResponse) {
       onScrollToBottom()
@@ -304,7 +319,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       const submittedImageAttachments = imageAttachments
       sendPrompt.mutate(
         {
-          sessionID,
+          sessionID: target,
           prompt: submittedPrompt,
           parts,
           model: currentModel,
@@ -315,7 +330,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
           onSuccess: () => clearSubmittedPrompt(submittedPrompt, submittedAttachedFiles, submittedImageAttachments)
         }
       )
-      setStoredAgent(sessionID, agentUsed)
+      setStoredAgent(target, agentUsed)
       if (model) {
         setStoredModel({ providerID: model.providerID, modelID: model.modelID })
       }
@@ -330,7 +345,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       const submittedPrompt = prompt
       sendShell.mutate(
         {
-          sessionID,
+          sessionID: target,
           command,
           agent: currentMode
         },
@@ -376,7 +391,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
 
     sendPrompt.mutate(
       {
-        sessionID,
+        sessionID: target,
         prompt: submittedPrompt,
         parts,
         model: currentModel,

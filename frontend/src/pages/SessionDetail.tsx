@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate, Navigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/features/message/MessageThread";
@@ -68,6 +68,7 @@ import { percentOfContainer, pixelDeltaInverted, useDragResize } from '@/framewo
 import { useDesktop } from "@/hooks/useDesktop";
 import { SessionMoreButton } from "@/features/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
+import { projectSessionPath } from "@/lib/project-session-path";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useLayer } from '@/framework/layer/useLayer'
@@ -393,6 +394,15 @@ export function SessionDetail() {
   const abortSession = useAbortSession(opcodeUrl, sessionDirectory, sessionId);
   const updateSession = useUpdateSession(opcodeUrl, sessionDirectory);
   const createSession = useCreateSession(opcodeUrl, sessionDirectory);
+  // Reached only when the project has no session yet. Nothing is created until
+  // the first message: a create response with no id throws rather than becoming
+  // a path and a POST to it.
+  const ensureSessionForNewConversation = useCallback(async () => {
+    const created = await createSession.mutateAsync({ agent: undefined })
+    if (!created?.id) throw new Error('The session could not be created')
+    navigate(projectSessionPath(repoId, created.id, activeTab), { replace: true })
+    return created.id
+  }, [createSession, navigate, repoId, activeTab]);
   const { model, modelString } = useModelSelection(opcodeUrl, sessionDirectory);
   const isEditingMessage = useUIState((state) => state.isEditingMessage);
   const setActivePromptFileBasePath = useUIState((state) => state.setActivePromptFileBasePath);
@@ -625,10 +635,6 @@ export function SessionDetail() {
 
   
 
-  if (!sessionId) {
-    return <Navigate to="/" replace />;
-  }
-
   if (!isAssistantSession && repoLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -644,7 +650,9 @@ export function SessionDetail() {
     return <SessionRouteFallback message={t('session.route.repositoryNotFound')} backTo="/" backLabel={t('session.route.backToRepositories')} />;
   }
 
-  if (sessionQueryError instanceof FetchError && sessionQueryError.statusCode === 404) {
+  // Only a session we asked for can be missing. With no session yet
+  // the query is disabled and there is nothing to report.
+  if (sessionId && sessionQueryError instanceof FetchError && sessionQueryError.statusCode === 404) {
     return (
       <SessionRouteFallback
         message={t('session.route.sessionNotFound')}
@@ -756,7 +764,7 @@ export function SessionDetail() {
             <MessageThread
               scrollRef={messageContainerRef}
               opcodeUrl={opcodeUrl} 
-              sessionID={sessionId} 
+              sessionID={sessionId ?? ''} 
               directory={sessionDirectory}
               messages={messages}
               onFileClick={handleFileClick}
@@ -851,7 +859,8 @@ export function SessionDetail() {
                 ref={promptInputRef}
                 opcodeUrl={opcodeUrl}
                 directory={sessionDirectory}
-                sessionID={sessionId}
+                sessionID={sessionId ?? ''}
+                ensureSession={ensureSessionForNewConversation}
                 showScrollButton={showScrollButton && !hasPromptContent}
                 isSessionActive={isSessionActive}
                 isStreamingResponse={isStreamingResponse}

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { installApiMocks, makeSession } from '../helpers/api-mocks'
 
 test.describe('repo entry route', () => {
-  test('redirects to the newest session without painting an intermediate screen', async ({ page }) => {
+  test('lands on a composer and does not bounce to the newest session', async ({ page }) => {
     const repo = { id: 1, fullPath: '/workspace/repos/demo', localPath: 'demo', cloneStatus: 'ready' as const }
     await installApiMocks(page, {
       repos: [repo],
@@ -11,10 +11,14 @@ test.describe('repo entry route', () => {
 
     await page.goto('/repos/1')
 
-    await expect(page).toHaveURL(/\/repos\/1\/sessions\/ses_newest$/)
+    // A project opens a conversation you can type into. It is not a hop to the
+    // newest session any more - that is the point of the change.
+    await expect(page).toHaveURL(/\/repos\/1$/)
+    await expect(page.locator('textarea, input[type="text"]').first()).toBeVisible({ timeout: 15000 })
+    await expect(page).not.toHaveURL(/\/sessions\//)
   })
 
-  test('still redirects when the session list answers slowly', async ({ page }) => {
+  test('a slow session list does not stand between you and the composer', async ({ page }) => {
     const repo = { id: 1, fullPath: '/workspace/repos/demo', localPath: 'demo', cloneStatus: 'ready' as const }
     await installApiMocks(page, {
       repos: [repo],
@@ -24,7 +28,9 @@ test.describe('repo entry route', () => {
 
     await page.goto('/repos/1')
 
-    await expect(page).toHaveURL(/\/repos\/1\/sessions\/ses_slow$/, { timeout: 20000 })
+    // The entry no longer asks for the session list at all, so its latency is
+    // irrelevant - which is the whole reason the hop could go.
+    await expect(page.locator('textarea, input[type="text"]').first()).toBeVisible({ timeout: 20000 })
     await expect(page).not.toHaveURL(/undefined/)
   })
 
@@ -71,8 +77,9 @@ test.describe('repo entry route', () => {
       sessionsByDirectory: { [repo.fullPath]: [makeSession('ses_a', repo.fullPath)] },
     })
 
-    await page.goto('/repos/1')
-    await expect(page).toHaveURL(/\/sessions\/ses_a$/)
+    // Straight to a session: the switcher lives on the session page, and the
+    // project entry is no longer a way to get there.
+    await page.goto('/repos/1/sessions/ses_a')
 
     await expect(page.locator('body')).toContainText(/Workspace|工作区/, { timeout: 15000 })
   })
