@@ -1,5 +1,5 @@
 import { useCallback, useState, useMemo, useEffect, useRef } from "react";
-import { useSessionsAcrossDirectories, useDeleteSession, useCreateSession } from "@/hooks/useOpenCode";
+import { useSessionsAcrossDirectories, useDeleteSession, useCreateSession, useUpdateSession } from "@/hooks/useOpenCode";
 import type { DeleteSessionTarget } from "@/hooks/useOpenCode";
 import { useSessionPins, useToggleSessionPin } from '@/hooks/useSessionPins';
 import { buildSessionKey } from '@/lib/sessionKey';
@@ -9,7 +9,7 @@ import { SessionCard } from "./SessionCard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Trash2, Pencil, X } from "lucide-react";
+import { Search, Trash2, Pencil, X, Plus } from "lucide-react";
 import { useI18n } from '@/lib/i18n';
 
 interface SessionListProps {
@@ -45,6 +45,7 @@ export const SessionList = ({
   const [searchQuery, setSearchQuery] = useState("");
   const { data: sessions, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useSessionsAcrossDirectories(opcodeUrl, directoriesList, { search: searchQuery, limit: 25 });
   const deleteSession = useDeleteSession(opcodeUrl, directoriesList);
+  const updateSession = useUpdateSession(opcodeUrl, sessionCreateDirectory);
   const createSession = useCreateSession(opcodeUrl, sessionCreateDirectory, (newSession) => {
     onSelectSession(newSession.id);
   });
@@ -83,6 +84,17 @@ export const SessionList = ({
   const { pinned: pinnedSessions, today: todaySessions, older: olderSessions } = useMemo(
     () => partitionSessions(filteredSessions, pinnedKeys, getSessionSelectionKey),
     [filteredSessions, pinnedKeys, getSessionSelectionKey],
+  );
+
+  const handleRename = useCallback(
+    (session: { id: string; directory?: string }, title: string) => {
+      updateSession.mutate({
+        sessionID: session.id,
+        title,
+        ...(session.directory ? { directory: session.directory } : {}),
+      } as { sessionID: string; title: string });
+    },
+    [updateSession],
   );
 
   const handleTogglePin = (session: { id: string; directory?: string }) => {
@@ -166,7 +178,7 @@ export const SessionList = ({
     return target;
   };
 
-  const handleDelete = (session: { id: string; directory?: string; workspaceID?: string }, e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleDelete = (session: { id: string; directory?: string; workspaceID?: string }, e: React.MouseEvent) => {
     e.stopPropagation();
     setSessionToDelete(getDeleteTarget(session));
     setDeleteDialogOpen(true);
@@ -237,6 +249,7 @@ export const SessionList = ({
         onSelect={onSelectSession}
         onToggleSelection={(selected) => toggleSessionSelection(session, selected)}
         onTogglePin={() => handleTogglePin(session)}
+        onRename={(title) => handleRename(session, title)}
         onDelete={(e) => handleDelete(session, e)}
       />
     );
@@ -288,6 +301,19 @@ export const SessionList = ({
                 name="session-search"
               />
             </div>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={t('session.list.newSessionAria')}
+              title={t('session.list.newSession')}
+              className="shrink-0 size-9"
+              disabled={!sessionCreateDirectory || createSession.isPending}
+              onClick={() => {
+                createSession.mutate({ agent: undefined });
+              }}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
             <Button
               variant="outline"
               size="icon"

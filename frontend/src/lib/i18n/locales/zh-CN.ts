@@ -18,6 +18,7 @@ export const zhCN: DeepString<typeof en> = {
     edit: '编辑',
     close: '关闭',
     confirm: '确认',
+    save: '保存',
     back: '返回',
     unknown: '未知',
   },

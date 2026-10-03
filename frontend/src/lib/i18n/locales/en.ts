@@ -16,6 +16,7 @@ export const en = {
     edit: 'Edit',
     close: 'Close',
     confirm: 'Confirm',
+    save: 'Save',
     back: 'Back',
     unknown: 'Unknown',
   },

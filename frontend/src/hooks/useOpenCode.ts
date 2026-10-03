@@ -536,6 +536,12 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
 
       useSendErrorStore.getState().clearError(sessionID);
       await queryClient.invalidateQueries({ queryKey });
+      // The session itself changed: its updated time and title, and for a
+      // session that was empty it now exists at all. The list used to learn
+      // that only from the SSE session.updated event, so a session created and
+      // then written to could stay invisible - the list is not on screen while
+      // you type, and if that event is missed nothing else refetches it.
+      invalidateSessionListCaches(queryClient, opcodeUrl);
     },
   });
 };

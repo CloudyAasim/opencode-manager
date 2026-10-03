@@ -1,8 +1,8 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SessionStatusIndicator } from "@/components/ui/session-status-indicator";
-import { Trash2, Clock, MoreVertical, Pin, PinOff } from "lucide-react";
+import { Trash2, Clock, MoreVertical, Pin, PinOff, Pencil, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Session } from "@/api/types";
 import { useSwipe } from "@/hooks/useSwipe";
@@ -23,9 +23,10 @@ interface SessionCardProps {
   workspaceLabel?: string;
   isPinned?: boolean;
   onTogglePin?: () => void;
+  onRename?: (title: string) => void;
   onSelect: (sessionID: string) => void;
   onToggleSelection: (selected: boolean) => void;
-  onDelete: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onDelete: (e: React.MouseEvent) => void;
 }
 
 export const SessionCard = ({
@@ -36,6 +37,7 @@ export const SessionCard = ({
   workspaceLabel,
   isPinned,
   onTogglePin,
+  onRename,
   onSelect,
   onToggleSelection,
   onDelete,
@@ -50,10 +52,25 @@ export const SessionCard = ({
     }
   }, [bind]);
 
-  const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(e);
     close();
+  };
+
+  const startRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDraftTitle(session.title ?? '');
+    setIsRenaming(true);
+  };
+
+  const commitRename = () => {
+    const next = draftTitle.trim();
+    setIsRenaming(false);
+    if (next && next !== session.title) onRename?.(next);
   };
 
   return (
@@ -135,9 +152,47 @@ export const SessionCard = ({
                 <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center gap-1">
                     {isPinned && <Pin className="w-3 h-3 text-warning shrink-0" />}
-                    <h3 className="text-sm font-semibold text-primary truncate">
-                      {displaySessionTitle(session.title, t)}
-                    </h3>
+                    {isRenaming ? (
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <input
+                          autoFocus
+                          value={draftTitle}
+                          aria-label={t('session.card.renameAria')}
+                          placeholder={t('session.card.renamePlaceholder')}
+                          onChange={(e) => setDraftTitle(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onBlur={commitRename}
+                          onKeyDown={(e) => {
+                            e.stopPropagation()
+                            if (e.key === 'Enter') commitRename()
+                            if (e.key === 'Escape') setIsRenaming(false)
+                          }}
+                          className="h-7 min-w-0 flex-1 rounded border border-border bg-background px-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={t('common.save')}
+                          className="h-7 w-7 shrink-0 p-0"
+                          onClick={(e) => { e.stopPropagation(); commitRename() }}
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={t('common.cancel')}
+                          className="h-7 w-7 shrink-0 p-0"
+                          onClick={(e) => { e.stopPropagation(); setIsRenaming(false) }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <h3 className="text-sm font-semibold text-primary truncate">
+                        {displaySessionTitle(session.title, t)}
+                      </h3>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                     <span className="flex items-center">
@@ -152,8 +207,7 @@ export const SessionCard = ({
                     <SessionStatusIndicator sessionID={session.id} size="sm" />
                   </div>
                 </div>
-                {onTogglePin && (
-                  <DropdownMenu>
+                <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         aria-label={t('session.card.actionsAria')}
@@ -171,13 +225,27 @@ export const SessionCard = ({
                       onClick={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
                     >
-                      <DropdownMenuItem onClick={() => onTogglePin()}>
-                        {isPinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
-                        {isPinned ? t('session.card.unpin') : t('session.card.pinToTop')}
+                      {onTogglePin && (
+                        <DropdownMenuItem onClick={() => onTogglePin()}>
+                          {isPinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
+                          {isPinned ? t('session.card.unpin') : t('session.card.pinToTop')}
+                        </DropdownMenuItem>
+                      )}
+                      {onRename && (
+                        <DropdownMenuItem onClick={startRename}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          {t('session.card.rename')}
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={handleDeleteClick}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        {t('session.list.delete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                )}
               </>
             )}
             {manageMode && (

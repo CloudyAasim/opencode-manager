@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { SessionList } from './SessionList'
 
-const { createSessionMock, deleteSessionMock, sessionsData, createSessionState, fetchNextPageMock, hasNextPageRef, isFetchingNextPageRef, isFetchNextPageErrorRef, useRealSessionsHookRef, lastSessionsHookArgs, sessionPinsData, togglePinMock } = vi.hoisted(() => ({
+const { createSessionMock, deleteSessionMock, sessionsData, createSessionState, fetchNextPageMock, hasNextPageRef, isFetchingNextPageRef, isFetchNextPageErrorRef, useRealSessionsHookRef, lastSessionsHookArgs, sessionPinsData, togglePinMock, renameSessionMock } = vi.hoisted(() => ({
   createSessionMock: vi.fn(),
   deleteSessionMock: vi.fn(),
   sessionsData: [] as Array<{ id: string; title: string; directory: string; workspaceID?: string; parentID?: string; time: { updated: number } }>,
@@ -18,6 +18,7 @@ const { createSessionMock, deleteSessionMock, sessionsData, createSessionState, 
   lastSessionsHookArgs: { current: undefined as { opcodeUrl: string; directories: string[]; options?: { search?: string; limit?: number } } | undefined },
   sessionPinsData: [] as Array<{ sessionId: string; directory: string; pinnedAt: number }>,
   togglePinMock: vi.fn(),
+  renameSessionMock: vi.fn(),
 }))
 
 vi.mock('@/hooks/useOpenCode', async (importOriginal) => {
@@ -44,6 +45,9 @@ vi.mock('@/hooks/useOpenCode', async (importOriginal) => {
       return { mutate: createSessionMock }
     },
     useDeleteSession: () => ({ mutateAsync: deleteSessionMock, isPending: false }),
+    // Spreading `actual` means anything the list starts using falls through to
+    // the real hook, which asks for a QueryClient these tests do not all wrap.
+    useUpdateSession: () => ({ mutate: renameSessionMock }),
   }
 })
 

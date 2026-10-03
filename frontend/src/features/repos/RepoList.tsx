@@ -155,7 +155,7 @@ export function RepoList() {
   const [selectedRepos, setSelectedRepos] = useState<Set<number>>(new Set())
   const [selectionMode, setSelectionMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterMode, setFilterMode] = useState<RepoFilterMode>('recent')
+  const [filterMode, setFilterMode] = useState<RepoFilterMode>('all')
   const isSelectionActive = selectionMode || selectedRepos.size > 0
 
   const sortMode = (preferences?.repoSortMode as RepoSortMode) || 'recent'
@@ -325,7 +325,7 @@ export function RepoList() {
               <div className="h-10 bg-muted/50 animate-pulse rounded w-full" />
             </div>
             <div className="mx-2 md:mx-0 flex-1 min-h-0">
-              <div className="h-full overflow-y-auto pt-4 pb-2 md:pb-0">
+              <div className="max-h-full overflow-y-auto pt-4 pb-2 md:pb-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 md:gap-4 w-full">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="md:pl-8">
