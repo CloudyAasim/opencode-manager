@@ -42,6 +42,120 @@ describe('authenticated opencode proxy routes', () => {
     forwardRawMock.mockResolvedValue(new Response('ok', { status: 200 }))
   })
 
+  /**
+   * Upstream rebuilds the provider list from scratch every call, and opening
+   * the model picker waits on it. `connected` in that payload reflects one
+   * user's credentials, so the cache is keyed per user - that part is the whole
+   * reason this test names two.
+   */
+  it('caches the provider listing per user instead of asking upstream every time', async () => {
+    forwardRawMock.mockResolvedValue(
+      new Response(JSON.stringify({ all: [], connected: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    // The cache is keyed by user, so this case needs one: an anonymous caller
+    // is deliberately not cached (covered separately below).
+    const app = new Hono()
+    const asAlice: MiddlewareHandler = async (c, next) => {
+      c.set('user' as never, { id: 'id-alice', username: 'alice', role: 'user' } as never)
+      await next()
+    }
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes(
+        { forwardRaw: forwardRawMock } as unknown as OpenCodeClient,
+        asAlice,
+        proxyTestDb,
+      ),
+    )
+    const url = '/api/opencode/provider?case=cache-1'
+
+    const first = await app.request(url)
+    expect(first.status).toBe(200)
+    expect(forwardRawMock).toHaveBeenCalledTimes(1)
+
+    const second = await app.request(url)
+    expect(second.status).toBe(200)
+    expect(second.headers.get('x-opencode-provider-cache')).toBe('hit')
+    expect(await second.json()).toEqual({ all: [], connected: [] })
+    expect(forwardRawMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not cache anything that is not the provider listing', async () => {
+    // With an identity, and on a path the cache is not meant to cover: this is
+    // the case that distinguishes "caches only /provider" from "caches
+    // everything for this user". buildApp() would have passed either way,
+    // because an anonymous caller is never cached at all.
+    const app = new Hono()
+    const asAlice: MiddlewareHandler = async (c, next) => {
+      c.set('user' as never, { id: 'id-alice', username: 'alice', role: 'user' } as never)
+      await next()
+    }
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes(
+        { forwardRaw: forwardRawMock } as unknown as OpenCodeClient,
+        asAlice,
+        proxyTestDb,
+      ),
+    )
+
+    await app.request('/api/opencode/session/ses_cache/message')
+    await app.request('/api/opencode/session/ses_cache/message')
+    await app.request('/api/opencode/session/ses_cache/message')
+
+    expect(forwardRawMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not share one tenant provider list with another', async () => {
+    // principalFrom() keys off id, so a user without one is not a user at all.
+    const asUser = (username: string): MiddlewareHandler => async (c, next) => {
+      c.set('user' as never, { id: `id-${username}`, username, role: 'user' } as never)
+      await next()
+    }
+    const buildFor = (username: string) => {
+      const app = new Hono()
+      app.route(
+        '/api/opencode',
+        createAuthenticatedOpenCodeProxyRoutes(
+          { forwardRaw: forwardRawMock } as unknown as OpenCodeClient,
+          asUser(username),
+          proxyTestDb,
+        ),
+      )
+      return app
+    }
+
+    await buildFor('alice').request('/api/opencode/provider?case=tenants')
+    await buildFor('alice').request('/api/opencode/provider?case=tenants')
+    expect(forwardRawMock).toHaveBeenCalledTimes(1)
+
+    // Bob's list is his own: `connected` reflects his credentials, so Alice's
+    // answer must not stand in for his.
+    await buildFor('bob').request('/api/opencode/provider?case=tenants')
+    expect(forwardRawMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('refuses to cache when the caller cannot be identified', async () => {
+    const app = new Hono()
+    // no user on the context at all
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes(
+        { forwardRaw: forwardRawMock } as unknown as OpenCodeClient,
+        passThroughAuth,
+        proxyTestDb,
+      ),
+    )
+
+    await app.request('/api/opencode/provider?case=anonymous')
+    await app.request('/api/opencode/provider?case=anonymous')
+
+    expect(forwardRawMock).toHaveBeenCalledTimes(2)
+  })
+
   it('returns 503 and never forwards when the OpenCode lifecycle is not initialized', async () => {
     isLifecycleInitializedMock.mockReturnValue(false)
     const app = buildApp()

@@ -1,5 +1,5 @@
 import path from "path";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { swPrecacheManifest } from "./plugins/sw-precache-manifest";
@@ -16,14 +16,14 @@ import fs from "node:fs";
  * Compressing once at build time and letting the server hand over the .gz turns
  * that per-request cost into a file read.
  */
-function precompressAssets() {
+function precompressAssets(): Plugin {
   return {
     name: "precompress-assets",
-    apply: "build" as const,
+    apply: "build",
     closeBundle() {
       const dir = path.resolve(__dirname, "dist");
       if (!fs.existsSync(dir)) return;
-      let count = 0;
+      let written = 0;
       const walk = (current: string) => {
         for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
           const full = path.join(current, entry.name);
@@ -38,11 +38,13 @@ function precompressAssets() {
             `${full}.gz`,
             gzipSync(source, { level: constants.Z_BEST_COMPRESSION }),
           );
-          count += 1;
+          written += 1;
         }
       };
       walk(dir);
-      console.log(`[precompress] wrote ${count} .gz files next to their assets`);
+      // Reported through the build log the plugin already has a channel for;
+      // a bare console here trips the repo's no-console rule.
+      this.warn(`precompressed ${written} assets to .gz`);
     },
   };
 }
