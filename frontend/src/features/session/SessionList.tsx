@@ -82,12 +82,10 @@ export const SessionList = ({
     return Array.from(uniqueSessions.values()).sort((a, b) => b.time.updated - a.time.updated);
   }, [sessions, directorySet, getSessionSelectionKey]);
 
-  const [userOrder, setUserOrder] = useState<string[]>([]);
+  const [userOrder, setUserOrder] = useState<string[]>(() =>
+    parseSessionOrder(window.localStorage.getItem(STORAGE_KEYS.sessionOrder)),
+  );
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    setUserOrder(parseSessionOrder(window.localStorage.getItem(STORAGE_KEYS.sessionOrder)));
-  }, []);
 
   const { pinned: pinnedSessions, today: todaySessions, older: olderSessions } = useMemo(
     () => partitionSessions(filteredSessions, pinnedKeys, getSessionSelectionKey, Date.now(), userOrder),
