@@ -49,6 +49,9 @@ export interface FileBrowserController {
   dropZoneRef: React.RefObject<HTMLDivElement | null>
 }
 
+/** Long enough for a slow listing, short enough that a stuck one stops spinning. */
+const FILES_REQUEST_TIMEOUT_MS = 15000
+
 export function useFileBrowserController(options: FileBrowserControllerOptions): FileBrowserController {
   const { t } = useI18n()
   const isMobile = useMobile()
@@ -96,7 +99,14 @@ export function useFileBrowserController(options: FileBrowserControllerOptions):
       setLoading(true)
       setError(null)
       try {
-        const response = await fetch(getFileApiUrl(path))
+        // A bare fetch with no deadline left the browser spinning for ever when
+        // the workspace path is refused: the server answers, but the listing
+        // that gates the screen never settles and `finally` never runs. Found by
+        // opening /files on the deployed site with no workspace and watching the
+        // spinner turn indefinitely.
+        const response = await fetch(getFileApiUrl(path), {
+          signal: AbortSignal.timeout(FILES_REQUEST_TIMEOUT_MS),
+        })
         if (!response.ok) {
           throw new Error(t('repo.fileBrowser.errors.loadFiles', { status: response.statusText }))
         }
