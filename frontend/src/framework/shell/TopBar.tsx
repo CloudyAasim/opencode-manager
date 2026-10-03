@@ -13,11 +13,7 @@ import { useMobileSheets } from '@/hooks/useMobileSheets'
 import { useAuth } from '@/hooks/useAuth'
 import { useTerminalAllowed } from '@/hooks/useTerminalAllowed'
 import { useUrlParams } from '@/hooks/useUrlParams'
-import {
-  buildNavModel,
-  buildProjectToolItems,
-  isNavItemActive,
-} from '@/framework/navigation/navModel'
+import { buildNavModel, isNavItemActive } from '@/framework/navigation/navModel'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { RepoSwitcher } from './RepoSwitcher'
@@ -101,7 +97,7 @@ export function TopBar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-96 w-72 overflow-y-auto">
-            {[...buildProjectToolItems(location.pathname), ...overflow].map((item) => (
+            {overflow.map((item) => (
               <DropdownMenuItem
                 key={item.key}
                 onSelect={() => go(item)}

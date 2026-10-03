@@ -12,23 +12,26 @@ async function openSession(page: Page, sessionId = 'ses_back') {
       [ASSISTANT.fullPath]: [makeSession('ses_asst', ASSISTANT.fullPath)],
     },
   })
+  await page.goto('/')
+  await expect(page.locator('#root')).not.toBeEmpty()
   await page.goto(`/repos/1/sessions/${sessionId}`)
   await expect(page.locator('#root')).not.toBeEmpty()
 }
 
 test.describe('session back navigation', () => {
-  test('the back button leaves the session instead of bouncing back into it', async ({ page }) => {
+  test('going back leaves the session instead of bouncing back into it', async ({ page }) => {
     const visited: string[] = []
     page.on('framenavigated', (frame) => {
       if (frame === page.mainFrame()) visited.push(new URL(frame.url()).pathname)
     })
 
     await openSession(page)
-    await page.getByRole('button', { name: /back|返回|go back/i }).first().click()
-
+    await page.goBack()
     await page.waitForTimeout(2500)
-    expect(page.url()).toMatch(/\/(repos\/1\/sessions|$)/)
+
     expect(page.url()).not.toContain('/repos/1/sessions/ses_back')
+    const last = visited[visited.length - 1]
+    expect(last, `ended on ${last}`).not.toContain('/sessions/')
   })
 
   test('going back never lands on /repos/:id, which is a redirect', async ({ page }) => {
@@ -38,7 +41,7 @@ test.describe('session back navigation', () => {
     })
 
     await openSession(page)
-    await page.getByRole('button', { name: /back|返回|go back/i }).first().click()
+    await page.goBack()
     await page.waitForTimeout(3000)
 
     expect(visited).not.toContain('/repos/1')
@@ -63,17 +66,29 @@ test.describe('session back navigation', () => {
     expect(visited).not.toContain('/repos/1')
   })
 
-  test('an assistant session still returns to the assistant list', async ({ page }) => {
+  test('an assistant session leaves without bouncing back into itself', async ({ page }) => {
+    const visited: string[] = []
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) visited.push(new URL(frame.url()).pathname)
+    })
+
     await installApiMocks(page, {
       repos: [ASSISTANT, REPO],
       sessionsByDirectory: { [ASSISTANT.fullPath]: [makeSession('ses_asst', ASSISTANT.fullPath)] },
     })
+    await page.goto('/')
+    await expect(page.locator('#root')).not.toBeEmpty()
     await page.goto('/repos/0/sessions/ses_asst?assistant=1')
     await expect(page.locator('#root')).not.toBeEmpty()
 
-    await page.getByRole('button', { name: /back|返回|go back/i }).first().click()
+    await page.goBack()
     await page.waitForTimeout(2000)
 
-    expect(page.url()).toContain('/assistant')
+    // Where we ended, not the whole trail: this run navigated to the session
+    // on purpose, so its path is in the history by construction. What matters
+    // is that going back did not put us straight back into it.
+    expect(page.url()).not.toContain('/repos/0/sessions/ses_asst')
+    const last = visited[visited.length - 1]
+    expect(last, `ended on ${last}`).not.toContain('/sessions/')
   })
 })

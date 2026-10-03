@@ -1,4 +1,4 @@
-import { FetchError } from '@opencode-manager/shared'
+import { FetchError } from '@opencode-manager/shared/types/errors'
 import type { components } from '@/api/opencode-types'
 
 export type OpenCodeError =

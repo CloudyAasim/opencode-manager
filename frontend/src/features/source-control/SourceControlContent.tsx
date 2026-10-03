@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FetchError } from '@opencode-manager/shared'
+import { FetchError } from '@opencode-manager/shared/types/errors'
 import { useGitStatus, getApiErrorMessage } from '@/api/git'
 import { getRepo } from '@/api/repos'
 

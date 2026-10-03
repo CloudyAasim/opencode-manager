@@ -1,4 +1,5 @@
-import { DEFAULTS, FetchError } from '@opencode-manager/shared'
+import { DEFAULTS } from '@opencode-manager/shared/config/defaults'
+import { FetchError } from '@opencode-manager/shared/types/errors'
 import type { ApiErrorResponse } from '@opencode-manager/shared'
 
 export { FetchError }

@@ -4,6 +4,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RepoSchedulesView } from '../RepoSchedulesView'
 
+// Matches the back control's accessible name in either locale.
+const BACK_CONTROL = /go back|返回/i
+
 const mocks = vi.hoisted(() => ({
   useScheduleTarget: vi.fn(),
   useRepoSchedules: vi.fn(),
@@ -185,7 +188,7 @@ describe('Schedules', () => {
       expect(screen.queryByText('Repository not found')).not.toBeInTheDocument()
     })
 
-    it('renders back button with correct href', () => {
+    it('offers no back control', () => {
       mockNavigate.mockClear()
 
       mocks.useScheduleTarget.mockReturnValue({
@@ -207,10 +210,12 @@ describe('Schedules', () => {
 
       renderSchedules('0')
 
-      const backButton = screen.getAllByRole('button')[0]
-      expect(backButton).toBeInTheDocument()
-      fireEvent.click(backButton)
-      expect(mockNavigate).toHaveBeenCalledWith('/assistant')
+      // The top bar is on every page and already navigates. Asserting the
+      // control is gone is what keeps it from coming back.
+      expect(screen.queryByRole('button', { name: BACK_CONTROL })).not.toBeInTheDocument()
+      // ...and that whatever sits where it used to does not quietly take over.
+      fireEvent.click(screen.getAllByRole('button')[0]!)
+      expect(mockNavigate).not.toHaveBeenCalledWith('/assistant')
     })
 
     it('calls runMutation with repoId=0 when Run Now is clicked', () => {
@@ -288,7 +293,7 @@ describe('Schedules', () => {
       expect(screen.getByText('repos/my-repo')).toBeInTheDocument()
     })
 
-    it('renders back button with correct href', () => {
+    it('offers no back control', () => {
       mockNavigate.mockClear()
 
       mocks.useScheduleTarget.mockReturnValue({
@@ -310,13 +315,12 @@ describe('Schedules', () => {
 
       renderSchedules('5')
 
-      const backButton = screen.getAllByRole('button')[0]
-      expect(backButton).toBeInTheDocument()
-      fireEvent.click(backButton)
-      expect(mockNavigate).toHaveBeenCalledWith('/repos/5')
+      expect(screen.queryByRole('button', { name: BACK_CONTROL })).not.toBeInTheDocument()
+      fireEvent.click(screen.getAllByRole('button')[0]!)
+      expect(mockNavigate).not.toHaveBeenCalledWith('/repos/5')
     })
 
-    it('uses returnTo param for back button when present', () => {
+    it('a returnTo param no longer buys a back control', () => {
       mockNavigate.mockClear()
 
       mocks.useScheduleTarget.mockReturnValue({
@@ -338,9 +342,10 @@ describe('Schedules', () => {
 
       renderSchedules('5', '/repos/5/schedules?returnTo=%2Frepos%2F5%2Fsessions%2Fabc%3Fassistant%3D1')
 
-      fireEvent.click(screen.getAllByRole('button')[0])
+      expect(screen.queryByRole('button', { name: BACK_CONTROL })).not.toBeInTheDocument()
+      fireEvent.click(screen.getAllByRole('button')[0]!)
 
-      expect(mockNavigate).toHaveBeenCalledWith('/repos/5/sessions/abc?assistant=1')
+      expect(mockNavigate).not.toHaveBeenCalledWith('/repos/5/sessions/abc?assistant=1')
     })
 
     it('normalizes prompts tab to jobs when jobs exist', () => {

@@ -1,4 +1,4 @@
-import { FetchError } from '@opencode-manager/shared'
+import { FetchError } from '@opencode-manager/shared/types/errors'
 import { OAUTH_ERROR_CODES, type OAuthErrorCode } from '@opencode-manager/shared/schemas'
 
 const ERROR_MESSAGES: Record<OAuthErrorCode, string> = {

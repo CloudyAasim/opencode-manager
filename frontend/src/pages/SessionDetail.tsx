@@ -287,8 +287,12 @@ export function SessionDetail() {
 
   const { data: repo, isLoading: repoLoading } = useQuery({
     queryKey: ["repo", repoId],
+    // The assistant is repo 0 and its route has no :id (/assistant and
+    // /repos/0/assistant both land here). Skipping the query for that case
+    // left repoDirectory and sessionDirectory undefined, and every part of
+    // the screen gated on a directory simply did not render. The backend
+    // synthesises repo 0, so asking for it is always safe.
     queryFn: () => getRepo(repoId),
-    enabled: id !== undefined,
     retry: (failureCount, error) => !(error instanceof FetchError && error.statusCode === 404) && failureCount < 3,
   });
 
@@ -711,7 +715,6 @@ export function SessionDetail() {
   const workspaceDisplayName = isAssistantSession || !repo
     ? t('session.header.assistant')
     : getRepoDisplayName(repo);
-  const sessionBackPath = getSessionListPath(isAssistantSession);
 
   return (
     <div
@@ -723,24 +726,17 @@ export function SessionDetail() {
       >
         <Header className="bg-background">
           <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
-            {session?.parentID ? (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleParentSessionClick}
-                  className="text-muted-foreground hover:text-foreground hover:bg-accent h-7 px-2 gap-1"
-                  title={t('session.header.backToParent')}
-                >
-                  <CornerUpLeft className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-xs">{t('session.header.parent')}</span>
-                </Button>
-                <div className="hidden sm:block">
-                  <Header.BackButton to={sessionBackPath} className="text-xs sm:text-sm" />
-                </div>
-              </>
-            ) : (
-              <Header.BackButton to={sessionBackPath} className="text-xs sm:text-sm" />
+            {session?.parentID && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleParentSessionClick}
+                className="text-muted-foreground hover:text-foreground hover:bg-accent h-7 px-2 gap-1"
+                title={t('session.header.backToParent')}
+              >
+                <CornerUpLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-xs">{t('session.header.parent')}</span>
+              </Button>
             )}
             <Button
               variant="ghost"

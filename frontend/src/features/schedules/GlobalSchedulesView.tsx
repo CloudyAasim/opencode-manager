@@ -311,7 +311,6 @@ export function GlobalSchedulesView() {
   return (
     <div className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col">
       <Header>
-        <Header.BackButton to="/" />
         <Header.Title>{t('schedules.global.title')}</Header.Title>
         <div className="flex items-center gap-2">
           <Header.Actions>
