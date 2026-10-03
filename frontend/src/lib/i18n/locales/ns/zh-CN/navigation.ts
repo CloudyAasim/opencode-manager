@@ -17,6 +17,7 @@ export const navigation = {
   close: '关闭',
   commands: '命令',
   mentionFile: '引用文件',
+  commandsEmpty: '没有匹配的命令',
   managerVersion: 'Manager v{{version}}',
   searchProjects: '搜索项目…',
   repo: '项目',

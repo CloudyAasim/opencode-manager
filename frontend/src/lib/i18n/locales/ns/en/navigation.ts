@@ -17,6 +17,7 @@ export const navigation = {
   close: 'Close',
   commands: 'Commands',
   mentionFile: 'Mention File',
+  commandsEmpty: 'No matching command',
   managerVersion: 'Manager v{{version}}',
   searchProjects: 'Search projects...',
   repo: 'Project',

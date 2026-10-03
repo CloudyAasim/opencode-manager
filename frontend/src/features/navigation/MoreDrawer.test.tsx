@@ -5,24 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MoreDrawer } from './MoreDrawer'
 import { useAuth } from '@/hooks/useAuth'
 import { useServerHealth } from '@/hooks/useServerHealth'
-import { useCommands } from '@/hooks/useCommands'
-import { useUIState } from '@/stores/uiStateStore'
 import { getRepo } from '@/api/repos'
 
 vi.mock('@/hooks/useAuth')
 vi.mock('@/hooks/useServerHealth')
-vi.mock('@/hooks/useCommands')
 vi.mock('@/api/repos', () => ({
   getRepo: vi.fn(),
-}))
-vi.mock('@/features/file-browser/FileBrowserSheet', () => ({
-  FileBrowserSheet: ({ isOpen, basePath, onFileSelect }: { isOpen: boolean; basePath: string; onFileSelect: (file: { path: string }) => void }) => (
-    isOpen ? (
-      <div data-testid="mention-file-browser" data-base-path={basePath}>
-        <button type="button" onClick={() => onFileSelect({ path: 'repo/src/App.tsx' })}>App.tsx</button>
-      </div>
-    ) : null
-  ),
 }))
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
@@ -104,24 +92,6 @@ describe('MoreDrawer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useNavigate).mockReturnValue(vi.fn())
-    vi.mocked(useCommands).mockReturnValue({
-      commands: [],
-      loading: false,
-      error: null,
-      filterCommands: vi.fn().mockReturnValue([
-        {
-          name: 'help',
-          description: 'Show help',
-          template: '',
-          agent: '',
-          model: '',
-          hints: [],
-        },
-      ]),
-    })
-    useUIState.getState().clearPendingPromptCommand()
-    useUIState.getState().clearPendingPromptFile()
-    useUIState.getState().setActivePromptFileBasePath(null)
     vi.mocked(getRepo).mockResolvedValue({
       id: 1,
       localPath: 'wrong-repo',
@@ -198,33 +168,29 @@ describe('MoreDrawer', () => {
     expect(screen.queryByText('OpenCode')).not.toBeInTheDocument()
   })
 
-  it('shows session commands and selects a command', () => {
+  /**
+   * These two entries used to sit in this drawer, above Settings, even on a
+   * conversation screen where they are the two things the composer needs. They
+   * moved onto the conversation screen itself; SessionDetail's own test file
+   * pins that they work there. Here the drawer pins that they left.
+   */
+  it('no longer offers conversation commands inside the drawer', () => {
     mockAuth()
     mockServerHealth()
     const handleClose = vi.fn()
     renderMoreDrawer({ initialEntry: '/repos/1/sessions/session-1', routePath: '/repos/:id/sessions/:sessionId', onClose: handleClose })
 
-    fireEvent.click(screen.getByText('Commands'))
-    expect(screen.queryByText('/help')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByText('help'))
-
-    expect(useUIState.getState().pendingPromptCommand?.command.name).toBe('help')
-    expect(handleClose).toHaveBeenCalled()
+    expect(screen.queryByText('Commands')).not.toBeInTheDocument()
+    expect(screen.queryByText('Mention File')).not.toBeInTheDocument()
   })
 
-  it('opens file browser and selects a file mention', () => {
+  it('still shows the settings entry it used to compete with', () => {
     mockAuth()
     mockServerHealth()
     const handleClose = vi.fn()
-    useUIState.getState().setActivePromptFileBasePath('repo')
     renderMoreDrawer({ initialEntry: '/repos/1/sessions/session-1', routePath: '/repos/:id/sessions/:sessionId', onClose: handleClose })
 
-    fireEvent.click(screen.getByText('Mention File'))
-    expect(screen.getByTestId('mention-file-browser')).toHaveAttribute('data-base-path', 'repo')
-    fireEvent.click(screen.getByText('App.tsx'))
-
-    expect(useUIState.getState().pendingPromptFile?.path).toBe('src/App.tsx')
-    expect(handleClose).toHaveBeenCalled()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
   it('shows Assistant instead of the source repo on assistant routes', () => {

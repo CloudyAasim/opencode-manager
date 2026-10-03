@@ -4,6 +4,7 @@ import { SourceControlPanel } from '@/features/source-control'
 import { RepoMcpDialog } from './RepoMcpDialog'
 import { RepoSkillsDialog } from './RepoSkillsDialog'
 import type { SkillFileInfo } from '@opencode-manager/shared'
+import type { FileInfo } from '@/types/files'
 
 // The overlays a page sitting on one repository mounts. Three of them were
 // being mounted by two pages each, with the same open/close plumbing wired by
@@ -24,6 +25,8 @@ interface RepoOverlaysProps {
   sessionId?: string
   initialSelectedFile?: string
   onFileBrowserClosed?: () => void
+  /** Set when the page wants the picked file rather than just browsing. */
+  onFileSelect?: (file: FileInfo) => void
   onSkillLoaded?: (skill: SkillFileInfo) => void
 }
 
@@ -37,6 +40,7 @@ export function RepoOverlays({
   sessionId,
   initialSelectedFile,
   onFileBrowserClosed,
+  onFileSelect,
   onSkillLoaded,
 }: RepoOverlaysProps) {
   const [filesOpen, setFilesOpen] = useLayer('files')
@@ -56,6 +60,7 @@ export function RepoOverlays({
         repoName={repoName}
         repoId={repoId}
         initialSelectedFile={initialSelectedFile}
+        onFileSelect={onFileSelect}
       />
       {sessionId && opcodeUrl ? (
         <RepoSkillsDialog

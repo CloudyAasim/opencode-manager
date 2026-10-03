@@ -5,7 +5,7 @@ import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/features/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/features/message/PromptInput";
 import { FloatingTTSButton } from '@/features/message/FloatingTTSButton'
-import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare } from "lucide-react";
+import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare, FileText, Command as CommandIcon } from "lucide-react";
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/features/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
@@ -70,6 +70,11 @@ import { SessionMoreButton } from "@/features/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
 import { projectSessionPath } from "@/lib/project-session-path";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
+import { useCommands } from "@/hooks/useCommands";
+import { toPromptMentionPath } from "@/lib/prompt-mention-path";
+import type { components } from "@/api/opencode-types";
+
+type CommandType = components['schemas']['Command'];
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useLayer } from '@/framework/layer/useLayer'
 import {
@@ -250,6 +255,12 @@ export function SessionDetail() {
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>();
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasPromptContent, setHasPromptContent] = useState(false);
+  // The command and mention-file entries used to live in the mobile "more"
+  // drawer, where they shared a list with Settings. They are conversation
+  // input, so they sit on the conversation screen now, next to the composer
+  // they feed.
+  const [commandsPanelOpen, setCommandsPanelOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
   const [minimizedQuestion, setMinimizedQuestion] = useState<QuestionRequest | null>(null);
 
   const isMobile = useMobile();
@@ -413,6 +424,35 @@ export function SessionDetail() {
   const { model, modelString } = useModelSelection(opcodeUrl, sessionDirectory);
   const isEditingMessage = useUIState((state) => state.isEditingMessage);
   const setActivePromptFileBasePath = useUIState((state) => state.setActivePromptFileBasePath);
+  // The file browser itself is mounted once, by RepoOverlays; the page
+  // only opens and closes that one.
+  const [, setFilesBrowserOpen] = useLayer('files');
+  const selectPromptCommand = useUIState((state) => state.selectPromptCommand);
+  const selectPromptFile = useUIState((state) => state.selectPromptFile);
+  const activePromptFileBasePath = useUIState((state) => state.activePromptFileBasePath);
+  const { filterCommands } = useCommands(opcodeUrl);
+  const commandList = filterCommands(commandQuery);
+
+  const closeCommandsPanel = useCallback(() => {
+    setCommandsPanelOpen(false);
+    setCommandQuery('');
+  }, []);
+
+  const handleSelectCommand = useCallback(
+    (command: CommandType) => {
+      selectPromptCommand(command);
+      closeCommandsPanel();
+    },
+    [selectPromptCommand, closeCommandsPanel],
+  );
+
+  const handleSelectMentionFile = useCallback(
+    (file: FileInfo) => {
+      selectPromptFile(toPromptMentionPath(file.path, activePromptFileBasePath));
+      setFilesBrowserOpen(false);
+    },
+    [selectPromptFile, activePromptFileBasePath, setFilesBrowserOpen],
+  );
   const { isEnabled: ttsEnabled } = useTTS();
   const sessionStatus = useSessionStatusForSession(sessionId);
   const { syncForSession: syncPermissionsForSession } = usePermissions();
@@ -817,18 +857,47 @@ export function SessionDetail() {
                   onMinimize={() => handleMinimizeQuestion(currentQuestion)}
                 />
               )}
-              <div className="mb-1.5 flex items-center gap-1">
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => navigate('/files')}>
+              {/* Six entries, and on a phone there is room for only about five at
+                  this size - hence the horizontal scroll rather than a wrap that
+                  would push the message list around. The targets are 36px on a
+                  phone instead of the 28px they use with a mouse. */}
+              <div className="mb-1.5 flex items-center gap-1 overflow-x-auto scrollbar-thin">
+                <Button variant="ghost" size="sm" className="h-9 shrink-0 gap-1 px-2 sm:h-7" onClick={() => navigate('/files')}>
                   <Folder className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t('navigation.files')}</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" onClick={() => setSkillsDialogOpen(true)}>
+                <Button variant="ghost" size="sm" className="h-9 shrink-0 gap-1 px-2 sm:h-7" onClick={() => setSkillsDialogOpen(true)}>
                   <Sparkles className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t('navigation.skills')}</span>
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 shrink-0 gap-1 px-2 sm:h-7"
+                  onClick={() => setCommandsPanelOpen((open) => !open)}
+                  aria-label={t('navigation.commands')}
+                  title={t('navigation.commands')}
+                  aria-expanded={commandsPanelOpen}
+                  data-testid="session-commands-trigger"
+                >
+                  <CommandIcon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t('navigation.commands')}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 shrink-0 gap-1 px-2 sm:h-7"
+                  onClick={() => setFilesBrowserOpen(true)}
+                  aria-label={t('navigation.mentionFile')}
+                  title={t('navigation.mentionFile')}
+                  data-testid="session-mention-file-trigger"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t('navigation.mentionFile')}</span>
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1 px-2" aria-label={t('navigation.more')}>
+                    <Button variant="ghost" size="sm" className="h-9 shrink-0 gap-1 px-2 sm:h-7" aria-label={t('navigation.more')}>
                       <Plus className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline">{t('navigation.more')}</span>
                     </Button>
@@ -853,7 +922,7 @@ export function SessionDetail() {
                     variant="ghost"
                     size="sm"
                     onClick={handleClearPrompt}
-                    className="h-7 shrink-0 gap-1 px-2 text-destructive hover:bg-destructive/10"
+                    className="h-9 shrink-0 gap-1 px-2 sm:h-7 text-destructive hover:bg-destructive/10"
                     aria-label={t('session.header.clear')}
                   >
                     <X className="h-3.5 w-3.5" />
@@ -861,6 +930,57 @@ export function SessionDetail() {
                   </Button>
                 )}
               </div>
+              {commandsPanelOpen && (
+                <div
+                  data-testid="session-command-panel"
+                  className="mb-1.5 overflow-hidden rounded-lg border border-border bg-background"
+                >
+                  <div className="flex items-center gap-2 border-b border-border px-2">
+                    <CommandIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <input
+                      value={commandQuery}
+                      onChange={(event) => setCommandQuery(event.target.value)}
+                      placeholder={t('navigation.commands')}
+                      aria-label={t('navigation.commands')}
+                      className="h-8 w-full min-w-0 bg-transparent text-sm outline-none"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={closeCommandsPanel}
+                      aria-label={t('navigation.close')}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto p-1">
+                    {commandList.length === 0 ? (
+                      <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                        {t('navigation.commandsEmpty')}
+                      </p>
+                    ) : (
+                      commandList.map((command) => (
+                        <button
+                          key={command.name}
+                          type="button"
+                          onClick={() => handleSelectCommand(command)}
+                          className="flex w-full min-w-0 items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent"
+                        >
+                          <span className="font-mono text-sm font-medium text-blue-600 dark:text-blue-400">
+                            {command.name}
+                          </span>
+                          {command.description && (
+                            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                              {command.description}
+                            </span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
               <SessionSendErrorBanner sessionId={sessionId} isConnected={isConnected} isReconnecting={isReconnecting} />
               <PromptInput
                 ref={promptInputRef}
@@ -926,6 +1046,7 @@ export function SessionDetail() {
         sessionId={sessionId}
         initialSelectedFile={selectedFilePath}
         onFileBrowserClosed={handleFileBrowserClose}
+        onFileSelect={handleSelectMentionFile}
         onSkillLoaded={(skill) => showToast.success(t('session.actions.loadedSkill', { name: skill.name }))}
       />
 

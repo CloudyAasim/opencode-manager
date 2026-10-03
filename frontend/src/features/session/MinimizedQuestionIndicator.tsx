@@ -30,8 +30,10 @@ export function MinimizedQuestionIndicator({
           }
         </button>
         <button
+          type="button"
           onClick={onDismiss}
-          className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors hidden sm:block"
+          aria-label={t('navigation.close')}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         >
           <X className="w-3.5 h-3.5" />
         </button>
