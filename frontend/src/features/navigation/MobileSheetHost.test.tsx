@@ -4,18 +4,6 @@ vi.mock('@/hooks/useMobile')
 vi.mock('@/hooks/useMobileSheets', () => ({
   useMobileSheets: vi.fn(),
 }))
-vi.mock('@/features/file-browser/FileBrowserSheet', () => ({
-  FileBrowserSheet: ({ isOpen, basePath, repoName }: { isOpen: boolean; basePath: string; repoName: string }) =>
-    isOpen ? <div data-testid="file-browser-sheet" data-base-path={basePath} data-repo-name={repoName}>FileBrowserSheet</div> : null,
-}))
-vi.mock('@/features/navigation/RepoQuickSwitchSheet', () => ({
-  RepoQuickSwitchSheet: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="repo-quick-switch-sheet">RepoQuickSwitchSheet</div> : null,
-}))
-vi.mock('@/features/navigation/NotificationsSheet', () => ({
-  NotificationsSheet: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="notifications-sheet">NotificationsSheet</div> : null,
-}))
 vi.mock('@/features/navigation/MoreDrawer', () => ({
   MoreDrawer: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="more-drawer">MoreDrawer</div> : null,
@@ -58,50 +46,23 @@ describe('MobileSheetHost', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders RepoQuickSwitchSheet when mobileTab=repos', async () => {
-    vi.mocked(useMobileSheets).mockReturnValue({
-      openSheet: 'repos',
-      open: vi.fn(),
-      close: vi.fn(),
-    })
-    render(
-      <MemoryRouter initialEntries={['/?mobileTab=repos']}>
-        <MobileSheetHost />
-      </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('repo-quick-switch-sheet')).toBeInTheDocument()
-  })
-
-  it('renders FileBrowserSheet with correct props when mobileTab=files', async () => {
-    vi.mocked(useMobileSheets).mockReturnValue({
-      openSheet: 'files',
-      open: vi.fn(),
-      close: vi.fn(),
-    })
-    render(
-      <MemoryRouter initialEntries={['/?mobileTab=files']}>
-        <MobileSheetHost />
-      </MemoryRouter>,
-    )
-    const sheet = await screen.findByTestId('file-browser-sheet')
-    expect(sheet).toBeInTheDocument()
-    expect(sheet.getAttribute('data-base-path')).toBe('')
-    expect(sheet.getAttribute('data-repo-name')).toBe('Workspace Root')
-  })
-
-  it('renders NotificationsSheet when mobileTab=notifications', async () => {
-    vi.mocked(useMobileSheets).mockReturnValue({
-      openSheet: 'notifications',
-      open: vi.fn(),
-      close: vi.fn(),
-    })
-    render(
-      <MemoryRouter initialEntries={['/?mobileTab=notifications']}>
-        <MobileSheetHost />
-      </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('notifications-sheet')).toBeInTheDocument()
-  })
+  /**
+   * The repo switcher, the workspace file browser and the notifications sheet
+   * were mounted here for keys that no button in the app ever set. They are
+   * gone; this pins that a stale link naming one renders nothing rather than
+   * silently opening a screen the user can no longer reach any other way.
+   */
+  it.each(['repos', 'files', 'notifications'])(
+    'renders nothing for the removed sheet key %s',
+    async (key) => {
+      const { container } = render(
+        <MemoryRouter initialEntries={[`/?mobileTab=${key}`]}>
+          <MobileSheetHost />
+        </MemoryRouter>,
+      )
+      expect(container.firstChild).toBeNull()
+    },
+  )
 
   it('renders MoreDrawer when mobileTab=more', async () => {
     vi.mocked(useMobileSheets).mockReturnValue({
@@ -117,18 +78,18 @@ describe('MobileSheetHost', () => {
     expect(await screen.findByTestId('more-drawer')).toBeInTheDocument()
   })
 
-  it('closes sheet when onClose is called', async () => {
+  it('closes the drawer when onClose is called', async () => {
     const mockClose = vi.fn()
     vi.mocked(useMobileSheets).mockReturnValue({
-      openSheet: 'repos',
+      openSheet: 'more',
       open: vi.fn(),
       close: mockClose,
     })
     render(
-      <MemoryRouter initialEntries={['/?mobileTab=repos']}>
+      <MemoryRouter initialEntries={['/?mobileTab=more']}>
         <MobileSheetHost />
       </MemoryRouter>,
     )
-    expect(await screen.findByTestId('repo-quick-switch-sheet')).toBeInTheDocument()
+    expect(await screen.findByTestId('more-drawer')).toBeInTheDocument()
   })
 })

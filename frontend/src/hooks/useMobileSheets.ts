@@ -1,7 +1,14 @@
 import { useCallback, useMemo } from 'react'
 import { useUrlParams } from './useUrlParams'
 
-type MobileSheetKey = 'repos' | 'files' | 'notifications' | 'more'
+/**
+ * Only 'more' has ever had an entry point. The other three keys were still
+ * declared here and still rendered by MobileSheetHost, so a hand-typed
+ * ?mobileTab=repos could open a drawer no button in the app could reach.
+ * They are deleted rather than kept "in case": the components behind them
+ * have no producer, and git keeps them if they ever come back.
+ */
+type MobileSheetKey = 'more'
 
 interface UseMobileSheetsReturn {
   openSheet: MobileSheetKey | null
@@ -14,7 +21,7 @@ export function useMobileSheets(): UseMobileSheetsReturn {
 
   const openSheet = useMemo<MobileSheetKey | null>(() => {
     const v = searchParams.get('mobileTab')
-    return (v === 'repos' || v === 'files' || v === 'notifications' || v === 'more') ? v : null
+    return v === 'more' ? v : null
   }, [searchParams])
 
   const open = useCallback((key: MobileSheetKey) => {

@@ -66,7 +66,6 @@ import { SessionTodoDisplay } from "@/features/message/SessionTodoDisplay";
 import { MEDIA } from '@/framework/shell/breakpoints';
 import { percentOfContainer, pixelDeltaInverted, useDragResize } from '@/framework/shell/useDragResize';
 import { useDesktop } from "@/hooks/useDesktop";
-import { SessionMoreButton } from "@/features/navigation/SessionMoreButton";
 import { useI18n } from "@/lib/i18n";
 import { projectSessionPath } from "@/lib/project-session-path";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
@@ -780,7 +779,6 @@ export function SessionDetail() {
             >
               <PanelRight className="h-4 w-4" />
             </Button>
-            <SessionMoreButton />
           </Header.Actions>
         </Header>
 

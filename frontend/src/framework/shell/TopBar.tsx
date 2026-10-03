@@ -118,7 +118,7 @@ export function TopBar() {
           variant="ghost"
           size="sm"
           aria-label={t('navigation.more')}
-          className="h-8 w-8 shrink-0 p-0"
+          className="h-10 w-10 shrink-0 p-0"
           onClick={() => open('more')}
         >
           <Menu className="size-4" />

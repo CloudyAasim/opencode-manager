@@ -160,7 +160,6 @@ const CROSS_FEATURE_DIALOG: ReadonlySet<string> = new Set([
   'features/repos/RepoMcpDialog.tsx -> features/settings/McpOAuthDialog.tsx',
   'features/repos/RepoSkillsDialog.tsx -> features/settings/SkillInstallDialog.tsx',
   'features/navigation/MobileSheetHost.tsx -> features/file-browser/FileBrowserSheet.tsx',
-  'features/navigation/RepoQuickSwitchSheet.tsx -> features/repos/AddRepoDialog.tsx',
   'features/source-control/BranchesTab.tsx -> features/repos/CreateWorktreeDialog.tsx',
   'features/repos/RepoRowActions.tsx -> features/source-control/SourceControlPanel.tsx',
   // The repo overlay cluster is mounted from one place so the five

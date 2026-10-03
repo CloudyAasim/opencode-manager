@@ -13,24 +13,24 @@ describe('useMobileSheets', () => {
 
   it('returns the correct openSheet when mobileTab param is set', () => {
     const { result } = renderHook(() => useMobileSheets(), {
-      wrapper: createRouterWrapper(['/?mobileTab=repos']),
+      wrapper: createRouterWrapper(['/?mobileTab=more']),
     })
-    expect(result.current.openSheet).toBe('repos')
+    expect(result.current.openSheet).toBe('more')
   })
 
   it('open sets the mobileTab param', () => {
     const { result } = renderHookWithRouter(() => useMobileSheets())
     act(() => {
-      result.current.open('files')
+      result.current.open('more')
     })
-    expect(result.current.openSheet).toBe('files')
+    expect(result.current.openSheet).toBe('more')
   })
 
   it('close removes the mobileTab param', () => {
     const { result } = renderHook(() => useMobileSheets(), {
-      wrapper: createRouterWrapper(['/?mobileTab=notifications']),
+      wrapper: createRouterWrapper(['/?mobileTab=more']),
     })
-    expect(result.current.openSheet).toBe('notifications')
+    expect(result.current.openSheet).toBe('more')
     act(() => {
       result.current.close()
     })
@@ -44,8 +44,8 @@ describe('useMobileSheets', () => {
     expect(result.current.openSheet).toBeNull()
   })
 
-  it('handles all valid MobileSheetKey values', () => {
-    const validKeys = ['repos', 'files', 'notifications', 'more'] as const
+  it('handles every valid MobileSheetKey value', () => {
+    const validKeys = ['more'] as const
     validKeys.forEach((key) => {
       const { result } = renderHook(() => useMobileSheets(), {
         wrapper: createRouterWrapper([`/?mobileTab=${key}`]),
@@ -54,9 +54,24 @@ describe('useMobileSheets', () => {
     })
   })
 
+  /**
+   * These three keys used to name drawers that no button could open. A URL
+   * could still name them, which is how an unreachable screen stays
+   * unreachable-but-alive. They now read as an unknown value.
+   */
+  it.each(['repos', 'files', 'notifications'])(
+    'treats the removed sheet key %s as unknown',
+    (key) => {
+      const { result } = renderHook(() => useMobileSheets(), {
+        wrapper: createRouterWrapper([`/?mobileTab=${key}`]),
+      })
+      expect(result.current.openSheet).toBeNull()
+    },
+  )
+
   it('returns stable openSheet identity across rerenders when search is unchanged', () => {
     const { result, rerender } = renderHook(() => useMobileSheets(), {
-      wrapper: createRouterWrapper(['/?mobileTab=repos']),
+      wrapper: createRouterWrapper(['/?mobileTab=more']),
     })
     const firstOpenSheet = result.current.openSheet
     rerender()
@@ -92,7 +107,7 @@ describe('useMobileSheets', () => {
         if (handled.current) return
         if (step === 'pushed') {
           handled.current = true
-          open('files')
+          open('more')
         } else if (step === 'back') {
           handled.current = true
           navigate(-1)
@@ -121,7 +136,7 @@ describe('useMobileSheets', () => {
     expect(screen.getByTestId('openSheet').textContent).toBe('')
 
     act(() => { screen.getByText('open').click() })
-    expect(screen.getByTestId('openSheet').textContent).toBe('files')
+    expect(screen.getByTestId('openSheet').textContent).toBe('more')
 
     act(() => { screen.getByText('back').click() })
     expect(screen.getByTestId('openSheet').textContent).toBe('')
