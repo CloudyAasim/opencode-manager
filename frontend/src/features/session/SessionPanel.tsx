@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -51,10 +51,12 @@ export function SessionPanel({
 }: SessionPanelProps) {
   const { t } = useI18n()
 
-  // Four entries, and the caller usually builds the array fresh each render,
-  // so memoising on it would only hide a bug behind a false sense of caching.
-  const byId = new Map(tabs.map((tab) => [tab.id, tab]))
-  const known = new Set(byId.keys())
+  // Four entries. The caller usually builds the array fresh each render, so the
+  // lookup maps are memoised on the array itself rather than on anything about
+  // its contents - a stable identity here is what lets moveTab be a real
+  // useCallback instead of a new function on every render.
+  const byId = useMemo(() => new Map(tabs.map((tab) => [tab.id, tab])), [tabs])
+  const known = useMemo(() => new Set(byId.keys()), [byId])
 
   const [tabIds, setTabIds] = usePersistentJSONState<string[]>({
     storageKey,
@@ -63,6 +65,7 @@ export function SessionPanel({
   })
 
   const [activeId, setActiveId] = useState<string>(defaultTabIds[0] ?? '')
+  const [draggingId, setDraggingId] = useState<string | null>(null)
 
   const visibleIds = tabIds.filter((id) => known.has(id))
 
@@ -77,6 +80,26 @@ export function SessionPanel({
       setTabIds((current) => (current.length > 1 ? current.filter((entry) => entry !== id) : current))
     },
     [setTabIds],
+  )
+
+  const moveTab = useCallback(
+    (fromId: string, toId: string) => {
+      if (fromId === toId) return
+      setTabIds((current) => {
+        const visible = current.filter((id) => known.has(id))
+        const from = visible.indexOf(fromId)
+        const to = visible.indexOf(toId)
+        if (from === -1 || to === -1) return current
+        const nextVisible = [...visible]
+        nextVisible.splice(to, 0, ...nextVisible.splice(from, 1))
+        // Ids this panel does not know about stay at the end, untouched.
+        // visibleIds, addTab and removeTab all leave them in place, so a
+        // reorder is not the place that quietly drops them.
+        const unknown = current.filter((id) => !known.has(id))
+        return [...nextVisible, ...unknown]
+      })
+    },
+    [setTabIds, known],
   )
 
   const addTab = useCallback(
@@ -125,7 +148,26 @@ export function SessionPanel({
             if (!tab) return null
             const Icon = tab.icon
             return (
-              <div key={id} className="group flex shrink-0 items-center">
+              <div
+                key={id}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = 'move'
+                  event.dataTransfer.setData('text/plain', id)
+                  setDraggingId(id)
+                }}
+                onDragEnd={() => setDraggingId(null)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  if (draggingId) moveTab(draggingId, id)
+                  setDraggingId(null)
+                }}
+                className={cn(
+                  'group flex shrink-0 items-center',
+                  draggingId === id && 'opacity-40',
+                )}
+              >
                 <Button
                   variant={id === active?.id ? 'secondary' : 'ghost'}
                   size="sm"

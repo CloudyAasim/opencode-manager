@@ -89,7 +89,7 @@ const compareMessageIds = (id1: string, id2: string): number => {
   return id1.localeCompare(id2)
 }
 
-const DEFAULT_PANEL_TAB_IDS = ['files', 'review', 'info'] as const
+export const DEFAULT_PANEL_TAB_IDS = ['files', 'terminal', 'review', 'info'] as const
 
 const PENDING_ACTION_SYNC_INTERVAL_MS = 30000
 const PROMPT_OVERLAY_CLEARANCE_PX = 16
