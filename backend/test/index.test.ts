@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { gzipSync, gunzipSync } from 'node:zlib'
 
 const serveMock = vi.fn()
 
@@ -216,6 +217,53 @@ describe('backend entrypoint', () => {
     await import('../src/index')
 
     expect(seedOpenCodeConfigFileMock).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * Built assets are content-hashed and served immutable, so their gzip is
+   * never going to change. Recompressing one per request cost seconds on a
+   * 900 KB entry chunk; the build writes a .gz and this hands it over as-is.
+   */
+  it('serves the precompressed asset instead of compressing it again', async () => {
+    const distAssets = join(tempWorkspace, 'frontend/dist/assets')
+    await mkdir(distAssets, { recursive: true })
+    const original = 'console.log("precompressed");'
+    await writeFile(join(distAssets, 'entry-test.js'), original)
+    await writeFile(
+      join(distAssets, 'entry-test.js.gz'),
+      gzipSync(Buffer.from(original)),
+    )
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(tempWorkspace)
+
+    try {
+      await import('../src/index')
+      const options = serveMock.mock.calls[0]![0] as { fetch: (req: Request) => Promise<Response> }
+
+      const gzipped = await options.fetch(
+        new Request('https://x/assets/entry-test.js', {
+          headers: { 'accept-encoding': 'gzip' },
+        }),
+      )
+      expect(gzipped.status).toBe(200)
+      expect(gzipped.headers.get('content-encoding')).toBe('gzip')
+      expect(gzipped.headers.get('cache-control')).toContain('immutable')
+      expect(gunzipSync(Buffer.from(await gzipped.arrayBuffer())).toString()).toBe(original)
+
+      // Without the header the client cannot read a gzip body.
+      const plain = await options.fetch(new Request('https://x/assets/entry-test.js'))
+      expect(plain.headers.get('content-encoding')).toBeNull()
+
+      // Nothing precompressed: fall through instead of inventing a 404.
+      await writeFile(join(distAssets, 'plain-test.js'), 'x')
+      const fallback = await options.fetch(
+        new Request('https://x/assets/plain-test.js', {
+          headers: { 'accept-encoding': 'gzip' },
+        }),
+      )
+      expect(fallback.status).not.toBe(200)
+    } finally {
+      cwdSpy.mockRestore()
+    }
   })
 
   it('answers the root route with service metadata outside production', async () => {

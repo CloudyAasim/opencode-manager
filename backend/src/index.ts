@@ -4,6 +4,8 @@ import { compress } from 'hono/compress'
 import { cors } from 'hono/cors'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { readFile } from 'fs/promises'
+import { readFileSync } from 'fs'
+import { basename, join } from 'path'
 import { initializeDatabase } from './db/schema'
 import { createRepoRoutes } from './routes/repos'
 import { createIPCServer, type IPCServer } from './ipc/ipcServer'
@@ -88,6 +90,55 @@ const app = new Hono()
 const REFLECT_ANY_ORIGIN_PREFIXES = ['/api/opencode-proxy/', '/api/internal/']
 
 app.use('/*', createSecurityHeadersMiddleware())
+
+/**
+ * Built assets carry a content hash and are served immutable, so the gzip of
+ * one is the same gzip every time. Compressing them per request meant a 921 KB
+ * entry chunk took 19 s raw and 3.3 s compressed, with the compressing redone
+ * for an answer that never changed. The build now writes a .gz beside each
+ * one; this hands those over directly, and anything without a .gz still falls
+ * through to serveStatic (and then to the compressing middleware).
+ */
+const PRECOMPRESSIBLE_TYPES: Record<string, string> = {
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+};
+const precompressedAssets = new Map<string, Uint8Array<ArrayBuffer>>();
+
+app.use('/assets/*', async (c, next) => {
+  const accept = c.req.header('accept-encoding') ?? '';
+  if (!accept.includes('gzip')) return next();
+
+  // basename first: a request path is never allowed to walk out of assets/.
+  const name = basename(c.req.path);
+  const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
+  const contentType = PRECOMPRESSIBLE_TYPES[ext];
+  if (!contentType) return next();
+
+  let body: Uint8Array<ArrayBuffer> | undefined = precompressedAssets.get(name);
+  if (!body) {
+    try {
+      // readFileSync hands back a Buffer whose backing store may be shared;
+      // Hono wants a plain Uint8Array over a transferable ArrayBuffer.
+      const buffer = readFileSync(join(process.cwd(), 'frontend/dist/assets', `${name}.gz`));
+      body = new Uint8Array(buffer);
+    } catch {
+      return next();
+    }
+    precompressedAssets.set(name, body);
+  }
+
+  return c.body(body, 200, {
+    'content-type': contentType,
+    'content-encoding': 'gzip',
+    'cache-control': 'public, max-age=31536000, immutable',
+    vary: 'Accept-Encoding',
+  });
+});
 
 app.use('/*', cors({
   origin: (origin, c) => {

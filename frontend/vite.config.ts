@@ -3,6 +3,49 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { swPrecacheManifest } from "./plugins/sw-precache-manifest";
+import { gzipSync, constants } from "node:zlib";
+import fs from "node:fs";
+
+/**
+ * Every asset this plugin produces carries a content hash in its name and is
+ * served with max-age=1y, immutable - it will never change and it is never
+ * re-fetched. Yet the server was gzipping it again on every single request: a
+ * 921 KB file took 19 s uncompressed and 3.3 s compressed, and the compressing
+ * was redone for a byte-identical answer each time.
+ *
+ * Compressing once at build time and letting the server hand over the .gz turns
+ * that per-request cost into a file read.
+ */
+function precompressAssets() {
+  return {
+    name: "precompress-assets",
+    apply: "build" as const,
+    closeBundle() {
+      const dir = path.resolve(__dirname, "dist");
+      if (!fs.existsSync(dir)) return;
+      let count = 0;
+      const walk = (current: string) => {
+        for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+          const full = path.join(current, entry.name);
+          if (entry.isDirectory()) {
+            walk(full);
+            continue;
+          }
+          if (!/\.(js|css|html|json|svg)$/.test(entry.name)) continue;
+          const source = fs.readFileSync(full);
+          if (source.length < 1024) continue;
+          fs.writeFileSync(
+            `${full}.gz`,
+            gzipSync(source, { level: constants.Z_BEST_COMPRESSION }),
+          );
+          count += 1;
+        }
+      };
+      walk(dir);
+      console.log(`[precompress] wrote ${count} .gz files next to their assets`);
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, ".."), "");
@@ -14,6 +57,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       swPrecacheManifest(),
+      precompressAssets(),
     ],
     resolve: {
       alias: {
