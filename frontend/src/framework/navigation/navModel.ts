@@ -33,6 +33,9 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
 }
 
 export function buildNavModel(options: NavModelOptions = {}): NavModel {
+  // Everything that is a place stays inline while the bar has room. Terminal
+  // used to be appended after Settings, so it was the one entry that fell into
+  // the overflow menu on a wide screen even with a six-item bar fitting easily.
   const items: NavItem[] = [
     {
       key: 'projects',
@@ -59,16 +62,8 @@ export function buildNavModel(options: NavModelOptions = {}): NavModel {
       icon: Folder,
       to: '/files',
       primary: true,
+      matches: (pathname) => pathname === '/files',
     },
-    {
-      key: 'schedules',
-      label: 'Schedules',
-      labelKey: 'navigation.schedules',
-      icon: CalendarClock,
-      to: '/schedules',
-      primary: true,
-    },
-    { key: 'settings', label: 'Settings', labelKey: 'navigation.settings', icon: Settings, to: '/settings' },
   ]
 
   if (options.isAdmin || options.terminalAllowed) {
@@ -78,10 +73,34 @@ export function buildNavModel(options: NavModelOptions = {}): NavModel {
       labelKey: 'navigation.terminal',
       icon: TerminalSquare,
       to: '/terminal',
+      primary: true,
+      matches: (pathname) => pathname === '/terminal',
     })
   }
 
-  items.push({ key: 'logout', label: 'Logout', labelKey: 'navigation.logout', icon: LogOut })
+  items.push(
+    {
+      key: 'schedules',
+      label: 'Schedules',
+      labelKey: 'navigation.schedules',
+      icon: CalendarClock,
+      to: '/schedules',
+      primary: true,
+      // A project's Schedules is the same place as the global one, so entering
+      // it has to keep the entry lit instead of dropping the highlight.
+      matches: (pathname) => pathname === '/schedules' || /^\/repos\/[^/]+\/schedules$/.test(pathname),
+    },
+    {
+      key: 'settings',
+      label: 'Settings',
+      labelKey: 'navigation.settings',
+      icon: Settings,
+      to: '/settings',
+      primary: true,
+      matches: (pathname) => pathname === '/settings',
+    },
+    { key: 'logout', label: 'Logout', labelKey: 'navigation.logout', icon: LogOut },
+  )
 
   return { items }
 }

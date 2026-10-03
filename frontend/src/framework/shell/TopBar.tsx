@@ -31,9 +31,10 @@ export function TopBar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useI18n()
-  // 768px 摆不下标题、仓库切换器和四个带文字的入口，到 1024px 才摊得开。
-  // 窄于这一档就收成一颗按钮，别让标签一个个截成 'Assis…'。
-  const spreadOut = useMediaQuery(MEDIA.expandedUp)
+  // 768px 摆不下标题、仓库切换器和带文字的入口，1024px 才摊得开四个；
+  // 六个入口要到 spacious 这一档才排得下。窄于摊得开的那一档就收成一颗
+  // 按钮，别让标签一个个截成 'Assis…'。
+  const spreadOut = useMediaQuery(MEDIA.spaciousUp)
   const { user, logout } = useAuth()
   const terminalAllowed = useTerminalAllowed()
   const { updateParams } = useUrlParams()

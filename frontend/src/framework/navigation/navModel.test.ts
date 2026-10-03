@@ -72,12 +72,15 @@ describe('buildMoreItems', () => {
   })
 
   it('marks the destinations that stay inline, and nothing else', () => {
+    // No options: terminal needs one of the two conditions, so it is absent and
+    // the inline set is the five places that are always reachable.
     const { items } = buildNavModel()
     expect(items.filter((item) => item.primary).map((item) => item.key)).toEqual([
       'projects',
       'assistant',
       'files',
       'schedules',
+      'settings',
     ])
   })
 

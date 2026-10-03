@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import { buildImportGraph, relativeTo } from './import-graph'
+import { buildNavModel, isNavItemActive } from '@/framework/navigation/navModel'
+import { BREAKPOINT } from '@/framework/shell/breakpoints'
 import path from 'node:path'
 
 const FRONTEND_SRC = path.resolve(__dirname, '../..')
@@ -89,10 +91,27 @@ describe('导航只有顶栏一张脸', () => {
     expect(textOf(MODEL), '高亮规则应当由模型给出').toContain('export function isNavItemActive')
   })
 
-  it('常驻项不超五个，窄屏也排得下一行', () => {
-    const primaryCount = (textOf(MODEL).match(/primary: true/g) ?? []).length
-    expect(primaryCount).toBeGreaterThanOrEqual(3)
-    expect(primaryCount, '顶栏最多四个常驻项，其余进 More').toBeLessThanOrEqual(4)
+  it('常驻项的个数，是按摊得开的那一档算的', () => {
+    // 原来这条是数源码里 `primary: true` 出现了几次，配一句"最多四个"，
+    // 理由只有"排得下一行"。那是数字符串，不是断言行为：把 primary 改成
+    // 算出来的，它照样数得到几个，而它也不知道到底排不排得下。
+    //
+    // 现在规则说的是关系：顶栏只在 `spacious` 那一档铺开，常驻项的个数
+    // 不得超过那一档排得下的数量（标题 + 仓库切换器上限 256 + More 按钮）。
+    // 预算 6 是按六个带文字的入口算的；再加第七个地方就该先量宽度，
+    // 而不是让标签被截成 'Assis…'。
+    const items = buildNavModel({ isAdmin: true, terminalAllowed: true }).items
+    const primaryCount = items.filter((item) => item.primary).length
+    const SPREAD_BUDGET = 6
+
+    expect(primaryCount, '能去的地方都该常驻，别在空间够的时候藏进 More').toBe(SPREAD_BUDGET)
+    expect(
+      primaryCount,
+      `顶栏在 spacious 那一档最多排得下 ${SPREAD_BUDGET} 个常驻项；再多就量一下宽度`,
+    ).toBeLessThanOrEqual(SPREAD_BUDGET)
+    expect(textOf(TOPBAR), '顶栏必须按 spacious 那一档铺开，而不是 expanded').toContain('MEDIA.spaciousUp')
+    expect(BREAKPOINT.spacious, 'spacious 必须比 expanded 更宽，否则这一档没有意义')
+      .toBeGreaterThan(BREAKPOINT.expanded)
   })
 
   it('没有第二个悬浮入口和 More 抢同一个动作', () => {
@@ -111,5 +130,51 @@ describe('导航只有顶栏一张脸', () => {
       floating,
       `这些地方还有悬浮按钮，而顶栏已经有 More：${floating.join(', ')}`,
     ).toEqual([])
+  })
+
+  it('入口的顺序是定的，不是推出来的', () => {
+    // 顺序没有任何推导依据：Terminal 当初只是因为要按权限条件 push，
+    // 就被放到了 Settings 后面，于是它在宽屏上也掉进 More 里。
+    // 这是一条产品决定，就该由门禁钉住，而不是等下一次有人改 push 顺序。
+    // 终端是两个条件之一成立才有，所以"没有"要把两个条件都关掉，
+    // 只关 terminalAllowed 而留着 isAdmin，那一项本来就该在。
+    const keys = (isAdmin: boolean, terminalAllowed: boolean) =>
+      buildNavModel({ isAdmin, terminalAllowed }).items.map((item) => item.key)
+
+    expect(keys(true, true), '顺序应当是：项目、助手、文件、终端、定时任务、设置、退出')
+      .toEqual(['projects', 'assistant', 'files', 'terminal', 'schedules', 'settings', 'logout'])
+    expect(keys(true, false), '管理员即使没有 terminal 许可也仍然进得去')
+      .toEqual(['projects', 'assistant', 'files', 'terminal', 'schedules', 'settings', 'logout'])
+    expect(keys(false, false), '两个条件都不成立时，终端这一项整条消失')
+      .toEqual(['projects', 'assistant', 'files', 'schedules', 'settings', 'logout'])
+  })
+
+  it('能进的地方就常驻，够宽的时候不许折叠', () => {
+    // 每一个"去某个地方"的入口都是 primary。设置和终端曾经不是，
+    // 于是空间明明摊得开，它们还是缩在 More 里。
+    const items = buildNavModel({ isAdmin: true, terminalAllowed: true }).items
+    const places = items.filter((item) => item.to)
+    expect(
+      places.filter((item) => !item.primary).map((item) => item.key),
+      '这些入口空间够的时候也会被折叠进 More',
+    ).toEqual([])
+  })
+
+  it('进入子页面时，选中的那一项不会掉高亮', () => {
+    const active = (pathname: string) =>
+      buildNavModel({ isAdmin: true, terminalAllowed: true })
+        .items.filter((item) => item.to)
+        .filter((item) => isNavItemActive(item, pathname))
+        .map((item) => item.key)
+
+    // 项目的排程页和全局排程页是同一个地方
+    expect(active('/repos/7/schedules')).toEqual(['schedules'])
+    expect(active('/schedules')).toEqual(['schedules'])
+    expect(active('/repos/7/assistant')).toEqual(['assistant'])
+    expect(active('/files')).toEqual(['files'])
+    expect(active('/settings')).toEqual(['settings'])
+    expect(active('/terminal')).toEqual(['terminal'])
+    // 真正离开之后就不该还亮着
+    expect(active('/repos/7/sessions/abc')).toEqual([])
   })
 })

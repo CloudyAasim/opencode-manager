@@ -95,13 +95,15 @@ describe('Files page', () => {
     fetchMock.mockReset()
   })
 
-  it('loads the root listing and offers a back control', async () => {
+  it('loads the root listing and offers no back control', async () => {
+    // /files is a top-level page: there is nothing behind it to return to, and
+    // a control that navigates back to / is a dead end on a fresh tab.
     render(<Files />, { wrapper })
 
     await waitFor(() => {
       expect(screen.getByText('a.txt')).toBeInTheDocument()
     })
-    expect(screen.getByRole('button', { name: /back|返回/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /back|返回/i })).not.toBeInTheDocument()
   })
 
   it('opens a full-screen preview for a picked file on narrow viewports', async () => {

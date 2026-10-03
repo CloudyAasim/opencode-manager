@@ -1,6 +1,4 @@
 import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
 import { FileBrowserView, type FileBrowserHandle } from './FileBrowserView'
 import { useFileBrowserController } from './useFileBrowserController'
 import { getRepoRelativeDisplayPath } from './display-path'
@@ -35,7 +33,6 @@ export function FileBrowserPage({
   allowNavigateAboveBase = true,
   onFileSelect,
 }: FileBrowserPageProps) {
-  const navigate = useNavigate()
   const fileBrowserRef = useRef<FileBrowserHandle>(null)
 
   const controller = useFileBrowserController({
@@ -44,13 +41,6 @@ export function FileBrowserPage({
     onFileSelect,
   })
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1)
-    } else {
-      navigate('/')
-    }
-  }
 
   const currentPath = controller.currentPath
   const displayPath = allowNavigateAboveBase
@@ -60,7 +50,6 @@ export function FileBrowserPage({
   return (
     <div className="h-dvh max-h-dvh flex flex-col bg-background overflow-hidden pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
       <FileBrowserHeader
-        back={handleBack}
         repoName={repoName}
         path={displayPath}
         repoId={repoId}
@@ -82,7 +71,6 @@ export function FileBrowserPage({
 }
 
 interface FileBrowserHeaderProps {
-  back: () => void
   repoName?: string
   path: string
   repoId?: number
@@ -90,7 +78,7 @@ interface FileBrowserHeaderProps {
   onLoadDirectory: (path: string) => void
 }
 
-function FileBrowserHeader({ back, repoName, path, repoId, basePath }: FileBrowserHeaderProps) {
+function FileBrowserHeader({ repoName, path, repoId, basePath }: FileBrowserHeaderProps) {
   const { t } = useI18n()
   const [downloadDialog, setDownloadDialog] = useState<{ type: 'directory' | 'repository' } | null>(null)
 
@@ -126,16 +114,6 @@ function FileBrowserHeader({ back, repoName, path, repoId, basePath }: FileBrows
 
   return (
     <header className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-3 py-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={back}
-        aria-label={t('common.back')}
-        title={t('common.back')}
-        className="h-8 w-8 shrink-0"
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </Button>
       {repoName && (
         <h1 className="text-sm font-semibold text-foreground shrink-0 truncate max-w-[120px] sm:max-w-[160px]">
           {repoName}

@@ -107,7 +107,10 @@ test.describe('files page on a phone', () => {
     expect(geometry.height).toBeGreaterThanOrEqual(geometry.viewport * 0.6)
   })
 
-  test('the back control leaves the files page', async ({ page }) => {
+  test('the files page offers no back control', async ({ page }) => {
+    // /files is a top-level page with nothing behind it, so a back control only
+    // ever strands the user - on a fresh tab it navigates to a page they were
+    // never on. Asserting the absence is what keeps it from coming back.
     await signIn(page)
     await installApiMocks(page, { repos: [REPO] })
     await mockListing(page, directory(MANY_FILES.slice(0, 3)))
@@ -115,8 +118,7 @@ test.describe('files page on a phone', () => {
     await page.goto('/files')
     await expect(page.locator('[data-testid="file-list-scroller"]')).toBeVisible()
 
-    await page.getByRole('button', { name: /back|返回/i }).first().click()
-    await expect(page).not.toHaveURL(/\/files$/)
+    await expect(page.getByRole('button', { name: /back|返回/i })).toHaveCount(0)
   })
 
   test('picking a file previews it without exceeding the viewport', async ({ page, isMobile }) => {

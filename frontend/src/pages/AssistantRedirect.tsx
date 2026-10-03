@@ -45,7 +45,6 @@ export function AssistantRedirect() {
   return (
     <div className="h-dvh max-h-dvh overflow-hidden bg-background flex flex-col pb-[calc(env(safe-area-inset-bottom)+56px)] sm:pb-0">
       <Header>
-        <Header.BackButton to="/" />
         <Header.Title>{t('misc.assistant.title')}</Header.Title>
         <Header.Actions>
           <div className="flex items-center gap-1">
