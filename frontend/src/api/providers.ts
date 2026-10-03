@@ -266,59 +266,65 @@ export async function toggleOpenCodeFavoriteModel(model: ModelSelection): Promis
   });
 }
 
-async function getConfiguredProviders(connectedIds: Set<string>, config?: OpenCodeConfigFile): Promise<ProviderWithModels[]> {
-  try {
-    const resolvedConfig = config ?? await settingsApi.getOpenCodeConfig();
-    if (!resolvedConfig.content.provider) return [];
+function buildConfiguredProviders(connectedIds: Set<string>, config: OpenCodeConfigFile): ProviderWithModels[] {
+  if (!config.content.provider) return [];
 
-    const configProviders = resolvedConfig.content.provider as Record<string, ConfigProvider>;
-    const result: ProviderWithModels[] = [];
+  const configProviders = config.content.provider as Record<string, ConfigProvider>;
+  const result: ProviderWithModels[] = [];
 
-    for (const [providerId, providerConfig] of Object.entries(configProviders)) {
-      if (!providerConfig || typeof providerConfig !== "object") continue;
+  for (const [providerId, providerConfig] of Object.entries(configProviders)) {
+    if (!providerConfig || typeof providerConfig !== "object") continue;
 
-      const source = classifyProviderSource(providerId, true);
-      const models: Model[] = [];
+    const source = classifyProviderSource(providerId, true);
+    const models: Model[] = [];
 
-      if (providerConfig.models) {
-        for (const [modelId, modelConfig] of Object.entries(providerConfig.models)) {
-          if (!modelConfig || typeof modelConfig !== "object") continue;
+    if (providerConfig.models) {
+      for (const [modelId, modelConfig] of Object.entries(providerConfig.models)) {
+        if (!modelConfig || typeof modelConfig !== "object") continue;
 
-          models.push({
-            id: typeof modelConfig.id === 'string' ? modelConfig.id : modelId,
-            key: modelId,
-            name: modelConfig.name || modelId,
-            limit: modelConfig.limit ? {
-              context: modelConfig.limit.context || 0,
-              output: modelConfig.limit.output || 0,
-            } : undefined,
-          });
-        }
+        models.push({
+          id: typeof modelConfig.id === 'string' ? modelConfig.id : modelId,
+          key: modelId,
+          name: modelConfig.name || modelId,
+          limit: modelConfig.limit ? {
+            context: modelConfig.limit.context || 0,
+            output: modelConfig.limit.output || 0,
+          } : undefined,
+        });
       }
-
-      result.push({
-        id: providerId,
-        name: providerConfig.name || providerId,
-        api: providerConfig.api || providerConfig.options?.baseURL,
-        env: [],
-        npm: providerConfig.npm,
-        models,
-        source,
-        isConnected: connectedIds.has(providerId),
-      });
     }
 
-    return result;
-  } catch {
-    return [];
+    result.push({
+      id: providerId,
+      name: providerConfig.name || providerId,
+      api: providerConfig.api || providerConfig.options?.baseURL,
+      env: [],
+      npm: providerConfig.npm,
+      models,
+      source,
+      isConnected: connectedIds.has(providerId),
+    });
   }
+
+  return result;
 }
 
 export async function getProvidersWithModels(directory?: string, config?: OpenCodeConfigFile): Promise<ProviderWithModels[]> {
-  const { providers: builtinProviders, connected } = await getProviders(directory);
+  // The provider list and the config file are independent, and when the caller
+  // had not loaded the config this used to fetch it again inside the second
+  // step - three round trips in a row before a model could be picked. Ask for
+  // both at once, and fall back to just the builtin providers if the config
+  // read fails rather than losing the list entirely.
+  const [builtin, resolvedConfig] = await Promise.all([
+    getProviders(directory),
+    config ? Promise.resolve(config) : settingsApi.getOpenCodeConfig().catch(() => null),
+  ]);
+  const { providers: builtinProviders, connected } = builtin;
   const connectedIds = new Set(connected);
 
-  const configuredProviders = await getConfiguredProviders(connectedIds, config);
+  const configuredProviders = resolvedConfig
+    ? buildConfiguredProviders(connectedIds, resolvedConfig)
+    : [];
   const configuredIds = new Set(configuredProviders.map((p) => p.id));
 
   const builtinResult: ProviderWithModels[] = builtinProviders
