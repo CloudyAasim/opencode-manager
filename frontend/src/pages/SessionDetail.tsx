@@ -25,6 +25,7 @@ import { ContextUsageIndicator } from "@/features/session/ContextUsageIndicator"
 import { useSession, useAbortSession, useUpdateSession, useMessages, useCreateSession } from "@/hooks/useOpenCode";
 import { useRepoActivity } from "@/hooks/useRepoActivity";
 import { useAssistantMode } from "@/hooks/useAssistantMode";
+import { SessionMoreButton } from "@/features/navigation/SessionMoreButton";
 import { useRepoSiblings, useCreateRepoWorkspace, useDeleteRepoWorkspaces } from "@/hooks/useRepoSiblings";
 import { useWorktreeTab } from "@/hooks/useWorktreeTab";
 import { SessionRouteFallback } from "@/features/session/SessionRouteFallback";
@@ -778,6 +779,10 @@ export function SessionDetail() {
             <div className="flex items-center gap-1">
               <PendingActionsGroup />
             </div>
+            {/* Upstream gives each screen its own More on mobile, with a bottom
+                tab bar underneath; this fork has no tab bar, so without this the
+                only way out of a long conversation is the bar at the very top. */}
+            <SessionMoreButton />
             <ContextUsageIndicator
               opcodeUrl={opcodeUrl}
               sessionID={sessionId}

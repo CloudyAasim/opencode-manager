@@ -23,7 +23,6 @@ const production = SOURCES.filter((source) => !isTest(source.rel))
 const UNREACHABLE = [
   'features/navigation/RepoQuickSwitchSheet.tsx',
   'features/navigation/NotificationsSheet.tsx',
-  'features/navigation/SessionMoreButton.tsx',
 ]
 
 /**
@@ -46,7 +45,7 @@ function openerFiles() {
     .filter((rel) => !isTest(rel))
 }
 
-describe('移动端抽屉：每张都要有入口，入口只能有一个', () => {
+describe('移动端抽屉：每张都要有入口，入口不能无限膨胀', () => {
   it('门禁自己看得见东西', () => {
     expect(SOURCES.length, '源文件少得可疑，这门禁多半跑在空集上').toBeGreaterThan(300)
     for (const rel of [HOOK, HOST, TOPBAR]) {
@@ -78,24 +77,37 @@ describe('移动端抽屉：每张都要有入口，入口只能有一个', () =
     }
     const all = SOURCES.map((source) => source.text).join('\n')
     expect(all, '还有文件引用已删的组件').not.toMatch(
-      /RepoQuickSwitchSheet|NotificationsSheet|SessionMoreButton/,
+      /RepoQuickSwitchSheet|NotificationsSheet/,
     )
   })
 
   /**
-   * TopBar renders on every page, so it is the one place a "more" button
-   * belongs. The conversation header used to carry a second one opening the
-   * same drawer, and on a phone both were on screen at once at two different
-   * sizes. A gesture is fine - it is not a second button.
+   * This gate used to demand exactly one button that opens the drawer, on the
+   * reasoning that TopBar renders everywhere and a second entry is a duplicate.
+   * Upstream says otherwise: every screen carries its own More and a bottom tab
+   * bar sits underneath, so on a phone the in-context one stays on screen once
+   * you have scrolled down a long thread. This fork has no tab bar - the 56px
+   * of reserved bottom padding is the hole where one used to be - so deleting
+   * the conversation header's button left a phone user with no way out of a
+   * long conversation except the bar at the very top.
+   *
+   * The rule that survives: two entry points, never three.
    */
-  it('打开同一个抽屉的按钮只有顶栏那一处', () => {
+  it('打开同一个抽屉的按钮不多不少', () => {
     const buttonCallers = production
       .filter((source) =>
         /<(Button|button)\b[\s\S]{0,400}?onClick=\{\(\) => open\('more'\)\}/.test(source.text),
       )
       .map((source) => source.rel)
-    expect(buttonCallers.sort(), `又多了打开抽屉的按钮：${buttonCallers.join(', ')}`).toEqual([
-      TOPBAR,
-    ])
+      .sort()
+
+    expect(buttonCallers, `抽屉入口变成了 ${buttonCallers.join(', ')}`).toContain(TOPBAR)
+    expect(buttonCallers.length, '抽屉入口在膨胀').toBeLessThanOrEqual(2)
+    // The button is defined in its own component and mounted by SessionDetail,
+    // so the caller looks for the file that actually owns the click handler.
+    expect(
+      buttonCallers.some((rel) => rel.endsWith('navigation/SessionMoreButton.tsx')),
+      '会话页没有自己的抽屉入口了，手机上滚长了就出不去了',
+    ).toBe(true)
   })
 })
