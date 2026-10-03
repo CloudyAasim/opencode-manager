@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import path from 'path'
 import { access, readFile, writeFile } from 'fs/promises'
 import { Hono } from 'hono'
-import { ensureAssistantMode, getAssistantModeStatus, buildSchedulesSkill, buildReposSkill, buildSettingsSkill, buildAssistantDefaultAgentMd, buildAssistantOpenCodeConfig, buildAssistantRepo, installAssistantWorkspace } from '../../src/services/assistant-mode'
+import { ensureAssistantMode, getAssistantModeStatus, getAssistantModeDirectory, buildSchedulesSkill, buildReposSkill, buildSettingsSkill, buildAssistantDefaultAgentMd, buildAssistantOpenCodeConfig, buildAssistantRepo, installAssistantWorkspace } from '../../src/services/assistant-mode'
 import { createTempAssistantWorkspace, createTestDb, mockRepo } from '../helpers/assistant-workspace'
 import { createInternalRoutes } from '../../src/routes/internal'
 import { ScheduleService } from '../../src/services/schedules'
@@ -647,6 +647,44 @@ describe('installAssistantWorkspace', () => {
     db = createTestDb()
   })
   afterEach(async () => { await ws.cleanup() })
+
+  it('prepares a workspace per account, not only the anonymous one', async () => {
+    // Each account has its own assistant directory, so warming only the
+    // anonymous one leaves every real user with nothing. That is how the
+    // assistant page ended up on its skeleton with the stream disconnected.
+    const now = Date.now()
+    const insert = db.prepare(
+      `INSERT INTO "user" ("id", "name", "email", "username", "role", "emailVerified", "createdAt", "updatedAt")
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    insert.run('u1', 'Alice', 'alice@example.com', 'alice', 'admin', 1, now, now)
+    insert.run('u2', 'Bob', 'bob@example.com', 'bob', 'user', 1, now + 1, now + 1)
+
+    await installAssistantWorkspace({ db })
+
+    for (const username of ['alice', 'bob']) {
+      // Ask the code where the directory is rather than guessing it again.
+      const dir = getAssistantModeDirectory(username)
+      const config = await readFile(path.join(dir, 'opencode.json'), 'utf8')
+      expect(JSON.parse(config).default_agent, `${username} 的工作区没建出来`).toBe('assistant')
+      await access(path.join(dir, '.opencode', 'agents', 'assistant.md'))
+    }
+
+    // The anonymous one is what the assistant repo points at, so it stays.
+    await access(path.join(ws.assistantDir, 'opencode.json'))
+  })
+
+  it('does not invent a directory for an account with no username', async () => {
+    const now = Date.now()
+    db.prepare(
+      `INSERT INTO "user" ("id", "name", "email", "username", "role", "emailVerified", "createdAt", "updatedAt")
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('u3', 'Nameless', 'nameless@example.com', null, 'user', 1, now, now)
+
+    await installAssistantWorkspace({ db })
+
+    await access(path.join(ws.assistantDir, 'opencode.json'))
+  })
 
   it('provisions the assistant workspace files without contacting OpenCode', async () => {
     const result = await installAssistantWorkspace({ db })

@@ -458,10 +458,41 @@ export async function getAssistantModeStatus(repo: Repo, username?: string | nul
   }
 }
 
+/**
+ * Warm the assistant workspace at boot, for every account on the server.
+ *
+ * This ran before, but without a username, so it built the one directory that
+ * nobody uses: getAssistantModeDirectory() is per-user, and the routes pass the
+ * session's username while this did not. The result was a workspace that always
+ * existed for the anonymous case and never for a real user, which is why the
+ * conversation screen sat on its skeleton with the stream disconnected until
+ * something asked again at runtime.
+ *
+ * Per user is the whole point of a per-user workspace, so warming it per user
+ * is what makes the warm-up true.
+ */
 export async function installAssistantWorkspace(deps: {
   db: Database
 }): Promise<AssistantModeStatus> {
   const assistantRepo = ensureAssistantRepo(deps.db)
 
+  for (const username of listAssistantUsernames(deps.db)) {
+    await ensureAssistantMode(assistantRepo, undefined, username)
+  }
+
+  // The anonymous workspace is the one the assistant repo itself points at, so
+  // it is still created - it is just no longer the only one. This is what the
+  // caller gets back, as before.
   return ensureAssistantMode(assistantRepo)
+}
+
+/**
+ * Account names, in creation order. A user without a username (or with one that
+ * is blank) has no separate workspace and is served by the anonymous one.
+ */
+function listAssistantUsernames(db: Database): string[] {
+  const rows = db
+    .prepare(`SELECT DISTINCT username FROM "user" WHERE username IS NOT NULL AND username != '' ORDER BY createdAt ASC`)
+    .all() as Array<{ username: string }>
+  return rows.map((row) => row.username)
 }
