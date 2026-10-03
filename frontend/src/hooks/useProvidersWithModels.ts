@@ -12,7 +12,10 @@ export function useProvidersWithModels({ enabled, directory, keyParts }: UseProv
   const { data: config, isLoading: isConfigLoading } = useOpenCodeConfigFile(enabled)
 
   const query = useQuery({
-    queryKey: ['providers-with-models', ...(keyParts ?? [])],
+    // The answer depends on the directory - getProviders() asks the server
+    // with it - so it belongs in the key. Without it, whichever project's
+    // models landed in cache last answered for all of them.
+    queryKey: ['providers-with-models', directory ?? '', ...(keyParts ?? [])],
     queryFn: () => getProvidersWithModels(directory, config),
     enabled: enabled && !isConfigLoading,
     staleTime: 5 * 60 * 1000,
