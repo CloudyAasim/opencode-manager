@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Hono } from 'hono'
 import type { MiddlewareHandler } from 'hono'
+import type { Database } from 'bun:sqlite'
 import { createAuthenticatedOpenCodeProxyRoutes } from '../../src/routes/opencode-auth-proxy'
 import { getUserSettingPath } from '@opencode-manager/shared/config/env'
 import type { OpenCodeClient } from '../../src/services/opencode/client'
 import { OpenCodeSupervisor } from '../../src/services/opencode-supervisor'
 import type { SettingsService } from '../../src/services/settings'
+import { logger } from '../../src/utils/logger'
 import { createTestDb } from '../helpers/assistant-workspace'
 
 const proxyTestDb = createTestDb()
@@ -520,5 +522,245 @@ describe('authenticated opencode proxy routes', () => {
     const res = await app.request(`/api/opencode/session?directory=${encodeURIComponent(directory)}`)
     expect(res.status).toBe(200)
     expect(forwardRawMock).toHaveBeenCalled()
+  })
+})
+
+/**
+ * Which OpenCode session belongs to whom.
+ *
+ * The manager creates every session itself, so `POST /session` is the one place
+ * where the caller and the new session id are known at the same moment. Writing
+ * that pairing down is all this does - the internal API does not read it yet -
+ * but the pairing only exists at that instant, so it has to be taken there.
+ */
+describe('recording who a new OpenCode session belongs to', () => {
+  let db: Database
+  let warnSpy: ReturnType<typeof vi.spyOn>
+
+  const buildFor = (user: { id: string; username?: string; role: 'admin' | 'user' } | null) => {
+    const app = new Hono()
+    const asCaller: MiddlewareHandler = async (c, next) => {
+      if (user) c.set('user' as never, user as never)
+      await next()
+    }
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes(
+        { forwardRaw: forwardRawMock } as unknown as OpenCodeClient,
+        asCaller,
+        db,
+      ),
+    )
+    return app
+  }
+
+  const sessionCreated = (id: string) =>
+    new Response(JSON.stringify({ id }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    isLifecycleInitializedMock.mockReturnValue(true)
+    forwardRawMock.mockResolvedValue(new Response('ok', { status: 200 }))
+    db = createTestDb()
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+  })
+
+  const recorded = (sessionId: string) => {
+    const row = db
+      .prepare('SELECT * FROM ocm_agent_session WHERE session_id = ?')
+      .get(sessionId) as Record<string, unknown> | undefined
+    return row ?? null
+  }
+
+  it('notes the caller as the owner of the session that just came back', async () => {
+    forwardRawMock.mockResolvedValue(sessionCreated('ses_owner'))
+    const directory = `${getUserSettingPath('alice')}/assistant`
+
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request(
+      `/api/opencode/session?directory=${encodeURIComponent(directory)}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"title":"t"}' },
+    )
+
+    expect(res.status).toBe(200)
+    expect(recorded('ses_owner')).toMatchObject({
+      session_id: 'ses_owner',
+      user_id: 'u-alice',
+      username: 'alice',
+      role: 'user',
+      // The directory is kept for auditing, not for deciding who this is -
+      // scheduled and shared repositories run in directories with no name in
+      // them, which is why it cannot be the identity.
+      directory,
+      source: 'proxy',
+    })
+  })
+
+  it('records a session created at the path with a trailing slash', async () => {
+    forwardRawMock.mockResolvedValue(sessionCreated('ses_slash'))
+
+    await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+
+    expect(recorded('ses_slash')).toMatchObject({ user_id: 'u-alice' })
+  })
+
+  it('leaves the response body readable for the caller', async () => {
+    // Recording reads the upstream body. Consuming it instead of cloning would
+    // hand the frontend an empty session object and break it in a way that
+    // looks nothing like an audit problem.
+    forwardRawMock.mockResolvedValue(sessionCreated('ses_body'))
+
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+
+    expect(await res.json()).toEqual({ id: 'ses_body' })
+    expect(recorded('ses_body')).toMatchObject({ user_id: 'u-alice' })
+  })
+
+  it('records nothing when the caller cannot be identified, and says nothing either', async () => {
+    forwardRawMock.mockResolvedValue(sessionCreated('ses_anon'))
+
+    const res = await buildFor(null).request('/api/opencode/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+
+    expect(res.status).toBe(200)
+    expect(recorded('ses_anon')).toBeNull()
+    // Nothing failed here - there was simply no one to attribute. A warning
+    // would be a lie, and it would be the only way to notice the difference
+    // between this and a genuine write failure.
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  it('records nothing for a request that does not create a session', async () => {
+    forwardRawMock.mockResolvedValue(sessionCreated('ses_wrong_path'))
+
+    await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session/ses_1/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+
+    expect(recorded('ses_wrong_path')).toBeNull()
+  })
+
+  it('records nothing when the request was not a POST', async () => {
+    forwardRawMock.mockResolvedValue(sessionCreated('ses_wrong_method'))
+
+    await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session')
+
+    expect(recorded('ses_wrong_method')).toBeNull()
+  })
+
+  it('records nothing when upstream refused to create the session', async () => {
+    forwardRawMock.mockResolvedValue(
+      new Response(JSON.stringify({ id: 'ses_rejected' }), {
+        status: 400,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+
+    expect(res.status).toBe(400)
+    expect(recorded('ses_rejected')).toBeNull()
+  })
+
+  it('creates the session anyway when there is no id in the answer to record', async () => {
+    forwardRawMock.mockResolvedValue(
+      new Response(JSON.stringify({ data: {} }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+
+    expect(res.status).toBe(200)
+    expect(
+      db.prepare('SELECT COUNT(*) AS n FROM ocm_agent_session').get(),
+    ).toEqual({ n: 0 })
+  })
+
+  it('creates the session anyway when the answer is not JSON at all', async () => {
+    forwardRawMock.mockResolvedValue(
+      new Response('<html>gateway</html>', { status: 200, headers: { 'content-type': 'text/html' } }),
+    )
+
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+
+    expect(res.status).toBe(200)
+    expect(
+      db.prepare('SELECT COUNT(*) AS n FROM ocm_agent_session').get(),
+    ).toEqual({ n: 0 })
+    // An unreadable body is a real problem worth reporting, unlike the
+    // identity-less case above.
+    expect(warnSpy).toHaveBeenCalled()
+  })
+
+  it('creates the session anyway when the owner cannot be written down', async () => {
+    const failing = new Proxy(db, {
+      get(target, prop) {
+        if (prop === 'prepare') {
+          return (sql: string) => {
+            if (sql.includes('ocm_agent_session')) throw new Error('write refused')
+            return target.prepare(sql)
+          }
+        }
+        const value = Reflect.get(target, prop) as unknown
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    }) as Database
+
+    const app = new Hono()
+    const asAlice: MiddlewareHandler = async (c, next) => {
+      c.set('user' as never, { id: 'u-alice', username: 'alice', role: 'user' } as never)
+      await next()
+    }
+    forwardRawMock.mockResolvedValue(sessionCreated('ses_write_failed'))
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes(
+        { forwardRaw: forwardRawMock } as unknown as OpenCodeClient,
+        asAlice,
+        failing,
+      ),
+    )
+
+    const res = await app.request('/api/opencode/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+
+    // Losing the note costs us a session we can no longer place. Failing the
+    // creation would cost the user their session, which is not a trade worth
+    // making over bookkeeping.
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ id: 'ses_write_failed' })
+    expect(warnSpy).toHaveBeenCalled()
   })
 })

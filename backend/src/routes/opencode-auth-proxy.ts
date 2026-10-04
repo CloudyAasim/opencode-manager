@@ -4,8 +4,11 @@ import type { Database } from 'bun:sqlite'
 import { opencodeServerManager } from '../services/opencode-single-server'
 import type { OpenCodeClient } from '../services/opencode/client'
 import { principalFrom, principalIsAdmin, resolveAccessRoots } from '../auth/ownership'
+import type { Principal } from '../auth/ownership'
 import { isWithinRoots } from '../auth/access-scope'
 import type { Session } from '../auth'
+import { recordAgentSession } from '../services/agent-session'
+import { getErrorMessage } from '../utils/error-utils'
 import { logger } from '../utils/logger'
 
 /**
@@ -55,6 +58,55 @@ function rememberProviderList(key: string, source: Response, body: ArrayBuffer):
   })
 }
 
+/**
+ * `POST /session` is the one call that mints a session, and it is the only
+ * moment where both halves of the answer exist at the same time: who asked,
+ * and which id came back. Trailing slash tolerated; anything deeper
+ * (`/session/ses_1/message`) is a different endpoint and is not matched.
+ */
+function isSessionCreation(method: string, pathname: string): boolean {
+  if (method !== 'POST') return false
+  const trimmed = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
+  return trimmed.endsWith('/session')
+}
+
+/**
+ * Noting the owner down is bookkeeping, not the request. A session that could
+ * not be recorded still works; what is lost is the note that would later let
+ * the internal API tell tenants apart, and that shows up loudly the moment
+ * enforcement is switched on. Failing the creation instead would turn a
+ * bookkeeping gap into an outage.
+ *
+ * Returning early on a missing principal - rather than letting the try below
+ * swallow the resulting TypeError - is what keeps "nobody to record" quiet.
+ * Nothing went wrong there, so a warning would be a lie.
+ */
+async function recordCreatedSession(
+  database: Database,
+  response: Response,
+  principal: Principal | null,
+  directory: string | null,
+): Promise<void> {
+  if (!principal) return
+
+  try {
+    const payload = await response.clone().json() as { id?: unknown } | null
+    const sessionId = typeof payload?.id === 'string' ? payload.id : null
+    if (!sessionId) return
+
+    recordAgentSession(database, {
+      sessionId,
+      userId: principal.id,
+      username: principal.username ?? null,
+      role: principal.role,
+      directory,
+      source: 'proxy',
+    })
+  } catch (error) {
+    logger.warn(`Could not record the owner of a new OpenCode session: ${getErrorMessage(error)}`)
+  }
+}
+
 export function createAuthenticatedOpenCodeProxyRoutes(
   openCodeClient: OpenCodeClient,
   requireAuth: MiddlewareHandler,
@@ -71,11 +123,11 @@ export function createAuthenticatedOpenCodeProxyRoutes(
     const principal = principalFrom(
       (c as unknown as { get: (key: string) => Session['user'] | undefined }).get('user'),
     )
+    const requestPath = new URL(c.req.url).pathname
 
     // Only the provider listing, only reads, only successful reads - and only
     // after the access check below has had its say.
-    const isProviderList =
-      c.req.method === 'GET' && new URL(c.req.url).pathname.endsWith('/provider')
+    const isProviderList = c.req.method === 'GET' && requestPath.endsWith('/provider')
     // No username means no safe key: sharing one bucket between callers
     // we could not identify would hand one tenant another's connected list.
     // Such a request is simply not cached.
@@ -106,6 +158,10 @@ export function createAuthenticatedOpenCodeProxyRoutes(
       } catch {
         // A body we could not copy is simply not cached.
       }
+    }
+
+    if (response.status === 200 && isSessionCreation(c.req.method, requestPath)) {
+      await recordCreatedSession(database, response, principal, directory ?? null)
     }
 
     return response

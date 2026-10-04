@@ -14,6 +14,7 @@ import { type ScheduledSessionRef } from '../sse-aggregator'
 import { getErrorMessage } from '../../utils/error-utils'
 import { logger } from '../../utils/logger'
 import { buildAssistantRepo } from '../assistant-mode'
+import { recordAgentSession, resolveRepoOwnerIdentity } from '../agent-session'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
 import { SESSION_STOPPED_ERROR, buildPromptWithSkills, buildRunLog, buildRunStartedLog, buildSessionTitle, createSessionMonitor, getAssistantMessageState } from './session-monitor'
 import type { AssistantOutcome, SessionMessage, SessionMonitor, SessionResponse, SessionStatus } from './session-monitor'
@@ -281,6 +282,23 @@ export class ScheduleService {
       }
 
       const session = await sessionResponse.json() as SessionResponse
+
+      // The internal API will eventually be asked "whose session is this" and
+      // answer it from here. Cron fired this run, so the owner of the repo it
+      // targets is the only person it can honestly be attributed to. A failed
+      // note is logged rather than thrown: losing the record costs us a session
+      // we can no longer place, while throwing would cost the user the run.
+      try {
+        recordAgentSession(this.db, {
+          sessionId: session.id,
+          ...resolveRepoOwnerIdentity(this.db, repoId),
+          directory: runDirectory,
+          source: 'schedule',
+        })
+      } catch (error) {
+        logger.warn(`Could not record the owner of scheduled session ${session.id}: ${getErrorMessage(error)}`)
+      }
+
       const runWithSession = updateScheduleRunMetadata(this.db, repoId, jobId, run.id, {
         sessionId: session.id,
         sessionTitle,
