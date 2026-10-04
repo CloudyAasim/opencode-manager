@@ -9,7 +9,7 @@ import { NotificationService } from '../../src/services/notification'
 import { SettingsService } from '../../src/services/settings'
 import { UpstreamError, type OpenCodeClient } from '../../src/services/opencode/client'
 import { allMigrations } from '../../src/db/migrations'
-import { getOrCreateInternalToken } from '../../src/services/internal-token'
+import { createInternalCaller } from '../helpers/internal-caller'
 import { migrate } from '../../src/db/migration-runner'
 import { OPENCODE_CONFIG_SEED, readOpenCodeConfigFile, writeOpenCodeConfigFile } from '../../src/services/opencode-config-file'
 import { createTempAssistantWorkspace } from '../helpers/assistant-workspace'
@@ -47,7 +47,7 @@ describe('internal/opencode-config routes', () => {
     const settingsService = new SettingsService(db)
     app = new Hono()
     app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
-    token = getOrCreateInternalToken(db)
+    token = createInternalCaller(db).token
   })
 
   afterEach(async () => {

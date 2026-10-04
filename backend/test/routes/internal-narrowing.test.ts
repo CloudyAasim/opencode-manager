@@ -92,13 +92,11 @@ describe('internal routes narrowed by session owner', () => {
     expect(body.repos.map((r) => r.id)).toEqual([11])
   })
 
-  it('still lists an unplaced caller own view, unchanged from before', async () => {
-    // No session header at all: this stage narrows what it can place and
-    // leaves the rest alone. Turning this into a refusal is the next stage.
+  it('refuses a shared token that names no session', async () => {
+    // The whole list, unnarrowed, is what a copied token bought before. There
+    // is no longer a "before" in which serving it was the compromise.
     const res = await app.request('/api/internal/repos', { headers: { authorization: `Bearer ${token}` } })
-    expect(res.status).toBe(200)
-    const body = await res.json() as { repos: { id: number }[] }
-    expect(body.repos.map((r) => r.id).sort()).toEqual([11, 22])
+    expect(res.status).toBe(401)
   })
 
   it('keeps a shared repository visible to everyone', async () => {
@@ -111,16 +109,16 @@ describe('internal routes narrowed by session owner', () => {
     expect(body.repos.map((r) => r.id).sort()).toEqual([11, 33])
   })
 
-  it('treats a session with no owner as unplaced', async () => {
+  it('refuses a session with no owner rather than borrowing a neighbour view', async () => {
     // This one is not hypothetical: a schedule on a repository nobody owns is
-    // recorded without a person, so it has no principal to narrow by and must
-    // fall back rather than borrow somebody's.
+    // recorded without a person, so it has no principal to narrow by. Falling
+    // back to "everything" meant a scheduled agent on a shared repository read
+    // both tenants' repositories, which is the leak the whole scheme exists to
+    // close.
     recordSession('ses_ownerless', null)
 
     const res = await app.request('/api/internal/repos', { headers: asSession('ses_ownerless') })
-    expect(res.status).toBe(200)
-    const body = await res.json() as { repos: { id: number }[] }
-    expect(body.repos.map((r) => r.id).sort()).toEqual([11, 22])
+    expect(res.status).toBe(401)
   })
 
   it('lets an administrator see every repository', async () => {
@@ -140,10 +138,9 @@ describe('internal routes narrowed by session owner', () => {
     expect(body.workspaces.map((w) => w.repoId)).toEqual([11])
   })
 
-  it('still lists every workspace for an unplaced caller', async () => {
+  it('refuses to list workspaces for a request that names no session', async () => {
     const res = await app.request('/api/internal/opencode-workspaces', { headers: { authorization: `Bearer ${token}` } })
-    const body = await res.json() as { workspaces: { repoId: number }[] }
-    expect(body.workspaces.map((w) => w.repoId).sort()).toEqual([11, 22])
+    expect(res.status).toBe(401)
   })
 
   // --- GET/PATCH /settings ------------------------------------------------
@@ -182,16 +179,27 @@ describe('internal routes narrowed by session owner', () => {
     expect(service.getSettings(ALICE).preferences.theme).toBe('system')
   })
 
-  it('still honours userId for an unplaced caller', async () => {
+  it('refuses to write another user settings for a request that names no session', async () => {
+    // The `?userId=` selector is what this stage removed. Keeping it alive for
+    // unplaceable callers would have left the original hole open behind a
+    // middleware that happens to be installed.
     const service = new SettingsService(db)
     service.updateSettings({ theme: 'light' }, BOB)
+
     const res = await app.request(`/api/internal/settings?userId=${BOB}`, {
       method: 'PATCH',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ theme: 'dark' }),
     })
-    expect(res.status).toBe(200)
-    expect(service.getSettings(BOB).preferences.theme).toBe('dark')
+    expect(res.status).toBe(401)
+    expect(service.getSettings(BOB).preferences.theme).toBe('light')
+  })
+
+  it('refuses to read another user settings for a request that names no session', async () => {
+    const res = await app.request(`/api/internal/settings?userId=${BOB}`, {
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(res.status).toBe(401)
   })
 
   // --- GET /schedules/all and /all/runs ------------------------------------
@@ -280,8 +288,8 @@ describe('internal routes narrowed by session owner', () => {
     expect(res.status).toBe(200)
   })
 
-  it('still serves any repository schedule to an unplaced caller', async () => {
+  it('refuses any repository schedule to a request that names no session', async () => {
     const res = await app.request('/api/internal/repos/22/schedules', { headers: { authorization: `Bearer ${token}` } })
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(401)
   })
 })

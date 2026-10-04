@@ -36,8 +36,35 @@ vi.mock('../../src/db/migration-runner', () => ({
   migrate: vi.fn(),
 }))
 
+/**
+ * Hoisted, because a `vi.mock` factory is lifted above the module body and
+ * would otherwise close over a binding that is still in its temporal dead
+ * zone. Re-primed in the describe below, because `vi.clearAllMocks()` is the
+ * only thing standing between these handles and a shared previous test's
+ * answer.
+ */
+const { USER_TOKEN, findUserIdByToken, findUserIdentity, accessibleRepoIds } = vi.hoisted(() => ({
+  USER_TOKEN: 'test-user-token',
+  findUserIdByToken: vi.fn<(provided: string) => string | null>(() => null),
+  findUserIdentity: vi.fn<(...args: unknown[]) => unknown>(() => null),
+  accessibleRepoIds: vi.fn<(...args: unknown[]) => number[]>(() => []),
+}))
+
 vi.mock('../../src/services/internal-token', () => ({
   getOrCreateInternalToken: vi.fn().mockReturnValue('test-internal-token'),
+  findUserIdByToken,
+}))
+
+/**
+ * The workspace shape is what this suite is about, so the caller is an admin
+ * and can see every repository. Which repositories a given tenant may see is
+ * internal-narrowing.test.ts's subject, and asserting it here as well would
+ * only give the same rule a second place to drift.
+ */
+vi.mock('../../src/auth/ownership', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/auth/ownership')>()),
+  findUserIdentity,
+  accessibleRepoIds,
 }))
 
 vi.mock('../../src/services/schedules', () => ({
@@ -74,6 +101,11 @@ describe('internal-opencode-workspaces routes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // `mockReturnValue`, not `mockImplementation` - see the note in
+    // opencode-proxy.test.ts, which measured the difference.
+    findUserIdByToken.mockReturnValue('u-workspaces')
+    findUserIdentity.mockReturnValue({ id: 'u-workspaces', role: 'admin', username: 'workspaces' })
+    accessibleRepoIds.mockReturnValue([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     mockListRepos.mockReturnValue([])
     const scheduleService = {} as ScheduleService
     const notificationService = {} as NotificationService
@@ -88,7 +120,7 @@ describe('internal-opencode-workspaces routes', () => {
     } as unknown as OpenCodeClient
     app = new Hono()
     app.route('/api/internal', createInternalRoutes(mockDb, scheduleService, notificationService, settingsService, openCodeClient))
-    token = 'test-internal-token'
+    token = USER_TOKEN
   })
 
   it('GET /api/internal/opencode-workspaces returns 401 without bearer token', async () => {

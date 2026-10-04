@@ -104,6 +104,10 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
         </Button>
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        {t('settingsPanels.managerToken.personalNote')}
+      </p>
+
       {confirmRotate && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />

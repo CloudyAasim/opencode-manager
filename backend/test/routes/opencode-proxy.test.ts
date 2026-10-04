@@ -9,8 +9,37 @@ vi.mock('bun:sqlite', () => ({
   Database: vi.fn(),
 }))
 
+/**
+ * A personal token, which is the credential the `ocm` CLI holds. The shared
+ * token stays mocked to its own value because the middleware still compares
+ * against it first, and a test that wanted the shared path would be testing the
+ * middleware, not the proxy.
+ *
+ * Hoisted, because a `vi.mock` factory is lifted above the module body and
+ * would otherwise close over a binding that is still in its temporal dead
+ * zone. Re-primed in the describe below, because `vi.clearAllMocks()` is the
+ * only thing standing between these handles and a previous test's answer.
+ *
+ * `mockReturnValue`, not `mockImplementation`: on a hoisted handle re-primed
+ * after `vi.clearAllMocks()`, the implementation form silently keeps the seed
+ * given to `vi.fn` and the request 401s. The return-value form was measured to
+ * work; the negative cases below therefore set their own rather than relying
+ * on a default.
+ */
+const { USER_TOKEN, findUserIdByToken, findUserIdentity } = vi.hoisted(() => ({
+  USER_TOKEN: 'test-user-token',
+  findUserIdByToken: vi.fn<(provided: string) => string | null>(() => null),
+  findUserIdentity: vi.fn<(...args: unknown[]) => unknown>(() => null),
+}))
+
 vi.mock('../../src/services/internal-token', () => ({
   getOrCreateInternalToken: vi.fn().mockReturnValue('test-internal-token'),
+  findUserIdByToken,
+}))
+
+vi.mock('../../src/auth/ownership', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/auth/ownership')>()),
+  findUserIdentity,
 }))
 
 const isLifecycleInitializedMock = vi.hoisted(() => vi.fn().mockReturnValue(true))
@@ -31,6 +60,8 @@ describe('opencode-proxy routes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    findUserIdByToken.mockReturnValue('u-proxy')
+    findUserIdentity.mockReturnValue({ id: 'u-proxy', role: 'user', username: 'u-proxy' })
     isLifecycleInitializedMock.mockReturnValue(true)
     originalFetch = globalThis.fetch
     app = new Hono()
@@ -55,7 +86,7 @@ describe('opencode-proxy routes', () => {
 
     const res = await app.request('/api/opencode-proxy/session/ses_1/message', {
       method: 'POST',
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(503)
@@ -63,6 +94,10 @@ describe('opencode-proxy routes', () => {
   })
 
   it('returns 401 with invalid bearer token', async () => {
+    // Stated here rather than left to the describe's default: a "401 when the
+    // token is wrong" test that passes because the lookup happens to return
+    // nothing is not testing the token at all.
+    findUserIdByToken.mockReturnValue(null)
     const res = await app.request('/api/opencode-proxy/doc', {
       headers: { Authorization: 'Bearer wrong-token' },
     })
@@ -72,6 +107,7 @@ describe('opencode-proxy routes', () => {
   })
 
   it('returns 401 with invalid basic auth password', async () => {
+    findUserIdByToken.mockReturnValue(null)
     const res = await app.request('/api/opencode-proxy/doc', {
       headers: { Authorization: 'Basic ' + Buffer.from('opencode:wrong-password').toString('base64') },
     })
@@ -87,7 +123,7 @@ describe('opencode-proxy routes', () => {
     globalThis.fetch = upstreamFetch as unknown as typeof fetch
 
     const res = await app.request('/api/opencode-proxy/doc', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(200)
@@ -111,7 +147,7 @@ describe('opencode-proxy routes', () => {
     )
     globalThis.fetch = upstreamFetch as unknown as typeof fetch
 
-    const basicAuthHeader = 'Basic ' + Buffer.from('opencode:test-internal-token').toString('base64')
+    const basicAuthHeader = 'Basic ' + Buffer.from(`opencode:${USER_TOKEN}`).toString('base64')
     const res = await app.request('/api/opencode-proxy/doc', {
       headers: { Authorization: basicAuthHeader },
     })
@@ -137,7 +173,7 @@ describe('opencode-proxy routes', () => {
 
     await app.request('/api/opencode-proxy/doc', {
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'x-opencode-directory': '/some/dir',
       },
     })
@@ -158,7 +194,7 @@ describe('opencode-proxy routes', () => {
 
     await app.request('/api/opencode-proxy/doc', {
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'x-opencode-directory': '/home/user/project',
         'x-opencode-workspace': 'my-workspace',
       },
@@ -174,7 +210,7 @@ describe('opencode-proxy routes', () => {
   it('returns 501 for WebSocket upgrade requests', async () => {
     const res = await app.request('/api/opencode-proxy/ws', {
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         Connection: 'Upgrade',
         Upgrade: 'websocket',
       },
@@ -194,7 +230,7 @@ describe('opencode-proxy routes', () => {
     globalThis.fetch = upstreamFetch as unknown as typeof fetch
 
     const res = await app.request('/api/opencode-proxy/events', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(200)
@@ -211,7 +247,7 @@ describe('opencode-proxy routes', () => {
     globalThis.fetch = upstreamFetch as unknown as typeof fetch
 
     const res = await app.request('/api/opencode-proxy/events', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(200)
@@ -223,7 +259,7 @@ describe('opencode-proxy routes', () => {
     globalThis.fetch = upstreamFetch as unknown as typeof fetch
 
     const res = await app.request('/api/opencode-proxy/doc', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(502)
@@ -238,7 +274,7 @@ describe('opencode-proxy routes', () => {
     globalThis.fetch = upstreamFetch as unknown as typeof fetch
 
     await app.request('/api/opencode-proxy/doc?foo=bar&baz=qux', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     const fetchCall = upstreamFetch.mock.calls[0] as [string, RequestInit]
@@ -254,7 +290,7 @@ describe('opencode-proxy routes', () => {
 
     await app.request('/api/opencode-proxy/doc', {
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         Host: 'localhost:5003',
         Connection: 'keep-alive',
         'Transfer-Encoding': 'chunked',
@@ -286,7 +322,7 @@ describe('opencode-proxy routes', () => {
     globalThis.fetch = upstreamFetch as unknown as typeof fetch
 
     const res = await app.request('/api/opencode-proxy/doc', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.headers.get('connection')).toBeNull()
@@ -302,7 +338,7 @@ describe('opencode-proxy routes', () => {
 
     const res = await app.request('/api/opencode-proxy/session/ses_1/shell', {
       method: 'POST',
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(200)
@@ -317,7 +353,7 @@ describe('opencode-proxy routes', () => {
 
     const res = await app.request('/api/opencode-proxy/%70ty', {
       method: 'POST',
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(200)
@@ -332,7 +368,7 @@ describe('opencode-proxy routes', () => {
 
     const res = await app.request('/api/opencode-proxy/session/ses_1/command', {
       method: 'POST',
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(200)
@@ -348,7 +384,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/mcp', {
       method: 'POST',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -375,7 +411,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/mcp', {
       method: 'POST',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -402,7 +438,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/mcp', {
       method: 'POST',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -429,7 +465,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/mcp', {
       method: 'POST',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -460,7 +496,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/config', {
       method: 'PATCH',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body,
@@ -480,7 +516,7 @@ describe('opencode-proxy routes', () => {
 
     const res = await app.request('/api/opencode-proxy/session/ses_1/prompt_async', {
       method: 'POST',
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
 
     expect(res.status).toBe(200)
@@ -497,7 +533,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/config', {
       method: 'PATCH',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body,
@@ -522,7 +558,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/config', {
       method: 'PATCH',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body,
@@ -543,7 +579,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/config', {
       method: 'PATCH',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: '{not json',
@@ -563,7 +599,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/config', {
       method: 'PATCH',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ theme: 'dark', plugin: ['opencode-plugin-npm'] }),
@@ -584,7 +620,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/session/ses_1/message', {
       method: 'PATCH',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ content: 'hello' }),
@@ -605,7 +641,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/auth/sso.example.com', {
       method: 'PUT',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ type: 'wellknown', key: 'SSO_TOKEN', token: 't' }),
@@ -626,7 +662,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/auth/anthropic', {
       method: 'PUT',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ type: 'api', key: 'sk-test' }),
@@ -647,7 +683,7 @@ describe('opencode-proxy routes', () => {
     const res = await app.request('/api/opencode-proxy/auth/sso.example.com', {
       method: 'PUT',
       headers: {
-        Authorization: 'Bearer test-internal-token',
+        Authorization: `Bearer ${USER_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ type: 'wellknown', key: 'SSO_TOKEN', token: 't' }),
@@ -687,7 +723,7 @@ describe('opencode-proxy routes', () => {
     globalThis.fetch = upstreamFetch as unknown as typeof fetch
 
     const healthyRes = await app.request('/api/opencode-proxy/doc', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
     expect(healthyRes.status).toBe(200)
     expect(upstreamFetch).toHaveBeenCalledTimes(1)
@@ -698,7 +734,7 @@ describe('opencode-proxy routes', () => {
     expect(lifecycle.initialized).toBe(false)
 
     const blockedRes = await app.request('/api/opencode-proxy/doc', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
     expect(blockedRes.status).toBe(503)
     expect(upstreamFetch).toHaveBeenCalledTimes(1)
@@ -709,7 +745,7 @@ describe('opencode-proxy routes', () => {
     expect(lifecycle.initialized).toBe(true)
 
     const reopenedRes = await app.request('/api/opencode-proxy/doc', {
-      headers: { Authorization: 'Bearer test-internal-token' },
+      headers: { Authorization: `Bearer ${USER_TOKEN}` },
     })
     expect(reopenedRes.status).toBe(200)
     expect(upstreamFetch).toHaveBeenCalledTimes(2)

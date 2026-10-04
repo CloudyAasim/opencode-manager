@@ -2,8 +2,9 @@ import { createMiddleware } from 'hono/factory'
 import { timingSafeEqual } from 'node:crypto'
 import type { Database } from 'bun:sqlite'
 import type { Context } from 'hono'
-import { getOrCreateInternalToken } from '../services/internal-token'
+import { findUserIdByToken, getOrCreateInternalToken } from '../services/internal-token'
 import { findAgentSession } from '../services/agent-session'
+import { findUserIdentity } from './ownership'
 import { logger } from '../utils/logger'
 
 function extractTokenFromBasic(header: string): string | null {
@@ -28,9 +29,9 @@ export type UnattributedReason = 'no-session-header' | 'unknown-session' | 'no-u
  * The shape the rest of the app already understands.
  *
  * Deliberately the same three fields `principalFrom()` reads off a signed-in
- * user: putting a session's owner on the context as `user` is what makes the
- * ownership filters that are already written - and that have never run on this
- * path, because an internal request never had a user - start running.
+ * user: putting a subject on the context as `user` is what makes the ownership
+ * filters already written for the web API apply here, instead of this path
+ * growing its own second copy of "is this an admin".
  */
 export interface InternalUser {
   id: string
@@ -38,45 +39,17 @@ export interface InternalUser {
   username: string | null
 }
 
-/**
- * Shadow mode, and the thing that makes narrowing possible at all.
- *
- * The internal token says "this is our plugin" and nothing about who is
- * calling. The session the plugin reports says who. This is where the two meet:
- * a request that can be placed gets its owner on the context under the same
- * `user` key a signed-in session uses, so the ownership filters already written
- * for the web API start running here - they have never run on this path,
- * because an internal request never carried a user.
- *
- * A request that cannot be placed is logged and then served exactly as it
- * always has. Only the unplaceable ones are logged: a line per request would
- * bury the number this exists to produce, and a placed one has nothing to
- * report.
- *
- * The log is not a security control and must not be read as one. A session id
- * is not a secret - `GET /schedules/all/runs` hands every run's `session_id`
- * to any agent holding the shared token - so until the routes are narrowed, a
- * caller can claim a session that is not theirs. Narrowing the routes is what
- * makes this worth anything; turning a null into a 401 is the stage after.
- */
-
-/**
- * Who an internal request belongs to, and - when nobody could be worked out -
- * why not.
- *
- * Both come from one lookup on purpose: two queries could disagree if a row
- * landed in between, and then the log would describe a different request from
- * the one that got through.
- *
- * A null user is not an error. This stage still lets the request through
- * exactly as it always has, and the routes that consult it treat a null as
- * "no narrowing available" rather than "deny".
- */
 export interface InternalIdentity {
   user: InternalUser | null
   reason: UnattributedReason | null
 }
 
+/**
+ * Which OpenCode session a plugin request is running in, and therefore whose
+ * it is. One lookup, one answer: two queries could disagree if a row landed in
+ * between, and then the log would describe a different request from the one
+ * that got through.
+ */
 export function resolveInternalIdentity(db: Database, rawSessionId: string | undefined): InternalIdentity {
   const sessionId = rawSessionId?.trim()
   if (!sessionId) return { user: null, reason: 'no-session-header' }
@@ -103,6 +76,38 @@ export function internalUserOf(c: unknown): InternalUser | null {
   return user?.id ? user : null
 }
 
+function presentedToken(header: string): string | null {
+  if (header.startsWith('Bearer ')) return header.slice(7)
+  if (header.startsWith('Basic ')) return extractTokenFromBasic(header)
+  return null
+}
+
+const UNATTRIBUTED_401 = {
+  error: 'Unauthorized',
+  message: 'This request could not be attributed to a user. The manager token is shared by every tenant, '
+    + 'so a request that uses it has to report the OpenCode session it is running in. '
+    + 'Tools that run outside a session should use a personal token from Settings.',
+}
+
+/**
+ * Two credentials reach the internal API, and they prove different things.
+ *
+ * A **user token** is a person. It was minted for them and it names them, so
+ * nothing further is asked of it. The `ocm` CLI runs on someone's own machine
+ * and carries this.
+ *
+ * The **plugin token** is the OpenCode server's, and it is shared by every
+ * tenant by construction - one process serves all of them - so it can only
+ * ever answer "this is our plugin". What says which tenant is the session the
+ * plugin reports, and a plugin request that cannot be placed is **refused**
+ * rather than served on the strength of a token that says nothing about who is
+ * asking.
+ *
+ * That refusal is the point of the whole exercise. Before it, the Settings page
+ * handed the shared token to any signed-in user, and one curl with it read
+ * every tenant's repositories and every tenant's session ids - including the
+ * session ids this identity scheme is built on.
+ */
 export function createInternalTokenMiddleware(db: Database) {
   return createMiddleware(async (c, next) => {
     const header = c.req.header('authorization') ?? c.req.header('Authorization')
@@ -110,35 +115,44 @@ export function createInternalTokenMiddleware(db: Database) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
-    const expected = getOrCreateInternalToken(db)
-
-    if (header.startsWith('Bearer ')) {
-      if (!tokenMatch(header.slice(7), expected)) {
-        return c.json({ error: 'Unauthorized' }, 401)
-      }
-    } else if (header.startsWith('Basic ')) {
-      const password = extractTokenFromBasic(header)
-      if (!password || !tokenMatch(password, expected)) {
-        return c.json({ error: 'Unauthorized' }, 401)
-      }
-    } else {
+    const presented = presentedToken(header)
+    if (!presented) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
-    // Past the token. A rejected request has no session worth counting, so the
-    // check sits here rather than at the top.
-    const sessionId = c.req.header(SESSION_HEADER)
-    const { user, reason } = resolveInternalIdentity(db, sessionId)
-
-    if (user) {
+    // The shared token is checked first on purpose: every tenant can see it, so
+    // a value matching it must be treated as the weaker credential rather than
+    // as whoever a user token might collide with.
+    if (tokenMatch(presented, getOrCreateInternalToken(db))) {
+      const sessionId = c.req.header(SESSION_HEADER)
+      const { user, reason } = resolveInternalIdentity(db, sessionId)
+      if (!user) {
+        logger.warn(
+          `[ocm-identity] internal request not attributable: reason=${reason} `
+          + `session=${sessionId?.trim() || '-'} method=${c.req.method} path=${new URL(c.req.url).pathname}`,
+        )
+        return c.json(UNATTRIBUTED_401, 401)
+      }
+      // Same key a signed-in session uses, so the ownership filters written for
+      // the web API apply with no second implementation of them.
       ;(c as unknown as Context).set('user', user)
-    } else {
-      logger.warn(
-        `[ocm-identity] internal request not attributable: reason=${reason} session=${sessionId?.trim() || '-'} `
-        + `method=${c.req.method} path=${new URL(c.req.url).pathname}`,
-      )
+      return next()
     }
 
-    await next()
+    const userId = findUserIdByToken(db, presented)
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    // The role comes from the user record, not from a session: a CLI is not
+    // running in one, and copying a role off whatever it last touched would let
+    // the two disagree.
+    const owner = findUserIdentity(db, userId)
+    ;(c as unknown as Context).set('user', {
+      id: userId,
+      role: owner?.role === 'admin' ? 'admin' : 'user',
+      username: owner?.username ?? null,
+    } satisfies InternalUser)
+    return next()
   })
 }

@@ -7,7 +7,7 @@ import { NotificationService } from '../../src/services/notification'
 import { SettingsService } from '../../src/services/settings'
 import { createOpenCodeClient } from '../../src/services/opencode/client'
 import { allMigrations } from '../../src/db/migrations'
-import { getOrCreateInternalToken } from '../../src/services/internal-token'
+import { createInternalCaller } from '../helpers/internal-caller'
 import { migrate } from '../../src/db/migration-runner'
 import type { UserPreferences } from '@opencode-manager/shared/types'
 import type { ScheduleWorktreeManager } from '../../src/services/schedule-worktree'
@@ -19,6 +19,7 @@ describe('internal/settings routes', () => {
   let settingsService: SettingsService
   let app: Hono
   let token: string
+  let userId: string
 
   beforeEach(() => {
     db = new Database(':memory:')
@@ -30,7 +31,12 @@ describe('internal/settings routes', () => {
     settingsService = new SettingsService(db)
     app = new Hono()
     app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
-    token = getOrCreateInternalToken(db)
+    const caller = createInternalCaller(db)
+    token = caller.token
+    // The route writes to whoever presented the token, so a seed written
+    // with no user id lands on `default` and the patch reads back an empty
+    // row. Same person on both sides, or the case proves nothing.
+    userId = caller.userId
   })
 
   it('GET /api/internal/settings returns 401 without bearer token', async () => {
@@ -135,7 +141,7 @@ describe('internal/settings routes', () => {
         model: 'tts-1',
         speed: 1.0,
       },
-    } as Partial<UserPreferences>)
+    } as Partial<UserPreferences>, userId)
 
     // Now patch only non-secret fields via the API
     const patchRes = await app.request('/api/internal/settings', {
@@ -167,7 +173,7 @@ describe('internal/settings routes', () => {
         model: 'tts-1',
         speed: 1.0,
       },
-    } as Partial<UserPreferences>)
+    } as Partial<UserPreferences>, userId)
 
     // Patch only voice — autoPlay, provider, model, speed must remain as seeded
     const patchRes = await app.request('/api/internal/settings', {
@@ -221,7 +227,7 @@ describe('internal/settings routes', () => {
         model: 'whisper-1',
         language: 'fr-FR',
       },
-    } as Partial<UserPreferences>)
+    } as Partial<UserPreferences>, userId)
 
     // Patch only model — language, provider, enabled must remain as seeded
     const patchRes = await app.request('/api/internal/settings', {

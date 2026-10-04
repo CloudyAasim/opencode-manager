@@ -6,8 +6,15 @@ import {
 } from '@opencode-manager/shared/schemas'
 import { ScheduleService, ScheduleServiceError } from '../services/schedules'
 import { parseId, handleServiceError } from '../utils/route-helpers'
-import { accessibleRepoIds, principalFrom } from '../auth/ownership'
+import { accessibleRepoIds, canAccessRepo, principalFrom } from '../auth/ownership'
 import type { Session } from '../auth'
+
+function forbidden(status: 401 | 403, error: string): Response {
+  return new Response(JSON.stringify({ error }), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  })
+}
 
 function parseRunListLimit(value: string | undefined): number {
   if (value === undefined) {
@@ -28,11 +35,35 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   const principalOf = (c: unknown) =>
     principalFrom((c as { get?: (key: string) => Session['user'] | undefined }).get?.('user'))
 
+  /**
+   * The per-repo routes create, run, edit and delete jobs by repository id, and
+   * they never checked who was asking - on either path. The repository list
+   * decides what a tenant can see, so a caller who knows an id could act on a
+   * repository that list would never show them.
+   *
+   * An absent subject used to be left alone, on the grounds that both mounts
+   * decide for themselves whether one is present. Both now do, so it cannot
+   * happen - and a branch that hands over a repository when it cannot prove
+   * who is asking is exactly the one that must not be left standing on the
+   * strength of a promise about some other file.
+   */
+  const requireRepoAccess = (c: unknown): Response | null => {
+    const principal = principalOf(c)
+    if (!principal) return forbidden(401, 'Unauthorized')
+    const repoId = Number((c as { req?: { param: (key: string) => string | undefined } }).req?.param('id'))
+    // A non-numeric id is not an authorisation question; `parseId` answers it
+    // with a 400 on the next line, and it should stay the thing that does.
+    if (!Number.isFinite(repoId)) return null
+    if (canAccessRepo(database, repoId, principal)) return null
+    return forbidden(403, 'Forbidden')
+  }
+
   app.get('/all', (c) => {
     try {
       const jobs = scheduleService.listAllJobsWithRepos()
       const principal = principalOf(c)
-      if (!principal || principal.role === 'admin') {
+      if (!principal) return c.json({ error: 'Unauthorized' }, 401)
+      if (principal.role === 'admin') {
         return c.json({ jobs })
       }
       const allowed = new Set(accessibleRepoIds(database, principal))
@@ -61,7 +92,8 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
       const triggerSource = c.req.query('triggerSource') || undefined
       const runs = scheduleService.listAllRuns({ limit, offset, status, repoId, jobId, triggerSource })
       const principal = principalOf(c)
-      if (!principal || principal.role === 'admin') {
+      if (!principal) return c.json({ error: 'Unauthorized' }, 401)
+      if (principal.role === 'admin') {
         return c.json({ runs })
       }
       const allowed = new Set(accessibleRepoIds(database, principal))
@@ -72,6 +104,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.get('/', (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       return c.json({ jobs: scheduleService.listJobs(repoId) })
@@ -81,6 +116,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.post('/', async (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const body = await c.req.json()
@@ -93,6 +131,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.get('/:jobId', (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)
@@ -107,6 +148,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.patch('/:jobId', async (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)
@@ -120,6 +164,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.delete('/:jobId', (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)
@@ -131,6 +178,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.post('/:jobId/run', async (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)
@@ -142,6 +192,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.get('/:jobId/runs', (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)
@@ -153,6 +206,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.get('/:jobId/runs/:runId', (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)
@@ -164,6 +220,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.post('/:jobId/runs/:runId/cancel', async (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)
@@ -176,6 +235,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.delete('/:jobId/runs', async (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)
@@ -187,6 +249,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
   })
 
   app.delete('/:jobId/runs/:runId', async (c) => {
+    const denied = requireRepoAccess(c)
+    if (denied) return denied
+
     try {
       const repoId = parseId(c.req.param('id'), 'repo id', ScheduleServiceError)
       const jobId = parseId(c.req.param('jobId'), 'schedule id', ScheduleServiceError)

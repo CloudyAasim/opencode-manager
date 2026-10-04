@@ -7,7 +7,7 @@ import { NotificationService } from '../../src/services/notification'
 import { SettingsService } from '../../src/services/settings'
 import { createOpenCodeClient } from '../../src/services/opencode/client'
 import { allMigrations } from '../../src/db/migrations'
-import { getOrCreateInternalToken } from '../../src/services/internal-token'
+import { createInternalCaller } from '../helpers/internal-caller'
 import { migrate } from '../../src/db/migration-runner'
 import type { ScheduleWorktreeManager } from '../../src/services/schedule-worktree'
 
@@ -29,7 +29,7 @@ describe('internal-schedules routes', () => {
     settingsService = new SettingsService(db)
     app = new Hono()
     app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
-    token = getOrCreateInternalToken(db)
+    token = createInternalCaller(db).token
   })
 
   it('GET /api/internal/schedules/all returns 401 without bearer token', async () => {

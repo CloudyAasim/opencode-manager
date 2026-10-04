@@ -16,10 +16,11 @@ export function createInternalRepoRoutes(db: Database, settingsService: Settings
       const repos = listRepos(db, settings.preferences.repoOrder)
       const principal = principalFrom(internalUserOf(c))
 
-      // No placement means no narrowing. Turning that into a refusal is the
-      // next stage's job; this one closes the gap for the requests it can
-      // actually place and leaves the rest exactly as they were.
-      if (!principal) return c.json({ repos })
+      // This used to read "no placement, no narrowing" and serve the whole
+      // list. The middleware no longer lets an unplaceable request this far,
+      // so the branch is unreachable - and unreachable branches in an
+      // authorisation path are how they come back. Refuse.
+      if (!principal) return c.json({ error: 'Unauthorized' }, 401)
 
       // One query for the whole list rather than a lookup per repo: this runs
       // on every tool call an agent makes, and the repo list is not small.

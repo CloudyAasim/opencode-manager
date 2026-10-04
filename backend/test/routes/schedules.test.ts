@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { ScheduleServiceError } from '../../src/services/schedules'
 
 const scheduleService = {
@@ -12,6 +13,8 @@ const scheduleService = {
   listRuns: vi.fn(),
   getRun: vi.fn(),
   cancelRun: vi.fn(),
+  clearRunHistory: vi.fn(),
+  deleteRun: vi.fn(),
   listAllEnabledJobs: vi.fn(),
   listAllJobsWithRepos: vi.fn(),
   listAllRuns: vi.fn(),
@@ -36,9 +39,32 @@ vi.mock('../../src/utils/logger', () => ({
 }))
 
 import { createScheduleRoutes } from '../../src/routes/schedules'
-import type { Database } from 'bun:sqlite'
+import { Database } from 'bun:sqlite'
+import { migrate } from '../../src/db/migration-runner'
+import { allMigrations } from '../../src/db/migrations'
 
-const testDb = {} as Database
+/**
+ * The factory used to be mounted against an empty object, which only worked
+ * because nothing asked the database anything. The ownership guard asks one
+ * question - who owns this repository - and a shared row answers it, so this
+ * is the smallest thing that lets the suite keep the subject it was written
+ * about. The ownership cases below use a real database instead.
+ */
+const testDb = {
+  prepare: () => ({ get: () => ({ user_id: null }) }),
+} as unknown as Database
+
+/**
+ * The web API mounts these routes under `requireAuth` and the internal API
+ * behind the token middleware, so in the running product every request that
+ * reaches a handler already has a subject. This suite mounted the factory
+ * bare, which quietly relied on the "no subject, no narrowing" branch these
+ * tests were never looking at. It now supplies a subject the way the app does,
+ * and the ownership cases get their own describe below.
+ */
+function asUser(c: Context, user: { id: string; role: 'admin' | 'user' }): void {
+  c.set('user', { ...user, name: user.id, email: `${user.id}@example.test` })
+}
 
 describe('Schedule Routes', () => {
   let app: Hono
@@ -46,7 +72,16 @@ describe('Schedule Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     app = new Hono()
-    app.route('/repos/:id/schedules', createScheduleRoutes(scheduleService as unknown as import('../../src/services/schedules').ScheduleService, testDb))
+    // The shim sits on the same app as the mount rather than wrapping it: a
+    // second `route()` would strip the path segment the handlers match on.
+    app.use('*', async (c, next) => {
+      asUser(c, { id: 'u-web', role: 'admin' })
+      await next()
+    })
+    app.route('/repos/:id/schedules', createScheduleRoutes(
+      scheduleService as unknown as import('../../src/services/schedules').ScheduleService,
+      testDb,
+    ))
   })
 
   it('lists jobs for a repo', async () => {
@@ -275,5 +310,229 @@ describe('Schedule Routes', () => {
       jobId: 7,
       triggerSource: 'manual',
     })
+  })
+})
+
+/**
+ * Repository ownership on the per-repo schedule routes.
+ *
+ * These handlers take a repository id straight out of the URL and never used to
+ * ask whether the caller may act on it, on either mount. The repository list is
+ * what hides another tenant's ids, so anyone who learned one - from a log, a
+ * run id, a teammate - could create, run, edit and delete that repository's
+ * scheduled jobs.
+ *
+ * Each case therefore comes in a pair: what the other tenant must not reach,
+ * and what its own tenant still can. A suite made only of refusals would pass
+ * just as well against a route that 403s everything, which is the failure that
+ * looks like a working product right up until someone tries to use it.
+ */
+describe('Schedule Routes - repository ownership', () => {
+  let db: Database
+  let alice: Hono
+  let bob: Hono
+  let admin: Hono
+  let anonymous: Hono
+
+  const addRepo = (id: number, userId: string | null) => {
+    db.prepare(
+      `INSERT INTO repos (id, local_path, default_branch, clone_status, cloned_at, user_id)
+       VALUES (?, ?, 'main', 'ready', ?, ?)`,
+    ).run(id, `repo-${id}`, Date.now(), userId)
+  }
+
+  const mount = (user: { id: string; role: 'admin' | 'user' } | null) => {
+    const wrapper = new Hono()
+    if (user) {
+      wrapper.use('*', async (c, next) => {
+        asUser(c, user)
+        await next()
+      })
+    }
+    wrapper.route(
+      '/repos/:id/schedules',
+      createScheduleRoutes(scheduleService as unknown as import('../../src/services/schedules').ScheduleService, db),
+    )
+    return wrapper
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    db = new Database(':memory:')
+    migrate(db, allMigrations)
+    addRepo(11, 'u-alice')
+    addRepo(22, 'u-bob')
+    addRepo(33, null)
+    alice = mount({ id: 'u-alice', role: 'user' })
+    bob = mount({ id: 'u-bob', role: 'user' })
+    admin = mount({ id: 'u-root', role: 'admin' })
+    anonymous = mount(null)
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('still lists a tenant own repository schedules', async () => {
+    scheduleService.listJobs.mockReturnValue([{ id: 7, name: 'Nightly' }])
+
+    const response = await alice.request('/repos/11/schedules')
+
+    expect(response.status).toBe(200)
+    expect(scheduleService.listJobs).toHaveBeenCalledWith(11)
+  })
+
+  it('still shows a shared repository to a tenant that does not own it', async () => {
+    // repos.user_id IS NULL means "shared", and that is the rule the repository
+    // list already follows. Ownership checks must not quietly redefine it as
+    // "owned by nobody".
+    scheduleService.listJobs.mockReturnValue([])
+
+    const response = await alice.request('/repos/33/schedules')
+
+    expect(response.status).toBe(200)
+  })
+
+  it('refuses to read another tenant repository schedules', async () => {
+    const response = await alice.request('/repos/22/schedules')
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.listJobs).not.toHaveBeenCalled()
+  })
+
+  it('refuses to create a job on another tenant repository', async () => {
+    const response = await alice.request('/repos/22/schedules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Mine now', scheduleMode: 'interval', prompt: 'go' }),
+    })
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.createJob).not.toHaveBeenCalled()
+  })
+
+  it('refuses to run another tenant repository job', async () => {
+    const response = await alice.request('/repos/22/schedules/7/run', { method: 'POST' })
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.runJob).not.toHaveBeenCalled()
+  })
+
+  it('refuses to edit another tenant repository job', async () => {
+    const response = await alice.request('/repos/22/schedules/7', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Renamed' }),
+    })
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.updateJob).not.toHaveBeenCalled()
+  })
+
+  it('refuses to delete another tenant repository job', async () => {
+    const response = await alice.request('/repos/22/schedules/7', { method: 'DELETE' })
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.deleteJob).not.toHaveBeenCalled()
+  })
+
+  it('refuses to read another tenant repository run history', async () => {
+    const response = await alice.request('/repos/22/schedules/7/runs')
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.listRuns).not.toHaveBeenCalled()
+  })
+
+  it('refuses to cancel another tenant repository run', async () => {
+    const response = await alice.request('/repos/22/schedules/7/runs/5/cancel', { method: 'POST' })
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.cancelRun).not.toHaveBeenCalled()
+  })
+
+  it('refuses to clear another tenant repository run history', async () => {
+    const response = await alice.request('/repos/22/schedules/7/runs', { method: 'DELETE' })
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.clearRunHistory).not.toHaveBeenCalled()
+  })
+
+  it('refuses to delete a single run of another tenant repository', async () => {
+    const response = await alice.request('/repos/22/schedules/7/runs/5', { method: 'DELETE' })
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.deleteRun).not.toHaveBeenCalled()
+  })
+
+  it('refuses to fetch one job of another tenant repository', async () => {
+    const response = await alice.request('/repos/22/schedules/7')
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.getJob).not.toHaveBeenCalled()
+  })
+
+  it('works the same way in the other direction', async () => {
+    // One direction is enough for a rule, two is enough to catch a guard that
+    // was written against a hard-coded id.
+    const response = await bob.request('/repos/11/schedules')
+    expect(response.status).toBe(403)
+  })
+
+  it('lets an administrator drive any repository', async () => {
+    scheduleService.listJobs.mockReturnValue([])
+
+    const response = await admin.request('/repos/22/schedules')
+
+    expect(response.status).toBe(200)
+  })
+
+  it('refuses a request with no subject at all', async () => {
+    // Both mounts now guarantee one, so this cannot happen in the product. It
+    // is the case that used to return every schedule, and it is the one that
+    // must never come back.
+    expect((await anonymous.request('/repos/22/schedules')).status).toBe(401)
+    expect((await anonymous.request('/repos/22/schedules/7/run', { method: 'POST' })).status).toBe(401)
+    expect((await anonymous.request('/repos/22/schedules/all')).status).toBe(401)
+    expect((await anonymous.request('/repos/22/schedules/all/runs')).status).toBe(401)
+  })
+
+  it('narrows the cross-repository list to what the caller may see', async () => {
+    scheduleService.listAllJobsWithRepos.mockReturnValue([
+      { id: 1, repoId: 11, name: 'alice job' },
+      { id: 2, repoId: 22, name: 'bob job' },
+      { id: 3, repoId: 33, name: 'shared job' },
+    ])
+
+    const response = await alice.request('/repos/11/schedules/all')
+    const body = await response.json() as { jobs: { id: number }[] }
+
+    expect(body.jobs.map((j) => j.id).sort()).toEqual([1, 3])
+  })
+
+  it('narrows the cross-repository run list to what the caller may see', async () => {
+    // A run row carries the session id the agent ran in. Handing one tenant
+    // every row would hand them the session ids the identity scheme is built
+    // on - the value they would then present to be placed as that tenant.
+    scheduleService.listAllRuns.mockReturnValue([
+      { id: 1, repoId: 11, sessionId: 'ses_alice' },
+      { id: 2, repoId: 22, sessionId: 'ses_bob' },
+    ])
+
+    const response = await alice.request('/repos/11/schedules/all/runs')
+    const body = await response.json() as { runs: { sessionId: string | null }[] }
+
+    expect(body.runs.map((r) => r.sessionId)).toEqual(['ses_alice'])
+  })
+
+  it('leaves the cross-repository lists untouched for an administrator', async () => {
+    scheduleService.listAllJobsWithRepos.mockReturnValue([
+      { id: 1, repoId: 11 },
+      { id: 2, repoId: 22 },
+    ])
+
+    const response = await admin.request('/repos/11/schedules/all')
+    const body = await response.json() as { jobs: unknown[] }
+
+    expect(body.jobs).toHaveLength(2)
   })
 })

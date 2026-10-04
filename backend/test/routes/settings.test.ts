@@ -4,7 +4,7 @@ import { Database } from 'bun:sqlite'
 import { createStubOpenCodeClient } from '../helpers/stub-opencode-client'
 import { migrate } from '../../src/db/migration-runner'
 import { allMigrations } from '../../src/db/migrations'
-import { getOrCreateInternalToken } from '../../src/services/internal-token'
+import { findUserIdByToken, getOrCreateInternalToken, getOrCreateUserToken } from '../../src/services/internal-token'
 
 const mockGetSettings = vi.fn()
 const mockUpdateSettings = vi.fn()
@@ -272,6 +272,8 @@ vi.mock('@opencode-manager/shared/config/env', () => ({
   },
 }))
 
+import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { createSettingsRoutes } from '../../src/routes/settings'
 import { getImportedSessionDirectories, getOpenCodeImportStatus, OpenCodeImportProtectionError, syncOpenCodeImport } from '../../src/services/opencode-import'
 import { relinkReposFromSessionDirectories } from '../../src/services/repo'
@@ -1366,16 +1368,21 @@ describe('Settings Routes - OpenCode Upgrade', () => {
       tokenDb.close()
     })
 
-    it('rotates the manager token and marks the OpenCode server restart as pending', async () => {
-      const previous = getOrCreateInternalToken(tokenDb)
+    it('rotates the caller own token without bouncing the OpenCode server', async () => {
+      const previous = getOrCreateUserToken(tokenDb, 'default')
 
       const res = await settingsApp.fetch(new Request('http://localhost/manager-token/rotate', { method: 'POST' }))
-      const json = await res.json() as { token: string }
+      const json = await res.json() as { token: string; restartRequired: boolean }
 
       expect(res.status).toBe(200)
       expect(json.token).toBeDefined()
       expect(json.token).not.toBe(previous)
-      expect(opencodeServerManager.markRestartPending).toHaveBeenCalledTimes(1)
+      // The old value was the OpenCode plugin's own credential, so replacing it
+      // meant restarting the process that reads it. This one is a human's: only
+      // that person's CLI has to re-pair, and restarting the server would be a
+      // shared outage bought for a private change.
+      expect(json.restartRequired).toBe(false)
+      expect(opencodeServerManager.markRestartPending).not.toHaveBeenCalled()
     })
 
     it('does not mark the OpenCode server restart as pending when rotation fails', async () => {
@@ -2145,13 +2152,117 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
     })
   })
 
+  /**
+   * The property that replaced the old one.
+   *
+   * Before, every signed-in user was handed the same value, because it was one
+   * value: the plugin's. A test that only checks "a token comes back" passes
+   * either way - it cannot tell a per-user token from a global one - so these
+   * check the difference between two callers directly, and check that the
+   * plugin's own credential is never what the page returns.
+   */
+/**
+ * A bare `Hono` has no variable map, so its `set` only accepts `never`. The
+ * application reaches `user` on the context through the same cast the routes
+ * use; this is the way in.
+ */
+function setUser(c: Context, user: { id: string; role: 'admin' | 'user'; username?: string | null }): void {
+  (c as unknown as { set: (key: string, value: unknown) => void }).set('user', user)
+}
+
+  describe('Settings Routes - the token panel is per user', () => {
+    let tokenDb: Database
+    let routes: ReturnType<typeof createSettingsRoutes>
+
+    const asUser = (id: string) => {
+      const wrapper = new Hono()
+      wrapper.use('*', async (c, next) => {
+        setUser(c, { id, role: 'user', username: id })
+        await next()
+      })
+      wrapper.route('/', routes)
+      return wrapper
+    }
+
+    const addUser = (id: string) => {
+      const now = Date.now()
+      tokenDb.prepare(
+        `INSERT INTO "user" ("id", "name", "email", "username", "role", "emailVerified", "createdAt", "updatedAt")
+         VALUES (?, ?, ?, ?, 'user', 0, ?, ?)`,
+      ).run(id, id, `${id}@example.test`, id, now, now)
+    }
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+      tokenDb = new Database(':memory:')
+      migrate(tokenDb, allMigrations)
+      routes = createSettingsRoutes(
+        tokenDb,
+        { getGitEnvironment: vi.fn().mockReturnValue({}) } as any,
+        createStubOpenCodeClient(),
+      )
+      addUser('u-alice')
+      addUser('u-bob')
+    })
+
+    afterEach(() => {
+      tokenDb.close()
+    })
+
+    it('gives two different callers two different tokens', async () => {
+      const alice = await (await asUser('u-alice').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+      const bob = await (await asUser('u-bob').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+
+      expect(alice.token).toBeTruthy()
+      expect(bob.token).toBeTruthy()
+      expect(alice.token).not.toBe(bob.token)
+    })
+
+    it('never returns the shared plugin token', async () => {
+      // The whole reason this route changed. Asserting it directly is the only
+      // way a future refactor that reaches for the global secret fails here
+      // rather than in production.
+      const shared = getOrCreateInternalToken(tokenDb)
+      const json = await (await asUser('u-alice').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+
+      expect(json.token).not.toBe(shared)
+    })
+
+    it('is stable across reads, so a CLI does not have to re-pair on every call', async () => {
+      const first = await (await asUser('u-alice').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+      const second = await (await asUser('u-alice').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+
+      expect(second.token).toBe(first.token)
+    })
+
+    it('rotates one caller without touching the other', async () => {
+      const before = await (await asUser('u-bob').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+      const alice = await (await asUser('u-alice').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+      const rotated = await (await asUser('u-alice').request(new Request('http://localhost/manager-token/rotate', { method: 'POST' }))).json() as { token: string }
+      const bob = await (await asUser('u-bob').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+
+      expect(rotated.token).not.toBe(alice.token)
+      expect(bob.token).toBe(before.token)
+    })
+
+    it('stops honouring the previous value after a rotation', async () => {
+      // Rotation is only worth anything if the old token stops working. Asserted
+      // through the real lookup rather than by reading the table, so a bug that
+      // left the old row behind would still fail.
+      const first = await (await asUser('u-alice').request(new Request('http://localhost/manager-token'))).json() as { token: string }
+      await asUser('u-alice').request(new Request('http://localhost/manager-token/rotate', { method: 'POST' }))
+
+      expect(findUserIdByToken(tokenDb, first.token)).toBeNull()
+    })
+  })
+
   describe('Maintenance routes', () => {
-    it('returns the manager token', async () => {
+    it('returns the caller own token', async () => {
       const res = await app.request(new Request('http://localhost/manager-token'))
 
       expect(res.status).toBe(200)
       const json = await res.json() as { token: string }
-      expect(json.token).toBe(getOrCreateInternalToken(db))
+      expect(json.token).toBe(getOrCreateUserToken(db, 'default'))
     })
 
     it('returns 500 when the manager token cannot be read', async () => {

@@ -9,14 +9,17 @@ import type { UserPreferences } from '@opencode-manager/shared/types'
  * So `?userId=` was not a filter, it was a selector: any agent holding the
  * shared token could read another tenant's credentials by naming them.
  *
- * A placed request now reads and writes only its own, whatever the query
- * string asks for. An unplaced one keeps the old behaviour rather than
- * guessing - the shadow log above says how often that is happening, and
- * refusing is the stage after this one.
+ * A placed request reads and writes only its own, whatever the query string
+ * asks for.
+ *
+ * An unplaced one used to fall back to `?userId=`, which meant the selector
+ * this stage set out to remove was still there for anyone who could get an
+ * unlabelled request through. It cannot any more - and a fallback that reads
+ * somebody else's settings is not something to keep around in case the
+ * middleware changes its mind. There is no fallback.
  */
-function resolveSettingsUserId(c: unknown): string {
-  const user = internalUserOf(c)
-  return user ? user.id : (c as { req?: { query: (key: string) => string | undefined } }).req?.query('userId') ?? 'default'
+function resolveSettingsUserId(c: unknown): string | null {
+  return internalUserOf(c)?.id ?? null
 }
 
 export function createInternalSettingsRoutes(settingsService: SettingsService) {
@@ -24,12 +27,14 @@ export function createInternalSettingsRoutes(settingsService: SettingsService) {
 
   app.get('/', (c) => {
     const userId = resolveSettingsUserId(c)
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401)
     const settings = settingsService.getSettings(userId)
     return c.json(settings)
   })
 
   app.patch('/', async (c) => {
     const userId = resolveSettingsUserId(c)
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401)
 
     let body: unknown
     try {

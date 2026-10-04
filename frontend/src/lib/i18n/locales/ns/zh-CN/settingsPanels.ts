@@ -886,11 +886,13 @@ export const settingsPanels = {
     clearFailed: '清除已存储的密码失败',
   },
   managerToken: {
-    title: '管理器内部令牌',
-    meta: '用于工作区插件和 API 客户端的 Bearer 令牌',
+    title: '我的管理器令牌',
+    meta: 'ocm CLI 使用的个人 Bearer 令牌',
+    personalNote:
+      '此令牌代表你本人，只能访问你自己的仓库和定时任务，请勿外传。如果你在令牌改为按人签发之前配对过，请把这里的新令牌重新填入 CLI 并再次执行 `ocm login` —— 之前存的旧令牌已无法单独通过校验。',
     loading: '加载中...',
     rotateWarning:
-      '轮换将使用现有令牌失效。任何使用它的插件或客户端都必须更新。再次点击轮换以确认。',
+      '轮换会让当前令牌立即失效，且只影响你自己的客户端 —— 本来就没有别人能用你的令牌。再次点击轮换以确认。',
     copy: '复制令牌',
     copyFailed: '复制令牌失败',
     rotate: '轮换令牌',

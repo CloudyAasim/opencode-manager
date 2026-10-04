@@ -2,8 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { logger } from '../../utils/logger'
 import { discoverModelsCached } from '../../utils/discovery-cache'
-import { opencodeServerManager } from '../../services/opencode-single-server'
-import { getOrCreateInternalToken, rotateInternalToken } from '../../services/internal-token'
+import { getOrCreateUserToken, rotateUserToken } from '../../services/internal-token'
 import { sseAggregator } from '../../services/sse-aggregator'
 import { restartOpenCode, getOpenCodeRestartCoordinator } from '../../services/opencode-restart'
 import { ENV } from '@opencode-manager/shared/config/env'
@@ -11,7 +10,7 @@ import type { SettingsRouteContext } from './context'
 import { OpenCodeServerAuthBodySchema } from '@opencode-manager/shared/schemas'
 
 export function createSystemRoutes(ctx: SettingsRouteContext) {
-  const { db, openCodeSupervisor, settingsService } = ctx
+  const { db, openCodeSupervisor, settingsService, currentUserId } = ctx
   const app = new Hono()
   app.get('/opencode-server-auth', async (c) => {
     try {
@@ -65,9 +64,19 @@ export function createSystemRoutes(ctx: SettingsRouteContext) {
     }
   })
 
+  /**
+   * The caller's own token, minted on first ask.
+   *
+   * This used to return one global token, the same one the OpenCode server
+   * holds. That token cannot mean anything about a person - it is in the
+   * environment of a process shared by every tenant - so handing it out from a
+   * per-user settings page made every tenant a holder of every tenant's
+   * credentials, and any of them could read the others' repositories and
+   * session ids with a single request.
+   */
   app.get('/manager-token', async (c) => {
     try {
-      const token = getOrCreateInternalToken(db)
+      const token = getOrCreateUserToken(db, currentUserId(c))
       return c.json({ token })
     } catch (error) {
       logger.error('Failed to get manager token:', error)
@@ -77,10 +86,9 @@ export function createSystemRoutes(ctx: SettingsRouteContext) {
 
   app.post('/manager-token/rotate', async (c) => {
     try {
-      const token = rotateInternalToken(db)
-      logger.info('Manager token rotated, marking OpenCode server restart as pending')
-      opencodeServerManager.markRestartPending()
-      return c.json({ token, restartRequired: true })
+      const token = rotateUserToken(db, currentUserId(c))
+      logger.info('Manager token rotated for a user; any client holding the previous one must re-pair')
+      return c.json({ token, restartRequired: false })
     } catch (error) {
       logger.error('Failed to rotate manager token:', error)
       return c.json({ error: 'Failed to rotate manager token' }, 500)

@@ -13,12 +13,13 @@ export function createInternalOpenCodeWorkspacesRoutes(db: Database) {
   app.get('/', async (c) => {
     try {
       const principal = principalFrom(internalUserOf(c))
-      // Unplaced means unnarrowed - same reasoning as the repo list, and the
-      // same reason refusing belongs to the stage after this one.
-      const allowed = principal ? new Set(accessibleRepoIds(db, principal)) : null
+      // Same reasoning as the repo list, and the same change: an unplaceable
+      // caller is refused rather than shown every workspace in the building.
+      if (!principal) return c.json({ error: 'Unauthorized' }, 401)
+      const allowed = new Set(accessibleRepoIds(db, principal))
       const repos = listRepos(db)
         .filter((repo) => repo.cloneStatus === 'ready')
-        .filter((repo) => !allowed || allowed.has(repo.id))
+        .filter((repo) => allowed.has(repo.id))
       const workspaces = await Promise.all(
         repos.map(async (repo) => ({
           repoId: repo.id,

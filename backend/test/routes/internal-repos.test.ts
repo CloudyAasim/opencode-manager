@@ -7,7 +7,7 @@ import { NotificationService } from '../../src/services/notification'
 import { SettingsService } from '../../src/services/settings'
 import { createOpenCodeClient } from '../../src/services/opencode/client'
 import { allMigrations } from '../../src/db/migrations'
-import { getOrCreateInternalToken } from '../../src/services/internal-token'
+import { createInternalCaller } from '../helpers/internal-caller'
 import { migrate } from '../../src/db/migration-runner'
 import { createRepo } from '../../src/db/queries'
 import type { CreateRepoInput } from '../../src/types/repo'
@@ -31,7 +31,7 @@ describe('internal-repos routes', () => {
     settingsService = new SettingsService(db)
     app = new Hono()
     app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
-    token = getOrCreateInternalToken(db)
+    token = createInternalCaller(db).token
   })
 
   it('GET /api/internal/repos returns 401 without bearer token', async () => {

@@ -11,7 +11,7 @@ import { createInternalRoutes } from '../../src/routes/internal'
 import { ScheduleService } from '../../src/services/schedules'
 import { NotificationService } from '../../src/services/notification'
 import { SettingsService } from '../../src/services/settings'
-import { getOrCreateInternalToken } from '../../src/services/internal-token'
+import { getOrCreateInternalToken, getOrCreateUserToken } from '../../src/services/internal-token'
 import { createOpenCodeClient } from '../../src/services/opencode/client'
 import { getRepoById } from '../../src/db/queries'
 import type { ScheduleWorktreeManager } from '../../src/services/schedule-worktree'
@@ -855,10 +855,14 @@ describe('assistant-mode end-to-end', () => {
   })
   afterEach(async () => { await ws.cleanup() })
 
-  it('the database internal token authenticates a request to /api/internal/schedules/all', async () => {
+  it('a personal token authenticates a request to /api/internal/schedules/all', async () => {
     await ensureAssistantMode(mockRepo)
 
-    const token = getOrCreateInternalToken(db)
+    const now = Date.now()
+    db.prepare(
+      `INSERT INTO "user" ("id", "name", "email", "username", "role", "emailVerified", "createdAt", "updatedAt")
+       VALUES ('u-assistant', 'assistant', 'assistant@example.test', 'assistant', 'user', 0, ?, ?)`,
+    ).run(now, now)
 
     const stubWorktreeManager = { prepare: () => Promise.resolve(null), finalize: () => Promise.resolve({ commitHash: null }) } as unknown as ScheduleWorktreeManager
     const scheduleService = new ScheduleService(db, createOpenCodeClient(), stubWorktreeManager)
@@ -871,11 +875,33 @@ describe('assistant-mode end-to-end', () => {
     expect(unauth.status).toBe(401)
 
     const authed = await app.request('/api/internal/schedules/all', {
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: `Bearer ${getOrCreateUserToken(db, 'u-assistant')}` },
     })
     expect(authed.status).toBe(200)
     const body = await authed.json() as { jobs: unknown[] }
     expect(Array.isArray(body.jobs)).toBe(true)
+  })
+
+  it('refuses the shared plugin token on its own, with no session to place it', async () => {
+    // The assistant runs in an OpenCode session, and the plugin token is what
+    // that session presents. Holding the token on its own no longer names
+    // anybody, so the same request that used to succeed anonymously is now the
+    // one thing that must not.
+    await ensureAssistantMode(mockRepo)
+
+    const token = getOrCreateInternalToken(db)
+
+    const stubWorktreeManager = { prepare: () => Promise.resolve(null), finalize: () => Promise.resolve({ commitHash: null }) } as unknown as ScheduleWorktreeManager
+    const scheduleService = new ScheduleService(db, createOpenCodeClient(), stubWorktreeManager)
+    const notificationService = new NotificationService(db)
+    const settingsService = new SettingsService(db)
+    const app = new Hono()
+    app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, createOpenCodeClient()))
+
+    const res = await app.request('/api/internal/schedules/all', {
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(res.status).toBe(401)
   })
 })
 

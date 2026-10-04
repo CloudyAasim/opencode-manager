@@ -6,7 +6,7 @@ import { ScheduleService } from '../../src/services/schedules'
 import { NotificationService } from '../../src/services/notification'
 import { SettingsService } from '../../src/services/settings'
 import { allMigrations } from '../../src/db/migrations'
-import { getOrCreateInternalToken } from '../../src/services/internal-token'
+import { createInternalCaller } from '../helpers/internal-caller'
 import { migrate } from '../../src/db/migration-runner'
 import { getAssistantModeDirectory } from '../../src/services/assistant-mode'
 import type { OpenCodeClient } from '../../src/services/opencode/client'
@@ -41,7 +41,7 @@ describe('internal/assistant routes', () => {
     settingsService = new SettingsService(db)
     app = new Hono()
     app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
-    token = getOrCreateInternalToken(db)
+    token = createInternalCaller(db).token
   })
 
   it('POST /api/internal/assistant/reload returns 401 without bearer token', async () => {

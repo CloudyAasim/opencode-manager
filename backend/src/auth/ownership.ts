@@ -25,6 +25,17 @@ export function principalFrom(user: PrincipalSource | undefined | null): Princip
   return { id: user.id, role: user.role === 'admin' ? 'admin' : 'user', username: user.username ?? null }
 }
 
+/**
+ * A person, looked up by id. Returns null for an id with no user row, which is
+ * a real case: a token outlives the account it was minted for.
+ */
+export function findUserIdentity(db: Database, userId: string): Principal | null {
+  const row = db
+    .prepare('SELECT id, role, username FROM "user" WHERE id = ?')
+    .get(userId) as PrincipalSource | undefined
+  return principalFrom(row)
+}
+
 export function principalIsAdmin(principal: Principal | null): boolean {
   return principal?.role === 'admin'
 }

@@ -911,11 +911,13 @@ export const settingsPanels = {
     clearFailed: 'Could not clear the stored password',
   },
   managerToken: {
-    title: 'Manager Internal Token',
-    meta: 'Bearer token for workspace plugin and API clients',
+    title: 'My Manager Token',
+    meta: 'Your personal bearer token for the ocm CLI',
+    personalNote:
+      'This token stands for you, so it grants access to your own repositories and schedules only. Keep it to yourself. If you paired before tokens became per-user, copy this one into your CLI and run `ocm login` again - the value it stored is no longer accepted on its own.',
     loading: 'Loading...',
     rotateWarning:
-      'Rotating will invalidate the existing token. Any plugin or client using it must be updated. Click Rotate again to confirm.',
+      'Rotating invalidates your current token. Only your own clients are affected, because nobody else can use your token in the first place. Click Rotate again to confirm.',
     copy: 'Copy token',
     copyFailed: 'Could not copy the token',
     rotate: 'Rotate token',
