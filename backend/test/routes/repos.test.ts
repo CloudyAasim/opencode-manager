@@ -71,6 +71,7 @@ import * as db from '../../src/db/queries'
 import * as repoService from '../../src/services/repo'
 import * as archiveService from '../../src/services/archive'
 import { createRepoRoutes } from '../../src/routes/repos'
+import type { OpenCodeClient } from '../../src/services/opencode/client'
 import { opencodeServerManager } from '../../src/services/opencode-single-server'
 import type { GitAuthService } from '../../src/services/git-auth'
 import type { ScheduleService } from '../../src/services/schedules'
@@ -1066,6 +1067,145 @@ describe('Repo Routes', () => {
       expect(res.status).toBe(500)
       const body = await res.json() as { error: string }
       expect(body.error).toBe('assistant failed')
+    })
+  })
+
+  describe('DELETE /:id', () => {
+    // Conversations are filed under the checkout's working directory, so the
+    // order of these two operations is the whole contract: purge first,
+    // remove the directory second. Reversed, "no sessions came back" stops
+    // being evidence of anything, and the conversations survive the delete.
+    let callOrder: string[] = []
+
+    beforeEach(() => {
+      // vi.clearAllMocks() in the outer hook clears calls but leaves
+      // implementations in place, so this block declares its own.
+      vi.mocked(repoService.deleteRepoFiles).mockReset()
+      vi.mocked(repoService.deleteRepoFiles).mockResolvedValue(undefined)
+      callOrder = []
+    })
+
+    function setUp(options: {
+      sessions?: unknown[]
+      listError?: Error
+      deleteNotOk?: string[]
+    } = {}) {
+      vi.mocked(db.getRepoById).mockReturnValue(createMockRepo())
+      vi.mocked(repoService.deleteRepoFiles).mockImplementation(async () => {
+        callOrder.push('deleteRepoFiles')
+      })
+
+      const client = createStubOpenCodeClient({
+        // getJson is generic on OpenCodeClient and vi.fn's inference drops the
+        // type parameter, so the spy is cast back onto the real signature.
+        getJson: vi.fn(async (_path: string, _opts?: { directory?: string }) => {
+          if (options.listError) throw options.listError
+          callOrder.push('listSessions')
+          return { data: options.sessions ?? [] }
+        }) as unknown as OpenCodeClient['getJson'],
+        forward: vi.fn(async (req) => {
+          callOrder.push('deleteSession')
+          const id = decodeURIComponent(req.path.replace(/^\/session\//, ''))
+          return new Response(JSON.stringify({}), {
+            status: options.deleteNotOk?.includes(id) ? 500 : 200,
+          })
+        }),
+      })
+
+      return { app: createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, client), client }
+    }
+
+    it('purges the conversations before it removes the checkout', async () => {
+      const { app } = setUp({ sessions: [{ id: 'ses_a' }, { id: 'ses_b' }] })
+
+      const res = await app.request('/1', { method: 'DELETE' })
+
+      expect(res.status).toBe(200)
+      expect(callOrder).toEqual(['listSessions', 'deleteSession', 'deleteSession', 'deleteRepoFiles'])
+    })
+
+    it('reports how many conversations went with the project', async () => {
+      const { app } = setUp({ sessions: [{ id: 'ses_a' }, { id: 'ses_b' }] })
+
+      const res = await app.request('/1', { method: 'DELETE' })
+      const body = await res.json() as { success: boolean; sessionsDeleted: number; sessionsPurgeIncomplete: boolean }
+
+      expect(body.success).toBe(true)
+      expect(body.sessionsDeleted).toBe(2)
+      expect(body.sessionsPurgeIncomplete).toBe(false)
+    })
+
+    it('scopes the purge to the checkout being deleted', async () => {
+      const { app, client } = setUp({ sessions: [{ id: 'ses_a' }] })
+
+      await app.request('/1', { method: 'DELETE' })
+
+      expect(vi.mocked(client.getJson).mock.calls[0]?.[1]).toMatchObject({
+        directory: '/tmp/repos/test-repo',
+      })
+      expect(vi.mocked(client.forward).mock.calls[0]?.[0]).toMatchObject({
+        method: 'DELETE',
+        path: '/session/ses_a',
+        directory: '/tmp/repos/test-repo',
+      })
+    })
+
+    it('flags an incomplete purge instead of reporting a clean delete', async () => {
+      const { app } = setUp({
+        sessions: [{ id: 'ses_a' }, { id: 'ses_stuck' }],
+        deleteNotOk: ['ses_stuck'],
+      })
+
+      const res = await app.request('/1', { method: 'DELETE' })
+      const body = await res.json() as { sessionsDeleted: number; sessionsPurgeIncomplete: boolean }
+
+      expect(body.sessionsDeleted).toBe(1)
+      expect(body.sessionsPurgeIncomplete).toBe(true)
+    })
+
+    it('flags an incomplete purge when the conversations cannot even be listed', async () => {
+      const { app } = setUp({ listError: new Error('opencode is down') })
+
+      const res = await app.request('/1', { method: 'DELETE' })
+      const body = await res.json() as { success: boolean; sessionsDeleted: number; sessionsPurgeIncomplete: boolean }
+
+      expect(res.status).toBe(200)
+      expect(body.success).toBe(true)
+      expect(body.sessionsDeleted).toBe(0)
+      expect(body.sessionsPurgeIncomplete).toBe(true)
+    })
+
+    it('still removes the project when the conversations could not be cleared', async () => {
+      const { app } = setUp({ listError: new Error('opencode is down') })
+
+      await app.request('/1', { method: 'DELETE' })
+
+      expect(repoService.deleteRepoFiles).toHaveBeenCalledWith(mockDb, 1)
+    })
+
+    it('returns 404 without purging anything when the repo is already gone', async () => {
+      vi.mocked(db.getRepoById).mockReturnValue(null)
+      const client = createStubOpenCodeClient()
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, client)
+      const res = await app.request('/99', { method: 'DELETE' })
+
+      expect(res.status).toBe(404)
+      expect(client.getJson).not.toHaveBeenCalled()
+      expect(repoService.deleteRepoFiles).not.toHaveBeenCalled()
+    })
+
+    it('refuses to delete the assistant repository and leaves its conversations alone', async () => {
+      // 0 is ASSISTANT_REPO_ID.
+      vi.mocked(db.getRepoById).mockReturnValue(createMockRepo({ id: 0 }))
+      const client = createStubOpenCodeClient()
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, client)
+      const res = await app.request('/0', { method: 'DELETE' })
+
+      expect(res.status).toBe(403)
+      expect(client.getJson).not.toHaveBeenCalled()
+      expect(repoService.deleteRepoFiles).not.toHaveBeenCalled()
     })
   })
 })

@@ -18,6 +18,7 @@ import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
 import { createRepoGitRoutes } from './repo-git'
 import { createScheduleRoutes } from './schedules'
 import { probeRepoDirectory } from '../services/repo/directory-state'
+import { purgeSessionsForDirectory } from '../services/repo/session-purge'
 import type { GitAuthService } from '../services/git-auth'
 import { ScheduleService } from '../services/schedules'
 import { ensureAssistantMode, getAssistantModeStatus, buildAssistantRepo } from '../services/assistant-mode'
@@ -380,10 +381,23 @@ app.get('/', async (c) => {
       }
       
       scheduleService.prepareRepoDelete(id)
-      
+
+      // Before the checkout goes away, not after. See session-purge.ts: a
+      // directory that no longer exists is exactly the case where "no chats
+      // came back" is worth nothing as an answer.
+      const purge = await purgeSessionsForDirectory(openCodeClient, repo.fullPath)
+
       await repoService.deleteRepoFiles(database, id)
-      
-      return c.json({ success: true })
+
+      // The delete still happened and the user still asked for it, so it is not
+      // an error. But "deleted, and the conversations are definitely gone" and
+      // "deleted, and some conversations are still on disk" must not look the
+      // same - the whole bug was silence.
+      return c.json({
+        success: true,
+        sessionsDeleted: purge.deleted,
+        sessionsPurgeIncomplete: purge.truncated || purge.failed.length > 0,
+      })
     } catch (error: unknown) {
       logger.error('Failed to delete repo:', error)
       return c.json({ error: getErrorMessage(error) }, 500)

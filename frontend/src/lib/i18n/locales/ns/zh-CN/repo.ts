@@ -114,6 +114,9 @@ export const repo = {
     unlinkMultipleDescription_other: '确定要解除 {{count}} 个项目的关联吗？仅会移除工作区引用，你的原始文件不会受到影响。',
     deleteMixedDescription_one: '确定要删除 {{count}} 个项目吗？克隆的项目将被移除本地文件；本地发现的项目仅会移除工作区引用 —— 原始文件不会受到影响。',
     deleteMixedDescription_other: '确定要删除 {{count}} 个项目吗？克隆的项目将被移除本地文件；本地发现的项目仅会移除工作区引用 —— 原始文件不会受到影响。',
+    conversationsNotCleared: '聊天记录未能清除',
+    conversationsNotClearedDescription_one: '有 1 个项目的聊天记录未能清除。重新添加该项目后，旧聊天仍可能出现。',
+    conversationsNotClearedDescription_other: '有 {{count}} 个项目的聊天记录未能清除。重新添加后，旧聊天仍可能出现。',
   },
   worktreeCreation: {
     title: '创建工作树',

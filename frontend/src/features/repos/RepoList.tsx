@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { listRepos, deleteRepo, updateRepoOrder } from "@/api/repos"
+import { listRepos, deleteRepo, updateRepoOrder, type RepoDeleteResult } from "@/api/repos"
+import { showToast } from "@/lib/toast"
 import { fetchReposGitStatus } from "@/api/git"
 import { DeleteDialog } from "@/components/ui/delete-dialog"
 import { GitBranch, Search, GripVertical } from "lucide-react"
@@ -236,9 +237,24 @@ export function RepoList() {
     return countAttentionItems(viewModels)
   }, [viewModels])
 
+  // Deleting a repository takes its conversations with it, but that purge is
+  // best-effort. When OpenCode would not hand a session over, the conversation
+  // is still on disk and re-adding the project brings it straight back - which
+  // is the bug. The delete itself still succeeded, so this is a warning, not an
+  // error, and it has to be said out loud.
+  const reportIncompletePurge = (results: RepoDeleteResult[]) => {
+    const incomplete = results.filter((result) => result.sessionsPurgeIncomplete).length
+    if (incomplete === 0) return
+
+    showToast.warning(t("repo.deleteDialog.conversationsNotCleared"), {
+      description: t("repo.deleteDialog.conversationsNotClearedDescription", { count: incomplete }),
+    })
+  }
+
   const deleteMutation = useMutation({
     mutationFn: deleteRepo,
-    onSuccess: () => {
+    onSuccess: (result) => {
+      reportIncompletePurge([result])
       invalidateRepoListCaches(queryClient)
       setDeleteDialogOpen(false)
       setRepoToDelete(null)
@@ -247,9 +263,10 @@ export function RepoList() {
 
   const batchDeleteMutation = useMutation({
     mutationFn: async (repoIds: number[]) => {
-      await Promise.all(repoIds.map((id) => deleteRepo(id)))
+      return await Promise.all(repoIds.map((id) => deleteRepo(id)))
     },
-    onSuccess: () => {
+    onSuccess: (results) => {
+      reportIncompletePurge(results)
       invalidateRepoListCaches(queryClient)
       setDeleteDialogOpen(false)
       setSelectedRepos(new Set())

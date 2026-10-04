@@ -114,6 +114,9 @@ export const repo = {
     unlinkMultipleDescription_other: 'Are you sure you want to unlink {{count}} repositories? Only workspace references will be removed. Your original files will not be affected.',
     deleteMixedDescription_one: 'Are you sure you want to delete {{count}} repository? Cloned repositories will have their local files removed. Locally discovered repositories will only have their workspace references removed — original files will not be affected.',
     deleteMixedDescription_other: 'Are you sure you want to delete {{count}} repositories? Cloned repositories will have their local files removed. Locally discovered repositories will only have their workspace references removed — original files will not be affected.',
+    conversationsNotCleared: 'Conversations were not cleared',
+    conversationsNotClearedDescription_one: 'Conversations could not be cleared for 1 repository. They may reappear if you add that project again.',
+    conversationsNotClearedDescription_other: 'Conversations could not be cleared for {{count}} repositories. They may reappear if you add those projects again.',
   },
   worktreeCreation: {
     title: 'Create Worktree',

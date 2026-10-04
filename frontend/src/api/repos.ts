@@ -83,8 +83,21 @@ export async function createRepoWorkspace(repoId: number): Promise<RepoWorkspace
   })
 }
 
-export async function deleteRepo(id: number): Promise<void> {
-  return fetchWrapperVoid(`${API_BASE_URL}/api/repos/${id}`, {
+export interface RepoDeleteResult {
+  success?: boolean
+  /** Conversations removed along with the checkout. */
+  sessionsDeleted?: number
+  /**
+   * True when some conversations could not be removed. The repository itself
+   * is gone either way, so this is not a failure - but it has to reach the
+   * user, because a leftover conversation is exactly what comes back if the
+   * project is added again.
+   */
+  sessionsPurgeIncomplete?: boolean
+}
+
+export async function deleteRepo(id: number): Promise<RepoDeleteResult> {
+  return fetchWrapper<RepoDeleteResult>(`${API_BASE_URL}/api/repos/${id}`, {
     method: 'DELETE',
   })
 }
