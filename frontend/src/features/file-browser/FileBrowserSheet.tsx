@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { FileBrowserView, type FileBrowserHandle } from './FileBrowserView'
 import { useFileBrowserController, type FileBrowserController } from './useFileBrowserController'
-import { getRepoRelativeDisplayPath } from './display-path'
+import { getRepoRelativeDisplayPath } from '@/lib/display-path'
 import { Button } from '@/components/ui/button'
 import { PathDisplay } from '@/components/ui/path-display'
 import { FullscreenSheet, FullscreenSheetHeader, FullscreenSheetContent } from '@/components/ui/fullscreen-sheet'

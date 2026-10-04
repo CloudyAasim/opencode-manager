@@ -4,8 +4,8 @@ import { access, mkdir, readFile, writeFile } from 'fs/promises'
 import { Hono } from 'hono'
 import { ensureAssistantMode, getAssistantModeStatus, getAssistantModeDirectory, buildSchedulesSkill, buildReposSkill, buildSettingsSkill, buildAssistantDefaultAgentMd, buildAssistantOpenCodeConfig, buildAssistantRepo, installAssistantWorkspace, resetAssistantWorkspace } from '../../src/services/assistant-mode'
 import { createTempAssistantWorkspace, createTestDb, mockRepo } from '../helpers/assistant-workspace'
-import { buildAssistantAgentPermission, buildAssistantDefaultAgentMdFromPrompt, PRIOR_ASSISTANT_AGENT_PERMISSION } from '../../src/services/assistant-mode/agents-md'
-import { buildLegacyAssistantDefaultAgentMd, buildPreviousAssistantDefaultAgentMd, buildPriorAssistantDefaultAgentMd, buildPriorAssistantAgentPrompt } from '../../src/services/assistant-mode/legacy'
+import { buildAssistantAgentPermission, buildAssistantDefaultAgentMdFromPrompt, PRIOR_ASSISTANT_AGENT_PERMISSION, buildAssistantAgentPrompt } from '../../src/services/assistant-mode/agents-md'
+import { buildLegacyAssistantDefaultAgentMd, buildPreviousAssistantDefaultAgentMd, buildPriorAssistantDefaultAgentMd, buildPriorAssistantAgentPrompt, buildLegacyAssistantAgentPrompt, buildPreviousAssistantAgentPrompt, matchesGeneratedAssistantAgentPrompt } from '../../src/services/assistant-mode/legacy'
 import { DEFAULT_AGENTS_MD } from '../../src/constants'
 import { createInternalRoutes } from '../../src/routes/internal'
 import { ScheduleService } from '../../src/services/schedules'
@@ -87,6 +87,62 @@ describe('historical assistant agent reconstruction', () => {
   it('defaults to the current permission and honours an override', () => {
     expect(buildAssistantDefaultAgentMdFromPrompt('body')).toContain('bash: deny')
     expect(buildAssistantDefaultAgentMdFromPrompt('body', PRIOR_ASSISTANT_AGENT_PERMISSION)).toContain('bash: allow')
+  })
+})
+
+describe('assistant prompt generations', () => {
+  // Every generation the prompt has ever shipped, oldest first. The list is
+  // the contract: a generation that is missing from it is a generation whose
+  // accounts silently stop being recognised, and nothing else in the suite
+  // would notice.
+  const generations = [
+    buildLegacyAssistantAgentPrompt(),
+    buildPreviousAssistantAgentPrompt(),
+    buildPriorAssistantAgentPrompt(),
+    buildAssistantAgentPrompt(),
+  ]
+
+  it('recognises every generation, so every account still gets managed updates', () => {
+    for (const [index, generation] of generations.entries()) {
+      expect(matchesGeneratedAssistantAgentPrompt(generation), `第 ${index} 代认不出来了`).toBe(true)
+    }
+  })
+
+  it('keeps each generation distinct', () => {
+    // If two of these are the same string, a generation was added without a
+    // variant recording the one it replaced - the hash of the old file then
+    // matches nothing and it is preserved as if the user had written it.
+    for (let i = 0; i < generations.length; i++) {
+      for (let j = i + 1; j < generations.length; j++) {
+        expect(generations[i], `第 ${i} 代与第 ${j} 代相同，中间漏了一代`).not.toBe(generations[j])
+      }
+    }
+  })
+
+  it('keeps the prior generation frozen as it actually shipped', () => {
+    // The load-bearing one. `buildPriorAssistantAgentPrompt` reproduces a file
+    // that is already on disk; editing it to keep up with the current prompt
+    // destroys the only copy of what that file used to be, and the failure is
+    // silent - every account that ran that generation keeps the old prompt
+    // forever and is reported as customised.
+    const prior = buildPriorAssistantAgentPrompt()
+    expect(prior).toContain('## This Directory Is Not Where Projects Go')
+    expect(prior).not.toContain('The Two Names You Will See in the File Manager')
+  })
+
+  it('tells the assistant the file manager names are display names only', () => {
+    // The other half: shortening the paths is a UI change, and the assistant is
+    // the one thing that might act on a path the user reads off the screen.
+    const current = buildAssistantAgentPrompt()
+    expect(current).toContain('The Two Names You Will See in the File Manager')
+    expect(current).toContain('display names')
+    expect(current).toContain('Never pass `/workspace` or `/assistant` to a request')
+  })
+
+  it('says the same thing in the skill, next to the real path it gives', () => {
+    const skill = buildReposSkill('/workspace/users/aasim/workspace/repos')
+    expect(skill).toContain('Projects live in `/workspace/users/aasim/workspace/repos`')
+    expect(skill).toContain('display names, not real paths')
   })
 })
 

@@ -565,6 +565,7 @@ If they already cloned into the wrong place, moving the directory into
 - Use \`id\` as \`:repoId\` in other API endpoints (e.g., \`/repos/:repoId/schedules\`)
 - \`fullPath\` is the absolute local path - use it for file operations
 - \`GET /repos\` is read-only. There is no route to create a project; that is done from the Projects screen.
+- Paths shown in the file manager as \`/workspace\` and \`/assistant\` are display names, not real paths. Requests take the real path; passing a display name fails as if the directory were missing.
 - \`currentBranch\` is not included in the response - it requires git operations to determine
 - Repo order is controlled by the \`repoOrder\` preference in settings
 `
