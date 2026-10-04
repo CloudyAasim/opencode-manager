@@ -642,4 +642,82 @@ describe('EventProvider questions', () => {
     expect(afterBooleanChange).toBe(initialRenderCount + 1)
     expect(renderCount).toBe(afterBooleanChange)
   })
+  it('fetches pending permissions and questions the moment health drops', async () => {
+    // The reconcile only ran on (re)connect, so a stream that degraded in place
+    // - still open, no longer delivering - had no repair path at all until the
+    // next reload. This edge is the repair.
+    // fetchInitialPendingData returns early without repos, so give it one.
+    mocks.listRepos.mockResolvedValue([{ id: 1, name: 'one', fullPath: '/repo/one' } as never])
+
+    let onHealthChange: (state: { isConnected: boolean; isHealthy: boolean; lastEventAt: number | null; isStalled: boolean }) => void = () => {}
+    mocks.subscribeGlobalMonitor.mockImplementation(({ onHealthChange: handler }) => {
+      onHealthChange = handler
+      return {
+        dispose: vi.fn(),
+        updateDirectories: vi.fn(),
+        reconnect: vi.fn(),
+        reportVisibility: vi.fn(),
+      }
+    })
+
+    render(<div data-testid="probe" />, { wrapper: createWrapper() })
+
+    // Wait for the repos query to resolve and the initial fetch to happen.
+    await waitFor(() => {
+      expect(mocks.listPendingPermissions.mock.calls.length).toBeGreaterThan(0)
+    })
+    const callsBeforeEdge = mocks.listPendingPermissions.mock.calls.length
+
+    act(() => {
+      onHealthChange({ isConnected: true, isHealthy: true, lastEventAt: 1, isStalled: false })
+    })
+
+    act(() => {
+      onHealthChange({ isConnected: true, isHealthy: false, lastEventAt: 1, isStalled: true })
+    })
+
+    await waitFor(() => {
+      expect(mocks.listPendingPermissions.mock.calls.length).toBeGreaterThan(callsBeforeEdge)
+    })
+  })
+
+  it('refetches on the health edge only, not on every unhealthy heartbeat', async () => {
+    // onHealthChange fires on every message and every heartbeat. Triggering on
+    // the level instead of the edge would fetch pending data forever.
+    mocks.listRepos.mockResolvedValue([{ id: 1, name: 'one', fullPath: '/repo/one' } as never])
+
+    let onHealthChange: (state: { isConnected: boolean; isHealthy: boolean; lastEventAt: number | null; isStalled: boolean }) => void = () => {}
+    mocks.subscribeGlobalMonitor.mockImplementation(({ onHealthChange: handler }) => {
+      onHealthChange = handler
+      return {
+        dispose: vi.fn(),
+        updateDirectories: vi.fn(),
+        reconnect: vi.fn(),
+        reportVisibility: vi.fn(),
+      }
+    })
+
+    render(<div data-testid="probe" />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(mocks.listPendingPermissions.mock.calls.length).toBeGreaterThan(0)
+    })
+
+    act(() => {
+      onHealthChange({ isConnected: true, isHealthy: false, lastEventAt: 1, isStalled: true })
+    })
+
+    await waitFor(() => {
+      expect(mocks.listPendingPermissions.mock.calls.length).toBeGreaterThan(0)
+    })
+    const afterEdge = mocks.listPendingPermissions.mock.calls.length
+
+    act(() => {
+      onHealthChange({ isConnected: true, isHealthy: false, lastEventAt: 2, isStalled: true })
+      onHealthChange({ isConnected: true, isHealthy: false, lastEventAt: 3, isStalled: true })
+      onHealthChange({ isConnected: true, isHealthy: false, lastEventAt: 4, isStalled: true })
+    })
+
+    expect(mocks.listPendingPermissions.mock.calls.length).toBe(afterEdge)
+  })
 })

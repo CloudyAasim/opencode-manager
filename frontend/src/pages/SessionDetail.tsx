@@ -54,7 +54,7 @@ import { getRepoDisplayName } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { RepoOverlays } from "@/features/repos/RepoOverlays";
 import { createOpenCodeClient } from "@/api/opencode";
-import { usePermissions, useQuestions } from "@/contexts/EventContext";
+import { usePermissions, useQuestions, useSSEHealth } from "@/contexts/EventContext";
 import { useSessionStatusForSession } from "@/stores/sessionStatusStore";
 import type { QuestionRequest } from "@/api/types";
 import { QuestionPrompt } from "@/features/session/QuestionPrompt";
@@ -98,6 +98,9 @@ const compareMessageIds = (id1: string, id2: string): number => {
 export const DEFAULT_PANEL_TAB_IDS = ['files', 'terminal', 'review', 'info'] as const
 
 const PENDING_ACTION_SYNC_INTERVAL_MS = 30000
+// Used while the stream is in trouble. Two calls per tick and they run in
+// parallel, so this is still cheaper than the lag it removes.
+const PENDING_ACTION_FAST_SYNC_INTERVAL_MS = 6000
 const PROMPT_OVERLAY_CLEARANCE_PX = 16
 
 export function SessionDetail() {
@@ -406,6 +409,7 @@ export function SessionDetail() {
   }, [sessionId, session?.directory]);
 
   const { isConnected, isReconnecting } = useSSE(opcodeUrl, sessionDirectory, sessionId);
+  const sseHealth = useSSEHealth();
 
   const { data: rawMessages, isLoading: messagesLoading } = useMessages(opcodeUrl, sessionId, sessionDirectory, { fallbackPoll: !isConnected });
 
@@ -547,7 +551,18 @@ export function SessionDetail() {
     refetchOnMount: 'always',
     refetchOnReconnect: true,
     refetchOnWindowFocus: true,
-    refetchInterval: !isConnected && (isSessionActive || hasIncompleteMessages) ? PENDING_ACTION_SYNC_INTERVAL_MS : false,
+    // Do NOT gate this on isConnected. A stream can be open and still not be
+    // delivering - a proxy buffering SSE, a heartbeat that stops while the
+    // socket lives - and then this reconcile switched itself off, so a missed
+    // permission or question simply never appeared. The old gate meant the UI
+    // claimed "connected" for up to STALL_THRESHOLD_MS while showing nothing,
+    // which is exactly "cannot tell if it failed or is stuck".
+    refetchInterval:
+      isSessionActive || hasIncompleteMessages
+        ? !isConnected || isReconnecting || sseHealth.isStalled || !sseHealth.isHealthy
+          ? PENDING_ACTION_FAST_SYNC_INTERVAL_MS
+          : PENDING_ACTION_SYNC_INTERVAL_MS
+        : false,
     retry: false,
   })
 

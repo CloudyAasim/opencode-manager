@@ -69,7 +69,12 @@ export const DEFAULTS = {
     CONNECT_TIMEOUT_MS: 10000,
     IDLE_GRACE_PERIOD_MS: 5000,
     HEARTBEAT_INTERVAL_MS: 30000,
-    STALL_THRESHOLD_MS: 90000,
+    // One and a half heartbeats. At 90s - three heartbeats - a stream that had
+    // actually died was still reported connected for a minute and a half, which
+    // is how "the status says connected and nothing arrives" happened. Anything
+    // the server sends counts as activity, so this only trips when nothing at
+    // all arrives for that long.
+    STALL_THRESHOLD_MS: 45000,
     WATCHDOG_TICK_MS: 15000,
   },
 

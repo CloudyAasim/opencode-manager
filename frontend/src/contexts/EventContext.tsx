@@ -198,13 +198,31 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     }
   }, [t])
 
+  // handleHealthChange is declared long before fetchInitialPendingData exists,
+  // so it reaches it through a ref rather than pretending a forward reference
+  // works.
+  const fetchInitialPendingDataRef = useRef<(() => Promise<void>) | null>(null)
+
+  // Edge-triggered on purpose. onHealthChange fires on every heartbeat and on
+  // every message, so reacting to the level would fetch pending data
+  // continuously for as long as the stream is merely unhappy.
+  const sseWasHealthyRef = useRef(true)
+
   const handleHealthChange = useCallback((next: EventStreamHealthState) => {
+    const wentUnhealthy = sseWasHealthyRef.current && !next.isHealthy
+    sseWasHealthyRef.current = next.isHealthy
+
     setSseHealth((prev) => {
       if (prev.isConnected === next.isConnected && prev.isHealthy === next.isHealthy && prev.isStalled === next.isStalled) {
         return prev
       }
       return { isConnected: next.isConnected, isHealthy: next.isHealthy, isStalled: next.isStalled }
     })
+
+    // The first sign that the stream has stopped delivering is this event.
+    // Fetch the truth now rather than waiting for the next poll tick: the poll
+    // is the safety net, this is the actual repair.
+    if (wentUnhealthy) void fetchInitialPendingDataRef.current?.()
   }, [])
 
   const [permissionsBySession, setPermissionsBySession] = useState<PermissionsBySession>({})
@@ -493,6 +511,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       })
     )
   }, [reconcilePermissionsForDirectory, reconcileQuestionsForDirectory])
+
+  fetchInitialPendingDataRef.current = fetchInitialPendingData
 
   const syncPermissionsForSession = useCallback(async (directory: string, sessionID: string) => {
     const client = new OpenCodeClient(OPENCODE_API_ENDPOINT, directory)

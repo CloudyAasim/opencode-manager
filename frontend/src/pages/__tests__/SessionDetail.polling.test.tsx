@@ -166,7 +166,7 @@ describe('SessionDetail pending-actions polling gating', () => {
       reject: vi.fn(),
       syncForSession: mocks.syncQuestionsForSession,
     })
-    mocks.useSSEHealth.mockReturnValue({ isHealthy: true })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: true, isStalled: false })
     mocks.useConfig.mockReturnValue({ data: undefined, isLoading: false })
     mocks.useOpenCodeClient.mockReturnValue({})
     mocks.useSettings.mockReturnValue({
@@ -196,8 +196,29 @@ describe('SessionDetail pending-actions polling gating', () => {
       </MemoryRouter>
     )
 
-  it('polls on the sync interval when disconnected and the session is active', async () => {
+  it('polls fast when disconnected and the session is active', async () => {
     mocks.useSSE.mockReturnValue({ isConnected: false, isReconnecting: false })
+    mocks.useSessionStatusForSession.mockReturnValue({ type: 'busy' })
+
+    const queryClient = createQueryClient()
+    renderSessionDetail(queryClient)
+
+    await waitFor(() => {
+      expect(findPendingActionsQuery(queryClient)).toBeDefined()
+    })
+
+    const query = findPendingActionsQuery(queryClient)
+    expect((query?.options as { refetchInterval?: unknown }).refetchInterval).toBe(6000)
+  })
+
+  it('keeps a slow safety net while the stream is connected and healthy', async () => {
+    // This used to assert `false`. Gating the reconcile on isConnected meant a
+    // stream that was open but not delivering switched the reconcile OFF, so a
+    // permission or question that arrived as a lost event simply never appeared
+    // - and the status bar still said connected. The slow interval is the price
+    // of not trusting that state again.
+    mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: true, isStalled: false })
     mocks.useSessionStatusForSession.mockReturnValue({ type: 'busy' })
 
     const queryClient = createQueryClient()
@@ -211,8 +232,11 @@ describe('SessionDetail pending-actions polling gating', () => {
     expect((query?.options as { refetchInterval?: unknown }).refetchInterval).toBe(30000)
   })
 
-  it('does not poll while the SSE stream is connected', async () => {
+  it('polls fast when the stream is connected but has stalled', async () => {
+    // The case that could not be expressed before: the socket is up, so
+    // isConnected is true, yet nothing is arriving.
     mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: false, isStalled: true })
     mocks.useSessionStatusForSession.mockReturnValue({ type: 'busy' })
 
     const queryClient = createQueryClient()
@@ -223,7 +247,23 @@ describe('SessionDetail pending-actions polling gating', () => {
     })
 
     const query = findPendingActionsQuery(queryClient)
-    expect((query?.options as { refetchInterval?: unknown }).refetchInterval).toBe(false)
+    expect((query?.options as { refetchInterval?: unknown }).refetchInterval).toBe(6000)
+  })
+
+  it('polls fast while the stream reports unhealthy without being flagged stalled', async () => {
+    mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: false, isStalled: false })
+    mocks.useSessionStatusForSession.mockReturnValue({ type: 'busy' })
+
+    const queryClient = createQueryClient()
+    renderSessionDetail(queryClient)
+
+    await waitFor(() => {
+      expect(findPendingActionsQuery(queryClient)).toBeDefined()
+    })
+
+    const query = findPendingActionsQuery(queryClient)
+    expect((query?.options as { refetchInterval?: unknown }).refetchInterval).toBe(6000)
   })
 
   it('does not poll when disconnected but the session is idle with no incomplete messages', async () => {
