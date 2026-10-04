@@ -136,68 +136,82 @@ const findPendingActionsQuery = (queryClient: QueryClient): Query | undefined =>
     .getAll()
     .find((query) => query.queryKey[1] === 'pending-actions')
 
+const HEALTHY_REPO = {
+  id: 1,
+  repoUrl: 'https://github.com/test/repo',
+  localPath: '/test/repo',
+  sourcePath: null,
+  fullPath: '/test/repo',
+  branch: 'main',
+  currentBranch: 'main',
+  fullSlug: 'test/repo',
+  repoType: 'github' as const,
+  directoryExists: true,
+}
+
+/**
+ * Every hook the page calls, with a working default, in one place.
+ *
+ * It has to be shared rather than written out per describe: `vi.clearAllMocks()`
+ * drops call history, so a describe that forgets to declare one of these hooks
+ * then reads whatever the *previous* describe happened to leave behind - which
+ * means the block only passes when it runs second. That is an order dependency,
+ * and with --sequence.shuffle it is a coin flip rather than a bug report.
+ */
+const setUpDefaultMocks = () => {
+  mocks.useSession.mockReturnValue({ data: undefined, isLoading: false })
+  mocks.useMessages.mockReturnValue({ data: [], isLoading: false })
+  mocks.useRepoActivity.mockReturnValue(undefined)
+  mocks.usePermissions.mockReturnValue({
+    pendingCount: 0,
+    hasPermissionsForSession: vi.fn(() => false),
+    syncForSession: mocks.syncPermissionsForSession,
+  })
+  mocks.useQuestions.mockReturnValue({
+    current: null,
+    getForSession: vi.fn(() => null),
+    pendingCount: 0,
+    hasQuestionsForSession: vi.fn(() => false),
+    reply: vi.fn(),
+    reject: vi.fn(),
+    syncForSession: mocks.syncQuestionsForSession,
+  })
+  mocks.useSSEHealth.mockReturnValue({ isHealthy: true, isStalled: false })
+  mocks.useConfig.mockReturnValue({ data: undefined, isLoading: false })
+  mocks.useOpenCodeClient.mockReturnValue({})
+  mocks.useSettings.mockReturnValue({
+    preferences: { expandToolCalls: false },
+    updateSettings: vi.fn(),
+  })
+  mocks.useSettingsDialog.mockReturnValue({ open: vi.fn() })
+  mocks.useMobile.mockReturnValue(false)
+  mocks.useVisualViewport.mockReturnValue({ keyboardHeight: 0 })
+  mocks.useKeyboardShortcuts.mockReturnValue({ leaderActive: false })
+  mocks.useAutoScroll.mockReturnValue({ scrollToBottom: vi.fn() })
+  mocks.useLayer.mockReturnValue([false, vi.fn()])
+  mocks.useSessionStatusForSession.mockReturnValue({ type: 'idle' })
+  mocks.getRepo.mockResolvedValue(HEALTHY_REPO)
+}
+
+const createQueryClient = () =>
+  new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+const renderSessionDetail = (queryClient: QueryClient) =>
+  render(
+    <MemoryRouter initialEntries={['/repos/1/sessions/session-1']}>
+      <QueryClientProvider client={queryClient}>
+        <Routes>
+          <Route path="/repos/:id/sessions/:sessionId" element={<SessionDetail />} />
+        </Routes>
+      </QueryClientProvider>
+    </MemoryRouter>
+  )
+
 describe('SessionDetail pending-actions polling gating', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-
-    mocks.useSession.mockReturnValue({ data: undefined, isLoading: false })
-    mocks.useMessages.mockReturnValue({ data: [], isLoading: false })
-    mocks.useRepoActivity.mockReturnValue(undefined)
-    mocks.usePermissions.mockReturnValue({
-      pendingCount: 0,
-      hasPermissionsForSession: vi.fn(() => false),
-      syncForSession: mocks.syncPermissionsForSession,
-    })
-    mocks.useQuestions.mockReturnValue({
-      current: null,
-      getForSession: vi.fn(() => null),
-      pendingCount: 0,
-      hasQuestionsForSession: vi.fn(() => false),
-      reply: vi.fn(),
-      reject: vi.fn(),
-      syncForSession: mocks.syncQuestionsForSession,
-    })
-    mocks.useSSEHealth.mockReturnValue({ isHealthy: true, isStalled: false })
-    mocks.useConfig.mockReturnValue({ data: undefined, isLoading: false })
-    mocks.useOpenCodeClient.mockReturnValue({})
-    mocks.useSettings.mockReturnValue({
-      preferences: { expandToolCalls: false },
-      updateSettings: vi.fn(),
-    })
-    mocks.useSettingsDialog.mockReturnValue({ open: vi.fn() })
-    mocks.useMobile.mockReturnValue(false)
-    mocks.useVisualViewport.mockReturnValue({ keyboardHeight: 0 })
-    mocks.useKeyboardShortcuts.mockReturnValue({ leaderActive: false })
-    mocks.useAutoScroll.mockReturnValue({ scrollToBottom: vi.fn() })
-    mocks.useLayer.mockReturnValue([false, vi.fn()])
-    mocks.useSessionStatusForSession.mockReturnValue({ type: 'idle' })
-    mocks.getRepo.mockResolvedValue({
-      id: 1,
-      repoUrl: 'https://github.com/test/repo',
-      localPath: '/test/repo',
-      sourcePath: null,
-      fullPath: '/test/repo',
-      branch: 'main',
-      currentBranch: 'main',
-      fullSlug: 'test/repo',
-      repoType: 'github' as const,
-      directoryExists: true,
-    })
+    setUpDefaultMocks()
   })
-
-  const createQueryClient = () =>
-    new QueryClient({ defaultOptions: { queries: { retry: false } } })
-
-  const renderSessionDetail = (queryClient: QueryClient) =>
-    render(
-      <MemoryRouter initialEntries={['/repos/1/sessions/session-1']}>
-        <QueryClientProvider client={queryClient}>
-          <Routes>
-            <Route path="/repos/:id/sessions/:sessionId" element={<SessionDetail />} />
-          </Routes>
-        </QueryClientProvider>
-      </MemoryRouter>
-    )
 
   it('polls fast when disconnected and the session is active', async () => {
     mocks.useSSE.mockReturnValue({ isConnected: false, isReconnecting: false })
@@ -343,20 +357,28 @@ describe('SessionDetail pending-actions polling gating', () => {
     const calls = mocks.useMessages.mock.calls
     expect(calls[calls.length - 1][3]).toEqual({ fallbackPoll: true })
   })
+
+  it('requests message fallback polling when health has not reported yet', async () => {
+    // No health data cannot confirm delivery, so it belongs on the same side
+    // as "not delivering". Reading through it would throw, and skipping it
+    // would freeze the list on the one render that precedes the first
+    // heartbeat.
+    mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.useSSEHealth.mockReturnValue(undefined as never)
+
+    const queryClient = createQueryClient()
+    renderSessionDetail(queryClient)
+
+    const calls = mocks.useMessages.mock.calls
+    expect(calls[calls.length - 1][3]).toEqual({ fallbackPoll: true })
+  })
 })
 
 describe('SessionDetail when the repository directory is gone', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.useSession.mockReturnValue({ data: undefined, isLoading: false })
-    mocks.useMessages.mockReturnValue({ data: [], isLoading: false })
-    mocks.useRepoActivity.mockReturnValue(undefined)
+    setUpDefaultMocks()
     mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
-    mocks.useSSEHealth.mockReturnValue({ isHealthy: true, isStalled: false })
-    mocks.useConfig.mockReturnValue({ data: undefined, isLoading: false })
-    mocks.useOpenCodeClient.mockReturnValue({})
-    mocks.useLayer.mockReturnValue([false, vi.fn()])
-    mocks.useSessionStatusForSession.mockReturnValue({ type: 'idle' })
     mocks.getRepo.mockResolvedValue({
       id: 1,
       localPath: 'demo',
@@ -367,20 +389,6 @@ describe('SessionDetail when the repository directory is gone', () => {
       directoryExists: false,
     })
   })
-
-  const createQueryClient = () =>
-    new QueryClient({ defaultOptions: { queries: { retry: false } } })
-
-  const renderSessionDetail = (queryClient: QueryClient) =>
-    render(
-      <MemoryRouter initialEntries={['/repos/1/sessions/session-1']}>
-        <QueryClientProvider client={queryClient}>
-          <Routes>
-            <Route path="/repos/:id/sessions/:sessionId" element={<SessionDetail />} />
-          </Routes>
-        </QueryClientProvider>
-      </MemoryRouter>
-    )
 
   it('names the missing path instead of rendering a session that looks alive', async () => {
     // The row still said "ready", so the header, the prompt and the message

@@ -417,7 +417,9 @@ export function SessionDetail() {
   // delivering left the conversation frozen on its last snapshot, with a
   // healthy-looking indicator. Ask whether the stream is *delivering*, not
   // merely attached, and fall back to polling whenever the answer is no.
-  const streamDelivering = isConnected && !isReconnecting && sseHealth.isHealthy && !sseHealth.isStalled;
+  // Health that has not reported yet cannot confirm delivery either, so it
+  // lands on the same side: poll.
+  const streamDelivering = isConnected && !isReconnecting && sseHealth?.isHealthy === true && !sseHealth.isStalled;
   const { data: rawMessages, isLoading: messagesLoading } = useMessages(opcodeUrl, sessionId, sessionDirectory, { fallbackPoll: !streamDelivering });
 
   const messages = useMemo(() => {
