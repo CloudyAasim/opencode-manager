@@ -251,10 +251,28 @@ export function RepoList() {
     })
   }
 
+  // Same reasoning for the checkout itself: a row whose stored path pointed
+  // outside the project directory is dropped without touching disk, so the
+  // project leaves the list while its files stay. Rare, and not the user's
+  // fault - but "deleted" and "still on disk" are different facts.
+  const reportFilesLeftBehind = (results: RepoDeleteResult[]) => {
+    const leftBehind = results.filter((result) => result.filesRemoved === false).length
+    if (leftBehind === 0) return
+
+    showToast.warning(t("repo.deleteDialog.filesLeftBehind"), {
+      description: t("repo.deleteDialog.filesLeftBehindDescription", { count: leftBehind }),
+    })
+  }
+
+  const reportDeleteOutcome = (results: RepoDeleteResult[]) => {
+    reportIncompletePurge(results)
+    reportFilesLeftBehind(results)
+  }
+
   const deleteMutation = useMutation({
     mutationFn: deleteRepo,
     onSuccess: (result) => {
-      reportIncompletePurge([result])
+      reportDeleteOutcome([result])
       invalidateRepoListCaches(queryClient)
       setDeleteDialogOpen(false)
       setRepoToDelete(null)
@@ -266,7 +284,7 @@ export function RepoList() {
       return await Promise.all(repoIds.map((id) => deleteRepo(id)))
     },
     onSuccess: (results) => {
-      reportIncompletePurge(results)
+      reportDeleteOutcome(results)
       invalidateRepoListCaches(queryClient)
       setDeleteDialogOpen(false)
       setSelectedRepos(new Set())

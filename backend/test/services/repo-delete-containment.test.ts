@@ -48,14 +48,14 @@ vi.mock('../../src/db/queries', () => ({
 // needs the real initLocalRepo out of this same module.
 vi.mock('../../src/services/repo/clone', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/services/repo/clone')>()),
-  normalizeRepoUrl: (url: string) => ({ name: url }),
+  normalizeRepoUrl: () => ({ name: 'base-repo' }),
 }))
 vi.mock('../../src/services/repo/worktree', () => ({
   removeWorktree: vi.fn(),
   createWorktreeSafely: vi.fn(),
 }))
-
 import { deleteRepoFiles } from '../../src/services/repo/delete'
+import { removeWorktree } from '../../src/services/repo/worktree'
 import { initLocalRepo } from '../../src/services/repo/clone'
 
 const db = {} as Database
@@ -82,6 +82,7 @@ describe('删除项目时目标必须留在项目目录内', () => {
     envRef.reposBase = base
     getRepoById.mockReset()
     deleteRepo.mockReset()
+    vi.mocked(removeWorktree).mockClear()
   })
 
   afterEach(() => {
@@ -147,12 +148,18 @@ describe('删除项目时目标必须留在项目目录内', () => {
         expect(existsSync(victimFile), `${escape.localPath(victim)} 把目录外的文件删掉了`).toBe(true)
       })
 
-      it(`${escape.name} 必须被拒绝,不能悄悄删`, async () => {
+      it(`${escape.name} 必须被拒绝,且不留下一行删不掉的记录`, async () => {
         getRepoById.mockReturnValue(repo(escape.localPath(victim)))
 
-        await expect(deleteRepoFiles(db, 1)).rejects.toThrow()
+        const result = await deleteRepoFiles(db, 1)
 
-        expect(deleteRepo).not.toHaveBeenCalled()
+        // The contract here used to be "throws, row kept". That was a trap I
+        // built: a row like this cannot be removed from the UI at all, so the
+        // user is stuck with it forever. The row goes, the filesystem is left
+        // alone, and the refusal is reported rather than swallowed.
+        expect(result.filesRemoved, '明明没删文件却说删了').toBe(false)
+        expect(result.refusal).toBeTruthy()
+        expect(deleteRepo).toHaveBeenCalledWith(db, 1)
       })
     }
 
@@ -170,20 +177,33 @@ describe('删除项目时目标必须留在项目目录内', () => {
       expect(existsSync(inside)).toBe(true)
     })
 
+    it('正常删除时 filesRemoved 为真', async () => {
+      mkdirSync(path.join(base, 'demo'))
+
+      getRepoById.mockReturnValue(repo('demo'))
+      const result = await deleteRepoFiles(db, 1)
+
+      expect(result.filesRemoved).toBe(true)
+      expect(result.refusal).toBeUndefined()
+      expect(deleteRepo).toHaveBeenCalledWith(db, 1)
+    })
+
     it('项目目录本身也不接受 —— rm -rf 会带走里面所有检出', async () => {
       getRepoById.mockReturnValue(repo('.'))
 
-      await deleteRepoFiles(db, 1).catch(() => {})
+      const result = await deleteRepoFiles(db, 1)
 
+      expect(result.filesRemoved).toBe(false)
       expect(existsSync(base)).toBe(true)
     })
 
     it('`..` 不接受 —— 那会删掉项目目录的父目录,也就是整个工作区', async () => {
       getRepoById.mockReturnValue(repo('..'))
 
-      await deleteRepoFiles(db, 1).catch(() => {})
+      const result = await deleteRepoFiles(db, 1)
 
       // base and victim both live under tmpDir, so this covers the parent too.
+      expect(result.filesRemoved).toBe(false)
       expect(existsSync(tmpDir), '项目目录的父目录被删掉了').toBe(true)
       expect(existsSync(base)).toBe(true)
       expect(existsSync(victimFile)).toBe(true)
@@ -192,9 +212,39 @@ describe('删除项目时目标必须留在项目目录内', () => {
     it('空的 localPath 不接受', async () => {
       getRepoById.mockReturnValue(repo(''))
 
-      await deleteRepoFiles(db, 1).catch(() => {})
+      const result = await deleteRepoFiles(db, 1)
 
+      expect(result.filesRemoved).toBe(false)
       expect(existsSync(base)).toBe(true)
+    })
+
+    it('坏行被清掉之后不留半截状态:不调 removeWorktree,不动 git', async () => {
+      // A worktree row also has to unregister itself from git. With the path
+      // refused there is nothing to unregister, so no attempt is made.
+      getRepoById.mockReturnValue(repo('../victim', { isWorktree: true, repoUrl: 'https://github.com/x/y.git' }))
+
+      await deleteRepoFiles(db, 1)
+
+      expect(removeWorktree).not.toHaveBeenCalled()
+      expect(deleteRepo).toHaveBeenCalledWith(db, 1)
+    })
+
+    it('正常的 worktree 行照常调 removeWorktree —— 上一条才有意义', async () => {
+      // Without this, "removeWorktree was not called" above would also pass if
+      // removeWorktree were simply never called for anything, and the guard
+      // would look load-bearing when it was not.
+      const checkout = path.join(base, 'demo')
+      mkdirSync(checkout, { recursive: true })
+      getRepoById.mockReturnValue(repo('demo', { isWorktree: true, repoUrl: 'https://github.com/x/y.git' }))
+
+      const result = await deleteRepoFiles(db, 1)
+
+      expect(removeWorktree).toHaveBeenCalledWith(
+        path.join(base, 'base-repo'),
+        checkout,
+      )
+      expect(result.filesRemoved).toBe(true)
+      expect(existsSync(checkout)).toBe(false)
     })
   })
 

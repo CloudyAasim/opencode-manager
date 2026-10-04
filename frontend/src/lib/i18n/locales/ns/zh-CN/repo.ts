@@ -117,6 +117,9 @@ export const repo = {
     conversationsNotCleared: '聊天记录未能清除',
     conversationsNotClearedDescription_one: '有 1 个项目的聊天记录未能清除。重新添加该项目后，旧聊天仍可能出现。',
     conversationsNotClearedDescription_other: '有 {{count}} 个项目的聊天记录未能清除。重新添加后，旧聊天仍可能出现。',
+    filesLeftBehind: '本地文件未删除',
+    filesLeftBehindDescription_one: '有 1 个项目已从列表移除，但它记录的路径指向项目目录之外，出于安全考虑没有删除任何文件。',
+    filesLeftBehindDescription_other: '有 {{count}} 个项目已从列表移除，但它们记录的路径指向项目目录之外，出于安全考虑没有删除任何文件。',
   },
   worktreeCreation: {
     title: '创建工作树',

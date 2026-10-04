@@ -746,14 +746,15 @@ describe('Repo Routes', () => {
 
     it('should prepare the delete and remove the repo files', async () => {
       vi.mocked(db.getRepoById).mockReturnValue(createMockRepo({ id: 1 }))
-      vi.mocked(repoService.deleteRepoFiles).mockResolvedValue(undefined)
+      vi.mocked(repoService.deleteRepoFiles).mockResolvedValue({ filesRemoved: true })
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
       const res = await app.request('/1', { method: 'DELETE' })
 
       expect(res.status).toBe(200)
-      const body = await res.json() as { success: boolean }
+      const body = await res.json() as { success: boolean; filesRemoved: boolean }
       expect(body.success).toBe(true)
+      expect(body.filesRemoved).toBe(true)
       expect(mockPrepareRepoDelete).toHaveBeenCalledWith(1)
       expect(repoService.deleteRepoFiles).toHaveBeenCalledWith(mockDb, 1)
     })
@@ -1081,7 +1082,7 @@ describe('Repo Routes', () => {
       // vi.clearAllMocks() in the outer hook clears calls but leaves
       // implementations in place, so this block declares its own.
       vi.mocked(repoService.deleteRepoFiles).mockReset()
-      vi.mocked(repoService.deleteRepoFiles).mockResolvedValue(undefined)
+      vi.mocked(repoService.deleteRepoFiles).mockResolvedValue({ filesRemoved: true })
       callOrder = []
     })
 
@@ -1093,6 +1094,9 @@ describe('Repo Routes', () => {
       vi.mocked(db.getRepoById).mockReturnValue(createMockRepo())
       vi.mocked(repoService.deleteRepoFiles).mockImplementation(async () => {
         callOrder.push('deleteRepoFiles')
+        // The real function reports whether anything on disk went; a mock that
+        // returns undefined reads as a crash, not as a clean delete.
+        return { filesRemoved: true }
       })
 
       const client = createStubOpenCodeClient({
@@ -1128,11 +1132,49 @@ describe('Repo Routes', () => {
       const { app } = setUp({ sessions: [{ id: 'ses_a' }, { id: 'ses_b' }] })
 
       const res = await app.request('/1', { method: 'DELETE' })
-      const body = await res.json() as { success: boolean; sessionsDeleted: number; sessionsPurgeIncomplete: boolean }
+      const body = await res.json() as {
+        success: boolean
+        sessionsDeleted: number
+        sessionsPurgeIncomplete: boolean
+        filesRemoved: boolean
+      }
 
       expect(body.success).toBe(true)
       expect(body.sessionsDeleted).toBe(2)
       expect(body.sessionsPurgeIncomplete).toBe(false)
+      expect(body.filesRemoved).toBe(true)
+    })
+
+    it('says so when the checkout could not be removed', async () => {
+      // A row whose stored path is refused still leaves the list, but its
+      // files stay on disk. "Deleted" and "the files are still there" must not
+      // look the same - that silence is the bug this whole path was built on.
+      const { app } = setUp({ sessions: [] })
+      vi.mocked(repoService.deleteRepoFiles).mockResolvedValue({
+        filesRemoved: false,
+        refusal: "Refusing to operate on '../victim'",
+      })
+
+      const res = await app.request('/1', { method: 'DELETE' })
+      const body = await res.json() as {
+        success: boolean
+        filesRemoved: boolean
+        refusal?: string
+      }
+
+      expect(res.status).toBe(200)
+      expect(body.success).toBe(true)
+      expect(body.filesRemoved).toBe(false)
+      expect(body.refusal).toContain('../victim')
+    })
+
+    it('omits the refusal field on a clean delete', async () => {
+      const { app } = setUp({ sessions: [] })
+
+      const res = await app.request('/1', { method: 'DELETE' })
+      const body = await res.json() as Record<string, unknown>
+
+      expect(body.refusal).toBeUndefined()
     })
 
     it('scopes the purge to the checkout being deleted', async () => {

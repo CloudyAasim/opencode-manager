@@ -94,6 +94,14 @@ export interface RepoDeleteResult {
    * project is added again.
    */
   sessionsPurgeIncomplete?: boolean
+  /**
+   * False when the row left the list but nothing on disk was deleted, because
+   * the stored path pointed outside the project directory and was refused.
+   * Also not a failure - the user asked for it to stop being a project - but
+   * the files are still there and saying so is the only honest option.
+   */
+  filesRemoved?: boolean
+  refusal?: string
 }
 
 export async function deleteRepo(id: number): Promise<RepoDeleteResult> {

@@ -387,16 +387,19 @@ app.get('/', async (c) => {
       // came back" is worth nothing as an answer.
       const purge = await purgeSessionsForDirectory(openCodeClient, repo.fullPath)
 
-      await repoService.deleteRepoFiles(database, id)
+      const outcome = await repoService.deleteRepoFiles(database, id)
 
       // The delete still happened and the user still asked for it, so it is not
       // an error. But "deleted, and the conversations are definitely gone" and
       // "deleted, and some conversations are still on disk" must not look the
-      // same - the whole bug was silence.
+      // same - the whole bug was silence. Same for a row whose stored path was
+      // refused: it leaves the list, and the files it pointed at stay.
       return c.json({
         success: true,
         sessionsDeleted: purge.deleted,
         sessionsPurgeIncomplete: purge.truncated || purge.failed.length > 0,
+        filesRemoved: outcome.filesRemoved,
+        ...(outcome.refusal ? { refusal: outcome.refusal } : {}),
       })
     } catch (error: unknown) {
       logger.error('Failed to delete repo:', error)

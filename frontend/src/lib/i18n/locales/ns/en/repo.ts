@@ -117,6 +117,9 @@ export const repo = {
     conversationsNotCleared: 'Conversations were not cleared',
     conversationsNotClearedDescription_one: 'Conversations could not be cleared for 1 repository. They may reappear if you add that project again.',
     conversationsNotClearedDescription_other: 'Conversations could not be cleared for {{count}} repositories. They may reappear if you add those projects again.',
+    filesLeftBehind: 'Local files were not deleted',
+    filesLeftBehindDescription_one: '1 repository was removed from the list, but the path it recorded pointed outside the project directory, so no files were deleted.',
+    filesLeftBehindDescription_other: '{{count}} repositories were removed from the list, but the paths they recorded pointed outside the project directory, so no files were deleted.',
   },
   worktreeCreation: {
     title: 'Create Worktree',

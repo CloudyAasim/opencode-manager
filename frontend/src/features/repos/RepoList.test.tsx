@@ -195,4 +195,60 @@ describe('删除项目时聊天记录没清干净', () => {
     await waitFor(() => expect(mockDeleteRepo).toHaveBeenCalledTimes(2))
     expect(showToast.warning).not.toHaveBeenCalled()
   })
+
+  it('文件没删掉要说 —— 「已删除」和「文件还在」不是一回事', async () => {
+    // The project leaves the list, but its stored path pointed outside the
+    // project directory so nothing on disk was touched. Rare and not the
+    // user's fault, and still not something to swallow.
+    mockDeleteRepo.mockResolvedValue({
+      success: true,
+      sessionsDeleted: 0,
+      sessionsPurgeIncomplete: false,
+      filesRemoved: false,
+      refusal: "Refusing to operate on '../victim'",
+    })
+
+    renderList()
+    await confirmDeleteOn(7)
+
+    await waitFor(() => expect(showToast.warning).toHaveBeenCalled())
+    expect(vi.mocked(showToast.warning).mock.calls[0]?.[0]).toBe('Local files were not deleted')
+    expect(vi.mocked(showToast.error)).not.toHaveBeenCalled()
+  })
+
+  it('filesRemoved 缺失（老后端）时不误报', async () => {
+    // `undefined` has to read as "nothing to report". Only an explicit false
+    // means files were left behind.
+    mockDeleteRepo.mockResolvedValue({ success: true, sessionsDeleted: 1, sessionsPurgeIncomplete: false })
+
+    renderList()
+    await confirmDeleteOn(7)
+
+    await waitFor(() => expect(mockDeleteRepo).toHaveBeenCalledWith(7))
+    expect(showToast.warning).not.toHaveBeenCalled()
+  })
+
+  it('批量删除里文件没删掉也要说', async () => {
+    // The batch path reports through the same helper as the single one. Testing
+    // only the conversation warning here let a mutant swap the helper back and
+    // survive - the files-left-behind warning was simply never exercised
+    // through this path.
+    mockDeleteRepo
+      .mockResolvedValueOnce({ success: true, sessionsDeleted: 5, sessionsPurgeIncomplete: false, filesRemoved: true })
+      .mockResolvedValueOnce({ success: true, sessionsDeleted: 0, sessionsPurgeIncomplete: false, filesRemoved: false })
+
+    renderList()
+
+    await waitFor(() => expect(screen.getByText('select-repo-7')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('select-repo-7'))
+    fireEvent.click(screen.getByText('select-repo-8'))
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]!)
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => expect(mockDeleteRepo).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(showToast.warning).mock.calls[0]?.[0]).toBe('Local files were not deleted')
+  })
 })
