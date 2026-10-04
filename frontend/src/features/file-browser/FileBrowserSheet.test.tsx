@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@testing-library/jest-dom'
 import { FileBrowserSheet } from './FileBrowserSheet'
@@ -1090,6 +1090,75 @@ describe('FileBrowserSheet swipe decision integration', () => {
     
     mockUseSwipeBack.mockRestore()
   })
+})
+
+describe('FileBrowserSheet header path', () => {
+  // The sheet renders the real file tree, so this exercises the whole chain:
+  // the listing, the browse root the server sends back, and the header. The
+  // previous version of this header assembled a `workspace`/`repos` prefix out
+  // of thin air, so it had no root to get wrong; now it does, and the root has
+  // to actually arrive.
+  const fetchMock = vi.hoisted(() => vi.fn())
+  vi.stubGlobal('fetch', (...args: unknown[]) => fetchMock(...args))
+
+  function listing(children: Array<{ name: string; path: string; isDirectory: boolean }>) {
+    return new Response(
+      JSON.stringify({
+        name: '',
+        path: '',
+        isDirectory: true,
+        workspaceRoot: '/workspace/users/aasim/workspace',
+        children,
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )
+  }
+
+  beforeEach(() => {
+    fetchMock.mockReset()
+    fetchMock.mockImplementation(async () =>
+      listing([{ name: 'a.txt', path: 'a.txt', isDirectory: false, size: 1, lastModified: new Date(0) }]),
+    )
+  })
+
+  it('shows the workspace as /workspace/ rather than the real path', async () => {
+    render(
+      <FileBrowserSheet isOpen onClose={vi.fn()} basePath="" allowNavigateAboveBase />,
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('/workspace/')).toBeInTheDocument()
+    })
+    // The account name is the reason this exists.
+    expect(screen.getByText('/workspace/').getAttribute('title')).not.toContain('aasim')
+  })
+
+  it('asks the server once, not once per render', async () => {
+    // `onDirectoryLoad` is in the dependencies of the controller's `loadFiles`
+    // callback, which the initial-load effect also depends on. Handing it an
+    // inline arrow function re-created `loadFiles` on every render, and the
+    // effect reloaded the root for ever - a request storm on the main files
+    // page, found by a test that counted requests instead of reading the
+    // screen.
+    render(
+      <FileBrowserSheet isOpen onClose={vi.fn()} basePath="" allowNavigateAboveBase />,
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('/workspace/')).toBeInTheDocument()
+    })
+    const settled = fetchMock.mock.calls.length
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(fetchMock.mock.calls.length).toBe(settled)
+  })
+
+  // Not covered here: what the header shows after walking up a level. The
+  // sheet re-mounts the browser on the way, which reloads the root and puts
+  // the header back, so a test for it would be measuring the remount rather
+  // than the header. The code passes `currentPath` rather than the stale
+  // `displayPath` for that reason; it is not defended by a test.
 })
 
 

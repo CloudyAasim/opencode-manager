@@ -10,20 +10,28 @@ import { PathDisplay } from './path-display'
  * interface goes back to leaking the account name.
  */
 describe('PathDisplay', () => {
-  it('shows the workspace under /workspace rather than the real path', () => {
-    // maxSegments is generous on purpose: this is about the mapping, and the
-    // truncation below is what would otherwise hide the answer.
-    render(<PathDisplay path="/workspace/users/aasim/workspace/repos/RelayAB/src" maxSegments={4} />)
+  const root = '/workspace/users/aasim/workspace'
+
+  it('shows the workspace as /workspace/ from a relative path', () => {
+    // This is the shape the browser actually produces. The first version of
+    // this feature mapped the relative path on its own, matched nothing, and
+    // shipped a header that looked exactly as it always had.
+    render(<PathDisplay path="" root={root} maxSegments={4} />)
+    expect(screen.getByText('/workspace/')).toBeInTheDocument()
+  })
+
+  it('shows paths inside the workspace under /workspace/', () => {
+    render(<PathDisplay path="repos/RelayAB/src" root={root} maxSegments={4} />)
     expect(screen.getByText('/workspace/repos/RelayAB/src')).toBeInTheDocument()
   })
 
-  it('shows the assistant directory under /assistant', () => {
-    render(<PathDisplay path="/workspace/users/aasim/setting/assistant/.opencode/agents" maxSegments={4} />)
-    expect(screen.getByText('/assistant/.opencode/agents')).toBeInTheDocument()
+  it('shows the assistant directory as /assistant/', () => {
+    render(<PathDisplay path="../setting/assistant" root={root} maxSegments={4} />)
+    expect(screen.getByText('/assistant/')).toBeInTheDocument()
   })
 
   it('does not leak the account name into the tooltip', () => {
-    render(<PathDisplay path="/workspace/users/aasim/workspace/repos/RelayAB/src" maxSegments={4} />)
+    render(<PathDisplay path="repos/RelayAB/src" root={root} maxSegments={4} />)
     // The whole point of shortening is that the on-disk layout stops being
     // part of the interface, and a tooltip is part of the interface.
     const el = screen.getByText('/workspace/repos/RelayAB/src')
@@ -34,7 +42,7 @@ describe('PathDisplay', () => {
   it('spends the truncation budget on the part the user is navigating', () => {
     // Shortened first, then truncated: with maxSegments=2 the account name
     // and the layout are gone before the last two segments are chosen.
-    render(<PathDisplay path="/workspace/users/aasim/workspace/repos/RelayAB/src/components" maxSegments={2} />)
+    render(<PathDisplay path="repos/RelayAB/src/components" root={root} maxSegments={2} />)
     expect(screen.getByText('/.../src/components')).toBeInTheDocument()
   })
 
@@ -43,7 +51,7 @@ describe('PathDisplay', () => {
     expect(screen.getByText('/src/components')).toBeInTheDocument()
   })
 
-  it('renders the root as /', () => {
+  it('renders an unresolved root as /', () => {
     const { rerender } = render(<PathDisplay path="/" />)
     expect(screen.getByText('/')).toBeInTheDocument()
     rerender(<PathDisplay path="" />)

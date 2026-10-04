@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { FileBrowserView, type FileBrowserHandle } from './FileBrowserView'
 import { useFileBrowserController } from './useFileBrowserController'
 import { getRepoRelativeDisplayPath } from '@/lib/display-path'
@@ -34,11 +34,26 @@ export function FileBrowserPage({
   onFileSelect,
 }: FileBrowserPageProps) {
   const fileBrowserRef = useRef<FileBrowserHandle>(null)
+  // The listing tells us the real browse root. Without it the header has only
+  // a relative path, which cannot say what it is relative to - and the last
+  // version guessed, hardcoding a `workspace` prefix in front of whatever the
+  // user was actually looking at.
+  const [workspaceRoot, setWorkspaceRoot] = useState<string | undefined>(undefined)
+
+  // Stable on purpose. `useFileBrowserController` takes this in the
+  // dependencies of its `loadFiles` callback, which the initial-load effect
+  // also depends on, so an inline arrow here re-created `loadFiles` on every
+  // render and the effect reloaded the root for ever. Found by a test that
+  // watched the network rather than the screen.
+  const handleDirectoryLoad = useCallback((info: { workspaceRoot?: string; currentPath: string }) => {
+    setWorkspaceRoot(info.workspaceRoot)
+  }, [])
 
   const controller = useFileBrowserController({
     basePath,
     allowNavigateAboveBase,
     onFileSelect,
+    onDirectoryLoad: handleDirectoryLoad,
   })
 
 
@@ -52,6 +67,7 @@ export function FileBrowserPage({
       <FileBrowserHeader
         repoName={repoName}
         path={displayPath}
+        workspaceRoot={workspaceRoot}
         repoId={repoId}
         basePath={basePath}
         onLoadDirectory={(p) => void controller.loadFiles(p)}
@@ -73,12 +89,13 @@ export function FileBrowserPage({
 interface FileBrowserHeaderProps {
   repoName?: string
   path: string
+  workspaceRoot?: string
   repoId?: number
   basePath: string
   onLoadDirectory: (path: string) => void
 }
 
-function FileBrowserHeader({ repoName, path, repoId, basePath }: FileBrowserHeaderProps) {
+function FileBrowserHeader({ repoName, path, workspaceRoot, repoId, basePath }: FileBrowserHeaderProps) {
   const { t } = useI18n()
   const [downloadDialog, setDownloadDialog] = useState<{ type: 'directory' | 'repository' } | null>(null)
 
@@ -119,7 +136,7 @@ function FileBrowserHeader({ repoName, path, repoId, basePath }: FileBrowserHead
           {repoName}
         </h1>
       )}
-      <PathDisplay path={path} maxSegments={4} className="truncate flex-1 min-w-0" />
+      <PathDisplay path={path} root={workspaceRoot} maxSegments={4} className="truncate flex-1 min-w-0" />
       {(repoId != null || basePath) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

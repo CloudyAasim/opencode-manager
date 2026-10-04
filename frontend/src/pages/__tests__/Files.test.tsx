@@ -16,16 +16,29 @@ vi.mock('@/hooks/useMobile', () => ({
 vi.stubGlobal('fetch', (...args: unknown[]) => fetchMock(...args))
 
 vi.mock('@/features/file-browser/FileTree', () => ({
+  // The up row is part of the real component's contract, so the mock has to
+  // have one too - without it there is no way to reach the assistant
+  // directory from the test, which is a sibling of the workspace rather than a
+  // child of it.
   FileTree: ({
     files,
     onFileSelect,
     onDirectoryClick,
+    onNavigateUp,
+    canNavigateUp,
   }: {
     files: Array<{ name: string; path: string; isDirectory: boolean }>
     onFileSelect: (file: FileInfo) => void
     onDirectoryClick: (path: string) => void
+    onNavigateUp?: () => void
+    canNavigateUp?: boolean
   }) => (
     <div>
+      {canNavigateUp ? (
+        <button type="button" data-testid="up" onClick={() => onNavigateUp?.()}>
+          ..
+        </button>
+      ) : null}
       {files.map((file) => (
         <button
           key={file.path}
@@ -141,4 +154,43 @@ describe('Files page', () => {
       expect(screen.getByText('src')).toBeInTheDocument()
     })
   })
+
+  it('shows the header as /workspace/ for a normal user', async () => {
+    // End to end on purpose. The first version of this feature unit tested the
+    // mapping and component tested the component, and the header still looked
+    // unchanged - because the page never passed the browse root down, so the
+    // mapping had a relative path it could not resolve. Only a test that goes
+    // through the page sees that.
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ ...LISTING, workspaceRoot: '/workspace/users/aasim/workspace' }),
+    )
+    render(<Files />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('a.txt')).toBeInTheDocument()
+    })
+    expect(screen.getByText('/workspace/')).toBeInTheDocument()
+  })
+
+  it('asks the server once, not once per render', async () => {
+    // `onDirectoryLoad` sits in the dependencies of the controller's
+    // `loadFiles` callback, and the initial-load effect depends on that too.
+    // Passing it an inline arrow function re-created `loadFiles` on every
+    // render, so the effect reloaded the root for ever - a request storm on
+    // the main files page, and one that a test reading the screen never sees,
+    // because the screen looks correct the whole time.
+    render(<Files />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('a.txt')).toBeInTheDocument()
+    })
+    const settled = fetchMock.mock.calls.length
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(fetchMock.mock.calls.length).toBe(settled)
+  })
+
+  // The `/assistant/` case is covered in FileBrowserSheet.test.tsx, which
+  // renders the real file tree. This file mocks FileTree, and driving
+  // navigation through an invented mock contract would have been testing the
+  // mock rather than the header.
 })

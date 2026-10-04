@@ -1,29 +1,34 @@
 import { useMemo } from 'react'
-import { toDisplayPath } from '@/lib/display-path'
+import { toDisplayPathFrom } from '@/lib/display-path'
 
 interface PathDisplayProps {
   path: string
+  /** The real browse root the server returned. Without it the path is shown raw. */
+  root?: string
   maxSegments?: number
   className?: string
 }
 
-export function PathDisplay({ path, maxSegments = 3, className = '' }: PathDisplayProps) {
+export function PathDisplay({ path, root, maxSegments = 3, className = '' }: PathDisplayProps) {
   const displayPath = useMemo(() => {
-    // Shortened first, so `/workspace` counts as one segment and the
+    // Shortened first, so `/workspace/` counts as one segment and the
     // truncation below spends its budget on what the user is actually
     // navigating rather than on the path they already knows.
-    const shortened = toDisplayPath(path)
+    const shortened = toDisplayPathFrom(root, path)
     if (shortened === '/') return '/'
 
     const segments = shortened.split('/').filter(Boolean)
 
+    // Returned as-is when it already fits. Rebuilding it from the segments
+    // would drop the trailing slash that marks a root, and the difference
+    // between `/workspace/` and `/workspace` is the whole point.
     if (segments.length <= maxSegments) {
-      return '/' + segments.join('/')
+      return shortened
     }
 
     const visibleSegments = segments.slice(-maxSegments)
     return '/.../' + visibleSegments.join('/')
-  }, [path, maxSegments])
+  }, [path, root, maxSegments])
 
   return (
     <span

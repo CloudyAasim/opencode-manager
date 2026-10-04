@@ -44,6 +44,7 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
   const { t } = useI18n()
   const normalizedBasePath = basePath || '.'
   const [displayPath, setDisplayPath] = useState<string>('/')
+  const [workspaceRoot, setWorkspaceRoot] = useState<string | undefined>(undefined)
   const [shouldRender, setShouldRender] = useState(false)
   const [currentPath, setCurrentPath] = useState<string>(basePath || '.')
   const [downloadDialog, setDownloadDialog] = useState<{ type: 'directory' | 'repository' } | null>(null)
@@ -81,14 +82,15 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
 
   const handleDirectoryLoad = useCallback(
     (info: { workspaceRoot?: string; currentPath: string }) => {
+      setWorkspaceRoot(info.workspaceRoot)
+      setCurrentPath(info.currentPath || '.')
       if (allowNavigateAboveBase) {
-        const pathParts = info.currentPath.split('/').filter(Boolean)
-        const displayParts = pathParts[0] === '..' ? ['workspace', ...pathParts.slice(1)] : ['workspace', 'repos', ...pathParts]
-        setDisplayPath('/' + displayParts.join('/'))
-        setCurrentPath(info.currentPath || '.')
+        // `displayPath` is deliberately left alone here. In this mode the
+        // header derives the real path from the browse root and this relative
+        // path, and passing the repo-relative state instead is what made the
+        // sheet sit on a stale `/` while the page beside it was correct.
         return
       }
-      setCurrentPath(info.currentPath || '.')
       setDisplayPath(getRepoRelativeDisplayPath(info.currentPath || '.', normalizedBasePath))
     },
     [allowNavigateAboveBase, normalizedBasePath],
@@ -146,7 +148,12 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
                   {repoName}
                 </h1>
               )}
-              <PathDisplay path={displayPath} maxSegments={4} className="truncate" />
+              <PathDisplay
+                path={allowNavigateAboveBase ? currentPath : displayPath}
+                root={allowNavigateAboveBase ? workspaceRoot : undefined}
+                maxSegments={4}
+                className="truncate"
+              />
             </div>
             <div className="flex items-center gap-2">
               {repoId != null && (
@@ -198,6 +205,12 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
               basePath={normalizedBasePath}
               showHeader={false}
               allowNavigateAboveBase={allowNavigateAboveBase}
+              // Wired here for the first time. The handler existed and was
+              // never passed to anything, so the header sat on its initial
+              // value while the listing underneath moved - and the previous
+              // implementation, which assembled a path by hand in this
+              // handler, had been dead code the whole time.
+              onDirectoryLoad={handleDirectoryLoad}
             />
           )}
         </FullscreenSheetContent>
