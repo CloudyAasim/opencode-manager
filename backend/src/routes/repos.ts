@@ -17,6 +17,7 @@ import { getErrorMessage, getStatusCode } from '../utils/error-utils'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
 import { createRepoGitRoutes } from './repo-git'
 import { createScheduleRoutes } from './schedules'
+import { probeRepoDirectory } from '../services/repo/directory-state'
 import type { GitAuthService } from '../services/git-auth'
 import { ScheduleService } from '../services/schedules'
 import { ensureAssistantMode, getAssistantModeStatus, buildAssistantRepo } from '../services/assistant-mode'
@@ -35,6 +36,10 @@ function withRepoSettings(database: Database, repo: Repo): Repo {
   return {
     ...repo,
     gitCredentialId: getRepoGitCredentialId(database, repo.id) ?? undefined,
+    // cloneStatus records what the clone did, not what is on disk now. Every
+    // consumer of this payload needs the present tense, or a repository whose
+    // directory was deleted goes on looking perfectly usable.
+    directoryExists: probeRepoDirectory(repo.fullPath).directoryExists,
   }
 }
 

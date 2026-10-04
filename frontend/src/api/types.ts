@@ -15,6 +15,12 @@ export interface Repo {
   gitCredentialId?: string
   isWorktree?: boolean
   isLocal?: boolean
+  /**
+   * Whether the checkout directory is on disk right now. Absent means the
+   * server did not check (older backend), not that the directory is missing -
+   * so only `false` may be treated as proof.
+   */
+  directoryExists?: boolean
 }
 
 import type { components } from './opencode-types'

@@ -177,6 +177,7 @@ const openCodeClient = createOpenCodeClient(
 
 import { DEFAULT_AGENTS_MD } from './constants'
 import { formatPersistenceWarning, readMountInfo, reportPersistence } from './services/persistence-check'
+import { logDirectoryReconciliation, reconcileRepoDirectories } from './services/repo/directory-state'
 
 let ipcServer: IPCServer | undefined
 const gitAuthService = new GitAuthService()
@@ -269,6 +270,13 @@ try {
 
   await migrateUserWorkspaceLayout()
   logger.info('Workspace directories initialized')
+
+  // The same reasoning applied per repository. A row that says "ready" while
+  // its directory is gone makes every session in it look alive and empty:
+  // messages never load, nothing reports an error, and the only clue is that
+  // nothing arrives. Check the disk against the database before serving any of
+  // it, and say so loudly when they disagree.
+  logDirectoryReconciliation(reconcileRepoDirectories(db))
 
   await cleanupExpiredCache()
   await sweepStaleUploadSessions()

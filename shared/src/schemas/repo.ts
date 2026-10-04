@@ -19,6 +19,12 @@ export const RepoSchema = z.object({
   userId: z.string().nullable().optional(),
   isWorktree: z.boolean().optional(),
   isLocal: z.boolean().optional(),
+  /**
+   * Whether the checkout directory is actually on disk right now. cloneStatus
+   * is a record of what happened during the clone, not a statement about the
+   * present, and the two diverge the moment a directory goes missing.
+   */
+  directoryExists: z.boolean().optional(),
 })
 
 export const InternalRepoListResponseSchema = z.object({

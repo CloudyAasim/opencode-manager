@@ -104,6 +104,7 @@ export const session = {
     backToRepositories: '返回项目列表',
     sessionNotFound: '未找到会话',
     backToSessions: '返回会话列表',
+    repoDirectoryMissing: '项目目录已不存在：{{path}}。会话无法加载任何内容，需要重新克隆该项目目录。',
   },
   actions: {
     createFailed: '创建新会话失败',

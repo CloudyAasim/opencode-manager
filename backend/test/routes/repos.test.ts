@@ -613,6 +613,36 @@ describe('Repo Routes', () => {
       const body = await res.json() as { error: string }
       expect(body.error).toBe('branch failed')
     })
+
+    it('reports a checkout that really is on disk', async () => {
+      // process.cwd() is the backend package root, which certainly exists. The
+      // point of the field is that it is measured, not remembered.
+      vi.mocked(db.getRepoById).mockReturnValue(createMockRepo({ id: 5, fullPath: process.cwd() }))
+      vi.mocked(repoService.getCurrentBranch).mockResolvedValue('main')
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+      const res = await app.request('/5', { method: 'GET' })
+
+      expect(res.status).toBe(200)
+      const body = await res.json() as Repo
+      expect(body.directoryExists).toBe(true)
+    })
+
+    it('reports a missing directory even while cloneStatus still says ready', async () => {
+      // package.json is a file, so a path below it can never be a checkout -
+      // ENOTDIR, provably absent, and it does not depend on cleanup.
+      vi.mocked(db.getRepoById).mockReturnValue(
+        createMockRepo({ id: 5, fullPath: `${process.cwd()}/package.json/not-a-dir`, cloneStatus: 'ready' })
+      )
+      vi.mocked(repoService.getCurrentBranch).mockResolvedValue(null)
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+      const res = await app.request('/5', { method: 'GET' })
+
+      expect(res.status).toBe(200)
+      const body = await res.json() as Repo
+      expect(body.directoryExists).toBe(false)
+    })
   })
 
   describe('PATCH /:id/git-credential', () => {

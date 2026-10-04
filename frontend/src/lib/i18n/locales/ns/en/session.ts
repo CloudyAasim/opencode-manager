@@ -104,6 +104,7 @@ export const session = {
     backToRepositories: 'Back to repositories',
     sessionNotFound: 'Session not found',
     backToSessions: 'Back to sessions',
+    repoDirectoryMissing: 'Repository directory no longer exists: {{path}}. This session cannot load anything; the directory needs to be cloned again.',
   },
   actions: {
     createFailed: 'Failed to create new session',

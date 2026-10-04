@@ -411,7 +411,14 @@ export function SessionDetail() {
   const { isConnected, isReconnecting } = useSSE(opcodeUrl, sessionDirectory, sessionId);
   const sseHealth = useSSEHealth();
 
-  const { data: rawMessages, isLoading: messagesLoading } = useMessages(opcodeUrl, sessionId, sessionDirectory, { fallbackPoll: !isConnected });
+  // The message list is the one thing the user is actually waiting on, and it
+  // had no fallback at all while the stream claimed to be connected: `!isConnected`
+  // is the only thing that turned polling on, so a stream that is open but not
+  // delivering left the conversation frozen on its last snapshot, with a
+  // healthy-looking indicator. Ask whether the stream is *delivering*, not
+  // merely attached, and fall back to polling whenever the answer is no.
+  const streamDelivering = isConnected && !isReconnecting && sseHealth.isHealthy && !sseHealth.isStalled;
+  const { data: rawMessages, isLoading: messagesLoading } = useMessages(opcodeUrl, sessionId, sessionDirectory, { fallbackPoll: !streamDelivering });
 
   const messages = useMemo(() => {
     if (!rawMessages) return undefined
@@ -734,6 +741,23 @@ export function SessionDetail() {
 
   if (!isAssistantSession && !repo) {
     return <SessionRouteFallback message={t('session.route.repositoryNotFound')} backTo="/" backLabel={t('session.route.backToRepositories')} />;
+  }
+
+  // The row is still marked ready and the header, the prompt and the file
+  // browser all render, so a repository whose directory was deleted looks like
+  // a working session that happens to be quiet: the question you sent is there
+  // (it was cached before the directory went), the answer never arrives, and
+  // nothing anywhere reports a problem. Name the actual cause instead.
+  // Strictly `false` - a backend that does not send the field is not evidence
+  // that the directory is gone.
+  if (!isAssistantSession && repo?.directoryExists === false) {
+    return (
+      <SessionRouteFallback
+        message={t('session.route.repoDirectoryMissing', { path: repo.fullPath })}
+        backTo="/"
+        backLabel={t('session.route.backToRepositories')}
+      />
+    );
   }
 
   // Only a session we asked for can be missing. With no session yet

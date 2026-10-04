@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, type Query } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionDetail } from '../SessionDetail'
@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   useSessionStatusForSession: vi.fn(),
   syncPermissionsForSession: vi.fn(),
   syncQuestionsForSession: vi.fn(),
+  getRepo: vi.fn(),
 }))
 
 vi.mock('@/hooks/useOpenCode', () => ({
@@ -114,17 +115,7 @@ vi.mock('@/contexts/EventContext', async (importOriginal) => {
 })
 
 vi.mock('@/api/repos', () => ({
-  getRepo: vi.fn(() => Promise.resolve({
-    id: 1,
-    repoUrl: 'https://github.com/test/repo',
-    localPath: '/test/repo',
-    sourcePath: null,
-    fullPath: '/test/repo',
-    branch: 'main',
-    currentBranch: 'main',
-    fullSlug: 'test/repo',
-    repoType: 'github' as const,
-  })),
+  getRepo: mocks.getRepo,
   initializeAssistantMode: vi.fn(() => Promise.resolve({ directory: '/test/repo' })),
 }))
 
@@ -180,6 +171,18 @@ describe('SessionDetail pending-actions polling gating', () => {
     mocks.useAutoScroll.mockReturnValue({ scrollToBottom: vi.fn() })
     mocks.useLayer.mockReturnValue([false, vi.fn()])
     mocks.useSessionStatusForSession.mockReturnValue({ type: 'idle' })
+    mocks.getRepo.mockResolvedValue({
+      id: 1,
+      repoUrl: 'https://github.com/test/repo',
+      localPath: '/test/repo',
+      sourcePath: null,
+      fullPath: '/test/repo',
+      branch: 'main',
+      currentBranch: 'main',
+      fullSlug: 'test/repo',
+      repoType: 'github' as const,
+      directoryExists: true,
+    })
   })
 
   const createQueryClient = () =>
@@ -291,13 +294,134 @@ describe('SessionDetail pending-actions polling gating', () => {
     expect(calls[calls.length - 1][3]).toEqual({ fallbackPoll: true })
   })
 
-  it('does not request message fallback polling while the SSE stream is connected', async () => {
+  it('does not request message fallback polling while the stream is delivering', async () => {
+    // This used to read "while the SSE stream is connected" and assert false.
+    // That was the bug: being attached is not the same as carrying events, so
+    // a stream that was open but delivering nothing turned the message list's
+    // only fallback off and froze the conversation on a stale snapshot. The
+    // contract is delivery, not attachment.
     mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: true, isStalled: false })
 
     const queryClient = createQueryClient()
     renderSessionDetail(queryClient)
 
     const calls = mocks.useMessages.mock.calls
     expect(calls[calls.length - 1][3]).toEqual({ fallbackPoll: false })
+  })
+
+  it('requests message fallback polling while connected but stalled', async () => {
+    // The case the old gate could not express at all.
+    mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: false, isStalled: true })
+
+    const queryClient = createQueryClient()
+    renderSessionDetail(queryClient)
+
+    const calls = mocks.useMessages.mock.calls
+    expect(calls[calls.length - 1][3]).toEqual({ fallbackPoll: true })
+  })
+
+  it('requests message fallback polling while connected but unhealthy', async () => {
+    mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: false, isStalled: false })
+
+    const queryClient = createQueryClient()
+    renderSessionDetail(queryClient)
+
+    const calls = mocks.useMessages.mock.calls
+    expect(calls[calls.length - 1][3]).toEqual({ fallbackPoll: true })
+  })
+
+  it('requests message fallback polling while the stream is reconnecting', async () => {
+    mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: true })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: true, isStalled: false })
+
+    const queryClient = createQueryClient()
+    renderSessionDetail(queryClient)
+
+    const calls = mocks.useMessages.mock.calls
+    expect(calls[calls.length - 1][3]).toEqual({ fallbackPoll: true })
+  })
+})
+
+describe('SessionDetail when the repository directory is gone', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.useSession.mockReturnValue({ data: undefined, isLoading: false })
+    mocks.useMessages.mockReturnValue({ data: [], isLoading: false })
+    mocks.useRepoActivity.mockReturnValue(undefined)
+    mocks.useSSE.mockReturnValue({ isConnected: true, isReconnecting: false })
+    mocks.useSSEHealth.mockReturnValue({ isHealthy: true, isStalled: false })
+    mocks.useConfig.mockReturnValue({ data: undefined, isLoading: false })
+    mocks.useOpenCodeClient.mockReturnValue({})
+    mocks.useLayer.mockReturnValue([false, vi.fn()])
+    mocks.useSessionStatusForSession.mockReturnValue({ type: 'idle' })
+    mocks.getRepo.mockResolvedValue({
+      id: 1,
+      localPath: 'demo',
+      fullPath: '/workspace/repos/demo',
+      defaultBranch: 'main',
+      cloneStatus: 'ready',
+      clonedAt: 0,
+      directoryExists: false,
+    })
+  })
+
+  const createQueryClient = () =>
+    new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+  const renderSessionDetail = (queryClient: QueryClient) =>
+    render(
+      <MemoryRouter initialEntries={['/repos/1/sessions/session-1']}>
+        <QueryClientProvider client={queryClient}>
+          <Routes>
+            <Route path="/repos/:id/sessions/:sessionId" element={<SessionDetail />} />
+          </Routes>
+        </QueryClientProvider>
+      </MemoryRouter>
+    )
+
+  it('names the missing path instead of rendering a session that looks alive', async () => {
+    // The row still said "ready", so the header, the prompt and the message
+    // list all rendered: the question was visible from the last successful
+    // load, the answer never arrived, and nothing reported a problem.
+    renderSessionDetail(createQueryClient())
+
+    await waitFor(() => {
+      expect(screen.getByText(/\/workspace\/repos\/demo/)).toBeInTheDocument()
+    })
+  })
+
+  it('stops rendering the session shell instead of leaving a plausible empty one', async () => {
+    renderSessionDetail(createQueryClient())
+
+    await waitFor(() => {
+      expect(screen.getByText(/\/workspace\/repos\/demo/)).toBeInTheDocument()
+    })
+    // The hooks still run - React has no early return - but the session header,
+    // the prompt and the cached message list must not. A stale cached list is
+    // exactly what used to masquerade as a working, merely quiet, session.
+    expect(screen.queryByTestId('session-header-region')).not.toBeInTheDocument()
+  })
+
+  it('still renders the session when the backend does not report the directory', async () => {
+    // An older backend omits the field. Absent is not the same as false, and
+    // refusing to render on absence would break every un-upgraded deployment.
+    mocks.getRepo.mockResolvedValue({
+      id: 1,
+      localPath: 'demo',
+      fullPath: '/workspace/repos/demo',
+      defaultBranch: 'main',
+      cloneStatus: 'ready',
+      clonedAt: 0,
+    })
+
+    renderSessionDetail(createQueryClient())
+
+    await waitFor(() => {
+      expect(mocks.useMessages).toHaveBeenCalled()
+    })
+    expect(screen.queryByText(/\/workspace\/repos\/demo/)).not.toBeInTheDocument()
   })
 })
