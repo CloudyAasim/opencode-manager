@@ -59,7 +59,22 @@ export async function deleteRepoFiles(
     const { name: repoName } = normalizeRepoUrl(repo.repoUrl)
     const baseRepoPath = resolveRepoPathInsideBase(repoName, base)
 
-    await removeWorktree(baseRepoPath, target)
+    const worktreeRemoval = await removeWorktree(baseRepoPath, target)
+    if (!worktreeRemoval.removed) {
+      // `target` cleared the containment check above, so it is inside the
+      // repositories directory - but removeWorktree refused it, which means
+      // this row does not describe a worktree of the base repository it names.
+      // Falling through to the `rm -rf` below would delete whatever that path
+      // actually holds, and a refused path is refused precisely because that
+      // is not known. Same handling as the guard above: drop the reference,
+      // touch nothing, say why.
+      logger.error(
+        `Repo ${repoId} is flagged as a worktree but '${repo.localPath}' is not a worktree of '${baseRepoPath}'. ` +
+          'Removing the database row without touching the filesystem.',
+      )
+      deleteRepo(database, repoId)
+      return { filesRemoved: false, refusal: worktreeRemoval.refusal }
+    }
   }
 
   // The resolved absolute path, with no cwd: the target no longer depends on

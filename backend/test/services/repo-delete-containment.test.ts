@@ -51,7 +51,10 @@ vi.mock('../../src/services/repo/clone', async (importOriginal) => ({
   normalizeRepoUrl: () => ({ name: 'base-repo' }),
 }))
 vi.mock('../../src/services/repo/worktree', () => ({
-  removeWorktree: vi.fn(),
+  // Typed result, not a bare vi.fn(): delete.ts branches on `removed`, so a
+  // mock that answers undefined would read as "refused" and quietly turn the
+  // normal worktree deletion test below into a false failure.
+  removeWorktree: vi.fn(async (): Promise<{ removed: boolean; refusal?: string }> => ({ removed: true })),
   createWorktreeSafely: vi.fn(),
 }))
 import { deleteRepoFiles } from '../../src/services/repo/delete'
@@ -82,7 +85,11 @@ describe('删除项目时目标必须留在项目目录内', () => {
     envRef.reposBase = base
     getRepoById.mockReset()
     deleteRepo.mockReset()
-    vi.mocked(removeWorktree).mockClear()
+    // mockReset, not mockClear: a once-implementation queued by one test would
+    // otherwise be handed to the next one. The default is re-stated here
+    // because the reset just took it away.
+    vi.mocked(removeWorktree).mockReset()
+    vi.mocked(removeWorktree).mockResolvedValue({ removed: true })
   })
 
   afterEach(() => {
@@ -245,6 +252,26 @@ describe('删除项目时目标必须留在项目目录内', () => {
       )
       expect(result.filesRemoved).toBe(true)
       expect(existsSync(checkout)).toBe(false)
+    })
+
+    it('removeWorktree 拒绝时:删行,不动磁盘,并说明原因', async () => {
+      // The path clears the containment check - it is inside the repositories
+      // directory - but removeWorktree is what knows whether it is a worktree
+      // of the base repository the row names. Falling through to the `rm -rf`
+      // after a refusal would delete whatever is really there, which is the
+      // entire reason the refusal happened.
+      const checkout = path.join(base, 'demo')
+      mkdirSync(checkout, { recursive: true })
+      writeFileSync(path.join(checkout, 'real-content.txt'), 'this must survive')
+      getRepoById.mockReturnValue(repo('demo', { isWorktree: true, repoUrl: 'https://github.com/x/y.git' }))
+      vi.mocked(removeWorktree).mockResolvedValueOnce({ removed: false, refusal: 'it belongs to a different repository' })
+
+      const result = await deleteRepoFiles(db, 1)
+
+      expect(result.filesRemoved).toBe(false)
+      expect(result.refusal).toBeTruthy()
+      expect(existsSync(path.join(checkout, 'real-content.txt'))).toBe(true)
+      expect(deleteRepo).toHaveBeenCalledWith(db, 1)
     })
   })
 
