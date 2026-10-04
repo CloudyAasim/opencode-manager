@@ -1,6 +1,5 @@
 import type { Database } from 'bun:sqlite'
 import path from 'node:path'
-import type { Session } from './index'
 import { getReposPath, getUserReposPath, getUserSettingPath, getUserWorkspacePath, getWorkspacePath } from '@opencode-manager/shared/config/env'
 
 export interface Principal {
@@ -9,7 +8,19 @@ export interface Principal {
   username?: string | null
 }
 
-export function principalFrom(user: Session['user'] | undefined | null): Principal | null {
+/**
+ * Everything a principal can be read out of. `Session['user']` satisfies it,
+ * and so does the three-field owner an internal request carries, which is why
+ * both feed the same function instead of each side growing its own copy of
+ * "is this an admin" logic.
+ */
+export interface PrincipalSource {
+  id?: string
+  role?: string
+  username?: string | null
+}
+
+export function principalFrom(user: PrincipalSource | undefined | null): Principal | null {
   if (!user?.id) return null
   return { id: user.id, role: user.role === 'admin' ? 'admin' : 'user', username: user.username ?? null }
 }

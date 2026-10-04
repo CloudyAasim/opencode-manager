@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import type { Database } from 'bun:sqlite'
 import { getRepoName, listRepos } from '../../db/queries'
+import { internalUserOf } from '../../auth/internal-token-middleware'
+import { accessibleRepoIds, principalFrom } from '../../auth/ownership'
 import { resolveProjectId } from '../../services/project-id-resolver'
 import { logger } from '../../utils/logger'
 import { getErrorMessage } from '../../utils/error-utils'
@@ -10,7 +12,13 @@ export function createInternalOpenCodeWorkspacesRoutes(db: Database) {
 
   app.get('/', async (c) => {
     try {
-      const repos = listRepos(db).filter((repo) => repo.cloneStatus === 'ready')
+      const principal = principalFrom(internalUserOf(c))
+      // Unplaced means unnarrowed - same reasoning as the repo list, and the
+      // same reason refusing belongs to the stage after this one.
+      const allowed = principal ? new Set(accessibleRepoIds(db, principal)) : null
+      const repos = listRepos(db)
+        .filter((repo) => repo.cloneStatus === 'ready')
+        .filter((repo) => !allowed || allowed.has(repo.id))
       const workspaces = await Promise.all(
         repos.map(async (repo) => ({
           repoId: repo.id,

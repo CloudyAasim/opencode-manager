@@ -1,19 +1,35 @@
 import { Hono } from 'hono'
 import { AssistantSettingsPatchSchema } from '@opencode-manager/shared/schemas'
+import { internalUserOf } from '../../auth/internal-token-middleware'
 import type { SettingsService } from '../../services/settings'
 import type { UserPreferences } from '@opencode-manager/shared/types'
+
+/**
+ * Settings are keyed by user, and a stored set can hold TTS and STT API keys.
+ * So `?userId=` was not a filter, it was a selector: any agent holding the
+ * shared token could read another tenant's credentials by naming them.
+ *
+ * A placed request now reads and writes only its own, whatever the query
+ * string asks for. An unplaced one keeps the old behaviour rather than
+ * guessing - the shadow log above says how often that is happening, and
+ * refusing is the stage after this one.
+ */
+function resolveSettingsUserId(c: unknown): string {
+  const user = internalUserOf(c)
+  return user ? user.id : (c as { req?: { query: (key: string) => string | undefined } }).req?.query('userId') ?? 'default'
+}
 
 export function createInternalSettingsRoutes(settingsService: SettingsService) {
   const app = new Hono()
 
   app.get('/', (c) => {
-    const userId = c.req.query('userId') ?? 'default'
+    const userId = resolveSettingsUserId(c)
     const settings = settingsService.getSettings(userId)
     return c.json(settings)
   })
 
   app.patch('/', async (c) => {
-    const userId = c.req.query('userId') ?? 'default'
+    const userId = resolveSettingsUserId(c)
 
     let body: unknown
     try {
