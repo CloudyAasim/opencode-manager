@@ -1,9 +1,11 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import path from 'path'
-import { access, readFile, writeFile } from 'fs/promises'
+import { access, mkdir, readFile, writeFile } from 'fs/promises'
 import { Hono } from 'hono'
-import { ensureAssistantMode, getAssistantModeStatus, getAssistantModeDirectory, buildSchedulesSkill, buildReposSkill, buildSettingsSkill, buildAssistantDefaultAgentMd, buildAssistantOpenCodeConfig, buildAssistantRepo, installAssistantWorkspace } from '../../src/services/assistant-mode'
+import { ensureAssistantMode, getAssistantModeStatus, getAssistantModeDirectory, buildSchedulesSkill, buildReposSkill, buildSettingsSkill, buildAssistantDefaultAgentMd, buildAssistantOpenCodeConfig, buildAssistantRepo, installAssistantWorkspace, resetAssistantWorkspace } from '../../src/services/assistant-mode'
 import { createTempAssistantWorkspace, createTestDb, mockRepo } from '../helpers/assistant-workspace'
+import { buildAssistantAgentPermission, buildAssistantDefaultAgentMdFromPrompt, PRIOR_ASSISTANT_AGENT_PERMISSION } from '../../src/services/assistant-mode/agents-md'
+import { buildLegacyAssistantDefaultAgentMd, buildPreviousAssistantDefaultAgentMd, buildPriorAssistantDefaultAgentMd, buildPriorAssistantAgentPrompt } from '../../src/services/assistant-mode/legacy'
 import { DEFAULT_AGENTS_MD } from '../../src/constants'
 import { createInternalRoutes } from '../../src/routes/internal'
 import { ScheduleService } from '../../src/services/schedules'
@@ -27,6 +29,64 @@ describe('buildSchedulesSkill', () => {
     const skill = buildSchedulesSkill()
     expect(skill).toContain('Use repo ID `0` for the built-in Assistant')
     expect(skill).toContain('/repos/0/schedules')
+  })
+})
+
+describe('historical assistant agent reconstruction', () => {
+  it('reproduces every past generation under the permission block it shipped with', () => {
+    // These builders exist to reconstruct a file that is already on disk so
+    // the app recognises its own output and updates it. If one rebuilds with
+    // today's permission block the hash matches nothing, the app concludes
+    // the user hand-wrote the file, and the old permissions survive - the
+    // tightening silently misses every account that already existed.
+    //
+    // Asserted on literals, not on one builder's output compared to
+    // another's, so a mutation that changes what they all emit cannot hide.
+    for (const [name, built] of [
+      ['legacy', buildLegacyAssistantDefaultAgentMd()],
+      ['previous', buildPreviousAssistantDefaultAgentMd()],
+      ['prior', buildPriorAssistantDefaultAgentMd()],
+    ] as const) {
+      expect(built, name).toContain('bash: allow')
+      expect(built, name).toContain('external_directory: ask')
+    }
+  })
+
+  it('pins the prior permission to the block that actually shipped', () => {
+    // The reverse assertion: without it, the test above would also pass if
+    // every builder drifted to the old block - which is the same failure in
+    // the other direction, reaching no one either.
+    expect(PRIOR_ASSISTANT_AGENT_PERMISSION).toEqual({
+      read: 'allow',
+      edit: 'allow',
+      glob: 'allow',
+      grep: 'allow',
+      list: 'allow',
+      bash: 'allow',
+      external_directory: 'ask',
+    })
+  })
+
+  it('gives the current agent no shell and no reach outside its own directory', () => {
+    const permission = buildAssistantAgentPermission()
+    // Not "ask". Every user's workspace is owned by the single OS account the
+    // container runs as, so a shell in one assistant's directory is a shell
+    // over every other user's projects.
+    expect(permission.bash).toBe('deny')
+    expect(permission.external_directory).toBe('deny')
+    // The tools that do the assistant's actual job stay open.
+    expect(permission).toMatchObject({
+      read: 'allow',
+      edit: 'allow',
+      glob: 'allow',
+      grep: 'allow',
+      list: 'allow',
+    })
+  })
+
+  it('defaults to the current permission and honours an override', () => {
+    expect(buildAssistantDefaultAgentMdFromPrompt('body')).toContain('bash: deny')
+    expect(buildAssistantDefaultAgentMdFromPrompt('body', PRIOR_ASSISTANT_AGENT_PERMISSION)).toContain('bash: allow')
   })
 })
 
@@ -62,38 +122,57 @@ describe('buildReposSkill', () => {
     expect(skill).not.toContain('openCodeConfigName')
   })
 
-  it('documents POST /repos as the way to add a project', () => {
-    // The skill used to say the repos API was read-only, which left the
-    // assistant with no documented way to add a project - so it ran
-    // `git clone` in its own configuration directory, where the result is
-    // invisible in the app and cannot be deleted from it.
+  it('does not document a route the internal API does not have', () => {
+    // Two rounds ago the skill said the repos API was read-only, and the
+    // assistant reached for `git clone` instead. The fix was to document
+    // `POST /repos` - which the internal API the assistant can actually reach
+    // does not expose, so the agent spent a turn discovering that and then
+    // fell back to the shell again. A route that is not in the allowlist is
+    // worse than a missing route: it reads as an invitation.
     const skill = buildReposSkill(reposPath)
-    expect(skill).toContain('### POST /repos')
-    expect(skill).toContain('"repoUrl": "https://github.com/owner/name.git"')
-    expect(skill).toContain('"localPath"')
-    expect(skill).not.toContain('there are no POST/PUT/DELETE operations for repos')
+    expect(skill).not.toContain('### POST /repos')
+    expect(skill).not.toContain('"repoUrl": "https://github.com/owner/name.git"')
+    expect(skill).toContain('**You cannot add one.**')
+    expect(skill).toContain('Projects screen')
   })
 
   it('names the projects directory, and forbids cloning into the assistant workspace', () => {
     const skill = buildReposSkill(reposPath)
-    // The whole sentence, not just the path somewhere in the file: the path
-    // also appears in the localPath example and in "Where projects belong", so
-    // asserting `toContain(reposPath)` passes even when the sentence that ties
-    // the path to "projects live here" is gone - which is the part that
-    // actually reaches the agent.
-    expect(skill).toContain(
-      `Projects live in the user's projects directory:\n\n\`\`\`\n${reposPath}\n\`\`\``,
-    )
-    expect(skill).toContain('`git clone` in a shell')
-    expect(skill).toContain('never clone into this assistant workspace')
+    // The whole line, not just the path somewhere in the file: it also appears
+    // in "Adding a project", so asserting `toContain(reposPath)` would pass
+    // even when the line that ties the path to "projects live here" is gone -
+    // and that line is the part that reaches the agent.
+    expect(skill).toContain(`- Projects live in \`${reposPath}\` and nowhere else.`)
+    expect(skill).toContain('becomes a project by itself')
+    expect(skill).not.toContain('`git clone` in a shell')
   })
 })
 
-describe('the assistant is told where projects do not belong', () => {
-  it('the agent prompt routes adding a project through the skill, not the shell', () => {
+describe('the assistant is told where projects do not belong, and that it has no shell', () => {
+  it('the agent prompt refuses to improvise a way to add a project', () => {
     const prompt = buildAssistantDefaultAgentMd()
-    expect(prompt).toContain('POST /repos')
-    expect(prompt).toContain('never clone into this directory')
+    expect(prompt).toContain('You cannot add one yourself')
+    expect(prompt).toContain('Projects screen')
+    // A prompt that still advertised POST /repos would send the agent looking
+    // for a route that does not exist, and it would improvise from there.
+    expect(prompt).not.toContain('POST /repos')
+  })
+
+  it('the agent prompt says why there is no shell', () => {
+    // Without the reason, "denied" reads as an obstacle to route around rather
+    // than as the boundary it is.
+    const prompt = buildAssistantDefaultAgentMd()
+    expect(prompt).toContain('You Have No Shell')
+    expect(prompt).toContain('one shared account')
+    expect(prompt).toContain('ocm')
+  })
+
+  it('the shell is denied, not merely set to ask', () => {
+    // `ask` is answered by whoever is at the keyboard; an unattended session
+    // has nobody, and it does nothing about an assistant reading another
+    // user's files.
+    expect(buildAssistantAgentPermission().bash).toBe('deny')
+    expect(buildAssistantAgentPermission().external_directory).toBe('deny')
   })
 
   it('the global agent instructions carry the same rule', () => {
@@ -254,8 +333,11 @@ describe('ensureAssistantMode', () => {
       glob: 'allow',
       grep: 'allow',
       list: 'allow',
-      bash: 'allow',
-      external_directory: 'ask',
+      // Denied, not "ask". Every user's workspace is owned by the one OS
+      // account the container runs as, so a shell in the assistant's directory
+      // is a shell over every other user's projects too.
+      bash: 'deny',
+      external_directory: 'deny',
     })
     expect(opencodeJson.agent?.assistant).toEqual({ mode: 'primary' })
     expect(opencodeJson.agent?.assistant?.prompt).toBeUndefined()
@@ -290,12 +372,15 @@ describe('ensureAssistantMode', () => {
     const reposSkillContent = await readFile(reposSkillPath, 'utf8')
     expect(reposSkillContent).toContain('name: repo-management')
     // The description is what the agent matches on when deciding whether to
-    // load the skill, so it has to say "add" - a description that only mentions
-    // listing is the same dead end as documenting the API as read-only.
-    expect(reposSkillContent).toContain('description: List, add, and inspect repos available')
+    // load the skill. It must not promise anything the agent cannot do: the
+    // skill now says out loud that the assistant cannot add a project, so a
+    // description offering to "add" would contradict the body of the very file
+    // it introduces.
+    expect(reposSkillContent).toContain('description: Inspect the projects available to OpenCode Manager')
     // And the file that lands on disk has to carry the concrete directory, not
-    // just the rule.
-    expect(reposSkillContent).toContain('### POST /repos')
+    // just the rule - the agent has no way to derive the projects path itself.
+    expect(reposSkillContent).toContain('Projects live in')
+    expect(reposSkillContent).not.toContain('### POST /repos')
 
     const assistantAgentContent = await readFile(assistantAgentPath, 'utf8')
     expect(assistantAgentContent).toContain('mode: primary')
@@ -534,6 +619,66 @@ Ask before destructive operations or changes outside this assistant workspace.
     expect(result.defaultAgent?.created).toBe(true)
   })
 
+  it('reaches accounts that already ran the generation before the shell was denied', async () => {
+    await ensureAssistantMode(mockRepo)
+    const assistantAgentPath = path.join(ws.assistantDir, '.opencode/agents/assistant.md')
+
+    // The frontmatter is written out by hand rather than taken from
+    // `buildPriorAssistantDefaultAgentMd()`. A fixture built by the very
+    // builder under test is a fixture that moves when the builder is broken,
+    // which is precisely the mutation this test exists to catch.
+    const priorGenerationFile = `---
+description: Default OpenCode Manager assistant workspace agent
+mode: primary
+permission:
+  read: allow
+  edit: allow
+  glob: allow
+  grep: allow
+  list: allow
+  bash: allow
+  external_directory: ask
+---
+
+${buildPriorAssistantAgentPrompt()}
+`
+    expect(priorGenerationFile).toBe(buildPriorAssistantDefaultAgentMd())
+
+    await writeFile(assistantAgentPath, priorGenerationFile)
+
+    const result = await ensureAssistantMode(mockRepo)
+    const updated = await readFile(assistantAgentPath, 'utf8')
+
+    // Rewritten, not preserved. A file the app does not recognise comes back
+    // with `created: false` and its old contents intact - which is exactly the
+    // failure this test is here to catch.
+    expect(result.defaultAgent?.created).toBe(true)
+    // And therefore actually tightened. Without the prior variant this file
+    // would hash to nothing, be preserved as "customized", and the account
+    // would keep a shell over every other user's files.
+    expect(updated).toBe(buildAssistantDefaultAgentMd())
+    expect(updated).toContain('bash: deny')
+    expect(updated).toContain('external_directory: deny')
+  })
+
+  it('still preserves an assistant.md the user genuinely wrote', async () => {
+    await ensureAssistantMode(mockRepo)
+    const assistantAgentPath = path.join(ws.assistantDir, '.opencode/agents/assistant.md')
+    const handWritten = `---
+description: My own assistant
+mode: primary
+---
+
+I only answer in haiku.
+`
+    await writeFile(assistantAgentPath, handWritten)
+
+    const result = await ensureAssistantMode(mockRepo)
+
+    expect(result.defaultAgent?.created).toBe(false)
+    expect(await readFile(assistantAgentPath, 'utf8')).toBe(handWritten)
+  })
+
   it('migrates previous-generation generated AGENTS.md that still mentions the internal token', async () => {
     await ensureAssistantMode(mockRepo)
     const agentsMdPath = path.join(ws.assistantDir, 'AGENTS.md')
@@ -676,6 +821,56 @@ describe('assistant-mode end-to-end', () => {
     const body = await authed.json() as { jobs: unknown[] }
     expect(Array.isArray(body.jobs)).toBe(true)
   })
+})
+
+describe('resetAssistantWorkspace', () => {
+  let ws: Awaited<ReturnType<typeof createTempAssistantWorkspace>>
+
+  beforeEach(async () => { ws = await createTempAssistantWorkspace() })
+  afterEach(async () => { await ws.cleanup() })
+
+  it('removes what the assistant accumulated and puts the managed files back', async () => {
+    await ensureAssistantMode(mockRepo, {}, 'alice')
+    const dir = getAssistantModeDirectory('alice')
+
+    // The two things the user actually wants gone: something the assistant
+    // downloaded that is not a project, and an agent file it edited into a
+    // state the user does not want to keep.
+    const stray = path.join(dir, 'RelayAB')
+    await mkdir(stray, { recursive: true })
+    await writeFile(path.join(stray, 'index.js'), 'console.log(1)')
+    await writeFile(path.join(dir, '.opencode/agents/assistant.md'), 'i only speak haiku')
+
+    await resetAssistantWorkspace(mockRepo, 'alice')
+
+    await expect(access(stray)).rejects.toThrow()
+    const agent = await readFile(path.join(dir, '.opencode/agents/assistant.md'), 'utf8')
+    expect(agent).toContain('bash: deny')
+    expect(JSON.parse(await readFile(path.join(dir, 'opencode.json'), 'utf8')).default_agent).toBe('assistant')
+    // The skills come back too, otherwise "reset" would leave an assistant
+    // that can do nothing at all.
+    await access(path.join(dir, '.opencode/skills/repo-management/SKILL.md'))
+  })
+
+  it('touches only the account that asked', async () => {
+    await ensureAssistantMode(mockRepo, {}, 'alice')
+    await ensureAssistantMode(mockRepo, {}, 'bob')
+
+    const bobDir = getAssistantModeDirectory('bob')
+    const bobBefore = await readFile(path.join(bobDir, '.opencode/agents/assistant.md'), 'utf8')
+    const bobStray = path.join(bobDir, 'his-private-notes')
+    await mkdir(bobStray, { recursive: true })
+    await writeFile(path.join(bobStray, 'keep.md'), 'do not touch')
+
+    await resetAssistantWorkspace(mockRepo, 'alice')
+
+    // Every user's files live under one OS account here, so nothing but the
+    // name in the path separates two assistants. If this ever regresses, one
+    // user can wipe another's workspace by pressing one button.
+    expect(await readFile(path.join(bobDir, '.opencode/agents/assistant.md'), 'utf8')).toBe(bobBefore)
+    expect(await readFile(path.join(bobStray, 'keep.md'), 'utf8')).toBe('do not touch')
+  })
+
 })
 
 describe('buildAssistantRepo', () => {

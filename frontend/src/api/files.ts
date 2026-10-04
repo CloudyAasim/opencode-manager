@@ -82,3 +82,19 @@ export async function applyFilePatches(path: string, patches: PatchOperation[]):
 export async function deleteFileOrFolder(path: string): Promise<{ success: boolean }> {
   return fetchWrapper(getFileApiUrl(path), { method: 'DELETE' })
 }
+
+/**
+ * Writes a file's whole contents.
+ *
+ * `PUT` with a `content` body overwrites even when the file already exists,
+ * which is what an editor needs. The patch endpoint only speaks line ranges,
+ * and turning "the user typed this" into a range is a way to lose content when
+ * the file changed underneath.
+ */
+export async function saveFileContent(path: string, content: string): Promise<FileInfo> {
+  return fetchWrapper(getFileApiUrl(path), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'file', content }),
+  })
+}

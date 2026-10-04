@@ -1,6 +1,7 @@
 export { getAssistantModeDirectory, assistantRelativePath, buildAssistantRepo,
          ensureAssistantMode, getAssistantModeStatus,
          listAssistantWorkspaceContents,
+         resetAssistantWorkspace,
          type AssistantWorkspaceEntry,
          type AssistantWorkspaceContents,
          installAssistantWorkspace } from './service'

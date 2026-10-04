@@ -177,6 +177,50 @@ export interface AssistantWorkspaceContents {
 }
 
 /**
+ * Deletes the assistant directory and writes it again from scratch.
+ *
+ * The user needs this because the directory holds files they are invited to
+ * edit, and "I broke the assistant and cannot get back to the file that fixes
+ * it" is a state with no way out. Regenerating it is the way out.
+/**
+ * Deletes the assistant directory and lays the managed files down again.
+ *
+ * This is an `rm -rf` over a user's own directory, so the target is pinned
+ * twice. Worth being precise about which of the two actually holds the line,
+ * because getting that backwards is how a decorative check survives for years:
+ *
+ * - The one that holds it: the directory comes from the authenticated
+ *   principal's username, never from a request body, and usernames are
+ *   `USERNAME_PATTERN` (`/^[a-z][a-z0-9]{2,31}$/`) by the time they are stored,
+ *   so they cannot carry `..` and the path cannot leave the users directory.
+ * - The one below: an invariant, not a defence. `getAssistantModeDirectory` is
+ *   `resolve(getUserSettingPath(username), 'assistant')` and `expectedParent`
+ *   is `resolve(getUserSettingPath(username))`, so the comparison is true by
+ *   construction and cannot fail today. It is kept because it is free and it
+ *   would trip if that function were ever rewritten - but it is not what stops
+ *   a traversal, and it should not be read as if it were.
+ */
+export async function resetAssistantWorkspace(
+  repo: Repo,
+  username?: string | null,
+): Promise<AssistantModeStatus> {
+  const assistantDir = getAssistantModeDirectory(username)
+  const expectedParent = path.resolve(username ? getUserSettingPath(username) : getReposPath())
+
+  if (path.dirname(assistantDir) !== expectedParent) {
+    throw new ValidationError(
+      `Refusing to reset '${assistantDir}': it is not directly inside '${expectedParent}'`,
+    )
+  }
+
+  await fs.rm(assistantDir, { recursive: true, force: true })
+
+  // ensureAssistantMode recreates the managed files. Existing customisations
+  // are gone by design - that is what "reset" means here.
+  return ensureAssistantMode(repo, {}, username)
+}
+
+/**
  * Lists what is actually in the assistant's directory, with sizes.
  *
  * The assistant's directory is a sibling of the projects directory rather than

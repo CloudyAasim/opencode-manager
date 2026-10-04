@@ -6,13 +6,19 @@ import { AssistantWorkspaceSettings } from './AssistantWorkspaceSettings'
 
 const getAssistantWorkspaceContents = vi.fn()
 const deleteFileOrFolder = vi.fn()
+const saveFileContent = vi.fn()
+const useFile = vi.fn()
+const resetAssistantWorkspace = vi.fn()
 
 vi.mock('@/api/repos', () => ({
   getAssistantWorkspaceContents: (id: number) => getAssistantWorkspaceContents(id),
+  resetAssistantWorkspace: (id: number) => resetAssistantWorkspace(id),
 }))
 
 vi.mock('@/api/files', () => ({
   deleteFileOrFolder: (path: string) => deleteFileOrFolder(path),
+  saveFileContent: (path: string, content: string) => saveFileContent(path, content),
+  useFile: (path: string | undefined) => useFile(path),
 }))
 
 const CONTENTS = {
@@ -44,8 +50,14 @@ describe('AssistantWorkspaceSettings', () => {
   beforeEach(() => {
     getAssistantWorkspaceContents.mockReset()
     deleteFileOrFolder.mockReset()
+    saveFileContent.mockReset()
+    useFile.mockReset()
+    resetAssistantWorkspace.mockReset()
     getAssistantWorkspaceContents.mockResolvedValue(CONTENTS)
     deleteFileOrFolder.mockResolvedValue({ success: true })
+    saveFileContent.mockResolvedValue({})
+    resetAssistantWorkspace.mockResolvedValue({})
+    useFile.mockReturnValue({ data: { content: '# managed file' }, isLoading: false, isError: false })
   })
 
   it('lists what is in the directory, with its size', async () => {
@@ -87,5 +99,82 @@ describe('AssistantWorkspaceSettings', () => {
     renderPanel()
 
     expect(await screen.findByText('The assistant workspace is empty.')).toBeInTheDocument()
+  })
+
+  it('edits a managed file, which is the half of the panel that was missing', async () => {
+    // Previewing a directory the user is invited to maintain, with no way to
+    // change anything, is not the feature it looks like. The write goes through
+    // the files API, which already accepts this directory.
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.click(await screen.findByRole('button', { name: 'Edit AGENTS.md' }))
+    const editor = await screen.findByRole('textbox', { name: 'AGENTS.md' })
+    await user.clear(editor)
+    await user.type(editor, 'fixed')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(saveFileContent).toHaveBeenCalledWith('/w/setting/assistant/AGENTS.md', 'fixed')
+    })
+  })
+
+  it('offers no editor for a directory', async () => {
+    // A directory has nothing to edit, and an editor that silently saved an
+    // empty file over one would be worse than not offering it.
+    //
+    // This is also the only place the "do not read a directory as a file" rule
+    // is observable. The guard inside `useFile` cannot be tested on its own:
+    // a directory never reaches the editing state while this one holds, so
+    // removing it changes nothing you can see. Together, they are the risk -
+    // and this assertion is the half of it that fails.
+    renderPanel()
+
+    expect(await screen.findByRole('button', { name: 'Edit AGENTS.md' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit RelayAB' })).not.toBeInTheDocument()
+  })
+
+  it('never hands a directory to the file-reading API', async () => {
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.click(await screen.findByRole('button', { name: 'Edit AGENTS.md' }))
+    await screen.findByRole('textbox', { name: 'AGENTS.md' })
+
+    for (const [requested] of useFile.mock.calls) {
+      expect(requested).not.toBe('/w/setting/assistant/RelayAB')
+    }
+  })
+
+  it('resets the whole assistant directory, behind a confirmation', async () => {
+    // The user asked for a way back when the assistant has made a mess of its
+    // own folder. It destroys everything in there, so it goes through the
+    // shared confirm dialog and the backend, not a local state wipe.
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.click(await screen.findByRole('button', { name: 'Reset assistant' }))
+
+    // Nothing is destroyed by merely opening the dialog.
+    expect(resetAssistantWorkspace).not.toHaveBeenCalled()
+
+    await user.click(await screen.findByRole('button', { name: 'Reset everything' }))
+
+    await waitFor(() => {
+      expect(resetAssistantWorkspace).toHaveBeenCalledWith(0)
+    })
+  })
+
+  it('can cancel the reset', async () => {
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.click(await screen.findByRole('button', { name: 'Reset assistant' }))
+    await user.click(await screen.findByRole('button', { name: /cancel/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Reset everything' })).not.toBeInTheDocument()
+    })
+    expect(resetAssistantWorkspace).not.toHaveBeenCalled()
   })
 })

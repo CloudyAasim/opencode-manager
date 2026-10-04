@@ -21,7 +21,7 @@ import { probeRepoDirectory } from '../services/repo/directory-state'
 import { purgeSessionsForDirectory } from '../services/repo/session-purge'
 import type { GitAuthService } from '../services/git-auth'
 import { ScheduleService } from '../services/schedules'
-import { ensureAssistantMode, getAssistantModeStatus, buildAssistantRepo, listAssistantWorkspaceContents } from '../services/assistant-mode'
+import { ensureAssistantMode, getAssistantModeStatus, buildAssistantRepo, listAssistantWorkspaceContents, resetAssistantWorkspace } from '../services/assistant-mode'
 import path from 'path'
 
 function resolveRepo(database: Database, id: number, principal?: Principal | null): Repo | null {
@@ -601,6 +601,25 @@ app.get('/', async (c) => {
     } catch (error: unknown) {
       logger.error('Failed to list assistant workspace contents:', error)
       return c.json({ error: getErrorMessage(error) }, 500)
+    }
+  })
+
+  app.post('/:id/assistant-mode/reset', async (c) => {
+    try {
+      const id = parseInt(c.req.param('id'))
+      const repo: Repo | null = resolveRepo(database, id, currentPrincipal(c))
+
+      if (!repo) {
+        return repoNotFoundResponse(c)
+      }
+
+      const username = currentPrincipal(c)?.username
+      const status = await resetAssistantWorkspace(repo, username)
+      logger.info(`Reset the assistant workspace for ${username ? `user ${username}` : 'the server'}`)
+      return c.json(status)
+    } catch (error: unknown) {
+      logger.error('Failed to reset the assistant workspace:', error)
+      return c.json({ error: getErrorMessage(error) }, getStatusCode(error) as ContentfulStatusCode)
     }
   })
 

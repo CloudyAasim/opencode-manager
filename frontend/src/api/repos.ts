@@ -236,3 +236,16 @@ export async function getAssistantWorkspaceContents(id: number): Promise<Assista
     method: 'GET',
   })
 }
+
+/**
+ * Deletes the assistant directory and writes it again. Everything the user put
+ * in it is gone, which is the point: it is the way back from having edited the
+ * file that keeps the assistant working.
+ */
+export async function resetAssistantWorkspace(id: number): Promise<AssistantModeStatus> {
+  return fetchWrapper(`${API_BASE_URL}/api/repos/${id}/assistant-mode/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+}

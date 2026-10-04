@@ -3,6 +3,7 @@ import { buildAssistantDefaultAgentMdFromPrompt } from './agents-md'
 import { buildAssistantAgentsMd } from './agents-md'
 import { buildAssistantAgentPrompt } from './agents-md'
 import { buildAssistantDefaultAgentMd } from './agents-md'
+import { PRIOR_ASSISTANT_AGENT_PERMISSION } from './agents-md'
 
 export function buildLegacyAssistantAgentsMd(): string {
   return `# Assistant Mode Instructions
@@ -72,7 +73,7 @@ export function buildLegacyAssistantAgentPrompt(): string {
 }
 
 export function buildLegacyAssistantDefaultAgentMd(): string {
-  return buildAssistantDefaultAgentMdFromPrompt(buildLegacyAssistantAgentPrompt())
+  return buildAssistantDefaultAgentMdFromPrompt(buildLegacyAssistantAgentPrompt(), PRIOR_ASSISTANT_AGENT_PERMISSION)
 }
 
 export function buildPreviousAssistantAgentsMd(): string {
@@ -91,20 +92,91 @@ Assistant-specific instructions belong in \`.opencode/agents/assistant.md\`.
 `
 }
 
+/**
+ * The prompt and directory note as shipped before the assistant lost shell
+ * access. Kept verbatim because these are compared by content hash: a
+ * paraphrase hashes differently and matches nothing, which is the difference
+ * between "the app recognises this as its own file and updates it" and "the app
+ * thinks the user wrote it and leaves it alone".
+ *
+ * That is not hypothetical. When the shell was denied without adding this, the
+ * new permission block would have reached new assistants only.
+ */
+export function buildPriorAssistantAgentsMd(): string {
+  return `# Assistant Mode Workspace
+
+This directory is the shared Assistant Mode workspace for OpenCode Manager. It
+holds assistant configuration only - it is not the projects directory.
+
+## Directory Contents
+
+- \`opencode.json\` configures this workspace and selects the default assistant agent.
+- \`.opencode/agents/assistant.md\` contains the default assistant agent instructions, behavior, durable preferences, and self-editing rules.
+- \`.opencode/skills/\` contains managed workspace skills for repos, schedules, notifications, and settings.
+
+Assistant-specific instructions belong in \`.opencode/agents/assistant.md\`.
+
+Projects do not belong here. Load the \`repo-management\` skill to add one; it
+clones into the user's projects directory and registers the result. A repository
+cloned into this directory is not shown as a project and cannot be deleted from
+the app.
+`
+}
+
+export function buildPriorAssistantAgentPrompt(): string {
+  return [
+    'You are the default Assistant Mode agent for OpenCode Manager.',
+    '',
+    'This workspace is the shared assistant workspace for OpenCode Manager. Help the user manage repos, schedules, notifications, settings, and assistant behavior safely.',
+    '',
+    '## This Directory Is Not Where Projects Go',
+    '',
+    'This directory holds assistant configuration and nothing else. The user\'s projects live in a separate projects directory, and they reach it through the app, not through the filesystem.',
+    '',
+    'When the user asks you to clone, add, or import a repository, load the `repo-management` skill and call `POST /repos`. Do not run `git clone` in a shell, and never clone into this directory.',
+    '',
+    'A repository cloned here is effectively lost: the app does not list it as a project, the file browser does not reach this directory, and the user has no way to delete it. That is the failure this rule exists to prevent - it has already happened.',
+    '',
+    '## Self-Editing Rules',
+    '',
+    'Durable assistant instructions, behavior, and preferences belong in `.opencode/agents/assistant.md`. Edit that file when the user expresses lasting preferences or when you need to refine your behavior.',
+    '',
+    'The workspace directory explanation belongs in `AGENTS.md`. Keep that file focused on describing the directory contents and pointing to managed files.',
+    '',
+    'Preserve user-customized workspace files unless the user explicitly asks you to change them. Ask before making significant, destructive, or out-of-workspace changes.',
+    '',
+    'After editing `.opencode/agents/assistant.md`, load `manager-settings` and call `POST /assistant/reload` to apply changes. Always ask the user before reloading.',
+    '',
+    '## Skill Usage',
+    '',
+    'Use the workspace skills when relevant:',
+    '- Load `repo-management` to add a project, or before `schedule-management` when you need a repo ID.',
+    '- Load `schedule-management` for schedule jobs and runs.',
+    '- Load `notifications` when the user should be notified about important events.',
+    '- Load `manager-settings` when reading or safely updating UI preferences.',
+  ].join('\n')
+}
+
+export function buildPriorAssistantDefaultAgentMd(): string {
+  return buildAssistantDefaultAgentMdFromPrompt(buildPriorAssistantAgentPrompt(), PRIOR_ASSISTANT_AGENT_PERMISSION)
+}
+
 export function matchesGeneratedAssistantAgentsMd(content: string): boolean {
   const currentHash = hashContent(buildAssistantAgentsMd())
   const previousHash = hashContent(buildPreviousAssistantAgentsMd())
   const legacyHash = hashContent(buildLegacyAssistantAgentsMd())
+  const priorHash = hashContent(buildPriorAssistantAgentsMd())
   const contentHash = hashContent(content)
-  return contentHash === currentHash || contentHash === previousHash || contentHash === legacyHash
+  return contentHash === currentHash || contentHash === priorHash || contentHash === previousHash || contentHash === legacyHash
 }
 
 export function matchesGeneratedAssistantDefaultAgentMd(content: string): boolean {
   const currentHash = hashContent(buildAssistantDefaultAgentMd())
   const previousHash = hashContent(buildPreviousAssistantDefaultAgentMd())
   const legacyHash = hashContent(buildLegacyAssistantDefaultAgentMd())
+  const priorHash = hashContent(buildPriorAssistantDefaultAgentMd())
   const contentHash = hashContent(content)
-  return contentHash === currentHash || contentHash === previousHash || contentHash === legacyHash
+  return contentHash === currentHash || contentHash === priorHash || contentHash === previousHash || contentHash === legacyHash
 }
 
 export function matchesGeneratedAssistantAgentPrompt(content: unknown): content is string {
@@ -112,8 +184,9 @@ export function matchesGeneratedAssistantAgentPrompt(content: unknown): content 
   const currentHash = hashContent(buildAssistantAgentPrompt())
   const previousHash = hashContent(buildPreviousAssistantAgentPrompt())
   const legacyHash = hashContent(buildLegacyAssistantAgentPrompt())
+  const priorHash = hashContent(buildPriorAssistantAgentPrompt())
   const contentHash = hashContent(content)
-  return contentHash === currentHash || contentHash === previousHash || contentHash === legacyHash
+  return contentHash === currentHash || contentHash === priorHash || contentHash === previousHash || contentHash === legacyHash
 }
 
 export function containsLegacyAssistantAgentsGuidance(content: string): boolean {
@@ -147,5 +220,5 @@ export function buildPreviousAssistantAgentPrompt(): string {
 }
 
 export function buildPreviousAssistantDefaultAgentMd(): string {
-  return buildAssistantDefaultAgentMdFromPrompt(buildPreviousAssistantAgentPrompt())
+  return buildAssistantDefaultAgentMdFromPrompt(buildPreviousAssistantAgentPrompt(), PRIOR_ASSISTANT_AGENT_PERMISSION)
 }

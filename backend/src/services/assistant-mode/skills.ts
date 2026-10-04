@@ -476,14 +476,14 @@ When the response contains \`restartRequired: true\`, tell the user to restart t
 export function buildReposSkill(reposPath: string): string {
   return `---
 name: repo-management
-description: List, add, and inspect repos available to OpenCode Manager with the ${MANAGER_TOOL_NAME} tool
+description: Inspect the projects available to OpenCode Manager with the ${MANAGER_TOOL_NAME} tool
 ---
 
 ## When to Load
 
-Load this skill when you need to discover repos, add a project, look up repo IDs, or need to reference repo information before managing schedules. Load it before the schedule-management skill if you don't know the repo ID.
+Load this skill when you need to discover repos, look up repo IDs, answer questions about where a project lives, or need to reference repo information before managing schedules. Load it before the schedule-management skill if you don't know the repo ID.
 
-**Load it whenever the user asks you to clone, add, or import a repository** - including a repository you already have on disk. Adding a project is \`POST /repos\`, and doing it any other way leaves the user with files they cannot see or delete.
+**Load it whenever the user asks you to clone, add, or import a repository** - so you can tell them where it goes and that you cannot do it yourself, rather than leaving them to guess.
 
 ## Tool
 
@@ -539,69 +539,32 @@ List all repos available to OpenCode Manager. The repos are returned in the orde
 }
 \`\`\`
 
-### POST /repos
+## Where projects live
 
-Add a project. This is **the only supported way to add a project** - do not run
-\`git clone\` in a shell, and never clone into this assistant workspace.
+- Projects live in \`${reposPath}\` and nowhere else. Anything you find elsewhere on
+  disk is not a project the user can see, open, or delete.
+- A repository that appears in that directory becomes a project by itself, on
+  the next time the project list loads. A user who cloned one by hand does not
+  need to do anything else.
 
-Projects live in the user's projects directory:
+## Adding a project
 
-\`\`\`
-${reposPath}
-\`\`\`
+**You cannot add one.** The manager API you can reach inspects projects but does
+not create them, and you have no shell to fall back on.
 
-The endpoint clones into that directory, registers the result, and returns the
-new repo. A \`git clone\` does none of that, so the repository sits on disk with
-no project behind it and the user cannot see, open, or delete it from the app.
+When the user asks you to clone, add, or import a repository, tell them to add it
+from the Projects screen. Do not suggest they run \`git clone\` themselves, and do
+not put anything in this directory - a repository here is invisible in the app
+and there is no UI path that deletes it.
 
-**Clone from a remote:**
-\`\`\`json
-{
-  "action": "request",
-  "params": {
-    "method": "POST",
-    "path": "/repos",
-    "body": { "repoUrl": "https://github.com/owner/name.git" }
-  }
-}
-\`\`\`
-
-**Register a directory that already exists:**
-\`\`\`json
-{
-  "action": "request",
-  "params": {
-    "method": "POST",
-    "path": "/repos",
-    "body": { "localPath": "${reposPath}/name" }
-  }
-}
-\`\`\`
-
-| Field | Meaning |
-|---|---|
-| \`repoUrl\` | Remote to clone. Mutually exclusive with \`localPath\`. |
-| \`localPath\` | Absolute path of an existing repository to register. |
-| \`branch\` | Branch to check out. |
-| \`directoryName\` | Directory name to clone into, instead of one derived from the URL. |
-| \`baseBranch\` | Base branch when \`useWorktree\` creates a new branch. |
-
-## Where projects belong
-
-- Projects live in \`${reposPath}\` and nowhere else.
-- This assistant workspace holds assistant configuration only. Anything you put
-  here is invisible in the app's file browser and cannot be cleaned up from the
-  UI, so a repository cloned here is effectively lost.
-- If you already cloned into the wrong place, move it into the projects
-  directory and then call \`POST /repos\` with \`localPath\` - the app picks up
-  repositories that appear in the projects directory on the next project list
-  load, but registering it explicitly is immediate and unambiguous.
+If they already cloned into the wrong place, moving the directory into
+\`${reposPath}\` is enough: it becomes a project on the next project list load.
 
 ## Notes
 
 - Use \`id\` as \`:repoId\` in other API endpoints (e.g., \`/repos/:repoId/schedules\`)
 - \`fullPath\` is the absolute local path - use it for file operations
-- \`GET /repos\` is read-only. Adding a project is \`POST /repos\`.
+- \`GET /repos\` is read-only. There is no route to create a project; that is done from the Projects screen.
 - \`currentBranch\` is not included in the response - it requires git operations to determine
 - Repo order is controlled by the \`repoOrder\` preference in settings
 `
