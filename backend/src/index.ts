@@ -176,6 +176,7 @@ const openCodeClient = createOpenCodeClient(
 )
 
 import { DEFAULT_AGENTS_MD } from './constants'
+import { formatPersistenceWarning, readMountInfo, reportPersistence } from './services/persistence-check'
 
 let ipcServer: IPCServer | undefined
 const gitAuthService = new GitAuthService()
@@ -252,6 +253,20 @@ try {
   await ensureDirectoryExists(getWorkspacePath())
   await ensureDirectoryExists(getReposPath())
   await ensureDirectoryExists(getConfigPath())
+  // Before anything writes user data, find out whether a deploy would take it
+  // with it. Repositories and chat history both live under WORKSPACE_PATH; only
+  // a mounted volume survives an image rebuild on Dokku.
+  {
+    const persistence = reportPersistence({
+      paths: [process.env.DATABASE_PATH ?? '', ENV.WORKSPACE.BASE_PATH],
+      mountInfo: readMountInfo(),
+      enabled: process.env.NODE_ENV === 'production',
+    })
+    if (!persistence.skipped && persistence.ephemeral.length > 0) {
+      logger.error(formatPersistenceWarning(persistence))
+    }
+  }
+
   await migrateUserWorkspaceLayout()
   logger.info('Workspace directories initialized')
 
