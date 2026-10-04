@@ -1,24 +1,42 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { Database } from 'bun:sqlite'
-import * as crypto from 'crypto'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 
-vi.mock('@opencode-manager/shared/config/env', () => ({
-  ENV: {
-    AUTH: {
-      SECRET: 'test-secret-for-encryption'
+/**
+ * One workspace root per test file, created inside the mock factory because
+ * `vi.mock` is hoisted above module-level declarations.
+ *
+ * It used to be the fixed '/tmp/test-workspace', which eight test files shared.
+ * The handler truncates `<workspace>/config/known_hosts` on initialize, and
+ * vitest runs files in parallel - so one file wiped another's fixture in the
+ * middle of its assertion. That surfaced as
+ * `expected '\n' to contain '[github.com]:2222'`: the '\n' is exactly what
+ * `loadFromDatabaseToKnownHosts` writes when the database is empty.
+ *
+ * This file also built a per-test unique directory that nothing ever used,
+ * and `afterEach` deleted that instead of the directory the handler actually
+ * wrote to - so the shared file was never cleaned up at all.
+ */
+vi.mock('@opencode-manager/shared/config/env', async () => {
+  const { randomUUID } = await import('node:crypto')
+  const root = `/tmp/ocm-ssh-knownhosts-${process.pid}-${randomUUID()}`
+  return {
+    ENV: {
+      AUTH: {
+        SECRET: 'test-secret-for-encryption'
+      },
+      OPENCODE: {
+        PORT: 5551
+      },
+      SERVER: {
+        PORT: 5003
+      }
     },
-    OPENCODE: {
-      PORT: 5551
-    },
-    SERVER: {
-      PORT: 5003
-    }
-  },
-  getWorkspacePath: vi.fn(() => '/tmp/test-workspace'),
-  getReposPath: vi.fn(() => '/tmp/test-repos'),
-}))
+    getWorkspacePath: () => root,
+    getReposPath: () => `${root}/repos`,
+  }
+})
 
 let testWorkspacePath: string = '/tmp/test-workspace'
 
@@ -34,6 +52,7 @@ vi.mock('bun:sqlite', () => ({
 }))
 
 import { SSHHostKeyHandler, createSSHHostKeyHandler } from '../../src/ipc/sshHostKeyHandler'
+import { getWorkspacePath } from '@opencode-manager/shared/config/env'
 
 describe('SSHHostKeyHandler', () => {
   let handler: SSHHostKeyHandler
@@ -41,24 +60,30 @@ describe('SSHHostKeyHandler', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    
-    const uniqueId = crypto.randomUUID()
-    testWorkspacePath = `/tmp/test-workspace-${uniqueId}`
-    
+
+    // The mocked root, not a fresh guess: it is the directory the handler
+    // actually writes to, and the only one `afterEach` can clean up.
+    testWorkspacePath = getWorkspacePath()
+
     mockPrepare.mockReturnValue({
       run: vi.fn(),
       get: vi.fn().mockReturnValue(null),
       all: vi.fn().mockReturnValue([]),
     })
-    
-    const configDir = `${testWorkspacePath}/config`
+
+    const configDir = path.join(testWorkspacePath, 'config')
     await fs.mkdir(configDir, { recursive: true })
     const knownHostsFile = path.join(configDir, 'known_hosts')
     await fs.writeFile(knownHostsFile, '', { mode: 0o600 })
-    
+
     handler = createSSHHostKeyHandler(mockDatabase, 5000)
     await handler.initialize()
     knownHostsPath = handler.getKnownHostsPath()
+
+    // Guard the fixture itself: if the handler ever stops using the mocked
+    // root, the tests would go back to writing somewhere `afterEach` cannot
+    // reach, which is how this leaked in the first place.
+    expect(knownHostsPath.startsWith(testWorkspacePath)).toBe(true)
   })
 
   afterEach(async () => {
