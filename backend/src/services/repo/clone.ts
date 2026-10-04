@@ -13,7 +13,7 @@ import path from 'path'
 import { parseSSHHost } from '../../utils/ssh-key-manager'
 import { getErrorMessage } from '../../utils/error-utils'
 import { ConflictError, NotFoundError, ServiceUnavailableError, ValidationError } from '../../utils/errors'
-import { normalizeInputPath } from './paths'
+import { normalizeInputPath, resolveRepoPathInsideBase } from './paths'
 import { createWorktreeSafely } from './worktree'
 import { registerExistingLocalRepo } from './discovery'
 
@@ -62,7 +62,11 @@ export async function initLocalRepo(
   }
 
   const repoLocalPath = normalizedInputPath
-  const targetPath = path.join(reposBase(), repoLocalPath)
+  // This value becomes the `local_path` column, which the delete path hands to
+  // `rm -rf`, and the rollback below removes it too. Nothing else stands
+  // between it and the filesystem, so the escape check happens here - at the
+  // only place it can still be cheap.
+  const targetPath = resolveRepoPathInsideBase(repoLocalPath, reposBase())
   const existing = getRepoByLocalPath(database, repoLocalPath)
   if (existing) {
     logger.info(`Local repo already exists in database: ${repoLocalPath}`)
@@ -126,8 +130,8 @@ export async function initLocalRepo(
     
     if (directoryCreated) {
       try {
-        await executeCommand(['rm', '-rf', repoLocalPath], reposBase())
-        logger.info(`Rolled back directory: ${repoLocalPath}`)
+        await executeCommand(['rm', '-rf', targetPath])
+        logger.info(`Rolled back directory: ${targetPath}`)
       } catch (fsError: unknown) {
         logger.error(`Failed to rollback directory ${repoLocalPath}:`, getErrorMessage(fsError))
       }
