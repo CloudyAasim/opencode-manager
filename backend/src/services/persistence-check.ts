@@ -29,7 +29,10 @@ export function parseMountInfo(content: string): Set<string> {
     // which are never where user data should live.
     const separator = fields.indexOf('-')
     if (separator < 0 || separator > fields.length - 4) continue
-    mountPoints.add(fields[4])
+    // noUncheckedIndexedAccess is on in this package, so the field is
+    // string | undefined even after the length check above.
+    const mountPoint = fields[4]
+    if (mountPoint) mountPoints.add(mountPoint)
   }
 
   return mountPoints
