@@ -101,5 +101,49 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install the pinned OpenCode binary
+        run: |
+          set -euo pipefail
+          # The plugin end-to-end test only runs against a real OpenCode, and it
+          # skips silently when there is none - which is how a plugin that has
+          # stopped loading ships behind a green build. The version is read out
+          # of the Dockerfile so it stays pinned in exactly one place.
+          VERSION="$(grep -oP '(?<=^ARG OPENCODE_VERSION=).*' Dockerfile)"
+          BASE="$(grep -oP '(?<=^ARG OPENCODE_DOWNLOAD_BASE=).*' Dockerfile)"
+          if [ -z "$VERSION" ] || [ -z "$BASE" ]; then
+            echo "Could not read OPENCODE_VERSION / OPENCODE_DOWNLOAD_BASE from the Dockerfile" >&2
+            exit 1
+          fi
+          case "$(uname -m)" in
+            x86_64) ARCH=x64 ;;
+            aarch64 | arm64) ARCH=arm64 ;;
+            *) echo "Unsupported runner architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          URL="$BASE/download/v$VERSION/opencode-linux-$ARCH.tar.gz"
+          echo "Installing opencode $VERSION from $URL"
+          BIN_DIR="$HOME/opencode-bin"
+          mkdir -p "$BIN_DIR"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
+            --connect-timeout 20 --max-time 600 "$URL" -o /tmp/opencode.tar.gz
+          tar -xzf /tmp/opencode.tar.gz -C /tmp
+          mv /tmp/opencode "$BIN_DIR/opencode"
+          chmod 755 "$BIN_DIR/opencode"
+          rm -f /tmp/opencode.tar.gz
+          # The test accepts a candidate only when `--version` exits 0 and
+          # prints something, so prove both here rather than letting the test
+          # quietly skip.
+          "$BIN_DIR/opencode" --version
+          "$BIN_DIR/opencode" --version | grep -q "$VERSION" || {
+            echo "Installed binary does not report version $VERSION" >&2
+            exit 1
+          }
+          echo "OPENCODE_BIN=$BIN_DIR/opencode" >> "$GITHUB_ENV"
+          echo "OCM_REQUIRE_OPENCODE_BIN=1" >> "$GITHUB_ENV"
+
       - name: Run tests
         run: pnpm test
+        env:
+          # The end-to-end test spawns the real binary. Keep it off the network
+          # and out of the update path so neither can turn into a red build.
+          OPENCODE_DISABLE_AUTOUPDATE: "1"
+          DO_NOT_TRACK: "1"

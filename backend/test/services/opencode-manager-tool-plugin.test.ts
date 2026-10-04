@@ -429,6 +429,27 @@ function resolveOpencodeBinary(): string | null {
 
 const SHIPPED_OPENCODE_BIN = resolveOpencodeBinary()
 
+/**
+ * Everywhere but a job that installed the binary on purpose, the block below
+ * skips - a developer machine has no OpenCode and neither does a plain CI
+ * runner. That is right for "the test cannot run here".
+ *
+ * It is wrong for a job that *did* install it: there the skip means the guard
+ * was set up and then quietly did nothing, and the one thing it protects -
+ * OpenCode actually loading the plugin and handing it a session - would go
+ * unverified behind a green build. So a job that wants the binary says so, and
+ * a skip then fails.
+ */
+describe('shipped OpenCode binary availability', () => {
+  it('is present when the job required it', () => {
+    if (process.env.OCM_REQUIRE_OPENCODE_BIN !== '1') return
+    expect(
+      SHIPPED_OPENCODE_BIN,
+      'OCM_REQUIRE_OPENCODE_BIN=1 but no usable opencode binary was found, so the plugin end-to-end test silently skipped',
+    ).not.toBeNull()
+  })
+})
+
 type ChatRequest = { messages?: unknown[]; tools?: { function?: { name?: string; parameters?: unknown } }[] }
 
 describe.skipIf(SHIPPED_OPENCODE_BIN === null)('ocm-manager plugin against the shipped OpenCode binary', () => {

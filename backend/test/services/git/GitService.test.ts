@@ -632,6 +632,15 @@ describe('GitService', () => {
     })
 
     it('returns early when no files to stage', async () => {
+      // stageFiles looks the repository up *before* it looks at the path list,
+      // so this case needs a repository of its own. It used to rely on a
+      // sibling test in this file having left one behind, which held only as
+      // long as --sequence.shuffle=true happened to run them in that order:
+      // one run in six failed with "Repository not found" on a clean checkout.
+      // A default in the outer beforeEach is not an option either - three
+      // cases further down this file assert the missing-repository path.
+      getRepoByIdMock.mockReturnValue({ id: 1, fullPath: '/path/to/repo' } as any)
+
       const result = await service.stageFiles(1, [], database)
 
       expect(executeCommandMock).not.toHaveBeenCalled()
