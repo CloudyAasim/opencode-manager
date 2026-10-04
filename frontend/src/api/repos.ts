@@ -3,7 +3,7 @@ import { FetchError, fetchWrapper, fetchWrapperVoid, fetchWrapperBlob } from './
 import { API_BASE_URL } from '@/config'
 import { REQUEST_TIMEOUTS } from './timeouts'
 import { saveFile } from '@/lib/download'
-import type { DiscoverReposResponse, AssistantModeStatus, AssistantModeInitRequest } from '@opencode-manager/shared/types'
+import type { DiscoverReposResponse, AssistantModeStatus, AssistantModeInitRequest, AssistantWorkspaceContents } from '@opencode-manager/shared/types'
 
 export interface CreateRepoOptions {
   repoUrl?: string
@@ -222,12 +222,17 @@ export async function getAssistantModeStatus(id: number): Promise<AssistantModeS
 }
 
 export async function initializeAssistantMode(
-  id: number,
-  options?: AssistantModeInitRequest
+  id: number,  options?: AssistantModeInitRequest
 ): Promise<AssistantModeStatus> {
   return fetchWrapper(`${API_BASE_URL}/api/repos/${id}/assistant-mode`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options ?? {}),
+  })
+}
+
+export async function getAssistantWorkspaceContents(id: number): Promise<AssistantWorkspaceContents> {
+  return fetchWrapper(`${API_BASE_URL}/api/repos/${id}/assistant-mode/contents`, {
+    method: 'GET',
   })
 }

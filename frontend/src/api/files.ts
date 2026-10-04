@@ -71,3 +71,14 @@ export async function applyFilePatches(path: string, patches: PatchOperation[]):
     body: JSON.stringify({ patches }),
   })
 }
+
+/**
+ * Removes a file or directory. The path is absolute and must be inside one of
+ * the caller's allowed roots - the file browser's root and the user's settings
+ * directory are both in them, so this also covers the assistant workspace, which
+ * is a sibling of the projects directory and therefore unreachable through the
+ * browser's own navigation.
+ */
+export async function deleteFileOrFolder(path: string): Promise<{ success: boolean }> {
+  return fetchWrapper(getFileApiUrl(path), { method: 'DELETE' })
+}

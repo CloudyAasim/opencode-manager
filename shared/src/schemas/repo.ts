@@ -111,6 +111,23 @@ export const AssistantModeStatusSchema = z.object({
   }).optional(),
 })
 
+export const AssistantWorkspaceEntrySchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  isDirectory: z.boolean(),
+  // True for entries the app writes and can rewrite on the next initialisation.
+  isManaged: z.boolean(),
+  sizeBytes: z.number().int().nonnegative(),
+})
+
+export const AssistantWorkspaceContentsSchema = z.object({
+  directory: z.string(),
+  entries: z.array(AssistantWorkspaceEntrySchema),
+  totalSizeBytes: z.number().int().nonnegative(),
+  // True when the measurement hit its budget, so totalSizeBytes is a floor.
+  truncated: z.boolean(),
+})
+
 export const AssistantModeInitRequestSchema = z.object({
   overwriteAgentsMd: z.boolean().optional(),
   overwriteOpenCodeConfig: z.boolean().optional(),

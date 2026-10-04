@@ -21,7 +21,7 @@ import { probeRepoDirectory } from '../services/repo/directory-state'
 import { purgeSessionsForDirectory } from '../services/repo/session-purge'
 import type { GitAuthService } from '../services/git-auth'
 import { ScheduleService } from '../services/schedules'
-import { ensureAssistantMode, getAssistantModeStatus, buildAssistantRepo } from '../services/assistant-mode'
+import { ensureAssistantMode, getAssistantModeStatus, buildAssistantRepo, listAssistantWorkspaceContents } from '../services/assistant-mode'
 import path from 'path'
 
 function resolveRepo(database: Database, id: number, principal?: Principal | null): Repo | null {
@@ -582,6 +582,24 @@ app.get('/', async (c) => {
       return c.json(status)
     } catch (error: unknown) {
       logger.error('Failed to get assistant mode status:', error)
+      return c.json({ error: getErrorMessage(error) }, 500)
+    }
+  })
+
+  app.get('/:id/assistant-mode/contents', async (c) => {
+    try {
+      const id = parseInt(c.req.param('id'))
+      const repo: Repo | null = resolveRepo(database, id, currentPrincipal(c))
+
+      if (!repo) {
+        return repoNotFoundResponse(c)
+      }
+
+      const username = currentPrincipal(c)?.username
+      const contents = await listAssistantWorkspaceContents(username)
+      return c.json(contents)
+    } catch (error: unknown) {
+      logger.error('Failed to list assistant workspace contents:', error)
       return c.json({ error: getErrorMessage(error) }, 500)
     }
   })

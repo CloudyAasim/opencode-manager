@@ -1,4 +1,6 @@
 import path from 'path'
+import fs from 'fs/promises'
+import type { Dirent } from 'fs'
 import { ValidationError } from '../../utils/errors'
 import { type Repo } from '@opencode-manager/shared/types'
 import { type AssistantModeStatus, type AssistantModeInitRequest, type OpenCodeConfigInput } from '@opencode-manager/shared/types'
@@ -81,6 +83,155 @@ function projectsDirectoryFor(username?: string | null): string {
   return username ? getUserReposPath(username) : getReposPath()
 }
 
+/**
+ * Entries the app writes and can rewrite. Deleting one of these does not
+ * permanently break the assistant - the next initialisation writes it again -
+ * but it may carry the user's own edits, so the UI asks more firmly before
+ * removing one than it does for a directory that is simply in the way.
+ */
+const MANAGED_WORKSPACE_ENTRIES = new Set<string>([
+  ASSISTANT_AGENTS_MD_FILENAME,
+  ASSISTANT_OPENCODE_CONFIG_FILENAME,
+  ASSISTANT_OPENCODE_DIR_NAME,
+])
+
+/**
+ * Measuring a directory is a full recursive walk, and the thing this is
+ * measuring is precisely "did something get cloned in here", which can be a
+ * repository with a populated `node_modules`. An unbounded walk would hang the
+ * settings panel on exactly the case the user opened it to look at, so it stops
+ * at a file count and a wall-clock budget and says it stopped.
+ */
+const SIZE_WALK_FILE_BUDGET = 20_000
+const SIZE_WALK_TIME_BUDGET_MS = 2_000
+
+interface SizeWalkState {
+  files: number
+  deadline: number
+  truncated: boolean
+}
+
+async function measureEntrySize(target: string, state: SizeWalkState): Promise<number> {
+  let bytes = 0
+  const pending: string[] = [target]
+
+  while (pending.length > 0) {
+    if (state.files >= SIZE_WALK_FILE_BUDGET || Date.now() >= state.deadline) {
+      state.truncated = true
+      break
+    }
+
+    const current = pending.pop() as string
+    let dirEntries: Dirent[]
+    try {
+      dirEntries = await fs.readdir(current, { withFileTypes: true })
+    } catch {
+      // Unreadable: contributes nothing rather than failing the whole listing.
+      continue
+    }
+
+    for (const entry of dirEntries) {
+      if (state.files >= SIZE_WALK_FILE_BUDGET || Date.now() >= state.deadline) {
+        state.truncated = true
+        break
+      }
+      state.files += 1
+
+      const entryPath = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        pending.push(entryPath)
+        continue
+      }
+      // `withFileTypes` reports a symlink as a symlink and not as a directory,
+      // so the `isFile` check below already keeps the walk out of whatever a
+      // link points at. Following one would count a tree that lives outside
+      // this directory, and could walk back out of the tree it started in.
+      if (!entry.isFile()) continue
+
+      try {
+        bytes += (await fs.lstat(entryPath)).size
+      } catch {
+        // Raced with a delete. Nothing to count.
+      }
+    }
+  }
+
+  return bytes
+}
+
+export interface AssistantWorkspaceEntry {
+  name: string
+  path: string
+  isDirectory: boolean
+  /** True for entries the app writes and can rewrite on the next initialisation. */
+  isManaged: boolean
+  sizeBytes: number
+}
+
+export interface AssistantWorkspaceContents {
+  directory: string
+  entries: AssistantWorkspaceEntry[]
+  totalSizeBytes: number
+  /** True when the walk hit its budget, so `totalSizeBytes` is a floor. */
+  truncated: boolean
+}
+
+/**
+ * Lists what is actually in the assistant's directory, with sizes.
+ *
+ * The assistant's directory is a sibling of the projects directory rather than
+ * a child of the file browser's root, so the app had no way to show the user
+ * what was in it or let them remove it. `DELETE /api/files` already worked
+ * against these paths - the settings directory is in the caller's allowed roots
+ * - so what was missing was entirely a matter of showing it.
+ */
+export async function listAssistantWorkspaceContents(username?: string | null): Promise<AssistantWorkspaceContents> {
+  const assistantDir = getAssistantModeDirectory(username)
+
+  let dirEntries: Dirent[]
+  try {
+    dirEntries = await fs.readdir(assistantDir, { withFileTypes: true })
+  } catch {
+    // The assistant has not been initialised yet. A normal state, not a fault.
+    return { directory: assistantDir, entries: [], totalSizeBytes: 0, truncated: false }
+  }
+
+  const state: SizeWalkState = { files: 0, deadline: Date.now() + SIZE_WALK_TIME_BUDGET_MS, truncated: false }
+  const entries: AssistantWorkspaceEntry[] = []
+  let totalSizeBytes = 0
+
+  for (const dirEntry of dirEntries.sort((left, right) => left.name.localeCompare(right.name))) {
+    const entryPath = path.join(assistantDir, dirEntry.name)
+    const isDirectory = dirEntry.isDirectory() && !dirEntry.isSymbolicLink()
+
+    let sizeBytes = 0
+    if (isDirectory) {
+      sizeBytes = await measureEntrySize(entryPath, state)
+    } else {
+      // A symlink is reported as zero rather than measured: the size would
+      // describe the target, which lives outside this directory and is counted
+      // wherever it actually is.
+      try {
+        const stats = await fs.lstat(entryPath)
+        sizeBytes = stats.isSymbolicLink() ? 0 : stats.size
+      } catch {
+        sizeBytes = 0
+      }
+    }
+
+    totalSizeBytes += sizeBytes
+    entries.push({
+      name: dirEntry.name,
+      path: entryPath,
+      isDirectory,
+      isManaged: MANAGED_WORKSPACE_ENTRIES.has(dirEntry.name),
+      sizeBytes,
+    })
+  }
+
+  return { directory: assistantDir, entries, totalSizeBytes, truncated: state.truncated }
+}
+
 export function buildAssistantRepo(username?: string | null): Repo {
   return {
     id: ASSISTANT_REPO_ID,
@@ -94,8 +245,7 @@ export function buildAssistantRepo(username?: string | null): Repo {
   }
 }
 
-export function getSchedulesSkillPath(assistantDir: string): string {
-  return path.join(assistantDir, ASSISTANT_OPENCODE_DIR, ASSISTANT_SKILLS_DIR, ASSISTANT_SCHEDULES_SKILL_DIR, ASSISTANT_SKILL_FILENAME)
+export function getSchedulesSkillPath(assistantDir: string): string {  return path.join(assistantDir, ASSISTANT_OPENCODE_DIR, ASSISTANT_SKILLS_DIR, ASSISTANT_SCHEDULES_SKILL_DIR, ASSISTANT_SKILL_FILENAME)
 }
 
 export function getNotificationsSkillPath(assistantDir: string): string {

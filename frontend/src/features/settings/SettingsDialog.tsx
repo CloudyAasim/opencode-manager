@@ -12,13 +12,14 @@ import { ProviderSettings } from '@/features/settings/ProviderSettings'
 import { AccountSettings } from '@/features/settings/AccountSettings'
 import { UsersSettings } from '@/features/settings/UsersSettings'
 import { AuditSettings } from '@/features/settings/AuditSettings'
+import { AssistantWorkspaceSettings } from '@/features/settings/AssistantWorkspaceSettings'
 import { VoiceSettings } from '@/features/settings/VoiceSettings'
 import { NotificationSettings } from '@/features/settings/NotificationSettings'
 import { VersionSelectDialog } from '@/features/settings/VersionSelectDialog'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { RowActionsMenuContext } from '@/components/ui/settings-list'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Users, History, Volume2, Bell, X, ScrollText, type LucideIcon } from 'lucide-react'
+import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Users, History, Volume2, Bell, X, ScrollText, Bot, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSettingsDialog, isSettingsContentTab, type SettingsContentTab } from '@/hooks/useSettingsDialog'
 import { useOptionalAuth } from '@/hooks/useAuth'
@@ -139,6 +140,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
     { id: 'git', icon: GitBranch, label: t('settings.menu.git.label'), description: t('settings.menu.git.description'), contentClassName: 'max-w-7xl', render: () => <GitSettings /> },
     { id: 'shortcuts', icon: Keyboard, label: t('settings.menu.shortcuts.label'), description: t('settings.menu.shortcuts.description'), contentClassName: 'max-w-7xl', render: () => <KeyboardShortcuts /> },
     { id: 'opencode', icon: Code, label: t('settings.menu.opencode.label'), description: t('settings.menu.opencode.description'), render: () => <OpenCodeSettings onOpenVersionDialog={() => setIsVersionDialogOpen(true)} /> },
+    { id: 'assistant', icon: Bot, label: t('settings.menu.assistant.label'), description: t('settings.menu.assistant.description'), contentClassName: 'max-w-4xl', render: () => <AssistantWorkspaceSettings /> },
     { id: 'logs', icon: ScrollText, label: t('settings.menu.logs.label'), description: t('settings.menu.logs.description'), contentClassName: 'h-full min-h-0', render: (surface) => ((surface === 'desktop') === isDesktop ? <LogsViewer /> : null) },
     { id: 'providers', icon: Key, label: t('settings.menu.providers.label'), description: t('settings.menu.providers.description'), contentClassName: 'max-w-7xl', render: () => <ProviderSettings /> },
     ...(user?.role === 'admin'

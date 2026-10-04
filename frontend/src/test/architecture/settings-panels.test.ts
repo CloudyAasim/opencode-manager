@@ -24,6 +24,7 @@ const PANELS = [
   'GitSettings',
   'KeyboardShortcuts',
   'OpenCodeSettings',
+  'AssistantWorkspaceSettings',
   'LogsViewer',
   'ProviderSettings',
   'UsersSettings',
