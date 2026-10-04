@@ -90,9 +90,18 @@ function assertAllowedRoute(method, path) {
   return resolved
 }
 
-async function requestInternalApi(method, path, body) {
+async function requestInternalApi(method, path, body, sessionId) {
   var resolved = resolveRoute(path)
   var headers = { Authorization: 'Bearer ' + resolved.token }
+  // The manager binds a session to a tenant by this header. It is passed down
+  // the call chain rather than kept in a module variable on purpose: one
+  // OpenCode process serves every session, so a shared variable would let two
+  // concurrent tool calls overwrite each other and each request would go out
+  // wearing the other session's identity. That failure is silent - the
+  // request still succeeds - which is the worst kind there is.
+  if (sessionId) {
+    headers['X-OCM-Session'] = sessionId
+  }
   var init = { method: method, headers: headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }
   if (body !== undefined) {
     headers['content-type'] = 'application/json'
@@ -111,8 +120,8 @@ async function requestInternalApi(method, path, body) {
   return text
 }
 
-async function postInternalApi(routePath, body) {
-  var text = await requestInternalApi('POST', routePath, body)
+async function postInternalApi(routePath, body, sessionId) {
+  var text = await requestInternalApi('POST', routePath, body, sessionId)
   try {
     return JSON.parse(text)
   } catch (error) {
@@ -129,8 +138,8 @@ var ACTIONS = {
       tag: z.string().max(${ASSISTANT_NOTIFICATION_LIMITS.TAG_MAX}).optional().describe('A deduplication key for replacing an earlier notification.'),
       priority: z.enum(['normal', 'high']).optional().describe('Use high for something that should interrupt the user.'),
     }).describe('Send a push notification to every device the user has registered.'),
-    run: async function (params) {
-      var result = await postInternalApi('/notifications/send', params)
+    run: async function (params, sessionId) {
+      var result = await postInternalApi('/notifications/send', params, sessionId)
       if (result.noSubscriptions === true) {
         return 'No devices are registered for push notifications, so nothing was delivered.'
       }
@@ -143,9 +152,9 @@ var ACTIONS = {
       path: z.string().min(1).max(500).describe('The internal API route path, such as /settings or /repos/0/schedules. Query strings are allowed.'),
       body: z.record(z.string(), z.unknown()).optional().describe('The JSON request body, for POST and PATCH routes.'),
     }).describe('Call an allow-listed OpenCode Manager internal API route.'),
-    run: async function (params) {
+    run: async function (params, sessionId) {
       assertAllowedRoute(params.method, params.path)
-      var text = await requestInternalApi(params.method, params.path, params.body)
+      var text = await requestInternalApi(params.method, params.path, params.body, sessionId)
       return text || 'The request succeeded with an empty response body.'
     },
   },
@@ -169,12 +178,22 @@ export default async function () {
           action: z.enum(ACTION_NAMES).describe('The OpenCode Manager action to perform.'),
           params: z.union(ACTION_NAMES.map(function (name) { return ACTIONS[name].params })).describe('The parameters for the chosen action.'),
         },
-        execute: async function (args) {
+        execute: async function (args, context) {
           if (!Object.prototype.hasOwnProperty.call(ACTIONS, args.action)) {
             throw new Error('Unknown OpenCode Manager action: ' + String(args.action) + '. Supported actions: ' + ACTION_NAMES.join(', ') + '.')
           }
+          // OpenCode hands the running session to every tool call as the second
+          // argument. A missing one is not a reason to refuse the action: the
+          // manager already sees the request arrive unlabelled and can say so,
+          // whereas refusing here would take the whole capability away from
+          // every session at once. Enforcement belongs on the manager side,
+          // where it is typed, tested and reversible.
+          // Trimmed here so a blank id never travels as a header - the manager
+          // would go looking for a session called "   " and report it as an
+          // unknown session, which points the wrong way.
+          var sessionId = context && context.sessionID ? String(context.sessionID).trim() : ''
           var action = ACTIONS[args.action]
-          return await action.run(action.params.parse(args.params))
+          return await action.run(action.params.parse(args.params), sessionId)
         },
       },
     },

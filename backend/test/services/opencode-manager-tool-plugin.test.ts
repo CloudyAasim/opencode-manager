@@ -13,10 +13,12 @@ import { installManagedPlugins, getOpenCodePluginDir } from '../../src/services/
 
 type ZodLike = { safeParse: (value: unknown) => { success: boolean } }
 
+type ToolContext = { sessionID?: string; directory?: string } | undefined
+
 type ToolDefinition = {
   description: string
   args: Record<string, ZodLike>
-  execute: (args: unknown) => Promise<string>
+  execute: (args: unknown, context?: ToolContext) => Promise<string>
 }
 
 type PluginHooks = { tool: Record<string, ToolDefinition | undefined> }
@@ -263,6 +265,148 @@ describe('ocm-manager plugin', () => {
   })
 })
 
+/**
+ * The manager tells tenants apart by the session id OpenCode hands to every
+ * tool call, carried on one header. The plugin's whole job is to pass that id
+ * along faithfully.
+ */
+describe('ocm-manager plugin session labelling', () => {
+  let configHome: string
+
+  beforeEach(async () => {
+    configHome = await fs.mkdtemp(path.join(os.tmpdir(), 'ocm-manager-'))
+    await installManagedPlugins(configHome)
+    process.env.OCM_INTERNAL_API_URL = 'http://localhost:5003/api/internal'
+    process.env.OCM_INTERNAL_TOKEN = 'secret-token'
+  })
+
+  afterEach(async () => {
+    vi.unstubAllGlobals()
+    delete process.env.OCM_INTERNAL_API_URL
+    delete process.env.OCM_INTERNAL_TOKEN
+    await fs.rm(configHome, { recursive: true, force: true })
+  })
+
+  function headersOfCall(fetchMock: ReturnType<typeof jsonResponse>, index = 0): Record<string, string> {
+    const [, init] = fetchMock.mock.calls[index] ?? []
+    return (init?.headers ?? {}) as Record<string, string>
+  }
+
+  it('labels the request with the session the tool was called in', async () => {
+    const fetchMock = jsonResponse({ userId: 'default' })
+    vi.stubGlobal('fetch', fetchMock)
+    const tool = await loadTool(configHome)
+
+    await tool.execute(
+      { action: 'request', params: { method: 'GET', path: '/settings' } },
+      { sessionID: 'ses_alice', directory: '/workspace/users/alice/workspace' },
+    )
+
+    expect(headersOfCall(fetchMock)['X-OCM-Session']).toBe('ses_alice')
+  })
+
+  it('labels a notification the same way', async () => {
+    // Only labelling the request action would leave push notifications
+    // unattributed, and those are the calls an assistant makes most often.
+    const fetchMock = jsonResponse({ delivered: 1, expired: 0, failed: 0, noSubscriptions: false })
+    vi.stubGlobal('fetch', fetchMock)
+    const tool = await loadTool(configHome)
+
+    await tool.execute(
+      { action: 'send_notification', params: { title: 't', body: 'b' } },
+      { sessionID: 'ses_alice' },
+    )
+
+    expect(headersOfCall(fetchMock)['X-OCM-Session']).toBe('ses_alice')
+  })
+
+  it('still serves the action when no session was provided', async () => {
+    // The point of shadow mode: an unlabelled request must be visible, not
+    // broken. Refusing here would take the tool away from every session at
+    // once, to fix something the manager can already see.
+    const fetchMock = jsonResponse({ userId: 'default' })
+    vi.stubGlobal('fetch', fetchMock)
+    const tool = await loadTool(configHome)
+
+    await expect(tool.execute({ action: 'request', params: { method: 'GET', path: '/settings' } }))
+      .resolves.toContain('default')
+    expect(headersOfCall(fetchMock)['X-OCM-Session']).toBeUndefined()
+
+    await expect(tool.execute({ action: 'request', params: { method: 'GET', path: '/settings' } }, {}))
+      .resolves.toContain('default')
+  })
+
+  it('does not send a session that is absent, empty or undefined', async () => {
+    // A header carrying the text "undefined" is worse than no header: the
+    // manager would look up a session called "undefined" and find nothing,
+    // which reads as "unknown session" instead of "no session".
+    const fetchMock = jsonResponse({ userId: 'default' })
+    vi.stubGlobal('fetch', fetchMock)
+    const tool = await loadTool(configHome)
+
+    for (const sessionID of [undefined, '', '   ']) {
+      await tool.execute(
+        { action: 'request', params: { method: 'GET', path: '/settings' } },
+        { sessionID },
+      )
+    }
+
+    const sent = fetchMock.mock.calls.map((_, i) => headersOfCall(fetchMock, i)['X-OCM-Session'])
+    expect(sent).toEqual([undefined, undefined, undefined])
+  })
+
+  it('keeps two concurrent calls from wearing each other session', async () => {
+    // One OpenCode process serves every tenant. A module-level variable would
+    // be overwritten by whichever call set it last, and the other request
+    // would go out silently claiming the wrong tenant - the request still
+    // succeeds, so nothing would ever show it.
+    //
+    // The two calls are held at the fetch until both have arrived, so they
+    // really are in flight together rather than merely started together. Note
+    // that this only bites if something awaits *before* the header is built:
+    // today nothing does, so a shared variable would still pass. That is the
+    // reason the session id is a parameter and not a variable, and this test
+    // is the thing that notices if someone adds an early await.
+    const arrived: (() => void)[] = []
+    const bothArrived = new Promise<void>((resolve) => {
+      arrived.push(resolve)
+      arrived.push(resolve)
+    })
+    let calls = 0
+    const fetchMock = vi.fn(async () => {
+      calls += 1
+      if (calls >= 2) arrived.forEach((release) => release())
+      await bothArrived
+      return { ok: true, status: 200, text: async () => '{"userId":"default"}' }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const tool = await loadTool(configHome)
+
+    await Promise.all([
+      tool.execute({ action: 'request', params: { method: 'GET', path: '/settings' } }, { sessionID: 'ses_alice' }),
+      tool.execute({ action: 'request', params: { method: 'GET', path: '/settings' } }, { sessionID: 'ses_bob' }),
+    ])
+
+    const sent = fetchMock.mock.calls.map((_, i) => headersOfCall(fetchMock, i)['X-OCM-Session'])
+    expect(sent).toHaveLength(2)
+    expect(sent.filter((id) => id === 'ses_alice')).toHaveLength(1)
+    expect(sent.filter((id) => id === 'ses_bob')).toHaveLength(1)
+  })
+
+  it('coerces a non-string session id rather than sending an object', async () => {
+    const fetchMock = jsonResponse({ userId: 'default' })
+    vi.stubGlobal('fetch', fetchMock)
+    const tool = await loadTool(configHome)
+
+    await tool.execute(
+      { action: 'request', params: { method: 'GET', path: '/settings' } },
+      { sessionID: 12345 as unknown as string },
+    )
+
+    expect(headersOfCall(fetchMock)['X-OCM-Session']).toBe('12345')
+  })
+})
+
 function resolveOpencodeBinary(): string | null {
   const candidates = [
     process.env.OPENCODE_BIN,
@@ -298,7 +442,11 @@ describe.skipIf(SHIPPED_OPENCODE_BIN === null)('ocm-manager plugin against the s
       })
       req.on('end', () => {
         if (req.method === 'POST' && req.url?.endsWith('/notifications/send')) {
-          requests.push(JSON.stringify({ auth: req.headers.authorization, body }))
+          requests.push(JSON.stringify({
+            auth: req.headers.authorization,
+            session: req.headers['x-ocm-session'] ?? null,
+            body,
+          }))
         }
         res.writeHead(200, { 'content-type': 'application/json' })
         res.end(JSON.stringify({ delivered: 1, expired: 0, failed: 0, noSubscriptions: false }))
@@ -493,8 +641,15 @@ describe.skipIf(SHIPPED_OPENCODE_BIN === null)('ocm-manager plugin against the s
       })
 
       expect(apiRequests).toHaveLength(1)
-      const request = JSON.parse(apiRequests[0] as string) as { auth: string; body: string }
+      const request = JSON.parse(apiRequests[0] as string) as { auth: string; session: string | null; body: string }
       expect(request.auth).toBe('Bearer test-token')
+      // The whole identity scheme rests on OpenCode passing a session id to
+      // `execute`. The unit tests can only prove the plugin forwards one it is
+      // given; this is the only place that proves OpenCode gives it one, and
+      // it runs against the binary we actually ship. If this ever goes null,
+      // stop and find out why - every request would be unattributable.
+      expect(request.session, 'OpenCode did not pass a session id to the tool').toBeTruthy()
+      expect(request.session).not.toBe('undefined')
       expect(JSON.parse(request.body)).toEqual({ title: 'Storm watch', body: 'Formation odds crossed 40%', priority: 'high' })
       expect(toolResults.some((output) => output.includes('Notification sent: 1 delivered, 0 failed.'))).toBe(true)
     } finally {
