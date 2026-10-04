@@ -54,3 +54,49 @@ describe('RepoRowActions 的重置权限入口', () => {
     expect(screen.getByRole('heading', { name: 'Reset Permissions' })).toBeInTheDocument()
   })
 })
+
+describe('RepoRowActions 在目录缺失时', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const renderMissing = (isMobile: boolean) =>
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <RepoRowActions
+          repo={{ ...REPO, directoryExists: false }}
+          onDelete={vi.fn()}
+          isDeleting={false}
+          isMobile={isMobile}
+        />
+      </QueryClientProvider>,
+    )
+
+  it('不再提供作用于那个目录的操作', () => {
+    // pull / worktree / rename / source control all act on the directory, and
+    // all of them fail at the far end - after the user committed to the action.
+    // The control stays visible and disabled: an action that silently vanished
+    // is harder to reason about than one that is visibly unavailable.
+    renderMissing(false)
+
+    expect(screen.getByRole('button', { name: 'Reset Permissions' })).toBeDisabled()
+  })
+
+  it('窄屏的溢出菜单里同样禁用', () => {
+    renderMissing(true)
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Repository actions' }), { button: 0 })
+    const item = within(screen.getByRole('menu')).getByText('Reset Permissions').closest('[role="menuitem"]')
+    expect(item).toHaveAttribute('data-disabled')
+  })
+
+  it('目录还在时照常提供', () => {
+    // The other direction: a missing directory must not disable everything for
+    // every user on a backend that never sends the field.
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <RepoRowActions repo={REPO} onDelete={vi.fn()} isDeleting={false} isMobile={false} />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Reset Permissions' })).not.toBeDisabled()
+  })
+})

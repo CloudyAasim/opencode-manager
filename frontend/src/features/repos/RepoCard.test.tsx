@@ -154,4 +154,50 @@ describe('RepoCard', () => {
 
     expect(screen.getByText('Cloning...')).toBeInTheDocument()
   })
+
+  it('says the directory is missing instead of showing a healthy project', () => {
+    // The report this fixes: the row said "ready", the files were gone, and
+    // the card still rendered green and fully actionable.
+    const props = {
+      ...defaultProps,
+      repo: { ...defaultProps.repo, cloneStatus: 'ready' as const, directoryExists: false },
+    }
+    const { container } = renderWithRouter(<RepoCard {...props} />)
+
+    expect(screen.getByText('Directory missing')).toBeInTheDocument()
+    expect(container.querySelector('.bg-green-500')).toBeFalsy()
+  })
+
+  it('still opens a project whose directory is gone, so the path can be shown', () => {
+    const props = {
+      ...defaultProps,
+      repo: { ...defaultProps.repo, cloneStatus: 'ready' as const, directoryExists: false },
+    }
+    renderWithRouter(<RepoCard {...props} />)
+
+    fireEvent.click(screen.getByText('test-repo'))
+    expect(mockNavigate).toHaveBeenCalledWith('/repos/1')
+  })
+
+  it('shows no warning when the backend does not report the directory', () => {
+    const props = {
+      ...defaultProps,
+      repo: { ...defaultProps.repo, cloneStatus: 'ready' as const },
+    }
+    const { container } = renderWithRouter(<RepoCard {...props} />)
+
+    expect(screen.queryByText('Directory missing')).not.toBeInTheDocument()
+    expect(container.querySelector('.bg-green-500')).toBeTruthy()
+  })
+
+  it('keeps the branch line for a healthy project', () => {
+    const props = {
+      ...defaultProps,
+      repo: { ...defaultProps.repo, directoryExists: true },
+    }
+    renderWithRouter(<RepoCard {...props} />)
+
+    expect(screen.queryByText('Directory missing')).not.toBeInTheDocument()
+    expect(screen.getByText('main')).toBeInTheDocument()
+  })
 })

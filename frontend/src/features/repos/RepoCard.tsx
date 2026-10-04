@@ -4,6 +4,7 @@ import { Loader2, GitBranch, FolderOpen, AlertCircle } from "lucide-react";
 import { getRepoDisplayName } from "@/lib/utils";
 import type { GitStatusResponse } from "@/types/git"
 import { RepoRowActions } from "./RepoRowActions"
+import { canOpenRepo, hasMissingDirectory, isRepoUsable } from "./repo-usability"
 import { useI18n } from '@/lib/i18n'
 import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
 
@@ -17,6 +18,7 @@ interface RepoCardProps {
     branch?: string;
     currentBranch?: string;
     cloneStatus: string;
+    directoryExists?: boolean;
     isWorktree?: boolean;
     isLocal?: boolean;
     fullPath?: string;
@@ -53,8 +55,15 @@ export function RepoCard({
 
   const repoName = getRepoDisplayName(repo);
   const branchToDisplay = gitStatus?.branch || repo.currentBranch || repo.branch;
-  const isReady = repo.cloneStatus === "ready";
   const isCloning = repo.cloneStatus === "cloning";
+  // Two separate questions. `isReady` is what the row says about the clone and
+  // decides whether the session page may be opened; `isUsable` is whether the
+  // directory is still there, which decides whether anything may be *done* to
+  // it. Collapsing them is what let a repository with no files on disk render
+  // as a green, fully-actionable project.
+  const isReady = canOpenRepo(repo);
+  const isUsable = isRepoUsable(repo);
+  const directoryMissing = hasMissingDirectory(repo);
 
   const isDirty = gitStatus?.hasChanges || false;
   const ahead = gitStatus?.ahead || 0;
@@ -78,6 +87,8 @@ export function RepoCard({
       className={`relative border rounded-xl overflow-hidden transition-all duration-200 w-full ${
         isReady ? "cursor-pointer active:scale-[0.98] hover:border-blue-500/50 hover:bg-accent/50 hover:shadow-md" : "cursor-default"
       } ${
+        directoryMissing ? "border-destructive/60 bg-destructive/5" : ""
+      } ${
         isSelected
           ? "border-blue-500 bg-blue-500/5"
           : "border-border bg-card"
@@ -90,7 +101,7 @@ export function RepoCard({
               <h3 className="font-semibold text-base text-foreground truncate">
                 {repoName}
               </h3>
-              {isReady && (
+              {isUsable && (
                 <div className={`w-2 h-2 rounded-full shrink-0 ${isDirty ? 'bg-warning' : 'bg-green-500'}`} />
               )}
             </div>
@@ -109,7 +120,15 @@ export function RepoCard({
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className="flex flex-1 items-center gap-2 min-w-0 overflow-hidden">
-              {isCloning ? (
+              {directoryMissing ? (
+                // Said here as well as on the session page, because the list is
+                // where the user actually is when they notice something is off.
+                // It is a measurement, not cloneStatus, so it cannot be stale.
+                <span className="flex items-center gap-1.5 text-destructive min-w-0">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{t('repo.directoryMissing')}</span>
+                </span>
+              ) : isCloning ? (
                 <span className="flex items-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
                   {t('repo.cloning')}

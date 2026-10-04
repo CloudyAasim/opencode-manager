@@ -13,6 +13,7 @@ export const repo = {
   create: 'Create',
   creating: 'Creating...',
   cloning: 'Cloning...',
+  directoryMissing: 'Directory missing',
   delete: 'Delete',
   done: 'Done',
   loading: 'Loading...',

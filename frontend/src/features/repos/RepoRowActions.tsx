@@ -18,6 +18,7 @@ import { downloadRepo, renameRepo } from '@/api/repos'
 import { showToast } from '@/lib/toast'
 import { getRepoDisplayName } from '@/lib/utils'
 import { invalidateRepoListCaches } from '@/lib/queryInvalidation'
+import { isRepoUsable } from './repo-usability'
 import { useI18n } from '@/lib/i18n'
 
 interface RepoRowActionsProps {
@@ -30,6 +31,7 @@ interface RepoRowActionsProps {
     branch?: string
     currentBranch?: string
     cloneStatus: string
+    directoryExists?: boolean
     isWorktree?: boolean
     isLocal?: boolean
     fullPath?: string
@@ -62,7 +64,10 @@ export function RepoRowActions({
 
   const repoName = getRepoDisplayName(repo)
   const branchToDisplay = gitStatus?.branch || repo.currentBranch || repo.branch
-  const isReady = repo.cloneStatus === 'ready'
+  // Pull, worktree, rename, source control and download all act on the
+  // directory. If it is gone they fail at the far end, after the user has
+  // committed to the action, so they are offered only when it is there.
+  const isReady = isRepoUsable(repo)
 
   const queryClient = useQueryClient()
   const renameMutation = useMutation({

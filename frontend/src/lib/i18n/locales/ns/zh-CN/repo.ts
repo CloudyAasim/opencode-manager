@@ -13,6 +13,7 @@ export const repo = {
   create: '创建',
   creating: '创建中…',
   cloning: '克隆中…',
+  directoryMissing: '目录缺失',
   delete: '删除',
   done: '完成',
   loading: '加载中…',

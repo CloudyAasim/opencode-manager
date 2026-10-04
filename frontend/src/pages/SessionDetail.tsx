@@ -30,6 +30,7 @@ import { useRepoSiblings, useCreateRepoWorkspace, useDeleteRepoWorkspaces } from
 import { useWorktreeTab } from "@/hooks/useWorktreeTab";
 import { SessionRouteFallback } from "@/features/session/SessionRouteFallback";
 import { WorktreeTabs } from "@/features/repos/WorktreeTabs";
+import { hasMissingDirectory } from "@/features/repos/repo-usability";
 import { WorkspaceManager } from "@/features/repos/WorkspaceManager";
 import { CreateWorkspaceDialog } from "@/features/repos/CreateWorkspaceDialog";
 import { workspaceLabel } from "@/api/repos";
@@ -749,10 +750,9 @@ export function SessionDetail() {
   // browser all render, so a repository whose directory was deleted looks like
   // a working session that happens to be quiet: the question you sent is there
   // (it was cached before the directory went), the answer never arrives, and
-  // nothing anywhere reports a problem. Name the actual cause instead.
-  // Strictly `false` - a backend that does not send the field is not evidence
-  // that the directory is gone.
-  if (!isAssistantSession && repo?.directoryExists === false) {
+  // nothing anywhere reports a problem. Name the actual cause instead. The
+  // predicate is shared with the project list, which says the same thing there.
+  if (!isAssistantSession && repo && hasMissingDirectory(repo)) {
     return (
       <SessionRouteFallback
         message={t('session.route.repoDirectoryMissing', { path: repo.fullPath })}
