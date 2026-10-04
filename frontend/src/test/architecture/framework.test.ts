@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { isProjectPath } from '@/lib/navigation'
 
 const FRONTEND_SRC = path.resolve(__dirname, '../..')
 const graph = buildImportGraph(FRONTEND_SRC, [['@', FRONTEND_SRC]])
@@ -56,51 +55,54 @@ describe('框架自身的整洁度', () => {
     ).toEqual([])
   })
 
-  it('右侧检视器跟着项目走，不在全局挂', () => {
-    // 面板里那三个标签分别是文件、源代码管理、终端，三样都要有项目。
-    // 项目外挂着它，按钮在、快捷键在，打开却是一个空壳。
+  it('外壳不再挂右侧检视器', () => {
+    // 会话页自己带一个右侧面板（文件 / 源代码管理 / 详情 / 终端），外壳又挂了
+    // 一个（文件 / 源代码管理 / 终端）—— 终端那两边用的是同一个 TerminalView。
+    // 于是会话页出现两个右侧栏，最右那个是外壳的，纯属重复。
     //
-    // 数出现次数：每一处只许出现一次，而且那一次必须在那个先问过
-    // isProjectPath 的组件里。用"把组件挖掉再看剩下的"那种写法会
-    // 依赖对边界的猜测，猜错就等于没有规则。
-    const app = SOURCES.find((source) => source.rel === 'App.tsx')!.text
-    const start = app.indexOf('function ProjectInspector')
-    expect(start, 'App.tsx 里应当有一个按项目判断的检视器组件').toBeGreaterThan(-1)
-
-    let depth = 0
-    let end = -1
-    for (let i = app.indexOf('{', start); i < app.length; i++) {
-      if (app[i] === '{') depth++
-      else if (app[i] === '}') {
-        depth--
-        if (depth === 0) {
-          end = i + 1
-          break
+    // 这里断言的是"删掉了"，不是"藏起来了"：一个还能被调用方塞内容的空槽位，
+    // 早晚会再被填满，然后问题原样回来。
+    const offenders: string[] = []
+    for (const name of [
+      'Inspector',
+      'InspectorProvider',
+      'FileBrowserInspectorTab',
+      'SourceControlInspectorTab',
+      'TerminalInspectorTab',
+      'InspectorCommands',
+    ]) {
+      for (const source of SOURCES) {
+        if (source.text.includes(name)) {
+          offenders.push(`${source.rel} -> ${name}`)
         }
       }
     }
-    const inside = app.slice(start, end)
-    const outside = app.slice(0, start) + app.slice(end)
 
-    for (const name of ['FileBrowserInspectorTab', 'SourceControlInspectorTab', 'TerminalInspectorTab', 'InspectorCommands']) {
-      const total = app.split(`<${name}`).length - 1
-      const scoped = inside.split(`<${name}`).length - 1
-      expect(total, `${name} 在 App.tsx 里出现了 ${total} 次`).toBe(1)
-      expect(scoped, `${name} 必须挂在按项目判断的那个组件里`).toBe(1)
-      expect(outside, `App.tsx 根部直接挂了 ${name}，检视器于是又变成全局的`).not.toContain(`<${name}`)
-    }
+    expect(
+      offenders,
+      [
+        `外壳检视器已经删除，却又出现在 ${offenders.length} 处：`,
+        ...offenders,
+        '要么真的删干净，要么承认它回来了 —— 别停在"先留着"。',
+      ].join('\n'),
+    ).toEqual([])
 
-    expect(app, '检视器应当经过那个按项目判断的组件').toContain('<ProjectInspector />')
-    expect(app, 'App.tsx 要判断项目范围就得用同一个判断').toContain('isProjectPath')
+    const shellFrame = SOURCES.find((source) => source.rel === 'framework/shell/ShellFrame.tsx')!.text
+    expect(shellFrame, 'ShellFrame 不该再留着 inspector 插槽').not.toContain('inspector')
+    expect(shellFrame, 'ShellFrame 也不该再 import 检视器').not.toContain('shell/Inspector')
   })
 
-  it('哪些页面算"在项目里"', () => {
-    // 助手是 repo 0，它那三个标签要读的也是同一个项目。
-    for (const inside of ['/repos/3', '/repos/3/sessions/s1', '/repos/0/assistant', '/assistant']) {
-      expect(isProjectPath(inside), `${inside} 应当算在项目里`).toBe(true)
-    }
-    for (const outside of ['/', '/files', '/schedules', '/settings', '/terminal', '/login', '/setup']) {
-      expect(isProjectPath(outside), `${outside} 不该挂检视器`).toBe(false)
-    }
+  it('会话页是唯一的右侧面板宿主', () => {
+    // 面板留在会话页：它比外壳那个多一个「详情」tab，还带拖拽调宽，
+    // 而顶栏本来就有独立的「文件」「终端」页，源代码管理在项目列表的行操作里。
+    // 所以删掉外壳那个不丢功能，只是让右边只剩一栏。
+    const sessionPanelRefs = SOURCES.filter(
+      (source) => source.text.includes('<SessionPanel'),
+    ).map((source) => source.rel)
+
+    expect(
+      sessionPanelRefs,
+      '右侧面板应当只有会话页一个宿主',
+    ).toEqual(['pages/SessionDetail.tsx'])
   })
 })

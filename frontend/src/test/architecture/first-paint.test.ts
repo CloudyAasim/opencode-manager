@@ -15,11 +15,14 @@ const ENTRY_ABS = path.join(FRONTEND_SRC, ENTRY)
  *
  * The terminal emulator and the markdown pipeline (react-markdown with remark,
  * rehype and highlight.js) used to sit in the entry chunk. The reason was
- * small and stupid: the inspector's terminal and file-browser entries are
- * registration stubs whose components return null, and they imported their
- * view synchronously anyway. Separately, a handful of values imported from the
- * shared package's root barrel pulled in zod, because that barrel re-exports
- * every schema module and each of those opens with `import { z } from 'zod'`.
+ * small and stupid: the shell inspector's terminal and file-browser entries
+ * were registration stubs whose components return null, and they imported
+ * their view synchronously anyway. Those stubs are gone now - the inspector
+ * was removed because the session page already carries its own right-hand
+ * panel - so this is now a standing rule rather than a fix for a known cause.
+ * Separately, a handful of values imported from the shared package's root
+ * barrel pulled in zod, because that barrel re-exports every schema module and
+ * each of those opens with `import { z } from 'zod'`.
  *
  * buildImportGraph cannot be used to measure this: it records `import('x')`
  * with typeOnly:false, so walking its edges from the entry reaches every lazy

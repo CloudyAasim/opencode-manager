@@ -2,13 +2,6 @@ export const shell = {
   repo: {
     all: '全部项目',
   },
-  inspector: {
-    open: '打开侧边面板',
-    close: '关闭侧边面板',
-    resize: '调整侧边宽度',
-    needProject: '打开一个项目以查看其变更',
-    reorder: '调整 {{tab}} 的位置',
-  },
   commands: {
     title: '命令面板',
     repoItem: '项目',

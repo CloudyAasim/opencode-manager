@@ -3,7 +3,6 @@ import type { ReactNode, RefObject } from 'react'
 interface ShellFrameProps {
   rootRef: RefObject<HTMLDivElement | null>
   header: ReactNode
-  inspector: ReactNode
   main: ReactNode
   status: ReactNode
   chrome?: boolean
@@ -12,7 +11,6 @@ interface ShellFrameProps {
 export function ShellFrame({
   rootRef,
   header,
-  inspector,
   main,
   status,
   chrome = true,
@@ -30,7 +28,6 @@ export function ShellFrame({
       {header}
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">{main}</div>
-        {inspector}
       </div>
       {status}
     </div>

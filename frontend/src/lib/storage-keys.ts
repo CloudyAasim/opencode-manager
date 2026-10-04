@@ -5,10 +5,6 @@ export const STORAGE_KEYS = {
   fileTreeWidth: 'ocm.fileTreeWidth',
   locale: 'ocm.locale',
   fileSplitPct: 'ocm.fileSplitPct',
-  inspectorOpen: 'ocm.inspectorOpen',
-  inspectorWidth: 'ocm.inspectorWidth',
-  inspectorTab: 'ocm.inspectorTab',
-  inspectorTabOrder: 'ocm.inspectorTabOrder',
   sessionOrder: 'ocm.sessionOrder',
 } as const
 
