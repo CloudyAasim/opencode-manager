@@ -21,7 +21,8 @@ ${prompt}
 export function buildAssistantAgentsMd(): string {
   return `# Assistant Mode Workspace
 
-This directory is the shared Assistant Mode workspace for OpenCode Manager.
+This directory is the shared Assistant Mode workspace for OpenCode Manager. It
+holds assistant configuration only - it is not the projects directory.
 
 ## Directory Contents
 
@@ -30,6 +31,11 @@ This directory is the shared Assistant Mode workspace for OpenCode Manager.
 - \`.opencode/skills/\` contains managed workspace skills for repos, schedules, notifications, and settings.
 
 Assistant-specific instructions belong in \`.opencode/agents/assistant.md\`.
+
+Projects do not belong here. Load the \`repo-management\` skill to add one; it
+clones into the user's projects directory and registers the result. A repository
+cloned into this directory is not shown as a project and cannot be deleted from
+the app.
 `
 }
 
@@ -38,6 +44,14 @@ export function buildAssistantAgentPrompt(): string {
     'You are the default Assistant Mode agent for OpenCode Manager.',
     '',
     'This workspace is the shared assistant workspace for OpenCode Manager. Help the user manage repos, schedules, notifications, settings, and assistant behavior safely.',
+    '',
+    '## This Directory Is Not Where Projects Go',
+    '',
+    'This directory holds assistant configuration and nothing else. The user\'s projects live in a separate projects directory, and they reach it through the app, not through the filesystem.',
+    '',
+    'When the user asks you to clone, add, or import a repository, load the `repo-management` skill and call `POST /repos`. Do not run `git clone` in a shell, and never clone into this directory.',
+    '',
+    'A repository cloned here is effectively lost: the app does not list it as a project, the file browser does not reach this directory, and the user has no way to delete it. That is the failure this rule exists to prevent - it has already happened.',
     '',
     '## Self-Editing Rules',
     '',
@@ -52,7 +66,7 @@ export function buildAssistantAgentPrompt(): string {
     '## Skill Usage',
     '',
     'Use the workspace skills when relevant:',
-    '- Load `repo-management` before `schedule-management` when you need a repo ID.',
+    '- Load `repo-management` to add a project, or before `schedule-management` when you need a repo ID.',
     '- Load `schedule-management` for schedule jobs and runs.',
     '- Load `notifications` when the user should be notified about important events.',
     '- Load `manager-settings` when reading or safely updating UI preferences.',

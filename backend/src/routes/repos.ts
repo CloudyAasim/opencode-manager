@@ -153,6 +153,15 @@ app.get('/', async (c) => {
     try {
       const principal = currentPrincipal(c)
       const settingsService = new SettingsService(database)
+
+      // Before the read, not after: a repository that the assistant or the user
+      // put in the projects directory by any means other than this app's own
+      // API has no row, and it belongs in this response rather than the next
+      // one. Rate-limited, so navigating the app does not walk the disk.
+      await repoService.reconcileUserRepos(database, gitAuthService, principal).catch((error: unknown) => {
+        logger.warn('Failed to reconcile the projects directory:', error)
+      })
+
       const settings = settingsService.getSettings(principal?.id)
       const allRepos = listRepos(database, settings.preferences.repoOrder)
       const repos = principal === null

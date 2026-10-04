@@ -98,7 +98,8 @@ export async function discoverLocalRepos(
   gitAuthService: GitAuthService,
   rootPath: string,
   maxDepth: number = DEFAULT_DISCOVERY_MAX_DEPTH,
-  userId?: string | null
+  userId?: string | null,
+  excludePaths: string[] = [],
 ): Promise<{
   repos: Repo[]
   discoveredCount: number
@@ -116,9 +117,18 @@ export async function discoverLocalRepos(
 
   const repoPaths: string[] = []
   const errors: Array<{ path: string; error: string }> = []
+  // Resolved up front so callers can pass either form. "Not a project" is a
+  // property of a directory, so it belongs to the walk rather than to each
+  // caller deciding afterwards - the Assistant directory is inside the global
+  // projects directory and is not a project.
+  const excluded = new Set(excludePaths.map((excludedPath) => path.resolve(excludedPath)))
 
   const walk = async (currentPath: string, depth: number): Promise<void> => {
     try {
+      if (excluded.has(path.resolve(currentPath))) {
+        return
+      }
+
       if (await isGitRepoRootPath(currentPath)) {
         repoPaths.push(currentPath)
         return

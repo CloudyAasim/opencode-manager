@@ -49,6 +49,13 @@ Prefer **pnpm** or **bun** over npm for installing dependencies to save disk spa
  - uv is pre-installed in the container and provides faster package installation
  - .venv directories created in repos will persist but can be removed safely
 
+## Projects
+
+- A repository the user asks you to clone, add, or import is a **project**, and projects live in the user's projects directory - not in the assistant's own workspace.
+- Add a project through OpenCode Manager (the repo-management skill, \`POST /repos\`). It clones into the projects directory and registers the result so the user can see and delete it.
+- **Do not \`git clone\` into the assistant workspace.** Files there are not shown in the app's file browser and the user has no way to remove them, so a repository put there is effectively lost.
+- A repository that is already on disk is registered, not re-cloned: move it into the projects directory and register it with \`localPath\`.
+
 ## General Guidelines
 
 - This file is merged with any AGENTS.md files in individual repositories

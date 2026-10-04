@@ -473,15 +473,17 @@ When the response contains \`restartRequired: true\`, tell the user to restart t
 `
 }
 
-export function buildReposSkill(): string {
+export function buildReposSkill(reposPath: string): string {
   return `---
 name: repo-management
-description: List repos available to OpenCode Manager with the ${MANAGER_TOOL_NAME} tool
+description: List, add, and inspect repos available to OpenCode Manager with the ${MANAGER_TOOL_NAME} tool
 ---
 
 ## When to Load
 
-Load this skill when you need to discover repos, look up repo IDs, or need to reference repo information before managing schedules. Load it before the schedule-management skill if you don't know the repo ID.
+Load this skill when you need to discover repos, add a project, look up repo IDs, or need to reference repo information before managing schedules. Load it before the schedule-management skill if you don't know the repo ID.
+
+**Load it whenever the user asks you to clone, add, or import a repository** - including a repository you already have on disk. Adding a project is \`POST /repos\`, and doing it any other way leaves the user with files they cannot see or delete.
 
 ## Tool
 
@@ -537,11 +539,69 @@ List all repos available to OpenCode Manager. The repos are returned in the orde
 }
 \`\`\`
 
+### POST /repos
+
+Add a project. This is **the only supported way to add a project** - do not run
+\`git clone\` in a shell, and never clone into this assistant workspace.
+
+Projects live in the user's projects directory:
+
+\`\`\`
+${reposPath}
+\`\`\`
+
+The endpoint clones into that directory, registers the result, and returns the
+new repo. A \`git clone\` does none of that, so the repository sits on disk with
+no project behind it and the user cannot see, open, or delete it from the app.
+
+**Clone from a remote:**
+\`\`\`json
+{
+  "action": "request",
+  "params": {
+    "method": "POST",
+    "path": "/repos",
+    "body": { "repoUrl": "https://github.com/owner/name.git" }
+  }
+}
+\`\`\`
+
+**Register a directory that already exists:**
+\`\`\`json
+{
+  "action": "request",
+  "params": {
+    "method": "POST",
+    "path": "/repos",
+    "body": { "localPath": "${reposPath}/name" }
+  }
+}
+\`\`\`
+
+| Field | Meaning |
+|---|---|
+| \`repoUrl\` | Remote to clone. Mutually exclusive with \`localPath\`. |
+| \`localPath\` | Absolute path of an existing repository to register. |
+| \`branch\` | Branch to check out. |
+| \`directoryName\` | Directory name to clone into, instead of one derived from the URL. |
+| \`baseBranch\` | Base branch when \`useWorktree\` creates a new branch. |
+
+## Where projects belong
+
+- Projects live in \`${reposPath}\` and nowhere else.
+- This assistant workspace holds assistant configuration only. Anything you put
+  here is invisible in the app's file browser and cannot be cleaned up from the
+  UI, so a repository cloned here is effectively lost.
+- If you already cloned into the wrong place, move it into the projects
+  directory and then call \`POST /repos\` with \`localPath\` - the app picks up
+  repositories that appear in the projects directory on the next project list
+  load, but registering it explicitly is immediate and unambiguous.
+
 ## Notes
 
 - Use \`id\` as \`:repoId\` in other API endpoints (e.g., \`/repos/:repoId/schedules\`)
 - \`fullPath\` is the absolute local path - use it for file operations
-- This endpoint is read-only - there are no POST/PUT/DELETE operations for repos
+- \`GET /repos\` is read-only. Adding a project is \`POST /repos\`.
 - \`currentBranch\` is not included in the response - it requires git operations to determine
 - Repo order is controlled by the \`repoOrder\` preference in settings
 `

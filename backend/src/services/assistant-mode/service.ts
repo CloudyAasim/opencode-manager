@@ -5,7 +5,7 @@ import { type AssistantModeStatus, type AssistantModeInitRequest, type OpenCodeC
 import { readFileContent, writeFileContent, fileExists, ensureDirectoryExists } from '../file-operations'
 import { OpenCodeConfigSchema } from '@opencode-manager/shared/schemas'
 import { ASSISTANT_REPO_ID, ASSISTANT_OPENCODE_DIR_NAME } from '@opencode-manager/shared/utils'
-import { getAssistantModePath, getReposPath, getUserSettingPath } from '@opencode-manager/shared/config/env'
+import { getAssistantModePath, getReposPath, getUserReposPath, getUserSettingPath } from '@opencode-manager/shared/config/env'
 import { type Database } from 'bun:sqlite'
 import { ensureAssistantRepo } from '../../db/queries'
 import { hasSameContentHash } from './content'
@@ -65,6 +65,20 @@ export function getAssistantModeDirectory(username?: string | null): string {
 
 export function assistantRelativePath(username?: string | null): string {
   return username ? `users/${username}/assistant` : ASSISTANT_MODE_RELATIVE_PATH
+}
+
+/**
+ * Where this user's projects live, spelled out for the assistant.
+ *
+ * The repo-management skill used to describe the projects API as read-only, so
+ * the assistant had no documented way to add a project and reached for
+ * `git clone` - which it ran in its own configuration directory, where the
+ * result is invisible in the app and cannot be deleted from it. Naming the
+ * directory in the skill is what makes "add a project" an action with a place
+ * to put the result.
+ */
+function projectsDirectoryFor(username?: string | null): string {
+  return username ? getUserReposPath(username) : getReposPath()
 }
 
 export function buildAssistantRepo(username?: string | null): Repo {
@@ -239,7 +253,7 @@ export async function ensureAssistantMode(
   }
 
   const reposSkillPath = getReposSkillPath(assistantDir)
-  const reposSkillContent = buildReposSkill()
+  const reposSkillContent = buildReposSkill(projectsDirectoryFor(username))
   const existingReposSkillContent = await fileExists(reposSkillPath) ? await readFileContent(reposSkillPath) : undefined
   const reposSkillCreated = !hasSameContentHash(existingReposSkillContent, reposSkillContent)
   if (reposSkillCreated) {

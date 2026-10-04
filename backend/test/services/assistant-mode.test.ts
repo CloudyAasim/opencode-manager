@@ -4,6 +4,7 @@ import { access, readFile, writeFile } from 'fs/promises'
 import { Hono } from 'hono'
 import { ensureAssistantMode, getAssistantModeStatus, getAssistantModeDirectory, buildSchedulesSkill, buildReposSkill, buildSettingsSkill, buildAssistantDefaultAgentMd, buildAssistantOpenCodeConfig, buildAssistantRepo, installAssistantWorkspace } from '../../src/services/assistant-mode'
 import { createTempAssistantWorkspace, createTestDb, mockRepo } from '../helpers/assistant-workspace'
+import { DEFAULT_AGENTS_MD } from '../../src/constants'
 import { createInternalRoutes } from '../../src/routes/internal'
 import { ScheduleService } from '../../src/services/schedules'
 import { NotificationService } from '../../src/services/notification'
@@ -30,33 +31,77 @@ describe('buildSchedulesSkill', () => {
 })
 
 describe('buildReposSkill', () => {
+  const reposPath = '/workspace/users/aasim/workspace/repos'
+
   it('instructs the agent to use the ocm tool request action', () => {
-    const skill = buildReposSkill()
+    const skill = buildReposSkill(reposPath)
     expect(skill).toContain('"action": "request"')
     expect(skill).toContain('"method": "GET"')
     expect(skill).toContain('"path": "/repos"')
   })
 
   it('contains GET /repos endpoint documentation', () => {
-    const skill = buildReposSkill()
+    const skill = buildReposSkill(reposPath)
     expect(skill).toContain('GET /repos')
   })
 
   it('does not instruct reading the internal token or sending a bearer header', () => {
-    const skill = buildReposSkill()
+    const skill = buildReposSkill(reposPath)
     expect(skill).not.toContain('Authorization: Bearer')
     expect(skill).not.toContain('.opencode/internal-token')
     expect(skill).not.toContain('curl')
   })
 
   it('does not contain a localhost base URL', () => {
-    const skill = buildReposSkill()
+    const skill = buildReposSkill(reposPath)
     expect(skill).not.toContain('localhost')
   })
 
   it('does not document the removed openCodeConfigName field', () => {
-    const skill = buildReposSkill()
+    const skill = buildReposSkill(reposPath)
     expect(skill).not.toContain('openCodeConfigName')
+  })
+
+  it('documents POST /repos as the way to add a project', () => {
+    // The skill used to say the repos API was read-only, which left the
+    // assistant with no documented way to add a project - so it ran
+    // `git clone` in its own configuration directory, where the result is
+    // invisible in the app and cannot be deleted from it.
+    const skill = buildReposSkill(reposPath)
+    expect(skill).toContain('### POST /repos')
+    expect(skill).toContain('"repoUrl": "https://github.com/owner/name.git"')
+    expect(skill).toContain('"localPath"')
+    expect(skill).not.toContain('there are no POST/PUT/DELETE operations for repos')
+  })
+
+  it('names the projects directory, and forbids cloning into the assistant workspace', () => {
+    const skill = buildReposSkill(reposPath)
+    // The whole sentence, not just the path somewhere in the file: the path
+    // also appears in the localPath example and in "Where projects belong", so
+    // asserting `toContain(reposPath)` passes even when the sentence that ties
+    // the path to "projects live here" is gone - which is the part that
+    // actually reaches the agent.
+    expect(skill).toContain(
+      `Projects live in the user's projects directory:\n\n\`\`\`\n${reposPath}\n\`\`\``,
+    )
+    expect(skill).toContain('`git clone` in a shell')
+    expect(skill).toContain('never clone into this assistant workspace')
+  })
+})
+
+describe('the assistant is told where projects do not belong', () => {
+  it('the agent prompt routes adding a project through the skill, not the shell', () => {
+    const prompt = buildAssistantDefaultAgentMd()
+    expect(prompt).toContain('POST /repos')
+    expect(prompt).toContain('never clone into this directory')
+  })
+
+  it('the global agent instructions carry the same rule', () => {
+    // The per-assistant prompt only reaches the Assistant. AGENTS.md is merged
+    // into ordinary repo sessions too, where the same mistake is just as easy
+    // to make.
+    expect(DEFAULT_AGENTS_MD).toContain('git clone')
+    expect(DEFAULT_AGENTS_MD).toContain('projects directory')
   })
 })
 
@@ -244,7 +289,13 @@ describe('ensureAssistantMode', () => {
 
     const reposSkillContent = await readFile(reposSkillPath, 'utf8')
     expect(reposSkillContent).toContain('name: repo-management')
-    expect(reposSkillContent).toContain('List repos available')
+    // The description is what the agent matches on when deciding whether to
+    // load the skill, so it has to say "add" - a description that only mentions
+    // listing is the same dead end as documenting the API as read-only.
+    expect(reposSkillContent).toContain('description: List, add, and inspect repos available')
+    // And the file that lands on disk has to carry the concrete directory, not
+    // just the rule.
+    expect(reposSkillContent).toContain('### POST /repos')
 
     const assistantAgentContent = await readFile(assistantAgentPath, 'utf8')
     expect(assistantAgentContent).toContain('mode: primary')

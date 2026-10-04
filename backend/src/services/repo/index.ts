@@ -1,4 +1,5 @@
 export { discoverLocalRepos, relinkReposFromSessionDirectories } from './discovery'
+export { reconcileUserRepos, resetReconcileThrottle, type ReconcileReposResult } from './reconcile'
 export { initLocalRepo, cloneRepo, type CloneRepoOptions } from './clone'
 export {
   getCurrentBranch,

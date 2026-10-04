@@ -27,6 +27,10 @@ vi.mock('../../src/services/repo', () => ({
   initLocalRepo: vi.fn(),
   cloneRepo: vi.fn(),
   discoverLocalRepos: vi.fn(),
+  // Resolves like the real one does. A bare vi.fn() answers undefined, and the
+  // route calls `.catch()` on the result, so the mock would turn every project
+  // list request into a TypeError instead of testing anything.
+  reconcileUserRepos: vi.fn().mockResolvedValue({ registeredCount: 0, existingCount: 0, skipped: true, errors: [] }),
   pullRepo: vi.fn(),
   switchBranch: vi.fn(),
   createBranch: vi.fn(),
@@ -525,6 +529,46 @@ describe('Repo Routes', () => {
       expect(body[1]?.currentBranch).toBeUndefined()
       expect(repoService.getCurrentBranch).toHaveBeenCalledTimes(1)
       expect(repoService.getCurrentBranch).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), {})
+    })
+
+    it('registers repositories sitting in the projects folder before answering', async () => {
+      // A repository the assistant or the user put there with anything other
+      // than this app's API has no row. The list is where it has to show up -
+      // reconciling after the read would mean it appears one refresh late, and
+      // the user files it as "it is not detected".
+      vi.mocked(db.listRepos).mockReturnValue([])
+      vi.mocked(repoService.reconcileUserRepos).mockClear()
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+      const res = await app.request('/', { method: 'GET' })
+
+      expect(res.status).toBe(200)
+      expect(repoService.reconcileUserRepos).toHaveBeenCalledTimes(1)
+      const listOrder: string[] = []
+      vi.mocked(db.listRepos).mockImplementation(() => {
+        listOrder.push('listRepos')
+        return []
+      })
+      vi.mocked(repoService.reconcileUserRepos).mockImplementation(async () => {
+        listOrder.push('reconcile')
+        return { registeredCount: 1, existingCount: 0, skipped: false, errors: [] }
+      })
+      await app.request('/', { method: 'GET' })
+      expect(listOrder).toEqual(['reconcile', 'listRepos'])
+    })
+
+    it('still returns the list when the projects directory cannot be walked', async () => {
+      // Reconciling is best-effort. A permission error or an unreadable
+      // directory must not cost the user their project list.
+      vi.mocked(db.listRepos).mockReturnValue([createMockRepo({ id: 1 })])
+      vi.mocked(repoService.getCurrentBranch).mockResolvedValue('main')
+      vi.mocked(repoService.reconcileUserRepos).mockRejectedValue(new Error('EACCES'))
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+      const res = await app.request('/', { method: 'GET' })
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toHaveLength(1)
     })
 
     it('should return 500 when listing repos throws', async () => {
