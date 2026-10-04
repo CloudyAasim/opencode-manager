@@ -103,4 +103,16 @@ describe('SessionPanel', () => {
     panel()
     expect(window.localStorage.getItem(STORAGE_KEYS.chatPanelTabs)).toBeTruthy()
   })
+
+  it('is frosted rather than see-through on desktop', () => {
+    // Same defect as the session rail, same fix, and the same reason to assert
+    // the absence of `md:bg-transparent` rather than the presence of a blur:
+    // the bug was the missing surface, not the missing effect.
+    panel()
+
+    const classes = screen.getByText('body-files').closest('aside')!.className
+    expect(classes).toContain('md:backdrop-blur-xl')
+    expect(classes).toContain('md:bg-card/75')
+    expect(classes).not.toContain('md:bg-transparent')
+  })
 })

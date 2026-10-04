@@ -56,4 +56,18 @@ describe('SessionRail', () => {
     fireEvent.click(screen.getByRole('button', { name: /close|关闭/i }))
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('is frosted rather than see-through on desktop', () => {
+    // `md:bg-transparent` left the session list sitting on the bare page
+    // background with no surface of its own, and the muted text in it dropped
+    // under 4.5:1 in light mode. A tinted, blurred panel is the fix; a fully
+    // transparent one is the bug, so this asserts the surface is *not*
+    // transparent rather than only asserting a blur is present.
+    rail()
+
+    const classes = screen.getByText('the list').closest('aside')!.className
+    expect(classes).toContain('md:backdrop-blur-xl')
+    expect(classes).toContain('md:bg-card/75')
+    expect(classes).not.toContain('md:bg-transparent')
+  })
 })

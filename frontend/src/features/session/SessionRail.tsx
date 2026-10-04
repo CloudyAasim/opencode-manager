@@ -45,7 +45,7 @@ export function SessionRail({ open, onClose, children }: SessionRailProps) {
         />
       )}
       <aside
-        className="absolute inset-y-0 left-0 z-40 flex w-[82%] max-w-xs shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-auto md:max-w-none md:bg-transparent md:shadow-none"
+        className="absolute inset-y-0 left-0 z-40 flex w-[82%] max-w-xs shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-auto md:max-w-none md:bg-card/75 md:shadow-none md:backdrop-blur-xl"
         style={isDesktop ? { width } : undefined}
       >
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
