@@ -107,7 +107,12 @@ describe('internal routes refuse rather than fall back when they have no subject
 
     expect(res.status).toBe(200)
     const body = await res.json() as { workspaces: { repoId: number }[] }
-    expect(body.workspaces.map((w) => w.repoId)).toEqual([22, 33])
+    // Sorted, like the repository list two tests up. The route calls
+    // `listRepos(db)` with no order argument, so the order it answers in is
+    // whatever SQLite picked - which is a plan detail, not a contract. Asserted
+    // unsorted, this passed or failed depending on how much else was running,
+    // and it is about who gets served, not about the order they arrive in.
+    expect(body.workspaces.map((w) => w.repoId).sort()).toEqual([22, 33])
   })
 
   // --- GET/PATCH /settings ------------------------------------------------
