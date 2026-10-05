@@ -8,6 +8,35 @@ export interface Migration {
   down(db: Database): void
 }
 
+/**
+ * Thrown by a migration whose precondition is not met, and which should be
+ * tried again later.
+ *
+ * Deliberately distinct from an ordinary failure. An ordinary failure means
+ * the migration is broken or the database is; rolling back and rethrowing, so
+ * the server refuses to start on a schema it does not understand, is right.
+ *
+ * A decline means "not yet": rows an operator still has to resolve. Rethrowing
+ * would turn a fixable data problem into an outage. But simply returning was
+ * worse - the runner cannot tell that from success, so it recorded the
+ * migration as applied, and a migration recorded as applied is never run
+ * again. The constraint it exists to create was silently never created, and
+ * the only trace was one line in a container log.
+ *
+ * So: roll back, do not record it, do not rethrow, and stop the run - later
+ * migrations may depend on this one. The next start tries again.
+ */
+export class MigrationDeclinedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'MigrationDeclinedError'
+  }
+}
+
+export function isMigrationDeclined(error: unknown): error is MigrationDeclinedError {
+  return error instanceof MigrationDeclinedError
+}
+
 interface MigrationRecord {
   version: number
   name: string
@@ -61,7 +90,10 @@ export function migrate(db: Database, migrations: Migration[]): void {
 
   logger.info(`Running ${pending.length} pending migration(s)`)
 
+  let declined: { migration: Migration; reason: MigrationDeclinedError } | null = null
+
   for (const migration of pending) {
+    if (declined) break
     logger.info(`Applying migration ${migration.version}: ${migration.name}`)
     db.run('BEGIN TRANSACTION')
     try {
@@ -71,9 +103,26 @@ export function migrate(db: Database, migrations: Migration[]): void {
       logger.info(`Migration ${migration.version} applied successfully`)
     } catch (error) {
       db.run('ROLLBACK')
+      if (isMigrationDeclined(error)) {
+        // Not recorded, not rethrown, and the run stops here rather than
+        // applying later migrations on top of a schema that is missing this
+        // one.
+        logger.error(`Migration ${migration.version} was declined and has NOT been recorded as applied.`)
+        declined = { migration, reason: error }
+        continue
+      }
       logger.error(`Migration ${migration.version} failed:`, error)
       throw error
     }
+  }
+
+  if (declined) {
+    logger.warn(
+      `Stopped at migration ${declined.migration.version} (${declined.migration.name}). It was not recorded as ` +
+      `applied and will be retried on the next start; later migrations were skipped because they may depend ` +
+      `on it. The server is running on the schema as it was before this migration. Reason: ${declined.reason.message}`,
+    )
+    return
   }
 
   logger.info('All migrations applied successfully')

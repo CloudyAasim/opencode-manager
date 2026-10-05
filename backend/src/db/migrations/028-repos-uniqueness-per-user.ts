@@ -1,5 +1,4 @@
-import type { Migration } from '../migration-runner'
-import { logger } from '../../utils/logger'
+import { MigrationDeclinedError, type Migration } from '../migration-runner'
 
 /**
  * `repos.local_path` is a name inside a directory, and `repos.repo_url` belongs
@@ -58,15 +57,19 @@ const migration: Migration = {
       .all() as { repo_url: string; branch: string; n: number }[]
 
     if (sharedDuplicates.length > 0 || sharedUrlDuplicates.length > 0) {
-      logger.error(
-        `repos-uniqueness-per-user: NOT applied. Shared repositories already share a key: ` +
+      // Declined, not returned. A plain `return` here is indistinguishable from
+      // success, so the runner records this migration as applied and it never
+      // runs again - leaving the global constraints in place while the
+      // database insists the migration that would fix them is done.
+      throw new MigrationDeclinedError(
+        `Shared repositories already share a key: ` +
         [
           ...sharedDuplicates.map((row) => `local_path '${row.local_path}' (x${row.n})`),
           ...sharedUrlDuplicates.map((row) => `url '${row.repo_url}'#${row.branch} (x${row.n})`),
         ].join(', ') +
-        '. The previous global constraints are left in place; resolve these rows and re-run.',
+        '. The previous global constraints are left in place and are still the ones in force; ' +
+        'resolve these rows and restart, and this migration will run again.',
       )
-      return
     }
 
     db.run('DROP INDEX IF EXISTS idx_local_path')
