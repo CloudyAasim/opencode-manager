@@ -17,6 +17,12 @@
 # Usage: terminal-sandbox.sh <shell> <workspace> [shell-args...]
 set -eu
 
+if [ "$#" -lt 3 ]; then
+  echo "terminal-sandbox: usage: $0 <shell> <workspace> <sandbox-cwd> [shell-args...]" >&2
+  echo "terminal-sandbox: got $# argument(s); refusing to run" >&2
+  exit 64
+fi
+
 SHELL_BIN="${1:-/bin/bash}"
 WORKSPACE="${2:-}"
 if [ -z "$WORKSPACE" ]; then

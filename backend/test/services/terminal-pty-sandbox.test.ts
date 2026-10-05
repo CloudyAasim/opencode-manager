@@ -20,6 +20,8 @@ import { resolveBridgePath, resolveSandboxScriptPath, SANDBOX_PROBE_FLAGS } from
  */
 
 const EX_CONFIG = 78
+/** sysexits EX_USAGE, which is what the shell script exits with on a bad call. */
+const EX_USAGE = 64
 
 const temps: string[] = []
 
@@ -169,5 +171,45 @@ describe('the availability probe and the sandbox it probes cannot drift apart', 
     // and that is the one operation AppArmor docker-default blocks.
     expect(SANDBOX_PROBE_FLAGS).toContain('--propagation')
     expect(argv!.join(' ')).toContain('--propagation unchanged')
+  })
+})
+
+/**
+ * `terminal-sandbox.sh` takes `<shell> <workspace> <sandbox-cwd>` and then
+ * `shift 3`s. Called with fewer arguments than that it fails at the `shift`
+ * with "can't shift that many" - true, and useless to whoever typed it.
+ *
+ * The neighbouring guard, for an empty workspace, already says what it wanted
+ * and exits 64. This brings the argument count in line with it.
+ *
+ * These run without `unshare` on purpose: the guard fires before the first
+ * mount, so they need neither a user namespace nor a writable /tmp, which is
+ * what lets them run in CI and on a developer machine.
+ */
+describe('the sandbox script rejects a bad invocation instead of half-running', () => {
+  it('says what it wanted when given too few arguments', () => {
+    const script = resolveSandboxScriptPath()
+    expect(script).not.toBeNull()
+
+    const result = spawnSync('/bin/sh', [script!, '/bin/true'], { encoding: 'utf-8' })
+
+    expect(result.status).toBe(EX_USAGE)
+    expect(result.stderr).toMatch(/<shell> <workspace> <sandbox-cwd>/)
+    expect(result.stderr).toMatch(/got 1 argument/)
+  })
+
+  it('still refuses an empty workspace', () => {
+    const script = resolveSandboxScriptPath()
+    expect(script).not.toBeNull()
+
+    // Three arguments, so the count guard is satisfied and this reaches the
+    // check that is actually about the workspace. With two arguments the
+    // usage message is the better answer anyway.
+    const result = spawnSync('/bin/sh', [script!, '/bin/true', '', '/workspace'], {
+      encoding: 'utf-8',
+    })
+
+    expect(result.status).toBe(EX_USAGE)
+    expect(result.stderr).toMatch(/missing workspace directory/)
   })
 })
