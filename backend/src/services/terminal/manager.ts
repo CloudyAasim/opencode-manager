@@ -147,13 +147,27 @@ export class TerminalManager {
     const cols = clampDimension(options.cols, ENV.TERMINAL.COLS)
     const rows = clampDimension(options.rows, ENV.TERMINAL.ROWS)
     const id = randomUUID()
+    const isAdminActor = actor.role === 'admin'
     const home = resolveUserTerminalHome(actor.id, actor.username)
-    const allowedRoot = actor.role === 'admin' ? path.resolve(ENV.TERMINAL.CWD) : home
+
+    // `null` means there is no directory holding only this person's files.
+    // For a non-admin that is fatal, and it is fatal *before* the spawn: the
+    // old fallback bound the workspace root instead, which is the one
+    // directory guaranteed to contain every other user's data, so a full disk
+    // or a flipped env var used to hand over exactly what the sandbox exists
+    // to withhold. An admin has no per-user directory to need - they are given
+    // the container on purpose - so they fall back to the configured cwd.
+    if (!home && !isAdminActor) {
+      throw new TerminalError('TERMINAL_SANDBOX_UNAVAILABLE')
+    }
+
+    const workspaceRoot = home ?? path.resolve(ENV.TERMINAL.CWD)
+    const allowedRoot = isAdminActor ? path.resolve(ENV.TERMINAL.CWD) : workspaceRoot
     const requestedCwd = options.cwd ? path.resolve(options.cwd) : null
-    const cwd = requestedCwd && isInsideDirectory(allowedRoot, requestedCwd) ? requestedCwd : home
-    const isolateWorkspace = ENV.TERMINAL.ISOLATE && actor.role !== 'admin' ? home : undefined
+    const cwd = requestedCwd && isInsideDirectory(allowedRoot, requestedCwd) ? requestedCwd : workspaceRoot
+    const isolateWorkspace = ENV.TERMINAL.ISOLATE && !isAdminActor ? workspaceRoot : undefined
     const sandboxCwd = isolateWorkspace
-      ? path.posix.join('/workspace', path.relative(home, cwd).split(path.sep).join('/'))
+      ? path.posix.join('/workspace', path.relative(workspaceRoot, cwd).split(path.sep).join('/'))
       : undefined
 
     // Refuse rather than degrade. Without this check a host that cannot build

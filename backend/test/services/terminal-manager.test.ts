@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createTestDb } from '../helpers/assistant-workspace'
 import { FakePtySpawner } from '../helpers/fake-pty'
+import { safeUserDirectoryName } from '../../src/services/terminal/home'
 import { TerminalError, TerminalManager, type TerminalActor } from '../../src/services/terminal/manager'
 
 const { ENV } = vi.hoisted(() => ({
@@ -15,7 +16,7 @@ const { ENV } = vi.hoisted(() => ({
       SHELL: '/bin/bash',
       CWD: '/workspace',
       USERS_DIR: 'users',
-      PER_USER_HOME: false,
+      PER_USER_HOME: true,
       COLS: 100,
       ROWS: 30,
       MAX_SESSIONS_PER_USER: 2,
@@ -45,7 +46,8 @@ function resetEnv() {
   ENV.TERMINAL.ENABLED = true
   ENV.TERMINAL.ISOLATE = true
   ENV.TERMINAL.CWD = '/workspace'
-  ENV.TERMINAL.PER_USER_HOME = false
+  ENV.TERMINAL.PER_USER_HOME = true
+  ENV.TERMINAL.USERS_DIR = 'users'
   ENV.TERMINAL.MAX_SESSIONS_PER_USER = 2
   ENV.TERMINAL.MAX_SESSIONS_TOTAL = 3
 }
@@ -70,9 +72,19 @@ describe('TerminalManager', () => {
   let db: ReturnType<typeof createTestDb>
   let spawner: FakePtySpawner
   let manager: TerminalManager
+  // The tests run against a real per-user home in a temporary directory. The
+  // shared fixture used to set PER_USER_HOME false, which - because the old
+  // resolver fell back to the workspace root - meant every assertion below was
+  // asserting that a non-admin gets bound to everybody's directory. That is the
+  // behaviour being removed, so it cannot stay as the baseline.
+  let workspaceBase: string
+  let userHome: string
 
   beforeEach(() => {
     resetEnv()
+    workspaceBase = mkdtempSync(path.join(tmpdir(), 'ocm-mgr-'))
+    ENV.TERMINAL.CWD = workspaceBase
+    userHome = path.join(workspaceBase, 'users', safeUserDirectoryName('user-1'))
     db = createTestDb()
     spawner = new FakePtySpawner()
     manager = new TerminalManager(db, spawner)
@@ -81,22 +93,41 @@ describe('TerminalManager', () => {
   afterEach(() => {
     manager.shutdown()
     db.close()
+    rmSync(workspaceBase, { recursive: true, force: true })
   })
 
   it('creates a session with the configured shell and working directory', () => {
     const session = manager.create(actor, { cols: 80, rows: 24 })
 
     expect(spawner.spawnOptions).toEqual([
-      { shell: '/bin/bash', cwd: '/workspace', cols: 80, rows: 24, isolateWorkspace: '/workspace', sandboxCwd: '/workspace' },
+      {
+        shell: '/bin/bash',
+        cwd: userHome,
+        cols: 80,
+        rows: 24,
+        isolateWorkspace: userHome,
+        sandboxCwd: '/workspace',
+      },
     ])
     expect(session.dimensions).toEqual({ cols: 80, rows: 24 })
     expect(manager.list(actor)).toHaveLength(1)
   })
 
-  it('sandboxes non-admin terminals in the user workspace', () => {
+  it('sandboxes non-admin terminals in the user workspace, not the shared one', () => {
     manager.create(actor, {})
 
-    expect(spawner.spawnOptions[0]?.isolateWorkspace).toBe('/workspace')
+    // The bind source must be this person's directory. The workspace root is
+    // the one directory guaranteed to hold every other user's data.
+    expect(spawner.spawnOptions[0]?.isolateWorkspace).toBe(userHome)
+    expect(spawner.spawnOptions[0]?.isolateWorkspace).not.toBe(workspaceBase)
+  })
+
+  it('names the sandbox root the same way the shell will', () => {
+    manager.create(actor, {})
+
+    // Inside the chroot the per-user directory is mounted at /workspace, so
+    // the path handed to the sandbox has to be expressed in those terms.
+    expect(spawner.spawnOptions[0]?.sandboxCwd).toBe('/workspace')
   })
 
   it('leaves admin terminals unconfined', () => {
@@ -114,11 +145,12 @@ describe('TerminalManager', () => {
   })
 
   it('starts a sandboxed terminal in the requested project directory', () => {
-    manager.create(actor, { cwd: '/workspace/repos/demo' })
+    const demo = path.join(userHome, 'repos', 'demo')
+    manager.create(actor, { cwd: demo })
 
     const options = spawner.spawnOptions[0]
-    expect(options?.cwd).toBe('/workspace/repos/demo')
-    expect(options?.isolateWorkspace).toBe('/workspace')
+    expect(options?.cwd).toBe(demo)
+    expect(options?.isolateWorkspace).toBe(userHome)
     expect(options?.sandboxCwd).toBe('/workspace/repos/demo')
   })
 
@@ -126,15 +158,38 @@ describe('TerminalManager', () => {
     manager.create(actor, { cwd: '/etc' })
 
     const options = spawner.spawnOptions[0]
-    expect(options?.cwd).toBe('/workspace')
+    expect(options?.cwd).toBe(userHome)
     expect(options?.sandboxCwd).toBe('/workspace')
   })
 
+  it('refuses to fall back to the shared workspace when there is no per-user home', () => {
+    ENV.TERMINAL.PER_USER_HOME = false
+
+    // The old behaviour returned the workspace root here and bound it. There
+    // is no directory that holds only this person's files, so the honest answer
+    // is that they cannot be given a terminal.
+    expect(captureError(() => manager.create(actor, {})).code).toBe('TERMINAL_SANDBOX_UNAVAILABLE')
+    expect(spawner.processes).toHaveLength(0)
+    expect(spawner.spawnOptions).toHaveLength(0)
+  })
+
+  it('still gives an admin a terminal when there is no per-user home', () => {
+    ENV.TERMINAL.PER_USER_HOME = false
+
+    // Admins are handed the container on purpose; the missing per-user
+    // directory is not their problem and must not become one.
+    manager.create({ ...actor, role: 'admin' }, {})
+
+    expect(spawner.processes).toHaveLength(1)
+    expect(spawner.spawnOptions[0]?.isolateWorkspace).toBeUndefined()
+    expect(spawner.spawnOptions[0]?.cwd).toBe(workspaceBase)
+  })
+
   it('lets an admin start in any workspace directory without a sandbox', () => {
-    manager.create({ ...actor, role: 'admin' }, { cwd: '/workspace/repos/demo' })
+    manager.create({ ...actor, role: 'admin' }, { cwd: path.join(workspaceBase, 'repos', 'demo') })
 
     const options = spawner.spawnOptions[0]
-    expect(options?.cwd).toBe('/workspace/repos/demo')
+    expect(options?.cwd).toBe(path.join(workspaceBase, 'repos', 'demo'))
     expect(options?.isolateWorkspace).toBeUndefined()
     expect(options?.sandboxCwd).toBeUndefined()
   })
@@ -145,20 +200,12 @@ describe('TerminalManager', () => {
     expect(session.dimensions).toEqual({ cols: 100, rows: 30 })
   })
 
-  it('spawns inside a private per-user directory when enabled', () => {
-    const base = mkdtempSync(path.join(tmpdir(), 'ocm-mgr-home-'))
-    try {
-      ENV.TERMINAL.CWD = base
-      ENV.TERMINAL.PER_USER_HOME = true
+  it('spawns inside a private per-user directory', () => {
+    const session = manager.create(actor, {})
 
-      const session = manager.create(actor, {})
-
-      const options = spawner.spawnOptions[0]
-      expect(options?.cwd).toBe(session.cwd)
-      expect(session.cwd.startsWith(path.join(base, 'users'))).toBe(true)
-    } finally {
-      rmSync(base, { recursive: true, force: true })
-    }
+    const options = spawner.spawnOptions[0]
+    expect(options?.cwd).toBe(session.cwd)
+    expect(session.cwd.startsWith(path.join(workspaceBase, 'users'))).toBe(true)
   })
 
   it('rejects when the terminal is disabled or unavailable', () => {
@@ -222,7 +269,7 @@ describe('TerminalManager', () => {
       .prepare('SELECT user_email, cwd, started_at, ended_at FROM terminal_audit WHERE id = ?')
       .get(session.id) as { user_email: string; cwd: string; started_at: number; ended_at: number | null }
     expect(started.user_email).toBe('user@example.com')
-    expect(started.cwd).toBe('/workspace')
+    expect(started.cwd).toBe(userHome)
     expect(started.ended_at).toBeNull()
 
     firstProcess(spawner).emitExit(0)
@@ -256,7 +303,7 @@ describe('TerminalManager', () => {
       enabled: true,
       available: true,
       shell: '/bin/bash',
-      cwd: '/workspace',
+      cwd: workspaceBase,
       adminsOnly: true,
     })
   })

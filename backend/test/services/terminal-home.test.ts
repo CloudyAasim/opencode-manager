@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, statSync, existsSync } from 'node:fs'
+import { mkdtempSync, rmSync, statSync, existsSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { logger } from '../../src/utils/logger'
 import { isInsideDirectory, resolveUserTerminalHome, safeUserDirectoryName } from '../../src/services/terminal/home'
 
 const { ENV } = vi.hoisted(() => ({
@@ -20,6 +21,13 @@ vi.mock('../../src/utils/logger', () => ({
 }))
 
 let base: string
+
+/** Narrowed here so a refusal fails as an assertion, not as a null in fs. */
+function requireHome(userId: string): string {
+  const home = resolveUserTerminalHome(userId)
+  expect(home).not.toBeNull()
+  return home as string
+}
 
 describe('terminal home resolution', () => {
   beforeEach(() => {
@@ -51,7 +59,7 @@ describe('terminal home resolution', () => {
   })
 
   it('creates a private per-user directory inside the workspace', () => {
-    const home = resolveUserTerminalHome('user-1')
+    const home = requireHome('user-1')
 
     expect(existsSync(home)).toBe(true)
     expect(isInsideDirectory(base, home)).toBe(true)
@@ -60,14 +68,48 @@ describe('terminal home resolution', () => {
   })
 
   it('is idempotent across repeated calls', () => {
-    const first = resolveUserTerminalHome('user-1')
-    const second = resolveUserTerminalHome('user-1')
+    const first = requireHome('user-1')
+    const second = requireHome('user-1')
     expect(second).toBe(first)
   })
 
-  it('returns the base workspace when per-user homes are disabled', () => {
+  it('refuses to produce a home when per-user homes are disabled', () => {
     ENV.TERMINAL.PER_USER_HOME = false
-    expect(resolveUserTerminalHome('user-1')).toBe(base)
+
+    // Returning the workspace root here used to look like a safe default. It
+    // is the one directory guaranteed to hold every user's data, so a non-admin
+    // bound to it is holding everyone's repositories, not their own.
+    expect(resolveUserTerminalHome('user-1')).toBeNull()
     expect(existsSync(path.join(base, 'users'))).toBe(false)
+  })
+
+  it('refuses when the home cannot be created, rather than widening the sandbox', () => {
+    // A path whose parent is a file: mkdir fails with ENOTDIR, the way a full
+    // disk or a permissions problem would.
+    const blocked = path.join(base, 'blocked')
+    writeFileSync(blocked, 'not a directory')
+    ENV.TERMINAL.USERS_DIR = 'blocked/users'
+
+    expect(resolveUserTerminalHome('user-1')).toBeNull()
+  })
+
+  it('refuses when the computed home escapes the workspace root', () => {
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
+
+    // `..` cannot be expressed through a valid username, so the escape is
+    // reached the other way: a users directory that climbs out.
+    ENV.TERMINAL.USERS_DIR = '../escaped'
+
+    expect(resolveUserTerminalHome('user-1')).toBeNull()
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('escapes the workspace root'))
+  })
+
+  it('says which refusal happened - a silent null is how this hid before', () => {
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
+    ENV.TERMINAL.PER_USER_HOME = false
+
+    resolveUserTerminalHome('user-1')
+
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('OCM_TERMINAL_PER_USER_HOME'))
   })
 })

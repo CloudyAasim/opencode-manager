@@ -15,17 +15,46 @@ export function isInsideDirectory(base: string, candidate: string): boolean {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
 }
 
-export function resolveUserTerminalHome(userId: string, username?: string | null): string {
+/**
+ * The directory a non-admin's shell is confined to, or `null` when there isn't
+ * one.
+ *
+ * `null` means this person cannot be confined, and every caller must refuse
+ * rather than substitute something. The tempting substitute is the workspace
+ * root, which is where this function used to fall back to - and that is the
+ * one directory guaranteed to contain everybody's data, so falling back to it
+ * means "no isolation" wearing the label "isolated". A `mkdirSync` that throws
+ * because the disk is full is enough to get there.
+ *
+ * So each failure below returns `null` and says which one it was; the caller
+ * turns that into `TERMINAL_SANDBOX_UNAVAILABLE`.
+ */
+export function resolveUserTerminalHome(userId: string, username?: string | null): string | null {
   const base = path.resolve(ENV.TERMINAL.CWD)
-  if (!ENV.TERMINAL.PER_USER_HOME) return base
+
+  // With per-user homes off there is no directory that holds only this
+  // person's files. Admin sessions are unaffected - they are handed the
+  // container on purpose - but a non-admin with nowhere of their own has
+  // nothing to be confined to.
+  if (!ENV.TERMINAL.PER_USER_HOME) {
+    logger.error(
+      `Cannot confine terminal sessions for user ${userId}: OCM_TERMINAL_PER_USER_HOME is false, ` +
+      `so there is no per-user directory. Refusing rather than binding the shared workspace, ` +
+      `which holds every user's data.`,
+    )
+    return null
+  }
 
   const validUsername = username && /^[a-z][a-z0-9]{2,31}$/.test(username) ? username : null
   const home = validUsername
     ? path.resolve(getUserWorkspacePath(validUsername))
     : path.resolve(base, ENV.TERMINAL.USERS_DIR, safeUserDirectoryName(userId))
   if (!isInsideDirectory(base, home)) {
-    logger.warn(`Computed terminal home escapes the workspace root for user ${userId}; using ${base}`)
-    return base
+    logger.error(
+      `Computed terminal home escapes the workspace root for user ${userId} (${home} is outside ${base}). ` +
+      `Refusing rather than binding the workspace root.`,
+    )
+    return null
   }
 
   try {
@@ -36,8 +65,12 @@ export function resolveUserTerminalHome(userId: string, username?: string | null
     void 0
     }
     return home
-  } catch {
-    logger.warn(`Failed to prepare the per-user terminal home for ${userId}; using ${base}`)
-    return base
+  } catch (error) {
+    logger.error(
+      `Failed to prepare the per-user terminal home for user ${userId} (${home}): ` +
+      `${error instanceof Error ? error.message : String(error)}. ` +
+      `Refusing rather than binding the workspace root, which holds every user's data.`,
+    )
+    return null
   }
 }
