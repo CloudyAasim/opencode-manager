@@ -7,7 +7,7 @@ import path from 'node:path'
 
 import { migrate } from '../../src/db/migration-runner'
 import { allMigrations } from '../../src/db/migrations'
-import { listRepos, getRepoByLocalPath } from '../../src/db/queries'
+import { listRepos, getRepoByLocalPath, ownedBy } from '../../src/db/queries'
 
 /**
  * A repository reaches the projects directory from more places than this app's
@@ -89,7 +89,7 @@ describe('reconcileUserRepos registers repositories the app never heard of', () 
 
     expect(result.registeredCount).toBe(1)
     expect(result.errors).toEqual([])
-    expect(getRepoByLocalPath(db, 'RelayAB')).not.toBeNull()
+    expect(getRepoByLocalPath(db, 'RelayAB', ownedBy('user-1'))).not.toBeNull()
     expect(listRepos(db).map((repo) => repo.localPath)).toContain('RelayAB')
   })
 
@@ -104,7 +104,7 @@ describe('reconcileUserRepos registers repositories the app never heard of', () 
     // A repository already inside the projects folder keeps its own relative
     // path as its local path - no alias, no symlink. That is the difference
     // between discovering something and pointing a new name at it.
-    expect(getRepoByLocalPath(db, 'org/nested-repo')).not.toBeNull()
+    expect(getRepoByLocalPath(db, 'org/nested-repo', ownedBy('user-1'))).not.toBeNull()
   })
 
   it('leaves a directory that is not a repository alone', async () => {
@@ -115,7 +115,7 @@ describe('reconcileUserRepos registers repositories the app never heard of', () 
     const result = await reconcileUserRepos(db, gitAuthService, principalFor('aasim', 'user-1'))
 
     expect(result.registeredCount).toBe(0)
-    expect(getRepoByLocalPath(db, 'scratch')).toBeNull()
+    expect(getRepoByLocalPath(db, 'scratch', ownedBy('user-1'))).toBeNull()
   })
 
   it('does not register the Assistant directory as a phantom project', async () => {
@@ -126,7 +126,7 @@ describe('reconcileUserRepos registers repositories the app never heard of', () 
 
     const result = await reconcileUserRepos(db, gitAuthService, principalFor('aasim', 'user-1'))
 
-    expect(getRepoByLocalPath(db, 'assistant')).toBeNull()
+    expect(getRepoByLocalPath(db, 'assistant', ownedBy('user-1'))).toBeNull()
     expect(result.registeredCount).toBe(0)
   })
 
@@ -137,7 +137,7 @@ describe('reconcileUserRepos registers repositories the app never heard of', () 
 
     await reconcileUserRepos(db, gitAuthService, principalFor('aasim', 'user-1'))
 
-    expect(getRepoByLocalPath(db, 'not-yours')).toBeNull()
+    expect(getRepoByLocalPath(db, 'not-yours', ownedBy('user-1'))).toBeNull()
   })
 
   it('reports a project it already knows as existing rather than adding it twice', async () => {
@@ -160,11 +160,11 @@ describe('reconcileUserRepos registers repositories the app never heard of', () 
     makeCommittedRepo(path.join(reposDir, 'second'))
     const throttled = await reconcileUserRepos(db, gitAuthService, principalFor('aasim', 'user-1'))
     expect(throttled.skipped).toBe(true)
-    expect(getRepoByLocalPath(db, 'second')).toBeNull()
+    expect(getRepoByLocalPath(db, 'second', ownedBy('user-1'))).toBeNull()
 
     const forced = await reconcileUserRepos(db, gitAuthService, principalFor('aasim', 'user-1'), { force: true })
     expect(forced.skipped).toBe(false)
-    expect(getRepoByLocalPath(db, 'second')).not.toBeNull()
+    expect(getRepoByLocalPath(db, 'second', ownedBy('user-1'))).not.toBeNull()
   })
 
   it('is a no-op when the projects directory does not exist yet', async () => {

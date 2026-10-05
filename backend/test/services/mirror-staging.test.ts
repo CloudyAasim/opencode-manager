@@ -8,16 +8,27 @@ const createRepo = vi.fn()
 const mockGetRepoByLocalPath = vi.fn()
 const mockGetRepoByUrlAndBranch = vi.fn()
 
-vi.mock('../../src/db/queries', () => ({
-  getRepoById,
-  createRepo,
-  getRepoByLocalPath: mockGetRepoByLocalPath,
-  getRepoBySourcePath: vi.fn(),
-  updateRepoStatus: vi.fn(),
-  updateRepoBranch: vi.fn(),
-  deleteRepo: vi.fn(),
-  getRepoByUrlAndBranch: mockGetRepoByUrlAndBranch,
-}))
+// `ownedBy` / `anyOwner` are pure scope constructors with no database behind
+// them, so the real implementations are the honest ones to hand back. Leaving
+// them out does not fail loudly - the modules under test receive `undefined`
+// and every scoped lookup quietly degrades to "no owner". Deliberately not
+// spreading `importActual`: a mock that leaks every real export stops
+// reporting the ones it forgot.
+vi.mock('../../src/db/queries', async () => {
+  const { ownedBy } = await vi.importActual<typeof import('../../src/db/queries')>('../../src/db/queries')
+
+  return {
+    getRepoById,
+    createRepo,
+    getRepoByLocalPath: mockGetRepoByLocalPath,
+    getRepoBySourcePath: vi.fn(),
+    updateRepoStatus: vi.fn(),
+    updateRepoBranch: vi.fn(),
+    deleteRepo: vi.fn(),
+    getRepoByUrlAndBranch: mockGetRepoByUrlAndBranch,
+    ownedBy,
+  }
+})
 
 const mockGetActiveDirectories = vi.fn().mockReturnValue([])
 vi.mock('../../src/services/sse-aggregator', () => ({
@@ -206,6 +217,7 @@ describe('createRepoRow', () => {
     mockGetRepoByUrlAndBranch.mockReturnValue(existingRepo)
 
     const { createRepoRow } = await import('../../src/services/repo')
+    const { ownedBy } = await import('../../src/db/queries')
     const result = createRepoRow(database, {
       name: 'new-name',
       originUrl: 'https://github.com/example/repo.git',
@@ -214,7 +226,7 @@ describe('createRepoRow', () => {
       branch: 'main',
     })
 
-    expect(mockGetRepoByUrlAndBranch).toHaveBeenCalledWith(database, 'https://github.com/example/repo.git', 'main')
+    expect(mockGetRepoByUrlAndBranch).toHaveBeenCalledWith(database, 'https://github.com/example/repo.git', 'main', ownedBy(null))
     expect(createRepo).not.toHaveBeenCalled()
     expect(result.repo).toEqual(existingRepo)
     expect(result.created).toBe(false)
@@ -236,16 +248,43 @@ describe('createRepoRow', () => {
     mockGetRepoByLocalPath.mockReturnValue(existingRepo)
 
     const { createRepoRow } = await import('../../src/services/repo')
+    const { ownedBy } = await import('../../src/db/queries')
     const result = createRepoRow(database, {
       name: 'new-name',
       localPath: 'existing-repo',
       fullPath: path.join(tmpRoot, 'existing-repo'),
     })
 
-    expect(mockGetRepoByLocalPath).toHaveBeenCalledWith(database, 'existing-repo')
+    expect(mockGetRepoByLocalPath).toHaveBeenCalledWith(database, 'existing-repo', ownedBy(null))
     expect(createRepo).not.toHaveBeenCalled()
     expect(result.repo).toEqual(existingRepo)
     expect(result.created).toBe(false)
+  })
+
+  it('asks about the row belonging to the user it is writing for', async () => {
+    const database = {} as never
+
+    const { createRepoRow } = await import('../../src/services/repo')
+    const { ownedBy } = await import('../../src/db/queries')
+    createRepoRow(database, {
+      name: 'demo',
+      originUrl: 'https://github.com/example/repo.git',
+      localPath: 'demo',
+      fullPath: path.join(tmpRoot, 'demo'),
+      branch: 'main',
+      userId: 'alice',
+    })
+
+    // Without the scope this lookup matches whichever user happens to have the
+    // URL, and a mirror commit for one person would be refused because a
+    // different person already had it.
+    expect(mockGetRepoByUrlAndBranch).toHaveBeenCalledWith(
+      database,
+      'https://github.com/example/repo.git',
+      'main',
+      ownedBy('alice'),
+    )
+    expect(createRepo).toHaveBeenCalledWith(database, expect.objectContaining({ userId: 'alice' }))
   })
 })
 

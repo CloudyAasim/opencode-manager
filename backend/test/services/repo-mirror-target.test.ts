@@ -80,7 +80,7 @@ describe('mirror target resolution', () => {
 
   it('rejects a branch whose sanitized path is occupied by a worktree for another branch and preserves that worktree', async () => {
     const { ensureMirrorTarget, planMirrorTarget } = await import('../../src/services/repo')
-    const { getRepoByLocalPath } = await import('../../src/db/queries')
+    const { getRepoByLocalPath, ownedBy } = await import('../../src/db/queries')
 
     // Materialise the occupying worktree here. It used to be the one left
     // behind by "creates the worktree, the branch, ...", so this test only
@@ -91,7 +91,7 @@ describe('mirror target resolution', () => {
 
     await expect(planMirrorTarget(db, base, 'feature-occupied')).rejects.toThrow(/occupied by repo .* 'feature\/occupied' instead of 'feature-occupied'/)
 
-    const ownerRow = getRepoByLocalPath(db, 'my-app-feature-occupied')!
+    const ownerRow = getRepoByLocalPath(db, 'my-app-feature-occupied', ownedBy(null))!
     expect(ownerRow.branch).toBe('feature/occupied')
     expect(existsSync(occupiedPath)).toBe(true)
     expect(execSync(`git -C "${occupiedPath}" rev-parse --abbrev-ref HEAD`, { encoding: 'utf-8' }).trim()).toBe('feature/occupied')
@@ -123,7 +123,7 @@ describe('mirror target resolution', () => {
 
   it('removes the created worktree and rethrows when registration fails', async () => {
     const { ensureMirrorTarget } = await import('../../src/services/repo')
-    const { getRepoByLocalPath } = await import('../../src/db/queries')
+    const { getRepoByLocalPath, ownedBy } = await import('../../src/db/queries')
 
     db.exec(`CREATE TRIGGER fail_mirror_repo_insert BEFORE INSERT ON repos
       WHEN NEW.local_path = 'my-app-feature-fail'
@@ -137,7 +137,7 @@ describe('mirror target resolution', () => {
 
       expect(existsSync(failedPath)).toBe(false)
       expect(execSync(`git -C "${baseRepoPath}" worktree list`, { encoding: 'utf-8' })).not.toContain('feature-fail')
-      expect(getRepoByLocalPath(db, 'my-app-feature-fail')).toBeNull()
+      expect(getRepoByLocalPath(db, 'my-app-feature-fail', ownedBy(null))).toBeNull()
     } finally {
       db.exec('DROP TRIGGER fail_mirror_repo_insert')
     }

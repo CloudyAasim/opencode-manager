@@ -24,12 +24,23 @@ vi.mock('../../src/services/sse-aggregator', () => ({
   },
 }))
 
-vi.mock('../../src/db/queries', () => ({
-  getRepoBySourcePath: vi.fn(() => null),
-  getRepoByLocalPath: vi.fn(() => null),
-  getRepoName: vi.fn(() => 'repo-name'),
-  listRepos: vi.fn(() => []),
-}))
+// `ownedBy` / `anyOwner` are pure scope constructors with no database behind
+// them, so the real implementations are the honest ones to hand back. Leaving
+// them out does not fail loudly - the modules under test receive `undefined`
+// and every scoped lookup quietly degrades to "no owner". Deliberately not
+// spreading `importActual`: a mock that leaks every real export stops
+// reporting the ones it forgot.
+vi.mock('../../src/db/queries', async () => {
+  const { anyOwner } = await vi.importActual<typeof import('../../src/db/queries')>('../../src/db/queries')
+
+  return {
+    getRepoBySourcePath: vi.fn(() => null),
+    getRepoByLocalPath: vi.fn(() => null),
+    getRepoName: vi.fn(() => 'repo-name'),
+    listRepos: vi.fn(() => []),
+    anyOwner,
+  }
+})
 
 vi.mock('../../src/services/project-id-resolver', () => ({
   resolveProjectId: vi.fn(async () => null),
@@ -39,6 +50,7 @@ import webpush from 'web-push'
 import { logger } from '../../src/utils/logger'
 import { sseAggregator } from '../../src/services/sse-aggregator'
 import {
+  anyOwner,
   getRepoBySourcePath,
   getRepoByLocalPath,
   listRepos,
@@ -568,6 +580,12 @@ describe('NotificationService handleSSEEvent', () => {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1', permission: 'bash', metadata: { command: 'ls' } },
     })
+    // The only cross-tenant lookup in the codebase, asserted rather than
+    // assumed. It is a system job handed an absolute directory with no user
+    // attached: the row it finds only decides who gets told, never what they
+    // are allowed to do, so scoping it to a user would silently stop owned
+    // repositories from resolving at all.
+    expect(getRepoBySourcePath).toHaveBeenCalledWith(expect.anything(), '/repos/my-repo', anyOwner())
     const [payload] = sentPayloads()
     expect(payload?.title).toBe('Run Command')
     expect(payload?.tag).toBe('permission.asked-ses_1')

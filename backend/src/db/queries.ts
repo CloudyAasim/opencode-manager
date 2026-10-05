@@ -177,12 +177,18 @@ export function ensureAssistantRepo(db: Database): Repo {
 export function createRepo(db: Database, repo: CreateRepoInput): Repo {
   const normalizedPath = repo.localPath.trim().replace(/\/+$/, '')
   
-  const existing = repo.isLocal 
+  // Scoped to the owner being written, not to the table. Without this a second
+  // user cloning a URL somebody else already has is handed that user's row -
+  // which the web route then turns into a 403, so the failure is a confusing
+  // message rather than a leak, but `cloneRepo` has still passed someone
+  // else's object to its caller.
+  const scope = ownedBy(repo.userId)
+  const existing = repo.isLocal
     ? repo.sourcePath
-      ? getRepoBySourcePath(db, repo.sourcePath) ?? getRepoByLocalPath(db, normalizedPath)
-      : getRepoByLocalPath(db, normalizedPath)
-    : getRepoByUrlAndBranch(db, repo.repoUrl, repo.branch)
-  
+      ? getRepoBySourcePath(db, repo.sourcePath, scope) ?? getRepoByLocalPath(db, normalizedPath, scope)
+      : getRepoByLocalPath(db, normalizedPath, scope)
+    : getRepoByUrlAndBranch(db, repo.repoUrl, repo.branch, scope)
+
   if (existing) {
     return existing
   }
@@ -215,47 +221,139 @@ export function createRepo(db: Database, repo: CreateRepoInput): Repo {
   } catch (error: unknown) {
     const errorMessage = getErrorMessage(error)
     if (errorMessage.includes('UNIQUE constraint failed') || (error && typeof error === 'object' && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE')) {
-      const conflictRepo = repo.isLocal 
+      // Same scope as the lookup above. Recovering with an unscoped query here
+      // is how a *different* user's row got returned as though it were the
+      // conflict being recovered from.
+      const conflictRepo = repo.isLocal
         ? repo.sourcePath
-          ? getRepoBySourcePath(db, repo.sourcePath) ?? getRepoByLocalPath(db, normalizedPath)
-          : getRepoByLocalPath(db, normalizedPath)
-        : getRepoByUrlAndBranch(db, repo.repoUrl, repo.branch)
-      
+          ? getRepoBySourcePath(db, repo.sourcePath, scope) ?? getRepoByLocalPath(db, normalizedPath, scope)
+          : getRepoByLocalPath(db, normalizedPath, scope)
+        : getRepoByUrlAndBranch(db, repo.repoUrl, repo.branch, scope)
+
       if (conflictRepo) {
         return conflictRepo
       }
-      
-      const identifier = repo.isLocal ? `path '${normalizedPath}'` : `url '${repo.repoUrl}' branch '${repo.branch || 'default'}'`
-      throw new ServiceUnavailableError(`Repository with ${identifier} already exists but could not be retrieved. This may indicate database corruption.`)
+
+      // Name the constraint that actually fired. The old message always blamed
+      // the URL and then suggested database corruption, so a perfectly ordinary
+      // "this directory name is taken" was reported as a mystery - and the
+      // real cause, a name that is unique per user colliding across users,
+      // was invisible.
+      //
+      // Every column of the violated index is listed, so this cannot read off
+      // the first one: `idx_local_path` reports `repos.user_id, repos.local_path`,
+      // and the first is the user's own identity - the one thing they cannot
+      // choose differently. `local_path` is the actionable half.
+      const columns = [...errorMessage.matchAll(/UNIQUE constraint failed: (.+)$/g)]
+        .flatMap((match) => (match[1] ?? '').split(','))
+        .map((name) => name.trim().split('.').pop() ?? '')
+        .filter(Boolean)
+      const detail = columns.includes('local_path')
+        ? `The directory name '${normalizedPath}' is already used by another repository. `
+          + 'Each user gets their own repositories directory, so this name has to be unique within one user; '
+          + 'pass a different directoryName.'
+        : columns.length > 0
+          ? `The value for ${columns.join(', ')} is already used by another repository. `
+          : 'A uniqueness constraint was violated. '
+
+      throw new ServiceUnavailableError(
+        `Cannot create repository: ${detail}` +
+        (repo.isLocal
+          ? `(local_path '${normalizedPath}')`
+          : `(repo_url '${repo.repoUrl}'${repo.branch ? ` branch '${repo.branch}'` : ''})`),
+      )
     }
     
     throw new ServiceUnavailableError(`Failed to create repository: ${errorMessage}`)
   }
 }
 
-export function getRepoByUrlAndBranch(db: Database, repoUrl: string, branch?: string): Repo | null {
-  const query = branch 
-    ? 'SELECT * FROM repos WHERE repo_url = ? AND branch = ?'
-    : 'SELECT * FROM repos WHERE repo_url = ? AND branch IS NULL'
-  
-  const stmt = db.prepare(query)
-  const row = branch 
-    ? stmt.get(repoUrl, branch) as RepoRow | undefined
-    : stmt.get(repoUrl) as RepoRow | undefined
-  
+/**
+ * Which rows a lookup is allowed to match.
+ *
+ * `owner` is what every write path means: one user's own row, plus the shared
+ * ones when the owner is null. `any` exists for the caller that is not acting
+ * for a user at all - a system job handed an absolute directory and trying to
+ * *name* the row it belongs to, which then only decides which subscriptions
+ * get told something happened.
+ *
+ * Required rather than defaulted, and that is the whole point: an optional
+ * `userId?` makes the cross-tenant call the one nobody remembers to pass.
+ * Every call site states which population it means, so the list is a grep.
+ */
+export type RepoOwnerScope =
+  | { kind: 'owner'; userId: string | null }
+  | { kind: 'any' }
+
+/** A user-scoped lookup. `null` means shared rows, which is what they always were. */
+export function ownedBy(userId: string | null | undefined): RepoOwnerScope {
+  return { kind: 'owner', userId: userId ?? null }
+}
+
+/** A system lookup. Grep for this: each use should be justifiable in one line. */
+export function anyOwner(): RepoOwnerScope {
+  return { kind: 'any' }
+}
+
+/**
+ * The owner predicate, or nothing for an unscoped lookup.
+ *
+ * `IS` rather than `= NULL`, because that is the NULL-safe form in SQLite, and
+ * writing it once beats each call site remembering which form works on a
+ * nullable column.
+ */
+function ownerPredicate(scope: RepoOwnerScope): string {
+  return scope.kind === 'owner' ? ' AND user_id IS ?' : ''
+}
+
+function ownerParam(scope: RepoOwnerScope): (string | null)[] {
+  return scope.kind === 'owner' ? [scope.userId] : []
+}
+
+export function getRepoByUrlAndBranch(
+  db: Database,
+  repoUrl: string,
+  branch: string | undefined,
+  scope: RepoOwnerScope,
+): Repo | null {
+  const branchClause = branch ? 'branch = ?' : 'branch IS NULL'
+  // Ordered so an unscoped match is reproducible. With per-user directory
+  // names, an unscoped lookup can match more than one row, and "whichever the
+  // query planner reached first" is not something a test can assert about.
+  const stmt = db.prepare(
+    `SELECT * FROM repos WHERE repo_url = ? AND ${branchClause}${ownerPredicate(scope)} ORDER BY id LIMIT 1`,
+  )
+  const row = stmt.get(
+    repoUrl,
+    ...(branch ? [branch] : []),
+    ...ownerParam(scope),
+  ) as RepoRow | undefined
+
   return row ? rowToRepo(row) : null
 }
 
-export function getRepoByLocalPath(db: Database, localPath: string): Repo | null {
-  const stmt = db.prepare('SELECT * FROM repos WHERE local_path = ?')
-  const row = stmt.get(localPath) as RepoRow | undefined
-  
+export function getRepoByLocalPath(
+  db: Database,
+  localPath: string,
+  scope: RepoOwnerScope,
+): Repo | null {
+  const stmt = db.prepare(
+    `SELECT * FROM repos WHERE local_path = ?${ownerPredicate(scope)} ORDER BY id LIMIT 1`,
+  )
+  const row = stmt.get(localPath, ...ownerParam(scope)) as RepoRow | undefined
+
   return row ? rowToRepo(row) : null
 }
 
-export function getRepoBySourcePath(db: Database, sourcePath: string): Repo | null {
-  const stmt = db.prepare('SELECT * FROM repos WHERE source_path = ?')
-  const row = stmt.get(sourcePath) as RepoRow | undefined
+export function getRepoBySourcePath(
+  db: Database,
+  sourcePath: string,
+  scope: RepoOwnerScope,
+): Repo | null {
+  const stmt = db.prepare(
+    `SELECT * FROM repos WHERE source_path = ?${ownerPredicate(scope)} ORDER BY id LIMIT 1`,
+  )
+  const row = stmt.get(sourcePath, ...ownerParam(scope)) as RepoRow | undefined
 
   return row ? rowToRepo(row) : null
 }

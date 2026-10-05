@@ -35,14 +35,25 @@ const deleteRepo = vi.fn()
 const createRepo = vi.fn()
 const getRepoByLocalPath = vi.fn()
 const updateRepoStatus = vi.fn()
-vi.mock('../../src/db/queries', () => ({
-  getRepoById: (...args: unknown[]) => getRepoById(...args),
-  deleteRepo: (...args: unknown[]) => deleteRepo(...args),
-  createRepo: (...args: unknown[]) => createRepo(...args),
-  getRepoByLocalPath: (...args: unknown[]) => getRepoByLocalPath(...args),
-  getRepoByUrlAndBranch: vi.fn(),
-  updateRepoStatus: (...args: unknown[]) => updateRepoStatus(...args),
-}))
+// `ownedBy` / `anyOwner` are pure scope constructors with no database behind
+// them, so the real implementations are the honest ones to hand back. Leaving
+// them out does not fail loudly - the modules under test receive `undefined`
+// and every scoped lookup quietly degrades to "no owner". Deliberately not
+// spreading `importActual`: a mock that leaks every real export stops
+// reporting the ones it forgot.
+vi.mock('../../src/db/queries', async () => {
+  const { ownedBy } = await vi.importActual<typeof import('../../src/db/queries')>('../../src/db/queries')
+
+  return {
+    getRepoById: (...args: unknown[]) => getRepoById(...args),
+    deleteRepo: (...args: unknown[]) => deleteRepo(...args),
+    createRepo: (...args: unknown[]) => createRepo(...args),
+    getRepoByLocalPath: (...args: unknown[]) => getRepoByLocalPath(...args),
+    getRepoByUrlAndBranch: vi.fn(),
+    updateRepoStatus: (...args: unknown[]) => updateRepoStatus(...args),
+    ownedBy,
+  }
+})
 
 // Partial: delete.ts wants a stub URL parser, but the entry-point test below
 // needs the real initLocalRepo out of this same module.
@@ -293,12 +304,13 @@ describe('删除项目时目标必须留在项目目录内', () => {
 
     it('添加本地项目时目录内的路径照常走通', async () => {
       getRepoByLocalPath.mockReturnValue({ id: 9, localPath: 'demo' })
+      const { ownedBy } = await import('../../src/db/queries')
 
       // It stops at the "already exists" branch, which is enough to prove the
       // path was accepted rather than rejected.
       await initLocalRepo(db, {} as never, 'demo')
 
-      expect(getRepoByLocalPath).toHaveBeenCalledWith(db, 'demo')
+      expect(getRepoByLocalPath).toHaveBeenCalledWith(db, 'demo', ownedBy(null))
       expect(createRepo).not.toHaveBeenCalled()
     })
   })

@@ -7,7 +7,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { Database } from 'bun:sqlite'
 import { migrate } from '../../src/db/migration-runner'
 import { allMigrations } from '../../src/db/migrations'
-import { createRepo, getRepoById, getRepoByLocalPath } from '../../src/db/queries'
+import { createRepo, getRepoById, getRepoByLocalPath, ownedBy } from '../../src/db/queries'
 import { resolveOpenCodeProjectId } from '@opencode-manager/shared/project-id'
 import { getReposPath, getScheduleWorktreesPath } from '@opencode-manager/shared/config/env'
 import type { GitAuthService } from '../../src/services/git-auth'
@@ -182,7 +182,7 @@ describe('repo service real git', () => {
       writeFileSync(path.join(reposPath, name), 'blocked')
 
       await expect(initLocalRepo(db, gitAuth, name)).rejects.toThrow(/Failed to initialize local repository/)
-      expect(getRepoByLocalPath(db, name)).toBeNull()
+      expect(getRepoByLocalPath(db, name, ownedBy(null))).toBeNull()
     })
 
     it('registers an absolute repo with a workspace symlink', async () => {
@@ -719,7 +719,7 @@ describe('repo service real git', () => {
       const name = uniqueName('clone-missing-source')
 
       await expect(cloneRepo(db, gitAuth, path.join(workspaceRoot, 'no-such-origin'), { directoryName: name })).rejects.toThrow(/does not exist/)
-      expect(getRepoByLocalPath(db, name)).toBeNull()
+      expect(getRepoByLocalPath(db, name, ownedBy(null))).toBeNull()
     })
 
     it('maps a repository-not-found clone failure', async () => {
@@ -736,7 +736,7 @@ describe('repo service real git', () => {
         }
       })
 
-      expect(getRepoByLocalPath(db, name)).toBeNull()
+      expect(getRepoByLocalPath(db, name, ownedBy(null))).toBeNull()
     })
 
     it('maps an authentication clone failure', async () => {
@@ -753,7 +753,7 @@ describe('repo service real git', () => {
         }
       })
 
-      expect(getRepoByLocalPath(db, name)).toBeNull()
+      expect(getRepoByLocalPath(db, name, ownedBy(null))).toBeNull()
     })
 
     it('maps an ssh permission-denied clone failure', async () => {
@@ -765,7 +765,7 @@ describe('repo service real git', () => {
       const name = uniqueName('clone-ssh')
 
       await expect(cloneRepo(db, sshAuth, 'ssh://git@example.invalid/owner/repo.git', { directoryName: name })).rejects.toThrow(/Access denied/)
-      expect(getRepoByLocalPath(db, name)).toBeNull()
+      expect(getRepoByLocalPath(db, name, ownedBy(null))).toBeNull()
     })
 
     it('maps a scp-style ssh permission-denied clone failure', async () => {
@@ -777,7 +777,7 @@ describe('repo service real git', () => {
       const name = uniqueName('clone-scp')
 
       await expect(cloneRepo(db, sshAuth, 'git@example.invalid:owner/repo.git', { directoryName: name })).rejects.toThrow(/Access denied/)
-      expect(getRepoByLocalPath(db, name)).toBeNull()
+      expect(getRepoByLocalPath(db, name, ownedBy(null))).toBeNull()
     })
   })
 

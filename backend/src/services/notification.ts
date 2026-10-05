@@ -15,6 +15,7 @@ import {
 import { SettingsService } from "./settings";
 import { sseAggregator, type SSEEvent } from "./sse-aggregator";
 import {
+  anyOwner,
   getRepoByLocalPath,
   getRepoBySourcePath,
   getRepoName,
@@ -265,9 +266,17 @@ export class NotificationService {
   }
 
   private async resolveRepoForDirectory(directory: string): Promise<Repo | null> {
+    // The one unscoped lookup in the codebase, and deliberately so.
+    //
+    // This is a system job: it is handed an absolute directory by the scheduler
+    // and its whole job is to name the row that directory belongs to, so that
+    // the right subscribers get told. It authorises nothing, and scoping it to
+    // "no user" would make it fail to find every repository anybody owns.
+    // The directory is already tenant-specific - every checkout lives under its
+    // owner's own repos directory - which is what makes matching on it safe.
     const repo =
-      getRepoBySourcePath(this.db, path.resolve(directory)) ??
-      getRepoByLocalPath(this.db, path.relative(getReposPath(), directory));
+      getRepoBySourcePath(this.db, path.resolve(directory), anyOwner()) ??
+      getRepoByLocalPath(this.db, path.relative(getReposPath(), directory), anyOwner());
     if (repo) return repo;
 
     const projectId = await resolveProjectId(directory);

@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from 'node:fs'
 import { executeCommand } from '../../utils/process'
 import { ensureDirectoryExists } from '../file-operations'
-import { createRepo, getRepoByLocalPath, updateRepoStatus, deleteRepo, getRepoByUrlAndBranch } from '../../db/queries'
+import { createRepo, getRepoByLocalPath, updateRepoStatus, deleteRepo, getRepoByUrlAndBranch, ownedBy } from '../../db/queries'
 import type { Database } from 'bun:sqlite'
 import type { Repo, CreateRepoInput } from '../../types/repo'
 import { logger } from '../../utils/logger'
@@ -67,7 +67,7 @@ export async function initLocalRepo(
   // between it and the filesystem, so the escape check happens here - at the
   // only place it can still be cheap.
   const targetPath = resolveRepoPathInsideBase(repoLocalPath, reposBase())
-  const existing = getRepoByLocalPath(database, repoLocalPath)
+  const existing = getRepoByLocalPath(database, repoLocalPath, ownedBy(userId))
   if (existing) {
     logger.info(`Local repo already exists in database: ${repoLocalPath}`)
     return existing
@@ -168,7 +168,9 @@ export async function cloneRepo(
   const worktreeDirName = branch && useWorktree ? `${dirName}-${sanitizeBranchForDirectory(branch)}` : dirName
   const localPath = worktreeDirName
 
-  const existing = getRepoByUrlAndBranch(database, normalizedRepoUrl, branch)
+  // Owned, not global: two users cloning the same URL is two repositories, and
+  // returning the first user's row here is what turned that into a 403.
+  const existing = getRepoByUrlAndBranch(database, normalizedRepoUrl, branch, ownedBy(userId))
 
   if (existing) {
     logger.info(`Repo branch already exists: ${normalizedRepoUrl}${branch ? `#${branch}` : ''}`)

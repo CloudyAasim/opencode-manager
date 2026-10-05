@@ -1,5 +1,5 @@
 import fs from 'fs/promises'
-import { getRepoByLocalPath, getRepoBySourcePath } from '../../db/queries'
+import { getRepoByLocalPath, getRepoBySourcePath, ownedBy } from '../../db/queries'
 import type { Database } from 'bun:sqlite'
 import { reposBase } from '../repo-paths'
 import { sanitizeRepoDirectoryName } from '@opencode-manager/shared/utils'
@@ -81,15 +81,30 @@ export async function createWorkspaceLink(alias: string, sourcePath: string): Pr
   await fs.symlink(sourcePath, aliasPath, process.platform === 'win32' ? 'junction' : 'dir')
 }
 
-export async function pickWorkspaceAlias(database: Database, sourcePath: string, rootPath?: string): Promise<string> {
-  const existingRepo = getRepoBySourcePath(database, sourcePath)
+/**
+ * Picks a free directory name for a user's next checkout.
+ *
+ * `userId` is required rather than optional: this is a *name allocator*, and
+ * the names it hands out have to be free within the user's own directory.
+ * Left unscoped it would also stop one user from taking a name another
+ * user already has in a completely separate directory - which is not a
+ * conflict, just a collision between two unrelated filesystems.
+ */
+export async function pickWorkspaceAlias(
+  database: Database,
+  sourcePath: string,
+  rootPath: string | undefined,
+  userId: string | null,
+): Promise<string> {
+  const scope = ownedBy(userId)
+  const existingRepo = getRepoBySourcePath(database, sourcePath, scope)
   if (existingRepo) {
     return existingRepo.localPath
   }
 
   const candidates = buildWorkspaceAliasCandidates(sourcePath, rootPath)
   for (const candidate of candidates) {
-    const existingByLocalPath = getRepoByLocalPath(database, candidate)
+    const existingByLocalPath = getRepoByLocalPath(database, candidate, scope)
     if (!existingByLocalPath && await isWorkspaceAliasAvailable(candidate, sourcePath)) {
       return candidate
     }
@@ -99,7 +114,7 @@ export async function pickWorkspaceAlias(database: Database, sourcePath: string,
   let suffix = 2
   while (true) {
     const candidate = `${baseCandidate}-${suffix}`
-    const existingByLocalPath = getRepoByLocalPath(database, candidate)
+    const existingByLocalPath = getRepoByLocalPath(database, candidate, scope)
     if (!existingByLocalPath && await isWorkspaceAliasAvailable(candidate, sourcePath)) {
       return candidate
     }

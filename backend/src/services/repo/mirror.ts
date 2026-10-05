@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { createRepo, getRepoByLocalPath } from '../../db/queries'
+import { createRepo, getRepoByLocalPath, ownedBy } from '../../db/queries'
 import type { Database } from 'bun:sqlite'
 import type { Repo } from '../../types/repo'
 import { reposBase } from '../repo-paths'
@@ -20,7 +20,11 @@ export async function planMirrorTarget(database: Database, repo: Repo, branch: s
 
   const localPath = `${getRepoBaseDirectoryName(repo)}-${sanitizeBranchForDirectory(branch)}`
   const fullPath = path.join(reposBase(), localPath)
-  const existing = getRepoByLocalPath(database, localPath)
+  // Scoped to the owner of the repo being mirrored. Unscoped, the conflict
+  // message names the row that happened to be there - which is how one user
+  // ends up being told that repo 7 (somebody else's) occupies the directory
+  // name they wanted.
+  const existing = getRepoByLocalPath(database, localPath, ownedBy(repo.userId))
 
   if (existing) {
     if (existing.branch !== branch) {

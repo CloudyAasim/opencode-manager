@@ -1,4 +1,4 @@
-import { createRepo, getRepoByLocalPath, getRepoById, getRepoByUrlAndBranch } from '../../db/queries'
+import { createRepo, getRepoByLocalPath, getRepoById, getRepoByUrlAndBranch, ownedBy } from '../../db/queries'
 import type { Database } from 'bun:sqlite'
 import type { Repo, CreateRepoInput } from '../../types/repo'
 import { logger } from '../../utils/logger'
@@ -20,9 +20,13 @@ export function createRepoRow(
 ): { repo: Repo; created: boolean } {
   const { originUrl, localPath, fullPath, branch, userId = null } = params
 
+  // Scoped to the owner this row is being created for. Unscoped, a mirror
+  // commit for one user would come back as "already exists" pointing at
+  // somebody else's row.
+  const scope = ownedBy(userId)
   const existing = originUrl
-    ? getRepoByUrlAndBranch(database, originUrl, branch)
-    : getRepoByLocalPath(database, localPath)
+    ? getRepoByUrlAndBranch(database, originUrl, branch, scope)
+    : getRepoByLocalPath(database, localPath, scope)
 
   if (existing) {
     return { repo: existing, created: false }

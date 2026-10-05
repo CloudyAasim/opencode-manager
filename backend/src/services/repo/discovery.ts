@@ -1,5 +1,5 @@
 import fs from 'fs/promises'
-import { createRepo, getRepoByLocalPath, getRepoBySourcePath } from '../../db/queries'
+import { createRepo, getRepoByLocalPath, getRepoBySourcePath, ownedBy } from '../../db/queries'
 import type { Database } from 'bun:sqlite'
 import type { Repo } from '../../types/repo'
 import { logger } from '../../utils/logger'
@@ -37,7 +37,7 @@ export async function registerExistingLocalRepo(
 ): Promise<{ repo: Repo; existed: boolean }> {
   const normalizedSourcePath = normalizeAbsolutePath(sourcePath)
   const env = gitAuthService.getGitEnvironment()
-  const existingBySourcePath = getRepoBySourcePath(database, normalizedSourcePath)
+  const existingBySourcePath = getRepoBySourcePath(database, normalizedSourcePath, ownedBy(userId))
 
   if (existingBySourcePath) {
     logger.info(`Local repo already exists in database: ${normalizedSourcePath}`)
@@ -65,14 +65,15 @@ export async function registerExistingLocalRepo(
   const workspaceLocalPath = getWorkspaceLocalPathForRepo(normalizedSourcePath)
 
   if (workspaceLocalPath) {
-    const existingByLocalPath = getRepoByLocalPath(database, workspaceLocalPath)
+    const existingByLocalPath = getRepoByLocalPath(database, workspaceLocalPath, ownedBy(userId))
     if (existingByLocalPath) {
       logger.info(`Workspace repo already exists in database: ${workspaceLocalPath}`)
       return { repo: existingByLocalPath, existed: true }
     }
   }
 
-  const repoLocalPath = workspaceLocalPath || await pickWorkspaceAlias(database, normalizedSourcePath, rootPath)
+  const repoLocalPath = workspaceLocalPath
+    || await pickWorkspaceAlias(database, normalizedSourcePath, rootPath, userId ?? null)
   if (!workspaceLocalPath) {
     await createWorkspaceLink(repoLocalPath, normalizedSourcePath)
   }

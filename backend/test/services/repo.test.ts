@@ -43,14 +43,25 @@ vi.mock('../../src/services/file-operations', () => ({
   ensureDirectoryExists,
 }))
 
-vi.mock('../../src/db/queries', () => ({
-  getRepoByLocalPath,
-  getRepoBySourcePath,
-  createRepo,
-  updateRepoStatus,
-  updateRepoBranch,
-  deleteRepo,
-}))
+// `ownedBy` / `anyOwner` are pure scope constructors with no database behind
+// them, so the real implementations are the honest ones to hand back. Leaving
+// them out does not fail loudly - the modules under test receive `undefined`
+// and every scoped lookup quietly degrades to "no owner". Deliberately not
+// spreading `importActual`: a mock that leaks every real export stops
+// reporting the ones it forgot.
+vi.mock('../../src/db/queries', async () => {
+  const { ownedBy } = await vi.importActual<typeof import('../../src/db/queries')>('../../src/db/queries')
+
+  return {
+    getRepoByLocalPath,
+    getRepoBySourcePath,
+    createRepo,
+    updateRepoStatus,
+    updateRepoBranch,
+    deleteRepo,
+    ownedBy,
+  }
+})
 
 const mockGitAuthService = {
   getGitEnvironment: vi.fn().mockReturnValue({}),

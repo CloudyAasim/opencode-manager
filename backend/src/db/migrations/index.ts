@@ -26,6 +26,7 @@ import migration024 from './024-repo-source-path-backfill'
 import migration025 from './025-schedule-run-status-index'
 import migration026 from './026-ocm-agent-session'
 import migration027 from './027-internal-user-token'
+import migration028 from './028-repos-uniqueness-per-user'
 
 export const allMigrations: Migration[] = [
   migration001,
@@ -55,4 +56,5 @@ export const allMigrations: Migration[] = [
   migration025,
   migration026,
   migration027,
+  migration028,
 ]
