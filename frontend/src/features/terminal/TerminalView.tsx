@@ -6,6 +6,7 @@ import { Loader2, PlugZap } from 'lucide-react'
 import { terminalApi } from '@/api/terminal'
 import { describeTerminalError } from './describe-terminal-error'
 import { useI18n } from '@/lib/i18n'
+import { toDisplayPath } from '@/lib/display-path'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -246,9 +247,17 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
             )}
           />
           <span>{statusLabel}</span>
+          {/* The session's `cwd` is the path on the host, which for a non-admin
+              is not a path their shell can name: the sandbox binds their
+              workspace at /workspace, so `pwd` there says /workspace/repos/X
+              while the session says /workspace/users/<name>/workspace/repos/X.
+              Displaying the host path named a directory that does not exist
+              from where the person is standing. Shortening it is also what
+              keeps the account name out of the interface, the same as the file
+              browser. */}
           {sessionCwd && (
             <span className="hidden truncate font-mono sm:inline">
-              · {t('terminal.workingDirectory')}: {sessionCwd}
+              · {t('terminal.workingDirectory')}: {toDisplayPath(sessionCwd)}
             </span>
           )}
           {exitInfo && (
