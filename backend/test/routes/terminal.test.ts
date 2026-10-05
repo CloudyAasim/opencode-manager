@@ -21,6 +21,11 @@ const { ENV } = vi.hoisted(() => ({
       IDLE_TIMEOUT_MS: 900000,
       MAX_DURATION_MS: 28800000,
       ADMINS_ONLY: true,
+      // Mirrors the production default. It used to be missing from this mock
+      // entirely, which made `ENV.TERMINAL.ISOLATE && ...` evaluate to false
+      // in every test in the file - so the non-admin sandbox path had no
+      // coverage at all, and a broken one would have looked fine.
+      ISOLATE: true,
     },
   },
 }))
@@ -78,6 +83,7 @@ describe('terminal routes', () => {
   beforeEach(() => {
     ENV.TERMINAL.ENABLED = true
     ENV.TERMINAL.ADMINS_ONLY = true
+    ENV.TERMINAL.ISOLATE = true
     db = createTestDb()
     spawner = new FakePtySpawner()
     manager = new TerminalManager(db, spawner)
@@ -88,12 +94,79 @@ describe('terminal routes', () => {
     db.close()
   })
 
-  it('rejects non-admins when admin-only', async () => {
+  it('still refuses a non-admin a session when admin-only', async () => {
+    const app = createApp(manager, 'user')
+
+    const res = await app.request('/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+
+    // The gate is still a gate. Only `/config` moved above it.
+    expect(res.status).toBe(403)
+  })
+
+  it('tells a non-admin why, instead of hiding the terminal with no reason', async () => {
     const app = createApp(manager, 'user')
 
     const res = await app.request('/config')
 
-    expect(res.status).toBe(403)
+    // This endpoint is how the interface asks "may this person open a
+    // terminal?". Answering it with 403 made the terminal simply not appear,
+    // which reads as "this app has no terminal" rather than "this server
+    // restricts it to administrators".
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ enabled: true, adminsOnly: true })
+  })
+
+  it('does not hand a non-admin the host details through that config', async () => {
+    const app = createApp(manager, 'user')
+
+    const body = await (await app.request('/config')).json() as Record<string, unknown>
+
+    // `cwd` is the admin's working directory and `shell` the interpreter, and
+    // both say more about the host than a non-admin needs in order to be told
+    // "not you". The runtime limits are admin tooling, not a user-facing fact.
+    expect(body).not.toHaveProperty('cwd')
+    expect(body).not.toHaveProperty('shell')
+    expect(Object.keys(body).sort()).toEqual(['adminsOnly', 'available', 'enabled', 'sandboxAvailable'])
+  })
+
+  it('refuses a non-admin session when the sandbox cannot be built', async () => {
+    ENV.TERMINAL.ADMINS_ONLY = false
+    // A container without unprivileged user namespaces: exactly the host that
+    // silently used to hand out a shell with the whole filesystem behind it.
+    spawner.sandboxUsable = false
+    const app = createApp(manager, 'user')
+
+    const res = await app.request('/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+
+    expect(res.status).toBe(503)
+    expect(await res.json()).toEqual({ error: 'TERMINAL_SANDBOX_UNAVAILABLE' })
+    // Nothing was started, so there is no session to leak.
+    expect(spawner.processes).toHaveLength(0)
+  })
+
+  it('still gives an admin a session on that same host', async () => {
+    ENV.TERMINAL.ADMINS_ONLY = false
+    spawner.sandboxUsable = false
+    const app = createApp(manager, 'admin')
+
+    // An admin is deliberately given the whole container, so a missing sandbox
+    // is not their problem and must not lock them out of a feature that works
+    // perfectly well for them.
+    const res = await app.request('/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+
+    expect(res.status).toBe(201)
   })
 
   it('exposes runtime config', async () => {
@@ -102,7 +175,12 @@ describe('terminal routes', () => {
     const res = await app.request('/config')
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toMatchObject({ enabled: true, available: true, adminsOnly: true })
+    expect(await res.json()).toMatchObject({
+      enabled: true,
+      available: true,
+      adminsOnly: true,
+      sandboxAvailable: true,
+    })
   })
 
   it('creates a session, forwards input, resizes and closes it', async () => {

@@ -20,8 +20,11 @@ export interface TerminalSessionInfo {
 export interface TerminalRuntimeConfig {
   enabled: boolean
   available: boolean
-  shell: string
-  cwd: string
+  /** Whether this host can confine a shell to one user's workspace. */
+  sandboxAvailable: boolean
+  /** Admin only - a non-admin is not told the host's shell or working directory. */
+  shell?: string
+  cwd?: string
   cols: number
   rows: number
   idleTimeoutMs: number

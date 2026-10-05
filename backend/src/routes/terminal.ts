@@ -3,7 +3,7 @@ import type { Context } from 'hono'
 import { stream } from 'hono/streaming'
 import { z } from 'zod'
 import { ENV } from '@opencode-manager/shared/config/env'
-import { requireAdmin } from '../auth/middleware'
+import { requireAdmin, isAdmin } from '../auth/middleware'
 import type { Session } from '../auth'
 import { TerminalError, type TerminalActor, type TerminalErrorCode, type TerminalManager, type TerminalSessionSummary } from '../services/terminal/manager'
 import type { TerminalSession } from '../services/terminal/session'
@@ -34,6 +34,7 @@ const resizeSchema = z.object({
 const ERROR_STATUS: Record<TerminalErrorCode, 403 | 404 | 429 | 503> = {
   TERMINAL_DISABLED: 503,
   TERMINAL_UNAVAILABLE: 503,
+  TERMINAL_SANDBOX_UNAVAILABLE: 503,
   TOO_MANY_SESSIONS: 429,
   SESSION_NOT_FOUND: 404,
   FORBIDDEN: 403,
@@ -102,13 +103,31 @@ export function createTerminalRoutes(manager: TerminalManager) {
     }
   }>()
 
+  // Registered before the admin gate, on purpose, and with a deliberately
+  // smaller payload for everyone else.
+  //
+  // This endpoint is how the interface answers "may this person open a
+  // terminal?", so guarding it with the same rule it reports meant that a
+  // non-admin got a 401 instead of an answer - and the terminal simply did not
+  // appear, with no reason given. Hono runs handlers in registration order, so
+  // this has to be declared above the gate below or the gate still catches it.
+  // `cwd` and `shell` are the admin's working directory and interpreter, which
+  // say more about the host than a non-admin needs to know, so those two are
+  // trimmed rather than served as-is.
+  app.get('/config', (c) => {
+    const config = manager.getConfig()
+    if (isAdmin(c.get('user'))) return c.json(config)
+    return c.json({
+      enabled: config.enabled,
+      available: config.available,
+      sandboxAvailable: config.sandboxAvailable,
+      adminsOnly: config.adminsOnly,
+    })
+  })
+
   if (ENV.TERMINAL.ADMINS_ONLY) {
     app.use('/*', requireAdmin)
   }
-
-  app.get('/config', (c) => {
-    return c.json(manager.getConfig())
-  })
 
   app.get('/sessions', (c) => {
     return c.json({ sessions: manager.list(actorOf(c)) })

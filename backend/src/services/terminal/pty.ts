@@ -25,6 +25,15 @@ export interface PtyProcess {
 
 export interface PtySpawner {
   available(): boolean
+  /**
+   * Whether a non-admin shell can actually be confined on this host right now.
+   *
+   * Separate from `available()` because the two failures are not
+   * interchangeable: a missing python3 means nobody gets a terminal, while a
+   * missing sandbox means admins are fine and every non-admin terminal would
+   * die at exec with no explanation.
+   */
+  sandboxAvailable(): boolean
   spawn(options: PtySpawnOptions): PtyProcess
 }
 
@@ -33,8 +42,23 @@ const BRIDGE_CANDIDATES = [
   fileURLToPath(new URL('../../../scripts/terminal-pty.py', import.meta.url)),
 ]
 
-function resolveBridgePath(): string | null {
+const SANDBOX_SCRIPT_CANDIDATES = [
+  path.resolve(process.cwd(), 'backend/scripts/terminal-sandbox.sh'),
+  fileURLToPath(new URL('../../../scripts/terminal-sandbox.sh', import.meta.url)),
+]
+
+// Exported so the tests resolve the scripts exactly the way this module does.
+// A test that looked in its own place could pass while production looked in
+// another, which is the same class of bug as testing a copy of the logic.
+export function resolveBridgePath(): string | null {
   for (const candidate of BRIDGE_CANDIDATES) {
+    if (candidate && existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+export function resolveSandboxScriptPath(): string | null {
+  for (const candidate of SANDBOX_SCRIPT_CANDIDATES) {
     if (candidate && existsSync(candidate)) return candidate
   }
   return null
@@ -42,6 +66,7 @@ function resolveBridgePath(): string | null {
 
 export class NodePtySpawner implements PtySpawner {
   private availability: boolean | null = null
+  private sandboxAvailability: boolean | null = null
 
   available(): boolean {
     if (this.availability !== null) return this.availability
@@ -62,6 +87,35 @@ export class NodePtySpawner implements PtySpawner {
       logger.warn('Web terminal unavailable: python3 with pty support was not found')
     }
     return this.availability
+  }
+
+  sandboxAvailable(): boolean {
+    if (this.sandboxAvailability !== null) return this.sandboxAvailability
+
+    if (!resolveBridgePath() || !resolveSandboxScriptPath()) {
+      this.sandboxAvailability = false
+      return false
+    }
+
+    // The sandbox is `unshare --user --map-root-user --mount`. When the kernel
+    // or the container's seccomp/AppArmor policy refuses that, exec fails and
+    // the shell never starts - so ask the host once, up front, instead of
+    // handing out a terminal that is guaranteed to die.
+    try {
+      const result = spawnSync('unshare', ['--user', '--map-root-user', '--mount', 'true'], { timeout: 5000 })
+      this.sandboxAvailability = result.status === 0
+    } catch {
+      this.sandboxAvailability = false
+    }
+
+    if (!this.sandboxAvailability) {
+      logger.warn(
+        'Web terminal sandbox unavailable: a non-admin shell cannot be confined on this host. ' +
+        'Add the container seccomp option `seccomp=unconfined`, or keep OCM_TERMINAL_ADMINS_ONLY=true. ' +
+        'Refusing to start unisolated shells rather than degrading to one.',
+      )
+    }
+    return this.sandboxAvailability
   }
 
   spawn(options: PtySpawnOptions): PtyProcess {

@@ -166,9 +166,35 @@ describe('TerminalManager', () => {
     expect(captureError(() => manager.create(actor, {})).code).toBe('TERMINAL_DISABLED')
     ENV.TERMINAL.ENABLED = true
 
-    const unavailable = new TerminalManager(db, { available: () => false, spawn: () => { throw new Error('nope') } })
+    const unavailable = new TerminalManager(db, {
+      available: () => false,
+      sandboxAvailable: () => false,
+      spawn: () => { throw new Error('nope') },
+    })
     expect(unavailable.isAvailable()).toBe(false)
     expect(captureError(() => unavailable.create(actor, {})).code).toBe('TERMINAL_UNAVAILABLE')
+  })
+
+  it('refuses a non-admin rather than starting a shell with no sandbox', () => {
+    const noSandbox = new FakePtySpawner()
+    noSandbox.sandboxUsable = false
+    const strict = new TerminalManager(db, noSandbox)
+
+    // The whole point of the check: on a host that cannot confine a shell, the
+    // answer has to be "no", not "yes, and here is an unrestricted one".
+    expect(captureError(() => strict.create(actor, {})).code).toBe('TERMINAL_SANDBOX_UNAVAILABLE')
+    expect(noSandbox.processes).toHaveLength(0)
+  })
+
+  it('reports the sandbox separately from the runtime being available', () => {
+    const noSandbox = new FakePtySpawner()
+    noSandbox.sandboxUsable = false
+    const strict = new TerminalManager(db, noSandbox)
+
+    // An admin is fine on this host and a non-admin is not. One boolean cannot
+    // say that, which is why the config carries two.
+    expect(strict.isAvailable()).toBe(true)
+    expect(strict.getConfig()).toMatchObject({ available: true, sandboxAvailable: false })
   })
 
   it('enforces the per-user session limit', () => {

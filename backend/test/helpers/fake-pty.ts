@@ -46,8 +46,19 @@ export class FakePtySpawner implements PtySpawner {
   readonly processes: FakePtyProcess[] = []
   readonly spawnOptions: PtySpawnOptions[] = []
 
+  /**
+   * Writable so a test can put the host in the state a container without
+   * unprivileged user namespaces is in, and assert that a non-admin session is
+   * refused rather than quietly started without a sandbox.
+   */
+  sandboxUsable = true
+
   available(): boolean {
     return true
+  }
+
+  sandboxAvailable(): boolean {
+    return this.sandboxUsable
   }
 
   spawn(options: PtySpawnOptions): FakePtyProcess {

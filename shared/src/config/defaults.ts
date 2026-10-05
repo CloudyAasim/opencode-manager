@@ -87,7 +87,15 @@ export const DEFAULTS = {
     MAX_SESSIONS_TOTAL: 4,
     IDLE_TIMEOUT_MS: 15 * 60 * 1000,
     MAX_DURATION_MS: 8 * 60 * 60 * 1000,
-    ADMINS_ONLY: true,
+    // Open to everyone, because the sandbox is what makes it safe to be: a
+    // non-admin shell is confined to a chroot holding only their own workspace
+    // and the standard system directories, with the application, the database,
+    // the OpenCode credentials and every other user's data unreachable.
+    //
+    // Set this to true to go back to admin-only. `TerminalManager` refuses to
+    // start a non-admin session at all when the sandbox cannot be built, so
+    // the safe failure mode here is "no terminal", never "an unconfined one".
+    ADMINS_ONLY: false,
     PER_USER_HOME: true,
     USERS_DIR: 'users',
   },

@@ -18,6 +18,7 @@ import json
 import os
 import pty
 import select
+import shutil
 import signal
 import struct
 import sys
@@ -26,16 +27,37 @@ import termios
 CTRL_FD = 3
 READ_SIZE = 65536
 
+# sysexits.h EX_CONFIG. Distinct from 127 (which is what a failed exec looks
+# like) so the server can tell "the sandbox could not be set up" apart from
+# "the shell binary is missing".
+EX_CONFIG = 78
+
 
 def build_shell_argv(shell: str) -> list:
     bind = os.environ.get("OCM_PTY_BIND")
     if not bind:
+        # No isolation asked for. The server only does this for an admin, who
+        # is deliberately given the whole container.
         return [shell, "-i"]
 
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "terminal-sandbox.sh")
     if not os.path.exists(script):
-        sys.stderr.write("terminal-pty: sandbox script not found; running without workspace isolation\n")
-        return [shell, "-i"]
+        # A sandbox was requested and cannot be provided. Falling back to a
+        # plain shell here would hand the caller the application directory, the
+        # SQLite database, the OpenCode credentials and every other user's
+        # workspaces - the exact thing the sandbox exists to prevent. So this
+        # refuses instead of degrading, and says so on stderr.
+        sys.stderr.write(
+            "terminal-pty: sandbox script not found; refusing to start an "
+            "unisolated shell\n"
+        )
+        os._exit(EX_CONFIG)
+
+    if shutil.which("unshare") is None:
+        sys.stderr.write(
+            "terminal-pty: unshare not found; refusing to start an unisolated shell\n"
+        )
+        os._exit(EX_CONFIG)
 
     sandbox_cwd = os.environ.get("OCM_PTY_SANDBOX_CWD") or "/workspace"
     return [

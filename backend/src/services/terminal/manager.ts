@@ -10,6 +10,7 @@ import { isInsideDirectory, resolveUserTerminalHome } from './home'
 export type TerminalErrorCode =
   | 'TERMINAL_DISABLED'
   | 'TERMINAL_UNAVAILABLE'
+  | 'TERMINAL_SANDBOX_UNAVAILABLE'
   | 'TOO_MANY_SESSIONS'
   | 'SESSION_NOT_FOUND'
   | 'FORBIDDEN'
@@ -48,6 +49,13 @@ export interface TerminalSessionSummary {
 export interface TerminalRuntimeConfig {
   enabled: boolean
   available: boolean
+  /**
+   * Whether a non-admin shell can be confined on this host. Reported apart
+   * from `available` because the two answer different questions, and a host
+   * with no user namespaces is perfectly fine for admins while being unusable
+   * for everyone else.
+   */
+  sandboxAvailable: boolean
   shell: string
   cwd: string
   cols: number
@@ -77,6 +85,7 @@ export class TerminalManager {
     return {
       enabled: ENV.TERMINAL.ENABLED,
       available: this.isAvailable(),
+      sandboxAvailable: this.spawner.sandboxAvailable(),
       shell: ENV.TERMINAL.SHELL,
       cwd: ENV.TERMINAL.CWD,
       cols: ENV.TERMINAL.COLS,
@@ -146,6 +155,14 @@ export class TerminalManager {
     const sandboxCwd = isolateWorkspace
       ? path.posix.join('/workspace', path.relative(home, cwd).split(path.sep).join('/'))
       : undefined
+
+    // Refuse rather than degrade. Without this check a host that cannot build
+    // the sandbox hands a non-admin a shell that dies at exec, and one that can
+    // half-build it hands over an unconfined one. Either way the person using
+    // it has no way to tell that the isolation they were promised is missing.
+    if (isolateWorkspace && !this.spawner.sandboxAvailable()) {
+      throw new TerminalError('TERMINAL_SANDBOX_UNAVAILABLE')
+    }
 
     const pty = this.spawner.spawn({
       shell: ENV.TERMINAL.SHELL,
