@@ -9,12 +9,27 @@ import { migrate } from '../../src/db/migration-runner'
 import { allMigrations } from '../../src/db/migrations'
 import { createRepo, getRepoById, getRepoByLocalPath, ownedBy } from '../../src/db/queries'
 import { resolveOpenCodeProjectId } from '@opencode-manager/shared/project-id'
-import { getReposPath, getScheduleWorktreesPath } from '@opencode-manager/shared/config/env'
+import { getReposPath, getScheduleWorktreesPath, getUserReposPath, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
 import type { GitAuthService } from '../../src/services/git-auth'
 import type { OpenCodeClient } from '../../src/services/opencode/client'
 import type { Repo } from '../../src/types/repo'
+import type { Principal } from '../../src/auth/ownership'
 
 type SiblingRepo = Repo & { currentBranch: string | undefined; workspaceId?: string }
+
+/**
+ * The sibling list is scoped by owner, and an admin's roots are the whole
+ * workspace, so the pre-existing cases below - which register ownerless rows
+ * directly under `reposPath` - are admin cases by construction. The scoped
+ * behaviour gets its own tests further down; declaring the principal at each
+ * call site is deliberate, because the signature makes forgetting it a type
+ * error rather than a silent "return everything".
+ */
+const ADMIN: Principal = { id: 'admin-1', role: 'admin', username: 'admin' }
+
+function asUser(id: string, username: string): Principal {
+  return { id, role: 'user', username }
+}
 
 const workspaceRoot = mkdtempSync(path.join(tmpdir(), 'repo-git-'))
 process.env.WORKSPACE_PATH = workspaceRoot
@@ -915,7 +930,7 @@ describe('repo service real git', () => {
     it('returns an empty list for an unknown repo', async () => {
       const { getSiblingRepos } = await import('../../src/services/repo')
 
-      expect(await getSiblingRepos(db, 9999, {})).toEqual([])
+      expect(await getSiblingRepos(db, 9999, ADMIN, {})).toEqual([])
     })
 
     it('returns an empty list for a repo that is not ready', async () => {
@@ -931,7 +946,7 @@ describe('repo service real git', () => {
         clonedAt: Date.now(),
       })
 
-      expect(await getSiblingRepos(db, repo.id, {})).toEqual([])
+      expect(await getSiblingRepos(db, repo.id, ADMIN, {})).toEqual([])
     })
 
     it('returns an empty list when the project id cannot be resolved', async () => {
@@ -947,7 +962,7 @@ describe('repo service real git', () => {
         clonedAt: Date.now(),
       })
 
-      expect(await getSiblingRepos(db, repo.id, {})).toEqual([])
+      expect(await getSiblingRepos(db, repo.id, ADMIN, {})).toEqual([])
     })
 
     it('returns repos sharing the same origin project', async () => {
@@ -978,7 +993,7 @@ describe('repo service real git', () => {
         clonedAt: Date.now(),
       })
 
-      const siblings = await getSiblingRepos(db, a.id, {})
+      const siblings = await getSiblingRepos(db, a.id, ADMIN, {})
 
       expect(siblings.map((repo) => repo.id).sort()).toEqual([a.id, b.id].sort())
       expect(siblings.every((repo) => repo.currentBranch === 'main')).toBe(true)
@@ -1038,7 +1053,7 @@ describe('repo service real git', () => {
         ],
       } as unknown as OpenCodeClient
 
-      const siblings = await getSiblingRepos(db, a.id, {}, client) as SiblingRepo[]
+      const siblings = await getSiblingRepos(db, a.id, ADMIN, {}, client) as SiblingRepo[]
       const workspaceSiblings = siblings.filter((repo) => repo.workspaceId)
 
       expect(workspaceSiblings.map((repo) => repo.workspaceId)).toEqual(['ws-extra', 'ws-dup'])
@@ -1066,7 +1081,7 @@ describe('repo service real git', () => {
         },
       } as unknown as OpenCodeClient
 
-      const siblings = await getSiblingRepos(db, a.id, {}, client) as SiblingRepo[]
+      const siblings = await getSiblingRepos(db, a.id, ADMIN, {}, client) as SiblingRepo[]
 
       expect(siblings.some((repo) => repo.id === a.id)).toBe(true)
       expect(siblings.some((repo) => repo.workspaceId)).toBe(false)
@@ -1080,6 +1095,100 @@ describe('repo service real git', () => {
       cloneOrigin(origin, repoPath)
 
       expect(await resolveOpenCodeProjectId(repoPath)).toMatch(/^[0-9a-f]{40}$/)
+    })
+
+    it('leaves another tenant\u2019s repo rows out of the answer', async () => {
+      const { getSiblingRepos } = await import('../../src/services/repo')
+      const origin = path.join(workspaceRoot, uniqueName('scoped-origin.git'))
+      const work = path.join(workspaceRoot, uniqueName('scoped-work'))
+      createOrigin(origin, work)
+
+      // Three checkouts of one project, in two tenants. Matching is by project
+      // id, so before the owner filter all three came back from either side.
+      const minePath = path.join(getUserReposPath('alice'), uniqueName('scoped-mine'))
+      const alsoMinePath = path.join(getUserReposPath('alice'), uniqueName('scoped-also-mine'))
+      const theirsPath = path.join(getUserReposPath('bob'), uniqueName('scoped-theirs'))
+      cloneOrigin(origin, minePath)
+      cloneOrigin(origin, alsoMinePath)
+      cloneOrigin(origin, theirsPath)
+
+      const register = (sourcePath: string, userId: string) => createRepo(db, {
+        isLocal: true,
+        localPath: path.basename(sourcePath),
+        sourcePath,
+        branch: 'main',
+        defaultBranch: 'main',
+        cloneStatus: 'ready',
+        clonedAt: Date.now(),
+        userId,
+      })
+      const mine = register(minePath, 'user-alice')
+      const alsoMine = register(alsoMinePath, 'user-alice')
+      const theirs = register(theirsPath, 'user-bob')
+
+      const asAlice = await getSiblingRepos(db, mine.id, asUser('user-alice', 'alice'), {})
+
+      expect(asAlice.map((repo) => repo.id).sort()).toEqual([mine.id, alsoMine.id].sort())
+      // Asserted on the payload, not only on the id list: a leak that carried
+      // somebody else\u2019s directory while omitting their id would pass an
+      // id-only check, and the directory is what the sidebar renders.
+      expect(JSON.stringify(asAlice)).not.toContain(theirsPath)
+
+      // The target is filtered the same way, so asking about a repo you do not
+      // own answers nothing rather than falling back to a neighbour that
+      // happens to share its project.
+      const asBob = await getSiblingRepos(db, theirs.id, asUser('user-bob', 'bob'), {})
+
+      expect(asBob.map((repo) => repo.id)).toEqual([theirs.id])
+      expect(JSON.stringify(asBob)).not.toContain(minePath)
+    })
+
+    it('leaves another tenant\u2019s workspace directories out of the answer', async () => {
+      const { getSiblingRepos } = await import('../../src/services/repo')
+      const origin = path.join(workspaceRoot, uniqueName('ws-scope-origin.git'))
+      const work = path.join(workspaceRoot, uniqueName('ws-scope-work'))
+      createOrigin(origin, work)
+
+      const minePath = path.join(getUserReposPath('alice'), uniqueName('ws-scope-mine'))
+      cloneOrigin(origin, minePath)
+      const mine = createRepo(db, {
+        isLocal: true,
+        localPath: path.basename(minePath),
+        sourcePath: minePath,
+        branch: 'main',
+        defaultBranch: 'main',
+        cloneStatus: 'ready',
+        clonedAt: Date.now(),
+        userId: 'user-alice',
+      })
+      const projectId = (await resolveOpenCodeProjectId(minePath))!
+
+      // A worktree row carries no owner, so the reported directory is the only
+      // thing there is to check. Both are real directories because the
+      // canonicaliser resolves symlinks and a missing one would throw.
+      const ownWorktree = path.join(getUserWorkspacePath('alice'), uniqueName('ws-scope-own'))
+      const foreignWorktree = path.join(getUserWorkspacePath('bob'), uniqueName('ws-scope-foreign'))
+      mkdirSync(ownWorktree, { recursive: true })
+      mkdirSync(foreignWorktree, { recursive: true })
+
+      const client = {
+        getJson: async () => [
+          { id: 'ws-own', type: 'worktree', name: 'own', branch: 'feature', directory: ownWorktree, projectID: projectId },
+          { id: 'ws-foreign', type: 'worktree', name: 'foreign', branch: 'main', directory: foreignWorktree, projectID: projectId },
+        ],
+      } as unknown as OpenCodeClient
+
+      const asAlice = await getSiblingRepos(db, mine.id, asUser('user-alice', 'alice'), {}, client) as SiblingRepo[]
+
+      expect(asAlice.filter((repo) => repo.workspaceId).map((repo) => repo.workspaceId)).toEqual(['ws-own'])
+      expect(JSON.stringify(asAlice)).not.toContain(foreignWorktree)
+
+      // An admin keeps the unfiltered view. Without this, "only one came back"
+      // would also be satisfied by the client never being asked properly.
+      const asAdmin = await getSiblingRepos(db, mine.id, ADMIN, {}, client) as SiblingRepo[]
+
+      expect(asAdmin.filter((repo) => repo.workspaceId).map((repo) => repo.workspaceId).sort())
+        .toEqual(['ws-foreign', 'ws-own'])
     })
   })
 })

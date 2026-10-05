@@ -13,6 +13,8 @@ import { SettingsService } from '../settings'
 import type { OpenCodeClient } from '../opencode/client'
 import { canonicalPathSync } from '../../utils/fs-safe'
 import { getCurrentBranch } from './branch'
+import { canAccessRepoOwner, principalIsAdmin, resolveAccessRoots, type Principal } from '../../auth/ownership'
+import { isWithinRoots } from '../../auth/access-scope'
 
 export function createRepoRow(
   database: Database,
@@ -56,15 +58,31 @@ export function isRepoInUse(db: Database, repoId: number): boolean {
   return sseAggregator.getActiveDirectories().includes(repo.fullPath)
 }
 
+/**
+ * Siblings of a repo: the other checkouts of the same project, plus the
+ * OpenCode workspaces sitting next to it.
+ *
+ * `principal` is required and comes before `gitEnv` on purpose. This used to
+ * take neither, call `listRepos` unscoped, and match rows by project id - so
+ * asking about your own repo answered with every other tenant's rows, and the
+ * workspace pass answered with every other tenant's worktree `fullPath`. Making
+ * it optional would have left "a caller forgot" looking exactly like the old
+ * behaviour, so there is no default that forgets.
+ */
 export async function getSiblingRepos(
   database: Database,
   repoId: number,
+  principal: Principal,
   gitEnv: Record<string, string>,
   openCodeClient?: OpenCodeClient,
 ): Promise<Array<Repo & { currentBranch: string | undefined }>> {
   const settingsService = new SettingsService(database)
   const settings = settingsService.getSettings()
+  // Same predicate the list endpoint and the delete guard use, so a repo that
+  // is not yours cannot appear here either. An ownerless row stays visible to
+  // everyone, which is the existing shared-repo rule and not a new one.
   const allRepos = listRepos(database, settings.preferences.repoOrder)
+    .filter((repo) => canAccessRepoOwner(repo.userId ?? null, principal))
 
   const target = allRepos.find((r) => r.id === repoId)
   if (!target || target.cloneStatus !== 'ready') return []
@@ -114,9 +132,18 @@ export async function getSiblingRepos(
       activeRuns.map((run) => run.worktreePath).filter((p): p is string => p !== null).map((p) => canonicalPathSync(path.resolve(p))),
     )
 
+    // A worktree row has no owner to check, so its directory is the only thing
+    // that can be checked. OpenCode reports every workspace under the project,
+    // across tenants, and each one becomes a `fullPath` in the response - the
+    // same field the sidebar renders and the browser is then handed. `null`
+    // rather than an empty array so "admin" and "nothing matched" stay distinct:
+    // an empty list would silently mean "no filtering" if it were the sentinel.
+    const scopeRoots = principalIsAdmin(principal) ? null : resolveAccessRoots(database, principal)
+
     const candidates = workspaces.filter((workspace) => {
       if (workspace.projectID !== targetProjectId) return false
       if (!workspace.directory) return false
+      if (scopeRoots && !isWithinRoots(workspace.directory, scopeRoots)) return false
 
       const workspaceDirectory = canonicalPathSync(path.resolve(workspace.directory))
       if (workspaceDirectory === targetDirectory) return false

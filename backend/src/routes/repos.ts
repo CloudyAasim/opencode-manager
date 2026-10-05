@@ -225,9 +225,14 @@ app.get('/', async (c) => {
     try {
       const id = parseInt(c.req.param('id'))
       if (Number.isNaN(id)) return c.json({ error: 'Invalid repo id' }, 400)
+      const principal = currentPrincipal(c)
+      if (!principal) {
+        return c.json({ error: 'Forbidden' }, 403)
+      }
       const siblings = await repoService.getSiblingRepos(
         database,
         id,
+        principal,
         gitAuthService.getGitEnvironment(),
         openCodeClient,
       )

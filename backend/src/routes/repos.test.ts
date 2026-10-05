@@ -28,9 +28,30 @@ const stubGitAuthService = {
   getGitCredentials: async () => [],
 } as unknown as GitAuthService
 
-function createTestApp(db: Database, openCodeClient: OpenCodeClient = createStubOpenCodeClient({
-  getJson: mock(async () => []) as any,
-})): Hono {
+/**
+ * Who these requests are from.
+ *
+ * The session middleware that sets `user` in production is not mounted here,
+ * and `/siblings` now refuses a request it cannot attribute rather than
+ * answering for every tenant. Modelling the caller keeps those cases describing
+ * the view they were written for - an admin's, which is every workspace the
+ * OpenCode client reports regardless of where it sits on disk. The owner-scoped
+ * behaviour is tested in `test/services/repo-git.test.ts`, with a real second
+ * tenant and real directories.
+ *
+ * It is a parameter rather than a blanket default because the other describes
+ * assert against what these routes do with no principal on the context, and
+ * giving them one changes answers that have nothing to do with this change.
+ */
+const SIGNED_IN_ADMIN = { id: 'admin-test', role: 'admin' as const, username: 'admin' }
+
+function createTestApp(
+  db: Database,
+  openCodeClient: OpenCodeClient = createStubOpenCodeClient({
+    getJson: mock(async () => []) as any,
+  }),
+  user?: { id: string; role: 'admin' | 'user'; username: string | null },
+): Hono {
   const app = new Hono()
   const scheduleService = {
     createSchedule: () => {},
@@ -40,6 +61,12 @@ function createTestApp(db: Database, openCodeClient: OpenCodeClient = createStub
     deleteSchedule: () => {},
     prepareRepoDelete: () => {},
   } as any
+  if (user) {
+    app.use('*', async (c, next) => {
+      (c as unknown as { set: (key: string, value: unknown) => void }).set('user', user)
+      await next()
+    })
+  }
   app.route('/repos', createRepoRoutes(db, stubGitAuthService, scheduleService, openCodeClient))
   return app
 }
@@ -65,9 +92,20 @@ describe('GET /api/repos/:id/siblings', () => {
   let db: Database
   let app: Hono
 
+  /**
+   * Every app in this block answers for an admin, because the sibling list is
+   * scoped by owner and an admin's roots are the whole workspace. See
+   * `SIGNED_IN_ADMIN` for why it is a parameter rather than a global default.
+   */
+  const asAdmin = (appDb: Database, client?: OpenCodeClient): Hono => createTestApp(
+    appDb,
+    client ?? createStubOpenCodeClient({ getJson: mock(async () => []) as any }),
+    SIGNED_IN_ADMIN,
+  )
+
   beforeEach(() => {
     db = createTestDb()
-    app = createTestApp(db)
+    app = asAdmin(db)
   })
 
   it('returns siblings including self with currentBranch', async () => {
@@ -97,7 +135,7 @@ describe('GET /api/repos/:id/siblings', () => {
     }))
 
     createRepo(db, { localPath: 'repo-a', defaultBranch: 'main', cloneStatus: 'ready', clonedAt: Date.now(), isLocal: true })
-    app = createTestApp(db, createStubOpenCodeClient({
+    app = asAdmin(db, createStubOpenCodeClient({
       getJson: mock(async () => ([{
         id: 'wrk_test',
         type: 'worktree',
@@ -126,7 +164,7 @@ describe('GET /api/repos/:id/siblings', () => {
     }))
 
     createRepo(db, { localPath: 'repo-a', defaultBranch: 'main', cloneStatus: 'ready', clonedAt: Date.now(), isLocal: true })
-    app = createTestApp(db, createStubOpenCodeClient({
+    app = asAdmin(db, createStubOpenCodeClient({
       getJson: mock(async () => ([
         {
           id: 'wrk_first',
@@ -162,7 +200,7 @@ describe('GET /api/repos/:id/siblings', () => {
 
     createRepo(db, { localPath: 'repo-a', defaultBranch: 'main', cloneStatus: 'ready', clonedAt: Date.now(), isLocal: true })
     const repoDirectory = path.join(getReposPath(), 'repo-a')
-    app = createTestApp(db, createStubOpenCodeClient({
+    app = asAdmin(db, createStubOpenCodeClient({
       getJson: mock(async () => ([{
         id: 'wrk_self',
         type: 'worktree',
@@ -188,7 +226,7 @@ describe('GET /api/repos/:id/siblings', () => {
     }))
 
     createRepo(db, { localPath: 'repo-wt', defaultBranch: 'main', cloneStatus: 'ready', clonedAt: Date.now(), isLocal: true })
-    app = createTestApp(db, createStubOpenCodeClient({
+    app = asAdmin(db, createStubOpenCodeClient({
       getJson: mock(async () => ([
         {
           id: 'wrk_main',
@@ -261,16 +299,22 @@ describe('GET /api/repos/:id/siblings', () => {
     expect(data).toEqual([])
   })
 
-  it('returns empty when target missing', async () => {
+  it('returns 404 when the target repo does not exist', async () => {
     mock.module('../services/project-id-resolver', () => ({
       resolveProjectId: (() => 'commit-A') as any,
       isGitMainCheckout: (() => Promise.resolve(false)) as any,
     }))
 
     const res = await app.request('/repos/9999/siblings')
-    expect(res.status).toBe(200)
-    const data = await res.json() as unknown[]
-    expect(data).toEqual([])
+
+    // Was `200 []`. The ownership guard runs before the handler, and a row that
+    // is not there is not one anybody owns, so it answers 404. That is the
+    // point of the change: `[]` used to come back both for "no such
+    // repository" and for "a repository you may not see", which is exactly the
+    // pair a caller should not be able to tell apart.
+    expect(res.status).toBe(404)
+    const data = await res.json() as { error: string }
+    expect(data.error).toMatch(/not found/i)
   })
 
   it('invalid id returns 400', async () => {
@@ -281,7 +325,7 @@ describe('GET /api/repos/:id/siblings', () => {
   })
 
   it('returns 500 when listing siblings throws', async () => {
-    const res = await createTestApp(createThrowingDb()).request('/repos/1/siblings')
+    const res = await asAdmin(createThrowingDb()).request('/repos/1/siblings')
     expect(res.status).toBe(500)
   })
 })
