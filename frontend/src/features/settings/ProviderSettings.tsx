@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
-import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2 } from 'lucide-react'
+import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2, Plus } from 'lucide-react'
 import { providerCredentialsApi, getProviders } from '@/api/providers'
 import type { Provider } from '@/api/providers'
 import { oauthApi, type OAuthAuthorizeResponse } from '@/api/oauth'
@@ -13,9 +13,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { OAuthAuthorizeDialog } from './OAuthAuthorizeDialog'
 import { OAuthCallbackDialog } from './OAuthCallbackDialog'
 import { ApiKeyDialog } from '@/features/settings/ApiKeyDialog'
-import { invalidateProviderCaches } from '@/lib/queryInvalidation'
+import { CustomProviderDialog } from './CustomProviderDialog'
+import { withCustomProvider, type CustomProviderDraft } from './custom-provider'
+import { settingsApi } from '@/api/settings'
+import { useOpenCodeConfigFile, OPEN_CODE_CONFIG_QUERY_KEY } from '@/hooks/useOpenCodeConfigFile'
+import { invalidateConfigCaches, invalidateProviderCaches } from '@/lib/queryInvalidation'
 import { showErrorToast } from '@/lib/error-toast'
+import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
+import type { OpenCodeConfigFile } from '@/api/types/settings'
 
 export function ProviderSettings() {
   const { t } = useI18n()
@@ -31,6 +37,8 @@ export function ProviderSettings() {
   const [apiKeyProvider, setApiKeyProvider] = useState<Provider | null>(null)
   const [apiKeyMode, setApiKeyMode] = useState<'add' | 'edit'>('add')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [isCustomProviderOpen, setIsCustomProviderOpen] = useState(false)
+  const [customProviderError, setCustomProviderError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data: providersData, isLoading: providersLoading } = useQuery({
@@ -55,6 +63,48 @@ export function ProviderSettings() {
     mutationFn: (providerId: string) => providerCredentialsApi.delete(providerId),
     onSuccess: () => {
       invalidateProviderCaches(queryClient)
+    },
+  })
+
+  // Declaring a provider is a config edit, not a registration: Manager has no
+  // provider catalogue, and the list this page renders is whatever OpenCode
+  // reports. So this writes `provider.<id>` into the OpenCode config and lets
+  // the next load pick it up.
+  const { data: openCodeConfig } = useOpenCodeConfigFile()
+  const declaredProviderIds = useMemo(
+    () => Object.keys((openCodeConfig?.content.provider as Record<string, unknown> | undefined) ?? {}),
+    [openCodeConfig],
+  )
+
+  const createCustomProviderMutation = useMutation({
+    mutationFn: async (draft: CustomProviderDraft) => {
+      const current = queryClient.getQueryData<OpenCodeConfigFile>(OPEN_CODE_CONFIG_QUERY_KEY)
+      if (!current) {
+        throw new Error('opencode-config-not-loaded')
+      }
+      return settingsApi.updateOpenCodeConfig({
+        content: withCustomProvider(current.content, draft),
+        expectedRevision: current.revision,
+      })
+    },
+    onSuccess: () => {
+      // The provider list is cached from OpenCode's own last answer, and the
+      // config file is what was just changed; both have to be re-read or the
+      // new provider does not show up until the page is reloaded.
+      invalidateConfigCaches(queryClient)
+      invalidateProviderCaches(queryClient)
+      setIsCustomProviderOpen(false)
+      setCustomProviderError(null)
+      showToast.success(t('settingsPanels.customProvider.created'))
+    },
+    onError: (error) => {
+      // Twice, on purpose: the toast is the same channel the delete path uses,
+      // and the dialog deliberately stays open - where a toast behind a modal
+      // is easy to miss. A conflict (409) carries the server's own wording,
+      // which says what changed and is worth showing verbatim.
+      const message = error instanceof Error && error.message ? error.message : t('settingsPanels.customProvider.createFailed')
+      setCustomProviderError(message)
+      showErrorToast(error, t('settingsPanels.customProvider.createFailed'))
     },
   })
 
@@ -272,11 +322,24 @@ export function ProviderSettings() {
         </div>
 
         <div className="min-w-0 space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">{t('settingsPanels.provider.apiKeys')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t('settingsPanels.provider.apiKeysDescription')}
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-foreground mb-2">{t('settingsPanels.provider.apiKeys')}</h2>
+              <p className="text-sm text-muted-foreground">
+                {t('settingsPanels.provider.apiKeysDescription')}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCustomProviderError(null)
+                setIsCustomProviderOpen(true)
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {t('settingsPanels.provider.createCustom')}
+            </Button>
           </div>
 
         <div className="space-y-3">
@@ -445,6 +508,23 @@ export function ProviderSettings() {
           mode={apiKeyMode}
         />
       )}
+
+      <CustomProviderDialog
+        open={isCustomProviderOpen}
+        onOpenChange={(open) => {
+          setIsCustomProviderOpen(open)
+          if (!open) setCustomProviderError(null)
+        }}
+        existingProviderIds={declaredProviderIds}
+        isSubmitting={createCustomProviderMutation.isPending}
+        error={customProviderError}
+        onSubmit={(draft) => {
+          // `mutate` is fire-and-forget by design; the dialog closes in the
+          // mutation's own `onSuccess` so a failure leaves it open with the
+          // fields still in it.
+          createCustomProviderMutation.mutate(draft)
+        }}
+      />
 
       <DeleteDialog
         open={deleteTarget !== null}
