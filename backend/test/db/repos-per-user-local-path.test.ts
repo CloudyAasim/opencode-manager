@@ -458,3 +458,140 @@ describe('existing rows survive the migration', () => {
     expect(getRepoByLocalPath(db, 'RelayAB', ownedBy('alice'))?.id).toBe(repo.id)
   })
 })
+
+/**
+ * The local-path routes take a directory the caller names, and until the guard
+ * below any signed-in user could hand over somebody else's checkout.
+ *
+ * What makes that more than a read: the row is written with the *caller's* id,
+ * so every ownership filter downstream treats it as theirs. Its `source_path`
+ * then joins `accessibleRepoOwnerPaths`, which is the list `GET /api/files` and
+ * the OpenCode proxy resolve against - and the same value reaches the delete
+ * path. Registering was enough to own it.
+ *
+ * The guard is scoped to the request rather than absolute, because registering
+ * a path the user named is only a request-time operation. The startup relink
+ * runs without a scope and keeps working; `access-scope.ts` documents that
+ * trade explicitly.
+ */
+describe('registering a local path stays inside the caller', () => {
+  let previousWorkspacePath: string | undefined
+
+  beforeEach(() => {
+    // `ENV.WORKSPACE.BASE_PATH` is a getter, so this takes effect immediately
+    // and makes the temp tree the real workspace for the rest of the block -
+    // which keeps the alias path inside the scope's own repo directory instead
+    // of the machine's default one.
+    previousWorkspacePath = process.env.WORKSPACE_PATH
+    process.env.WORKSPACE_PATH = workspaceRoot
+  })
+
+  afterEach(() => {
+    if (previousWorkspacePath === undefined) {
+      delete process.env.WORKSPACE_PATH
+    } else {
+      process.env.WORKSPACE_PATH = previousWorkspacePath
+    }
+  })
+
+  function committedRepoAt(target: string): string {
+    mkdirSync(target, { recursive: true })
+    git(['init', '-b', 'main'], target)
+    git(['config', 'user.email', 'test@test.com'], target)
+    git(['config', 'user.name', 'Test'], target)
+    git(['commit', '--allow-empty', '-m', 'init'], target)
+    return target
+  }
+
+  /**
+   * `assertWithinAccessScope` throws a plain `{ message, statusCode }` rather
+   * than an `Error`, so `rejects.toThrow` cannot see it. Captured and matched
+   * structurally instead, which also pins the status the route will report.
+   */
+  function captureRejection(promise: Promise<unknown>): Promise<unknown> {
+    return promise.then(() => null, (error: unknown) => error)
+  }
+
+  const OUTSIDE = {
+    statusCode: 403,
+    message: expect.stringMatching(/outside the allowed workspace/),
+  }
+
+  it('refuses a directory that belongs to somebody else', async () => {
+    const { registerExistingLocalRepo } = await import('../../src/services/repo/discovery')
+    const bobDir = committedRepoAt(path.join(scopeFor('bob').repoBase, 'RelayAB'))
+
+    const thrown = await runWithAccessScope(scopeFor('alice'), () =>
+      captureRejection(registerExistingLocalRepo(db, gitAuth, bobDir, undefined, undefined, 'alice')),
+    )
+
+    expect(thrown).toMatchObject(OUTSIDE)
+    // The guard has to stop the row, not just the request: a row here is what
+    // puts Bob's directory into Alice's readable set.
+    expect(getRepoBySourcePath(db, bobDir, anyOwner())).toBeNull()
+  })
+
+  it('refuses a path that only looks like it is inside', async () => {
+    const { registerExistingLocalRepo } = await import('../../src/services/repo/discovery')
+    const bobDir = committedRepoAt(path.join(scopeFor('bob').repoBase, 'RelayAB'))
+    // Built as a string, not with `path.join`, on purpose: `path.join` would
+    // collapse the `..` before the call and the guard would never see a
+    // traversing path at all. What is under test is that
+    // `normalizeAbsolutePath` resolves first and the guard measures the result
+    // - a guard on the raw string would pass this.
+    const aliceBase = scopeFor('alice').repoBase
+    const sneaky = `${aliceBase}/../../../bob/workspace/repos/RelayAB`
+
+    expect(path.resolve(sneaky)).toBe(bobDir)
+
+    const thrown = await runWithAccessScope(scopeFor('alice'), () =>
+      captureRejection(registerExistingLocalRepo(db, gitAuth, sneaky, undefined, undefined, 'alice')),
+    )
+
+    expect(thrown).toMatchObject(OUTSIDE)
+    expect(getRepoBySourcePath(db, bobDir, anyOwner())).toBeNull()
+  })
+
+  it('still registers a directory inside the caller own workspace', async () => {
+    // The positive half. Without it, "always throw" would satisfy every test
+    // above and the feature would be off entirely.
+    const { registerExistingLocalRepo } = await import('../../src/services/repo/discovery')
+    const ownDir = committedRepoAt(path.join(scopeFor('alice').repoBase, 'Mine'))
+
+    const { repo } = await runWithAccessScope(scopeFor('alice'), () =>
+      registerExistingLocalRepo(db, gitAuth, ownDir, undefined, undefined, 'alice'),
+    )
+
+    expect(repo.userId).toBe('alice')
+    expect(repo.sourcePath).toBe(ownDir)
+    expect(getRepoBySourcePath(db, ownDir, ownedBy('alice'))?.id).toBe(repo.id)
+  })
+
+  it('refuses to discover under a root outside the caller own workspace', async () => {
+    const { discoverLocalRepos } = await import('../../src/services/repo')
+    const bobRoot = scopeFor('bob').repoBase
+    const bobDir = committedRepoAt(path.join(bobRoot, 'RelayAB'))
+
+    const thrown = await runWithAccessScope(scopeFor('alice'), () =>
+      captureRejection(discoverLocalRepos(db, gitAuth, bobRoot, 2, 'alice')),
+    )
+
+    expect(thrown).toMatchObject(OUTSIDE)
+    expect(getRepoBySourcePath(db, bobDir, anyOwner())).toBeNull()
+  })
+
+  it('still discovers under a root inside the caller own workspace', async () => {
+    const { discoverLocalRepos } = await import('../../src/services/repo')
+    const ownRoot = scopeFor('alice').repoBase
+    committedRepoAt(path.join(ownRoot, 'Mine'))
+    committedRepoAt(path.join(ownRoot, 'nested', 'Deeper'))
+
+    const result = await runWithAccessScope(scopeFor('alice'), () =>
+      discoverLocalRepos(db, gitAuth, ownRoot, 3, 'alice'),
+    )
+
+    expect(result.errors).toEqual([])
+    expect(result.discoveredCount).toBe(2)
+    expect(result.repos.every((repo) => repo.userId === 'alice')).toBe(true)
+  })
+})

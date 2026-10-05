@@ -22,6 +22,7 @@ import {
   pickWorkspaceAlias,
 } from './workspace-alias'
 import { checkoutBranchSafely, safeGetCurrentBranch } from './branch'
+import { assertWithinAccessScope } from '../../auth/access-scope'
 
 const DEFAULT_DISCOVERY_MAX_DEPTH = 4
 
@@ -36,6 +37,20 @@ export async function registerExistingLocalRepo(
   userId?: string | null
 ): Promise<{ repo: Repo; existed: boolean }> {
   const normalizedSourcePath = normalizeAbsolutePath(sourcePath)
+  // The caller chose this path, and without a check here a signed-in user can
+  // register somebody else's checkout as their own. The row is written with
+  // *their* id, so the ownership filter in the route passes it; the row's
+  // `source_path` then joins `accessibleRepoOwnerPaths`, and from that moment
+  // `GET /api/files` and the OpenCode proxy serve that directory as theirs.
+  // The same value reaches `rm -rf` on the delete path.
+  //
+  // A request-scope guard is the right one here because both ways in -
+  // `POST /api/repos` with an absolute `localPath`, and `POST /api/repos/discover`
+  // - arrive inside the scope `index.ts` installs, as does the reconcile job,
+  // which sets one explicitly. The startup relink passes through unguarded:
+  // that is what `assertWithinAccessScope` documents, and it is not reachable
+  // from a request.
+  assertWithinAccessScope(normalizedSourcePath)
   const env = gitAuthService.getGitEnvironment()
   const existingBySourcePath = getRepoBySourcePath(database, normalizedSourcePath, ownedBy(userId))
 
@@ -108,6 +123,10 @@ export async function discoverLocalRepos(
   errors: Array<{ path: string; error: string }>
 }> {
   const normalizedRootPath = normalizeAbsolutePath(rootPath)
+  // Checked here rather than only per repo, so a caller is told their root is
+  // outside their workspace instead of receiving a list of directories that all
+  // failed to register for no stated reason.
+  assertWithinAccessScope(normalizedRootPath)
   const rootStats = await fs.stat(normalizedRootPath).catch((error: unknown) => {
     throw new Error(`Failed to access '${normalizedRootPath}': ${getErrorMessage(error)}`)
   })
