@@ -47,6 +47,30 @@ const SANDBOX_SCRIPT_CANDIDATES = [
   fileURLToPath(new URL('../../../scripts/terminal-sandbox.sh', import.meta.url)),
 ]
 
+/**
+ * The namespace flags the PTY bridge runs before the sandbox script, in the
+ * order `build_shell_argv` uses them.
+ *
+ * The probe has to ask the host the *same* question the sandbox asks. When it
+ * asked a harder one it reported "unavailable" on hosts where the real sandbox
+ * works: `--propagation unchanged` is the difference. Without it `unshare
+ * --mount` tries to change mount propagation, which the AppArmor
+ * docker-default profile refuses - so the probe failed under
+ * `seccomp=unconfined` + default AppArmor while the production argv, which
+ * passes `--propagation unchanged` and therefore never makes that change,
+ * succeeded.
+ *
+ * Exported so a test can compare it against the bridge's real argv instead of
+ * trusting this comment to stay true.
+ */
+export const SANDBOX_PROBE_FLAGS = [
+  '--user',
+  '--map-root-user',
+  '--mount',
+  '--propagation',
+  'unchanged',
+] as const
+
 // Exported so the tests resolve the scripts exactly the way this module does.
 // A test that looked in its own place could pass while production looked in
 // another, which is the same class of bug as testing a copy of the logic.
@@ -97,13 +121,13 @@ export class NodePtySpawner implements PtySpawner {
       return false
     }
 
-    // The sandbox is `unshare --user --map-root-user --mount`. When the kernel
-    // or the container's seccomp/AppArmor policy refuses that, exec fails and
-    // the shell never starts - so ask the host once, up front, instead of
-    // handing out a terminal that is guaranteed to die.
+    // The sandbox is the namespace built by SANDBOX_PROBE_FLAGS. When the
+    // kernel or the container's seccomp/AppArmor policy refuses that, exec
+    // fails and the shell never starts - so ask the host once, up front,
+    // instead of handing out a terminal that is guaranteed to die.
     let reason = ''
     try {
-      const result = spawnSync('unshare', ['--user', '--map-root-user', '--mount', 'true'], {
+      const result = spawnSync('unshare', [...SANDBOX_PROBE_FLAGS, '--', 'true'], {
         timeout: 5000,
         encoding: 'utf-8',
       })

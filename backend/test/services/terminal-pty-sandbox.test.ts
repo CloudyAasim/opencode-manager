@@ -1,9 +1,9 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { copyFileSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { resolveBridgePath, resolveSandboxScriptPath } from '../../src/services/terminal/pty'
+import { resolveBridgePath, resolveSandboxScriptPath, SANDBOX_PROBE_FLAGS } from '../../src/services/terminal/pty'
 
 /**
  * `build_shell_argv` in `terminal-pty.py` decides whether the shell it is about
@@ -31,8 +31,9 @@ afterEach(() => {
 })
 
 /** Loads the bridge from `script` and asks it what it would run. */
-function askBridge(script: string, bind: string | null) {
+function askBridge(script: string, bind: string | null, pathOverride?: string) {
   const env: Record<string, string> = { ...process.env, OCM_PTY_SHELL: '/bin/bash' }
+  if (pathOverride) env.PATH = pathOverride
   if (bind) env.OCM_PTY_BIND = bind
   else delete env.OCM_PTY_BIND
 
@@ -50,6 +51,21 @@ function askBridge(script: string, bind: string | null) {
     stderr: result.stderr ?? '',
     argv: result.status === 0 ? JSON.parse(result.stdout) as string[] : null,
   }
+}
+
+/**
+ * A PATH that can still start python3 but has no `unshare` on it, which is what
+ * an image without util-linux looks like to `shutil.which`.
+ */
+function pythonWithoutUnshare(): string {
+  const found = spawnSync('python3', ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf-8' })
+  const real = found.stdout?.trim()
+  if (!real) throw new Error('python3 not found')
+
+  const dir = mkdtempSync(path.join(tmpdir(), 'ocm-path-'))
+  temps.push(dir)
+  symlinkSync(real, path.join(dir, 'python3'))
+  return dir
 }
 
 /** A copy of the bridge with no `terminal-sandbox.sh` sitting next to it. */
@@ -90,6 +106,22 @@ describe('the PTY bridge refuses to run an unconfined shell', () => {
     expect(stderr).toMatch(/refusing to start an unisolated shell/)
   })
 
+  it('exits instead of degrading when unshare is missing', () => {
+    // util-linux is in the Dockerfile, so this branch is unreachable in the
+    // real image - which is exactly why it can rot unnoticed. It is the same
+    // fail-closed decision as the missing-script branch above, one condition
+    // further down.
+    const { status, stderr, argv } = askBridge(
+      resolveBridgePath()!,
+      '/tmp/ocm-home',
+      pythonWithoutUnshare(),
+    )
+
+    expect(argv).toBeNull()
+    expect(status).toBe(EX_CONFIG)
+    expect(stderr).toMatch(/unshare not found.*refusing to start an unisolated shell/s)
+  })
+
   it('leaves an admin alone: no bind means a plain shell, which is the point', () => {
     const { status, argv } = askBridge(resolveBridgePath()!, null)
 
@@ -97,5 +129,45 @@ describe('the PTY bridge refuses to run an unconfined shell', () => {
     // happen is a *non-admin* arriving here.
     expect(status).toBe(0)
     expect(argv).toEqual(['/bin/bash', '-i'])
+  })
+})
+
+/**
+ * `NodePtySpawner.sandboxAvailable()` runs its own `unshare` to decide whether
+ * to hand a non-admin a terminal at all. It lives in a different file, in a
+ * different language, from the argv that decides whether the sandbox actually
+ * gets built - and nothing compared them, so the two drifted.
+ *
+ * The drift cost a working sandbox: the probe omitted `--propagation
+ * unchanged`, which makes `unshare --mount` attempt a mount propagation change
+ * that the AppArmor docker-default profile refuses. The probe therefore failed
+ * on a host where the production sandbox succeeded, and every non-admin was
+ * told the sandbox was unavailable while the config that would have fixed it
+ * was sitting right there on the app.
+ *
+ * This test fails if either side changes without the other.
+ */
+describe('the availability probe and the sandbox it probes cannot drift apart', () => {
+  it('runs the same unshare flags the bridge will actually run', () => {
+    const { status, argv } = askBridge(resolveBridgePath()!, '/tmp/ocm-home')
+    expect(status).toBe(0)
+
+    const separator = argv!.indexOf('--')
+    expect(separator).toBeGreaterThan(0)
+
+    // Everything between `unshare` and the `--` that ends the options is what
+    // decides whether the kernel and the container policy say yes.
+    expect(argv!.slice(1, separator)).toEqual([...SANDBOX_PROBE_FLAGS])
+  })
+
+  it('keeps the probe from being stricter than the sandbox', () => {
+    const { argv } = askBridge(resolveBridgePath()!, '/tmp/ocm-home')
+
+    // Spelled out as its own assertion because "the probe asks a harder
+    // question" is the exact shape of the bug this file exists to prevent:
+    // unshare --mount without --propagation tries to make the tree private,
+    // and that is the one operation AppArmor docker-default blocks.
+    expect(SANDBOX_PROBE_FLAGS).toContain('--propagation')
+    expect(argv!.join(' ')).toContain('--propagation unchanged')
   })
 })

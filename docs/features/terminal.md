@@ -59,10 +59,36 @@ unshare --user --map-root-user --mount --propagation unchanged -- \
 用户，root 拥有的系统文件成为未映射 id，`CAP_DAC_OVERRIDE` 不适用，普通权限位即拒绝写入
 （容器根是 overlayfs，不支持以只读方式重新挂载，故不能依赖 `remount,ro`）。
 
-!!! note "前提"
-    容器的 seccomp 必须允许非特权 user namespaces。部署脚本已为 Dokku 应用添加
-    `--security-opt seccomp=unconfined`。若宿主禁止创建 user namespace，普通用户终端将
-    无法启动；可设置 `OCM_TERMINAL_ISOLATE=false` 关闭沙箱（不推荐），或仅保留管理员终端。
+!!! note "前提：这是一个服务器侧的 Docker 选项，仓库里管不着"
+    容器以 `node` 非 root 运行（`Dockerfile` 的 `USER node`），而 `chroot` 需要
+    `CAP_SYS_CHROOT`、`mount` 需要 `CAP_SYS_ADMIN` —— 非 root 进程两个都没有，**唯一**的获取途径
+    是 user namespace。因此沙箱在结构上依赖「宿主允许创建非特权 user namespace」，
+    **没有任何纯代码的办法绕开它**。
+
+    Docker 默认的 seccomp 剖面会拦 `clone(CLONE_NEWUSER)`，表现为
+    `unshare failed: Operation not permitted`。需要手工在应用上加：
+
+    ```bash
+    dokku docker-options:add <app> deploy "--security-opt seccomp=unconfined"
+    dokku docker-options:add <app> run     "--security-opt seccomp=unconfined"
+    ```
+
+    **AppArmor 不用动。** 默认的 `docker-default` 剖面拦的是 mount propagation，而上面的
+    `--propagation unchanged` 正是为了不去做那次传播变更，所以只要放开 seccomp 就够了
+    （`dokku config` 也改不了 AppArmor）。
+
+    这是 `2bf0b2a`（把部署配置从仓库移到服务器）之前，仓库里的部署脚本每次都会自动执行的两行。
+    搬走时它们没有跟着搬过去，**沙箱从那天起就建不起来了**，而失败方式是静默的 ——
+    普通用户点开终端，看到一个立刻退出的 shell。
+
+    建不起来时**不会**退化成无隔离 shell：`TerminalManager` 在 spawn 之前就拒绝，
+    非管理员终端直接不可用，管理员不受影响。要在服务器上实测：
+
+    ```bash
+    docker exec opencode-manager.web.1 \
+      unshare --user --map-root-user --mount --propagation unchanged true \
+      && echo SANDBOX_OK || echo SANDBOX_BLOCKED
+    ```
 
 
 ## 工作流程
