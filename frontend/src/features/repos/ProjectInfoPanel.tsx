@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GitBranch, GitCommitHorizontal } from 'lucide-react'
 import { fetchGitLog, fetchGitStatus } from '@/api/git'
 import { useI18n } from '@/lib/i18n'
+import { toDisplayPath } from '@/lib/display-path'
 import { DEFAULT_REPO_BRANCH } from '@/lib/repo-constants'
 
 export interface ProjectInfoPanelProps {
@@ -44,7 +45,7 @@ export function ProjectInfoPanel({ repoId, name, directory, branch }: ProjectInf
 
       <div>
         <div className="text-xs text-muted-foreground">{t('repo.info.directory')}</div>
-        <div className="break-all font-mono text-xs">{directory ?? '-'}</div>
+        <div className="break-all font-mono text-xs">{directory ? toDisplayPath(directory) : '-'}</div>
       </div>
 
       <div className="flex items-center gap-2">

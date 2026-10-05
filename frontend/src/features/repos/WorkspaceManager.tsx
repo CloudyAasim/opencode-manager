@@ -5,6 +5,7 @@ import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { GitBranch, Plus, Search, Trash2 } from 'lucide-react'
 import { workspaceLabel, type RepoSibling } from '@/api/repos'
+import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
 
 interface WorkspaceManagerProps {
@@ -204,7 +205,7 @@ export function WorkspaceManager({
                     {isActive && <span className="text-xs text-primary">{t('repo.workspaceManager.selected')}</span>}
                     {workspace.fullPath && (
                       <span className="ml-auto hidden truncate text-xs text-muted-foreground md:block md:max-w-[45%]">
-                        {workspace.fullPath}
+                        {toDisplayPath(workspace.fullPath)}
                       </span>
                     )}
                   </button>
@@ -225,7 +226,7 @@ export function WorkspaceManager({
                   <span className="truncate">{label}</span>
                   {workspace.fullPath && (
                     <span className="ml-auto hidden truncate text-xs text-muted-foreground md:block md:max-w-[45%]">
-                      {workspace.fullPath}
+                      {toDisplayPath(workspace.fullPath)}
                     </span>
                   )}
                 </div>

@@ -146,6 +146,45 @@ describe('AssistantWorkspaceSettings', () => {
     }
   })
 
+  it('shortens the directory instead of printing the host layout', async () => {
+    // The card header is where the assistant directory is spelled out, and the
+    // spelling the server sends carries the account name. This is display only:
+    // the paths that are opened and written still go out unmodified.
+    renderPanel()
+
+    // Positive - the directory is rendered, and the entries beside it are too,
+    // so "the raw path is gone" cannot pass by the panel rendering nothing.
+    expect(await screen.findByText('/assistant/')).toBeInTheDocument()
+    expect(await screen.findByText('RelayAB')).toBeInTheDocument()
+    expect(await screen.findByText('AGENTS.md')).toBeInTheDocument()
+    // Reverse - the host layout is not printed anywhere in the panel.
+    expect(document.body.textContent).not.toContain('/workspace/users/aasim/setting/assistant')
+    expect(document.body.textContent).not.toContain('users/aasim')
+  })
+
+  it('still writes and deletes with the real path, not the shortened one', async () => {
+    // Shortening the display must not shorten what the tools act on. Both of
+    // these assert the raw path reaches the API, which is the part that would
+    // break silently if the display helper were used for the calls too.
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.click(await screen.findByRole('button', { name: 'Delete RelayAB' }))
+    await user.click(await screen.findByRole('button', { name: /delete/i }))
+    await waitFor(() => {
+      expect(deleteFileOrFolder).toHaveBeenCalledWith('/w/setting/assistant/RelayAB')
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'Edit AGENTS.md' }))
+    const editor = await screen.findByRole('textbox', { name: 'AGENTS.md' })
+    await user.clear(editor)
+    await user.type(editor, 'fixed')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => {
+      expect(saveFileContent).toHaveBeenCalledWith('/w/setting/assistant/AGENTS.md', 'fixed')
+    })
+  })
+
   it('resets the whole assistant directory, behind a confirmation', async () => {
     // The user asked for a way back when the assistant has made a mess of its
     // own folder. It destroys everything in there, so it goes through the

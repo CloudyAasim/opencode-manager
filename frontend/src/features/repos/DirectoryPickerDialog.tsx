@@ -5,6 +5,7 @@ import { browseDirectory } from '@/api/filesystem'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Folder, FolderGit2, ChevronUp } from 'lucide-react'
+import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
 
 interface DirectoryPickerDialogProps {
@@ -43,6 +44,11 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
     }
   }, [data?.path, onSelect, onOpenChange])
 
+  // Display only. The browsed path is the server's absolute layout, so the
+  // header and its tooltip show the shortened form, while `onSelect` still
+  // hands the real path back to the caller - every caller needs the real one.
+  const displayPath = data?.path ? toDisplayPath(data.path) : undefined
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent mobileFullscreen className="grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 sm:max-w-[560px] sm:max-h-[80vh]">
@@ -51,8 +57,8 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
         </DialogHeader>
 
         <div className="px-4 sm:px-6 pb-2">
-          <p className="truncate rounded bg-muted px-3 py-2 text-xs text-muted-foreground" title={data?.path}>
-            {data?.path ?? t('repo.loading')}
+          <p className="truncate rounded bg-muted px-3 py-2 text-xs text-muted-foreground" title={displayPath}>
+            {displayPath ?? t('repo.loading')}
           </p>
         </div>
 

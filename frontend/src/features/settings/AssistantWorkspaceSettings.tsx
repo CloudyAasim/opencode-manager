@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { getAssistantWorkspaceContents, resetAssistantWorkspace } from '@/api/repos'
 import { deleteFileOrFolder, saveFileContent, useFile } from '@/api/files'
 import { showErrorToast } from '@/lib/error-toast'
+import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
 import type { AssistantWorkspaceEntry } from '@opencode-manager/shared/types'
@@ -156,7 +157,7 @@ export function AssistantWorkspaceSettings() {
             </Badge>
           </CardTitle>
           <CardDescription className="break-all text-xs sm:text-sm">
-            {contentsQuery.data?.directory ?? '—'}
+            {contentsQuery.data?.directory ? toDisplayPath(contentsQuery.data.directory) : '—'}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">

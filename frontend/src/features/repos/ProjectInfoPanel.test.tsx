@@ -50,4 +50,38 @@ describe('ProjectInfoPanel', () => {
     expect(fetchGitStatus).not.toHaveBeenCalled()
     expect(fetchGitLog).not.toHaveBeenCalled()
   })
+
+  it('shortens the directory to the space the user navigates by', () => {
+    // The panel is the one place a project's absolute path is spelled out in
+    // full, and on disk that path carries the account name and the internal
+    // layout. The name is the part worth keeping out of the interface.
+    render(
+      <ProjectInfoPanel
+        repoId={0}
+        name="demo"
+        directory="/workspace/users/aasim/workspace/repos/RelayAB"
+      />,
+      { wrapper },
+    )
+
+    // Positive: the directory is rendered, shortened, and the real project is
+    // still identifiable in it.
+    expect(screen.getByText('/workspace/repos/RelayAB')).toBeInTheDocument()
+    // Reverse: the host layout is not printed.
+    expect(screen.queryByText('/workspace/users/aasim/workspace/repos/RelayAB')).not.toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('users/aasim')
+  })
+
+  it('leaves a directory outside the managed roots spelled as it is', () => {
+    // `toDisplayPath` only rewrites the two roots the user actually navigates
+    // by. Inventing a shorter form for anything else would be showing a path
+    // that does not exist.
+    render(
+      <ProjectInfoPanel repoId={0} name="demo" directory="/opt/other/projects" />,
+      { wrapper },
+    )
+
+    expect(screen.getByText('/opt/other/projects')).toBeInTheDocument()
+    expect(screen.getByText('demo')).toBeInTheDocument()
+  })
 })
