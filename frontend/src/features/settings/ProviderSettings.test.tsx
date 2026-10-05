@@ -216,15 +216,22 @@ describe('ProviderSettings', () => {
 
   it('keeps the Connected disclosure collapsed and labels its icon-only key actions', async () => {
     const user = userEvent.setup()
-    renderSettings()
+    const { container } = renderSettings()
 
     await screen.findByText('Anthropic')
 
-    expect(screen.queryByText('OpenAI')).not.toBeInTheDocument()
+    // Scoped to the API keys sub-section on purpose: the custom-provider
+    // section above it legitimately renders a provider called OpenAI whenever
+    // the config declares one, so a document-wide "is OpenAI on the page" says
+    // nothing about whether this disclosure is collapsed.
+    const apiKeysColumn = (container.firstElementChild?.firstElementChild?.children[1]) as HTMLElement
+    const apiKeysSection = apiKeysColumn.querySelector('.border-t') as HTMLElement
+    expect(apiKeysSection).toBeInTheDocument()
+    expect(within(apiKeysSection).queryByText('OpenAI')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Connected/ }))
 
-    const connectedCard = screen.getByText('OpenAI').closest('.bg-card') as HTMLElement
+    const connectedCard = within(apiKeysSection).getByText('OpenAI').closest('.bg-card') as HTMLElement
     expect(within(connectedCard).getByRole('button', { name: 'Edit API key for OpenAI' })).toBeInTheDocument()
     expect(within(connectedCard).getByRole('button', { name: 'Remove credentials for OpenAI' })).toBeInTheDocument()
   })
@@ -240,8 +247,8 @@ describe('ProviderSettings', () => {
 
     await user.type(screen.getByPlaceholderText('Search providers...'), 'together')
 
-    expect(screen.getByText('Together AI')).toBeInTheDocument()
-    expect(screen.queryByText('OpenAI')).not.toBeInTheDocument()
+    expect(within(list).getByText('Together AI')).toBeInTheDocument()
+    expect(within(list).queryByText('OpenAI')).not.toBeInTheDocument()
   })
 
   it('opens the OAuth authorize dialog when Connect is chosen', async () => {
@@ -342,62 +349,196 @@ describe('ProviderSettings', () => {
  * Declaring a provider is a config edit. Manager has no provider catalogue of
  * its own - the list this page renders is whatever OpenCode reports - so these
  * cases are about what lands in the OpenCode config and nothing else.
+ *
+ * The dialog itself is stubbed: its form is covered by its own test file, and
+ * what matters here is the wiring - which ids the page offers, which draft goes
+ * up, and what a refusal does.
  */
-describe('ProviderSettings — declaring a custom provider', () => {
+vi.mock('./CustomProviderDialog', () => ({
+  CustomProviderDialog: ({
+    open,
+    onOpenChange,
+    onSubmit,
+    editingProviderId,
+    initialDraft,
+    existingProviderIds,
+    error,
+  }: {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    onSubmit: (draft: unknown) => void
+    editingProviderId?: string
+    initialDraft?: { name: string; models: unknown[] } | undefined
+    existingProviderIds: string[]
+    error?: string | null
+  }) =>
+    open ? (
+      <div
+        data-testid="custom-provider-dialog"
+        data-editing={editingProviderId ?? ''}
+        data-ids={existingProviderIds.join(',')}
+      >
+        <span data-testid="draft-name">{initialDraft?.name ?? ''}</span>
+        <span data-testid="draft-models">{initialDraft?.models.length ?? 0}</span>
+        {error && <span data-testid="dialog-error">{error}</span>}
+        <button
+          onClick={() =>
+            onSubmit({
+              providerId: 'my-provider',
+              name: 'My Provider',
+              kind: 'api',
+              baseUrl: 'https://example.com/v1',
+              npm: '',
+              models: [
+                {
+                  id: 'my-model',
+                  name: 'My Model',
+                  family: '',
+                  status: '',
+                  releaseDate: '',
+                  contextLimit: '128000',
+                  inputLimit: '',
+                  outputLimit: '16384',
+                  temperature: true,
+                  reasoning: true,
+                  attachment: false,
+                  toolcall: true,
+                  inputModalities: { text: true, audio: false, image: true, video: false, pdf: false },
+                  outputModalities: { text: true, audio: false, image: false, video: false, pdf: false },
+                  interleaved: 'none',
+                  costInput: '2.5',
+                  costOutput: '10',
+                  costCacheRead: '',
+                  costCacheWrite: '',
+                  variants: [{ name: 'high', reasoningEffort: 'high', extraJson: '' }],
+                  headers: [],
+                  optionsJson: '',
+                },
+              ],
+            })
+          }
+        >
+          Submit provider
+        </button>
+        <button onClick={() => onOpenChange(false)}>Close provider dialog</button>
+      </div>
+    ) : null,
+}))
+
+const DECLARED = {
+  mine: {
+    name: 'Mine',
+    api: 'https://example.com/v1',
+    options: { baseURL: 'https://example.com/v1' },
+    models: { 'gpt-4o': { name: 'GPT-4o' }, 'gpt-4o-mini': { name: 'GPT-4o mini' } },
+  },
+  openai: { name: 'OpenAI' },
+}
+
+describe('ProviderSettings — the custom provider section', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockProviderData()
+    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture(DECLARED))
   })
 
-  const openDialog = async (user: ReturnType<typeof userEvent.setup>) => {
-    await user.click(await screen.findByRole('button', { name: 'New custom provider' }))
-    await screen.findByRole('button', { name: 'Create' })
-  }
-
-  async function declare(user: ReturnType<typeof userEvent.setup>, id: string) {
-    await user.type(screen.getByLabelText('Provider ID'), id)
-    await user.type(screen.getByLabelText('Endpoint URL'), 'https://example.com/v1')
-    await user.type(screen.getByLabelText('Model ID'), 'my-model')
-    await user.click(screen.getByRole('button', { name: 'Create' }))
-  }
-
-  it('offers the entry point next to the API keys it belongs with', async () => {
-    const user = userEvent.setup()
+  it('puts the section in the providers column, above the API keys it belongs with', async () => {
     const { container } = renderSettings()
 
     await screen.findByText('Together AI')
 
-    const apiKeysColumn = (container.firstElementChild?.firstElementChild?.children[1]) as HTMLElement
-    expect(within(apiKeysColumn).getByRole('button', { name: 'New custom provider' })).toBeInTheDocument()
-
-    await openDialog(user)
-    expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument()
+    const rightColumn = (container.firstElementChild?.firstElementChild?.children[1]) as HTMLElement
+    expect(within(rightColumn).getByRole('heading', { name: 'Custom providers' })).toBeInTheDocument()
+    expect(within(rightColumn).getByRole('heading', { name: 'API Keys' })).toBeInTheDocument()
   })
 
-  it('writes one provider key into the config and leaves the rest alone', async () => {
+  it('lists what the config declares, with its model count and whether a key is attached', async () => {
+    renderSettings()
+
+    await screen.findByText('Mine')
+
+    expect(screen.getByText('mine')).toBeInTheDocument()
+    expect(screen.getByText('2 models declared')).toBeInTheDocument()
+    // Nothing in the credential list for this id, so the row has to say so
+    // rather than leave a blank where a status would go.
+    expect(screen.getByText('No key attached')).toBeInTheDocument()
+    // The section is about declared providers, not the catalogue the rest of
+    // the page lists, so the two must not bleed into each other.
+    expect(screen.getByRole('button', { name: 'Edit OpenAI' })).toBeInTheDocument()
+  })
+
+  it('says so when nothing has been declared', async () => {
+    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture({}))
+    renderSettings()
+
+    await screen.findByText('No custom providers yet')
+
+    expect(screen.queryByRole('button', { name: /^Edit / })).not.toBeInTheDocument()
+  })
+
+  it('opens a blank editor for a create, with every declared id offered as taken', async () => {
     const user = userEvent.setup()
     renderSettings()
-    await screen.findByText('Together AI')
-    await openDialog(user)
 
-    await declare(user, 'my-provider')
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'New custom provider' }))
+
+    const dialog = screen.getByTestId('custom-provider-dialog')
+    expect(dialog).toHaveAttribute('data-editing', '')
+    expect(dialog).toHaveAttribute('data-ids', 'mine,openai')
+    expect(screen.getByTestId('draft-name')).toHaveTextContent('')
+    expect(screen.getByTestId('draft-models')).toHaveTextContent('0')
+  })
+
+  it('opens the stored declaration for an edit, rather than a blank form', async () => {
+    // A create-shaped editor for an existing provider is how a save silently
+    // replaces it with an empty one.
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'Edit Mine' }))
+
+    const dialog = screen.getByTestId('custom-provider-dialog')
+    expect(dialog).toHaveAttribute('data-editing', 'mine')
+    expect(screen.getByTestId('draft-name')).toHaveTextContent('Mine')
+    expect(screen.getByTestId('draft-models')).toHaveTextContent('2')
+  })
+
+  it('writes the whole declaration, limits and capabilities included', async () => {
+    // The point of the rewrite: a model with a name and nothing else leaves
+    // `limit.context` and `capabilities.*` undefined, and the rest of the app
+    // reads them without a guard.
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'New custom provider' }))
+    await user.click(screen.getByRole('button', { name: 'Submit provider' }))
 
     await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
     const request = vi.mocked(settingsApi.updateOpenCodeConfig).mock.calls[0][0]
 
-    // The merged content goes up, because the update API diffs against the
-    // merged view and writes only the changed paths - sending just the new
-    // key would read as a removal of everything else.
     expect(request.expectedRevision).toBe('rev-1')
     expect(request.content).toMatchObject({
       theme: 'dark',
       provider: {
-        openai: { name: 'OpenAI' },
         'my-provider': {
-          name: 'my-provider',
+          name: 'My Provider',
           api: 'https://example.com/v1',
           options: { baseURL: 'https://example.com/v1' },
-          models: { 'my-model': { name: 'my-model' } },
+          models: {
+            'my-model': {
+              limit: { context: 128000, output: 16384 },
+              capabilities: {
+                reasoning: true,
+                toolcall: true,
+                input: { text: true, image: true },
+              },
+              cost: { input: 2.5, output: 10 },
+              variants: { high: { reasoningEffort: 'high' } },
+            },
+          },
         },
       },
     })
@@ -405,33 +546,48 @@ describe('ProviderSettings — declaring a custom provider', () => {
     expect(JSON.stringify(request.content)).not.toContain('apiKey')
   })
 
-  it('refuses a provider id the config already declares', async () => {
-    // Creating over an existing id would replace it whole, its models
-    // included. Paired with the write case above, which is the same flow with
-    // a free id.
-    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture({ openai: { name: 'OpenAI' } }))
+  it('sends the merged content, not just the changed key', async () => {
     const user = userEvent.setup()
     renderSettings()
-    await screen.findByText('Together AI')
-    await openDialog(user)
 
-    await user.type(screen.getByLabelText('Provider ID'), 'openai')
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'New custom provider' }))
+    await user.click(screen.getByRole('button', { name: 'Submit provider' }))
 
-    expect(screen.getByText(/openai already exists/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
+    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalled())
+    const content = vi.mocked(settingsApi.updateOpenCodeConfig).mock.calls[0][0].content
 
-    await user.click(screen.getByRole('button', { name: 'Create' }))
-    expect(settingsApi.updateOpenCodeConfig).not.toHaveBeenCalled()
+    // Sending only the new key would read, against the merged view, as a
+    // removal of everything else and trip the shadowed-removal guard.
+    expect(content).toHaveProperty('provider.mine')
+    expect(content).toHaveProperty('provider.openai')
+    expect(content).toHaveProperty('theme', 'dark')
   })
 
-  it('re-reads the provider list after a create, so the new one shows up', async () => {
+  it('takes a provider out of the config, leaving the others alone', async () => {
     const user = userEvent.setup()
     renderSettings()
-    await screen.findByText('Together AI')
+
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'Remove Mine' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
+
+    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
+    const content = vi.mocked(settingsApi.updateOpenCodeConfig).mock.calls[0][0].content
+    expect(content).toHaveProperty('provider.openai')
+    expect(content).not.toHaveProperty('provider.mine')
+    expect(content).toHaveProperty('theme', 'dark')
+  })
+
+  it('re-reads the provider list after a change, so the row updates', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('Mine')
     const before = vi.mocked(getProviders).mock.calls.length
 
-    await openDialog(user)
-    await declare(user, 'my-provider')
+    await user.click(screen.getByRole('button', { name: 'Remove Mine' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
 
     // Not asserted on an invalidation helper being called: what matters is that
     // the list this page renders is asked for again, since it is OpenCode's
@@ -441,37 +597,50 @@ describe('ProviderSettings — declaring a custom provider', () => {
     })
   })
 
-  it('closes the dialog once the write lands', async () => {
+  it('closes the editor once the write lands', async () => {
     const user = userEvent.setup()
     renderSettings()
-    await screen.findByText('Together AI')
-    await openDialog(user)
 
-    await declare(user, 'my-provider')
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'New custom provider' }))
+    await user.click(screen.getByRole('button', { name: 'Submit provider' }))
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Create' })).not.toBeInTheDocument()
+      expect(screen.queryByTestId('custom-provider-dialog')).not.toBeInTheDocument()
     })
   })
 
-  it('keeps the dialog open with its fields intact when the write fails', async () => {
+  it('keeps the editor open with the failure in it when the write fails', async () => {
     // A failed write that looks like a successful one is the failure mode that
     // matters here: the user would then go and look for a provider that is not
     // in the config.
     vi.mocked(settingsApi.updateOpenCodeConfig).mockRejectedValue(new Error('boom'))
     const user = userEvent.setup()
     renderSettings()
-    await screen.findByText('Together AI')
-    await openDialog(user)
 
-    await declare(user, 'my-provider')
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'New custom provider' }))
+    await user.click(screen.getByRole('button', { name: 'Submit provider' }))
 
     await waitFor(() => expect(showErrorToast).toHaveBeenCalled())
-    expect(vi.mocked(showErrorToast).mock.calls[0]?.[1]).toBe('Could not create the custom provider')
-    expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Provider ID')).toHaveValue('my-provider')
+    expect(vi.mocked(showErrorToast).mock.calls[0]?.[1]).toBe('Could not save the custom provider')
+    expect(screen.getByTestId('custom-provider-dialog')).toBeInTheDocument()
     // The message is in the dialog too, not only in a toast behind a modal
     // that deliberately stayed open.
-    expect(screen.getByText('boom')).toBeInTheDocument()
+    expect(screen.getByTestId('dialog-error')).toHaveTextContent('boom')
+  })
+
+  it('leaves the confirmation open when the removal fails', async () => {
+    vi.mocked(settingsApi.updateOpenCodeConfig).mockRejectedValue(new Error('nope'))
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'Remove Mine' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
+
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalled())
+    expect(screen.getByRole('button', { name: 'Confirm delete' })).toBeInTheDocument()
+    expect(vi.mocked(showErrorToast).mock.calls[0]?.[1]).toBe('Could not remove the custom provider')
   })
 })

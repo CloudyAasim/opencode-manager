@@ -14,7 +14,12 @@ import { OAuthAuthorizeDialog } from './OAuthAuthorizeDialog'
 import { OAuthCallbackDialog } from './OAuthCallbackDialog'
 import { ApiKeyDialog } from '@/features/settings/ApiKeyDialog'
 import { CustomProviderDialog } from './CustomProviderDialog'
-import { withCustomProvider, type CustomProviderDraft } from './custom-provider'
+import {
+  customProviderDraftFromConfig,
+  withCustomProvider,
+  withoutCustomProvider,
+  type CustomProviderDraft,
+} from './custom-provider'
 import { settingsApi } from '@/api/settings'
 import { useOpenCodeConfigFile, OPEN_CODE_CONFIG_QUERY_KEY } from '@/hooks/useOpenCodeConfigFile'
 import { invalidateConfigCaches, invalidateProviderCaches } from '@/lib/queryInvalidation'
@@ -22,6 +27,16 @@ import { showErrorToast } from '@/lib/error-toast'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
 import type { OpenCodeConfigFile } from '@/api/types/settings'
+
+/**
+ * Which provider the editor is open on. Carries the id rather than a boolean so
+ * a save knows whether it is creating - and has to refuse a collision - or
+ * editing one that is already there.
+ */
+type ProviderDialogState =
+  | { mode: 'closed' }
+  | { mode: 'create' }
+  | { mode: 'edit'; providerId: string }
 
 export function ProviderSettings() {
   const { t } = useI18n()
@@ -37,8 +52,9 @@ export function ProviderSettings() {
   const [apiKeyProvider, setApiKeyProvider] = useState<Provider | null>(null)
   const [apiKeyMode, setApiKeyMode] = useState<'add' | 'edit'>('add')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [isCustomProviderOpen, setIsCustomProviderOpen] = useState(false)
   const [customProviderError, setCustomProviderError] = useState<string | null>(null)
+  const [providerDialog, setProviderDialog] = useState<ProviderDialogState>({ mode: 'closed' })
+  const [pendingRemoval, setPendingRemoval] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
   const { data: providersData, isLoading: providersLoading } = useQuery({
@@ -71,12 +87,44 @@ export function ProviderSettings() {
   // reports. So this writes `provider.<id>` into the OpenCode config and lets
   // the next load pick it up.
   const { data: openCodeConfig } = useOpenCodeConfigFile()
-  const declaredProviderIds = useMemo(
-    () => Object.keys((openCodeConfig?.content.provider as Record<string, unknown> | undefined) ?? {}),
-    [openCodeConfig],
+  const declaredProviders = useMemo(() => {
+    const entries = (openCodeConfig?.content.provider ?? {}) as Record<string, Record<string, unknown>>
+    return Object.entries(entries).map(([id, entry]) => {
+      const options = (entry.options ?? {}) as Record<string, unknown>
+      return {
+        id,
+        name: typeof entry.name === 'string' && entry.name ? entry.name : id,
+        modelCount: Object.keys((entry.models ?? {}) as Record<string, unknown>).length,
+        endpoint:
+          typeof entry.api === 'string' && entry.api
+            ? entry.api
+            : typeof options.baseURL === 'string'
+              ? options.baseURL
+              : null,
+      }
+    })
+  }, [openCodeConfig])
+  const declaredProviderIds = useMemo(() => declaredProviders.map((p) => p.id), [declaredProviders])
+
+  const editingProviderId = providerDialog.mode === 'edit' ? providerDialog.providerId : null
+
+  /**
+   * The declaration the editor opens on, memoised.
+   *
+   * Not for tidiness. `CustomProviderDialog` resets its form from this in an
+   * effect keyed on it, so building it inline handed the effect a fresh object
+   * on every render - and a reset on every render re-renders, which rebuilds it
+   * again. Editing a provider would have fought itself.
+   */
+  const editingDraft = useMemo(
+    () =>
+      editingProviderId && openCodeConfig
+        ? customProviderDraftFromConfig(editingProviderId, openCodeConfig.content)
+        : undefined,
+    [editingProviderId, openCodeConfig],
   )
 
-  const createCustomProviderMutation = useMutation({
+  const saveCustomProviderMutation = useMutation({
     mutationFn: async (draft: CustomProviderDraft) => {
       const current = queryClient.getQueryData<OpenCodeConfigFile>(OPEN_CODE_CONFIG_QUERY_KEY)
       if (!current) {
@@ -90,22 +138,44 @@ export function ProviderSettings() {
     onSuccess: () => {
       // The provider list is cached from OpenCode's own last answer, and the
       // config file is what was just changed; both have to be re-read or the
-      // new provider does not show up until the page is reloaded.
+      // change does not show up until the page is reloaded.
       invalidateConfigCaches(queryClient)
       invalidateProviderCaches(queryClient)
-      setIsCustomProviderOpen(false)
+      setProviderDialog({ mode: 'closed' })
       setCustomProviderError(null)
-      showToast.success(t('settingsPanels.customProvider.created'))
+      showToast.success(t('settingsPanels.provider.customProvidersSaved'))
     },
     onError: (error) => {
       // Twice, on purpose: the toast is the same channel the delete path uses,
       // and the dialog deliberately stays open - where a toast behind a modal
       // is easy to miss. A conflict (409) carries the server's own wording,
       // which says what changed and is worth showing verbatim.
-      const message = error instanceof Error && error.message ? error.message : t('settingsPanels.customProvider.createFailed')
+      const message = error instanceof Error && error.message ? error.message : t('settingsPanels.provider.customProvidersSaveFailed')
       setCustomProviderError(message)
-      showErrorToast(error, t('settingsPanels.customProvider.createFailed'))
+      showErrorToast(error, t('settingsPanels.provider.customProvidersSaveFailed'))
     },
+  })
+
+  const removeCustomProviderMutation = useMutation({
+    mutationFn: async (providerId: string) => {
+      const current = queryClient.getQueryData<OpenCodeConfigFile>(OPEN_CODE_CONFIG_QUERY_KEY)
+      if (!current) {
+        throw new Error('opencode-config-not-loaded')
+      }
+      return settingsApi.updateOpenCodeConfig({
+        content: withoutCustomProvider(current.content, providerId),
+        expectedRevision: current.revision,
+      })
+    },
+    onSuccess: () => {
+      invalidateConfigCaches(queryClient)
+      invalidateProviderCaches(queryClient)
+      setPendingRemoval(null)
+      showToast.success(t('settingsPanels.provider.customProvidersRemoved'))
+    },
+    // The confirmation stays open on failure: closing it would make a refused
+    // delete look like a completed one.
+    onError: (error) => showErrorToast(error, t('settingsPanels.provider.customProvidersRemoveFailed')),
   })
 
   const handleDeleteCredential = (providerId: string) => {
@@ -321,25 +391,102 @@ export function ProviderSettings() {
         )}
         </div>
 
-        <div className="min-w-0 space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-foreground mb-2">{t('settingsPanels.provider.apiKeys')}</h2>
-              <p className="text-sm text-muted-foreground">
-                {t('settingsPanels.provider.apiKeysDescription')}
-              </p>
+        <div className="min-w-0 space-y-6">
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-foreground mb-2">
+                  {t('settingsPanels.provider.customProviders')}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {t('settingsPanels.provider.customProvidersDescription')}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCustomProviderError(null)
+                  setProviderDialog({ mode: 'create' })
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                {t('settingsPanels.provider.customProvidersAdd')}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setCustomProviderError(null)
-                setIsCustomProviderOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              {t('settingsPanels.provider.createCustom')}
-            </Button>
+
+            {declaredProviders.length === 0 ? (
+              <Card className="bg-card border-border">
+                <CardContent className="pt-6">
+                  <p className="text-sm font-medium text-foreground text-center">
+                    {t('settingsPanels.provider.customProvidersEmptyTitle')}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground text-center">
+                    {t('settingsPanels.provider.customProvidersEmptyHint')}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="divide-y divide-border">
+                {declaredProviders.map((provider) => (
+                  <div
+                    key={provider.id}
+                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{provider.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono truncate">{provider.id}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {t('settingsPanels.provider.customProvidersModels', {
+                            count: provider.modelCount,
+                          })}
+                        </span>
+                        {hasCredentials(provider.id) ? (
+                          <Badge variant="default" className="bg-green-600 hover:bg-green-700 shrink-0">
+                            <Check className="h-3 w-3 mr-1" />
+                            {t('settingsPanels.provider.connected')}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="shrink-0">
+                            {t('settingsPanels.provider.customProvidersNoKey')}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCustomProviderError(null)
+                          setProviderDialog({ mode: 'edit', providerId: provider.id })
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        {t('settingsPanels.provider.customProvidersEdit', { name: provider.name })}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setPendingRemoval({ id: provider.id, name: provider.name })}
+                        disabled={removeCustomProviderMutation.isPending}
+                      >
+                        {t('settingsPanels.provider.customProvidersDelete', { name: provider.name })}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <div className="border-t border-border pt-6">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground mb-2">{t('settingsPanels.provider.apiKeys')}</h2>
+            <p className="text-sm text-muted-foreground">
+              {t('settingsPanels.provider.apiKeysDescription')}
+            </p>
           </div>
 
         <div className="space-y-3">
@@ -484,7 +631,8 @@ export function ProviderSettings() {
             </div>
           )}
         </div>
-      </div>
+          </div>
+        </div>
       </div>
 
       {apiKeyProvider && (
@@ -510,20 +658,39 @@ export function ProviderSettings() {
       )}
 
       <CustomProviderDialog
-        open={isCustomProviderOpen}
+        open={providerDialog.mode !== 'closed'}
         onOpenChange={(open) => {
-          setIsCustomProviderOpen(open)
-          if (!open) setCustomProviderError(null)
+          if (!open) {
+            setProviderDialog({ mode: 'closed' })
+            setCustomProviderError(null)
+          }
         }}
         existingProviderIds={declaredProviderIds}
-        isSubmitting={createCustomProviderMutation.isPending}
+        editingProviderId={editingProviderId ?? undefined}
+        initialDraft={editingDraft}
+        isSubmitting={saveCustomProviderMutation.isPending}
         error={customProviderError}
         onSubmit={(draft) => {
           // `mutate` is fire-and-forget by design; the dialog closes in the
           // mutation's own `onSuccess` so a failure leaves it open with the
           // fields still in it.
-          createCustomProviderMutation.mutate(draft)
+          saveCustomProviderMutation.mutate(draft)
         }}
+      />
+
+      <DeleteDialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => !open && setPendingRemoval(null)}
+        onConfirm={() => {
+          if (!pendingRemoval) return
+          removeCustomProviderMutation.mutate(pendingRemoval.id)
+        }}
+        onCancel={() => setPendingRemoval(null)}
+        title={t('settingsPanels.provider.customProvidersDeleteTitle')}
+        description={t('settingsPanels.provider.customProvidersDeleteDescription', {
+          name: pendingRemoval?.name ?? '',
+        })}
+        isDeleting={removeCustomProviderMutation.isPending}
       />
 
       <DeleteDialog
