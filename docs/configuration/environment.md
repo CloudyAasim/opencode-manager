@@ -143,8 +143,8 @@ user agent, shell, cwd, start/end, exit code).
 | `OCM_TERMINAL_MAX_SESSIONS_TOTAL` | Concurrent sessions overall | `4` |
 | `OCM_TERMINAL_IDLE_TIMEOUT_MS` | Close a session after inactivity | `900000` |
 | `OCM_TERMINAL_MAX_DURATION_MS` | Absolute session lifetime cap | `28800000` |
-| `OCM_TERMINAL_ADMINS_ONLY` | Restrict the terminal to administrators | `true` (the Dokku deploy sets `false` so users get the sandboxed terminal) |
-| `OCM_TERMINAL_PER_USER_HOME` | Give each user a private directory under the workspace | `true` |
+| `OCM_TERMINAL_ADMINS_ONLY` | Restrict the terminal to administrators | `false` — the terminal is open to everyone and the sandbox is what makes that safe. Set `true` to go back to admin-only. |
+| `OCM_TERMINAL_PER_USER_HOME` | Give each user a private directory under the workspace | `true`. **Turning this off leaves non-admins with no terminal**: there is then no directory holding only their files, and the server refuses rather than binding the shared workspace, which holds every user's data. |
 | `OCM_TERMINAL_USERS_DIR` | Subdirectory that holds per-user terminal homes | `users` |
 
 !!! warning "Terminal equals shell access"

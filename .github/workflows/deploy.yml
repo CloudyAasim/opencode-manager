@@ -15,7 +15,16 @@ jobs:
           fetch-depth: 0
 
       - name: Deploy to Dokku
-        uses: dokku/github-action@master
+        # Pinned to the exact commit this workflow has been running, not to a
+        # moving branch. This is the one step that receives the production
+        # deploy key, on every push to main, so a change on the action's side
+        # would otherwise become code execution with the key in hand.
+        #
+        # a38b28b is dokku/github-action's master as of 2026-08-01. The tagged
+        # v1.10.0 is 13 commits behind it, so pinning to the tag would quietly
+        # change what runs on the next deploy. Moving to the tag is a separate,
+        # deliberate change.
+        uses: dokku/github-action@a38b28b1f65617ee2b12e0ca96315fd5f889292f
         with:
           git_remote_url: ${{ secrets.GIT_REMOTE_URL }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
