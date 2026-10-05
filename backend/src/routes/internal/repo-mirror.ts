@@ -11,6 +11,7 @@ import {
   type MirrorTargetPlanResponse,
 } from '@opencode-manager/shared/schemas'
 import { getRepoById, updateLastPulled, updateRepoBranch, deleteRepo } from '../../db/queries'
+import { internalUserOf } from '../../auth/internal-token-middleware'
 import { ensureMirrorTargetPath, createRepoRow, isRepoInUse, planMirrorTarget, ensureMirrorTarget } from '../../services/repo'
 import { logger } from '../../utils/logger'
 import { getErrorMessage } from '../../utils/error-utils'
@@ -95,6 +96,12 @@ export function createInternalRepoMirrorRoutes(db: Database) {
         localPath: target.localPath,
         fullPath: target.fullPath,
         branch: body.branch,
+        // Without an owner the row lands with `user_id IS NULL`, and
+        // `canAccessRepoOwner(null, principal)` is true for every non-admin -
+        // so the mirror this request just created was immediately deletable by
+        // any tenant, and its directory joined the set of paths they could
+        // read. The internal token names a user; that is the owner.
+        userId: internalUserOf(c)?.id ?? null,
       })
       repoId = newRepo.id
       fullPath = newRepo.fullPath
