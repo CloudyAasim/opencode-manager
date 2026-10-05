@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, File, Folder, FolderOpen, RefreshCw } from '
 import { getFileApiUrl } from '@/api/files'
 import type { FileInfo } from '@/types/files'
 import { cn } from '@/lib/utils'
+import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
 
 function sortEntries(a: FileInfo, b: FileInfo) {
@@ -62,7 +63,7 @@ function TreeNode({ file, guides, isLast, selectedPath, onSelectFile }: TreeNode
           'flex w-full items-center gap-1 rounded px-1 py-1 text-left transition-colors hover:bg-accent',
           isSelected && 'bg-primary-soft text-primary',
         )}
-        title={file.path}
+        title={toDisplayPath(file.path)}
       >
         <span className="whitespace-pre font-mono text-xs text-muted-foreground select-none">{prefix}</span>
         {file.isDirectory ? (
@@ -140,7 +141,13 @@ export const FileTreeExplorer = memo(function FileTreeExplorer({
   return (
     <div className={cn('flex h-full min-h-0 flex-col', className)}>
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-2 py-1.5">
-        <span className="truncate font-mono text-xs text-muted-foreground">{rootPath ? `/${rootPath}` : '/'}</span>
+        {/* `rootPath` is the real on-disk directory, so a normal user's project
+            root is `/workspace/users/<name>/workspace/repos/<repo>`. Shown raw
+            it is long enough to squeeze the refresh button, and it puts the
+            account name in the sidebar. The same shortening the file browser
+            header already does, so the two spellings agree. Display only -
+            every request still carries the real path. */}
+        <span className="truncate font-mono text-xs text-muted-foreground">{toDisplayPath(rootPath)}</span>
         <button
           type="button"
           onClick={() => void load()}
