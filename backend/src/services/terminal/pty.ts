@@ -101,18 +101,35 @@ export class NodePtySpawner implements PtySpawner {
     // or the container's seccomp/AppArmor policy refuses that, exec fails and
     // the shell never starts - so ask the host once, up front, instead of
     // handing out a terminal that is guaranteed to die.
+    let reason = ''
     try {
-      const result = spawnSync('unshare', ['--user', '--map-root-user', '--mount', 'true'], { timeout: 5000 })
+      const result = spawnSync('unshare', ['--user', '--map-root-user', '--mount', 'true'], {
+        timeout: 5000,
+        encoding: 'utf-8',
+      })
       this.sandboxAvailability = result.status === 0
-    } catch {
+      if (!this.sandboxAvailability) {
+        // Two different problems with two different fixes, and the operator
+        // should not have to guess which one they have.
+        reason = (result.stderr ?? '').trim() || `exit ${result.status}`
+      }
+    } catch (error) {
       this.sandboxAvailability = false
+      reason = error instanceof Error ? error.message : String(error)
     }
 
     if (!this.sandboxAvailability) {
+      // `unshare` missing is a Dockerfile problem; `unshare` present and
+      // refused is a container policy problem, and `dokku config` cannot fix
+      // the AppArmor half of it.
+      const missing = /ENOENT|not found/i.test(reason)
       logger.warn(
-        'Web terminal sandbox unavailable: a non-admin shell cannot be confined on this host. ' +
-        'Add the container seccomp option `seccomp=unconfined`, or keep OCM_TERMINAL_ADMINS_ONLY=true. ' +
-        'Refusing to start unisolated shells rather than degrading to one.',
+        missing
+          ? 'Web terminal sandbox unavailable: `unshare` was not found in this image, so a non-admin shell cannot be confined. Install util-linux in the Dockerfile.'
+          : `Web terminal sandbox unavailable: a non-admin shell cannot be confined on this host (${reason}). ` +
+            'This is a container policy refusing unprivileged user namespaces - the usual cause is the default seccomp profile, ' +
+            'in which case add "--security-opt seccomp=unconfined", or the AppArmor docker-default profile, which dokku config cannot change. ' +
+            'Unisolated shells are refused rather than served, so this leaves admins unaffected and everybody else without a terminal.',
       )
     }
     return this.sandboxAvailability

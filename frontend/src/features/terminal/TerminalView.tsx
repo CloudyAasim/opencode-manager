@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { Loader2, PlugZap } from 'lucide-react'
 import { terminalApi } from '@/api/terminal'
+import { describeTerminalError } from './describe-terminal-error'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -198,8 +199,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
         connectStream(session.id)
       } catch (error) {
         setStatus('error')
-        const message = error instanceof Error ? error.message : 'error'
-        writeNotice(message)
+        writeNotice(describeTerminalError(error, tRef.current))
       }
     }
 

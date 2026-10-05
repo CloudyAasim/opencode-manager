@@ -67,6 +67,7 @@ export const en = {
     unavailableDescription: 'The terminal is disabled or the PTY runtime is missing on the server.',
     sandboxUnavailableDescription: 'This server cannot confine a shell to your workspace, so the terminal stays closed rather than handing you an unrestricted one.',
     adminsOnlyDescription: 'This server restricts the terminal to administrators.',
+    tooManySessionsDescription: 'You already have the maximum number of terminal sessions open. Close one and try again.',
     confinedToWorkspace: 'Confined to your own workspace',
     workingDirectory: 'Working directory',
     shell: 'Shell',

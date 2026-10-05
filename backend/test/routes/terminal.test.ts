@@ -147,7 +147,7 @@ describe('terminal routes', () => {
     })
 
     expect(res.status).toBe(503)
-    expect(await res.json()).toEqual({ error: 'TERMINAL_SANDBOX_UNAVAILABLE' })
+    expect(await res.json()).toEqual({ error: 'TERMINAL_SANDBOX_UNAVAILABLE', code: 'TERMINAL_SANDBOX_UNAVAILABLE' })
     // Nothing was started, so there is no session to leak.
     expect(spawner.processes).toHaveLength(0)
   })

@@ -69,6 +69,7 @@ export const zhCN: DeepString<typeof en> = {
     unavailableDescription: '终端已被禁用，或服务器缺少 PTY 运行环境。',
     sandboxUnavailableDescription: '这台服务器无法把你的 shell 限制在工作区内，因此终端保持关闭，而不是给你一个不受限制的 shell。',
     adminsOnlyDescription: '这台服务器把终端限制为管理员专用。',
+    tooManySessionsDescription: '你已经开到了终端会话数量上限，关掉一个再试。',
     confinedToWorkspace: '已限制在你自己的工作区内',
     workingDirectory: '工作目录',
     shell: 'Shell',

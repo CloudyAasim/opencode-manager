@@ -48,7 +48,11 @@ type TerminalContext = Context<{
 }>
 
 function errorResponse(c: TerminalContext, error: TerminalError) {
-  return c.json({ error: error.code }, ERROR_STATUS[error.code])
+  // `code` as well as `error`, because that is the field the rest of the
+  // frontend keys on when it wants to say something specific instead of
+  // "request failed". With only `error` set, `FetchError.code` is undefined and
+  // the raw enum ends up printed in the terminal.
+  return c.json({ error: error.code, code: error.code }, ERROR_STATUS[error.code])
 }
 
 function actorOf(c: TerminalContext): TerminalActor {
