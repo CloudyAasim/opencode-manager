@@ -1406,7 +1406,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
 })
 
 describe('Settings Routes - versions, directory files, skills, MCP and maintenance', () => {
-  let app: ReturnType<typeof createSettingsRoutes>
+  let app: Hono
   let db: Database
   let supervisor: { restart: ReturnType<typeof vi.fn> }
   let fetchMock: ReturnType<typeof vi.fn>
@@ -1443,12 +1443,23 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
     supervisor = {
       restart: vi.fn().mockResolvedValue({ healthy: true, resumedSessionIDs: [] }),
     }
-    app = createSettingsRoutes(
+    // The session middleware that sets `user` in production is not mounted
+    // here, and `/opencode-active-sessions` and `/skills` now refuse a request
+    // with no principal rather than guessing one. Modelling the caller keeps
+    // these cases describing the admin view they were written for; the
+    // tenant-scoping rules live in `settings-tenant-scope.test.ts`.
+    const routes = createSettingsRoutes(
       db,
       { getGitEnvironment: vi.fn().mockReturnValue({}) } as any,
       createStubOpenCodeClient(),
       supervisor as any,
     )
+    app = new Hono()
+    app.use('*', async (c, next) => {
+      setUser(c, { id: 'default', role: 'admin', username: 'default' })
+      await next()
+    })
+    app.route('/', routes)
     fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     mockGetVersion.mockReturnValue('1.2.27')

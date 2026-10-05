@@ -12,9 +12,11 @@ import { parseUploadManifest, readUploadedManifestFiles, UploadValidationError }
 import type { SettingsRouteContext } from './context'
 import * as helpers from './helpers'
 import { CreateCustomCommandSchema, UpdateCustomCommandSchema } from '@opencode-manager/shared/schemas'
+import { canAccessRepo, resolveAccessRoots } from '../../auth/ownership'
+import { isWithinRoots } from '../../auth/access-scope'
 
 export function createConfigEditorRoutes(ctx: SettingsRouteContext) {
-  const { db, openCodeClient, openCodeSupervisor, settingsService, currentUserId } = ctx
+  const { db, openCodeClient, openCodeSupervisor, settingsService, currentUserId, currentPrincipal } = ctx
   const app = new Hono()
   app.get('/custom-commands', async (c) => {
     try {
@@ -153,11 +155,34 @@ export function createConfigEditorRoutes(ctx: SettingsRouteContext) {
     }
   })
 
+  /**
+   * Skills for a project directory, or for one repo.
+   *
+   * Both query parameters used to go straight through. `directory` reaches
+   * `openCodeClient.forward({ path: '/skill', directory })`, so any directory
+   * on the host produced a listing of that directory's `.opencode` tree -
+   * readable by any signed-in user, with no ownership question asked. `repoId`
+   * was the same hole one indirection over, because the lookup that used it was
+   * not scoped either. Both are checked against the caller's own roots now, and
+   * an unattributable request is refused rather than served as somebody.
+   */
   app.get('/skills', async (c) => {
     try {
+      const principal = currentPrincipal(c)
+      if (!principal) {
+        return c.json({ error: 'Forbidden' }, 403)
+      }
+
       const repoId = helpers.parseOptionalRepoId(c.req.query('repoId'))
+      if (repoId !== undefined && !canAccessRepo(db, repoId, principal)) {
+        return c.json({ error: 'Forbidden' }, 403)
+      }
+
       const directory = c.req.query('directory')
-      
+      if (directory && !isWithinRoots(directory, resolveAccessRoots(db, principal))) {
+        return c.json({ error: 'Forbidden' }, 403)
+      }
+
       const skills = await listManagedSkills(db, openCodeClient, repoId, directory)
       return c.json(skills)
     } catch (error) {

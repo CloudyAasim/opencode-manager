@@ -8,9 +8,11 @@ import { restartOpenCode, getOpenCodeRestartCoordinator } from '../../services/o
 import { ENV } from '@opencode-manager/shared/config/env'
 import type { SettingsRouteContext } from './context'
 import { OpenCodeServerAuthBodySchema } from '@opencode-manager/shared/schemas'
+import { principalIsAdmin, resolveAccessRoots } from '../../auth/ownership'
+import { isWithinRoots } from '../../auth/access-scope'
 
 export function createSystemRoutes(ctx: SettingsRouteContext) {
-  const { db, openCodeSupervisor, settingsService, currentUserId } = ctx
+  const { db, openCodeSupervisor, settingsService, currentUserId, currentPrincipal } = ctx
   const app = new Hono()
   app.get('/opencode-server-auth', async (c) => {
     try {
@@ -95,8 +97,25 @@ export function createSystemRoutes(ctx: SettingsRouteContext) {
     }
   })
 
+  /**
+   * Resumable sessions, for the restart flow.
+   *
+   * `captureResumableSessions` walks one shared OpenCode process, so the
+   * result is every tenant's sessions with their absolute directories attached.
+   * Handing that to any signed-in user published the other tenants' checkout
+   * paths and session ids. Filtered to the caller's own roots now; an admin
+   * keeps the unfiltered view because their roots already are the whole
+   * workspace.
+   */
   app.get('/opencode-active-sessions', (c) => {
-    const sessions = getOpenCodeRestartCoordinator()?.captureResumableSessions() ?? []
+    const principal = currentPrincipal(c)
+    if (!principal) {
+      return c.json({ error: 'Forbidden' }, 403)
+    }
+    const all = getOpenCodeRestartCoordinator()?.captureResumableSessions() ?? []
+    const sessions = principalIsAdmin(principal)
+      ? all
+      : all.filter((session) => isWithinRoots(session.directory, resolveAccessRoots(db, principal)))
     return c.json({ count: sessions.length, sessions })
   })
 

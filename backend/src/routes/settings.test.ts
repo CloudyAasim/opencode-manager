@@ -212,8 +212,31 @@ function createTestDb(): Database {
   return db
 }
 
-function createTestApp(db: Database, openCodeSupervisor?: OpenCodeSupervisor): Hono {
+/**
+ * The settings routes sit behind the session middleware, and it is that
+ * middleware which puts a `user` on the context. Two of the routes now refuse a
+ * request that arrives without one instead of guessing an owner, so the app has
+ * to model the caller: mounted bare, every request here was unattributed - a
+ * state production never reaches, and one these tests were quietly asserting
+ * against.
+ *
+ * The id is `'default'` because the rest of this file already treats the
+ * fallback as the caller and asserts against it by name. The role is admin
+ * because these cases describe the unfiltered view; the tenant-scoping
+ * behaviour gets its own file with a real second user.
+ */
+const SIGNED_IN_ADMIN = { id: 'default', role: 'admin' as const, username: 'default' }
+
+function createTestApp(
+  db: Database,
+  openCodeSupervisor?: OpenCodeSupervisor,
+  user: { id: string; role: 'admin' | 'user'; username: string | null } = SIGNED_IN_ADMIN,
+): Hono {
   const app = new Hono()
+  app.use('*', async (c, next) => {
+    (c as unknown as { set: (key: string, value: unknown) => void }).set('user', user)
+    await next()
+  })
   app.route('/settings', createSettingsRoutes(db, mockGitAuthService, createStubOpenCodeClient(), openCodeSupervisor))
   return app
 }
