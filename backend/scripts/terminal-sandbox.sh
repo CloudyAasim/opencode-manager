@@ -60,4 +60,16 @@ export HOME=/workspace
 export PWD=/workspace
 export OCM_SANDBOX_CWD="$SANDBOX_CWD"
 
-exec chroot "$ROOT" /bin/sh -c 'cd "${OCM_SANDBOX_CWD:-/workspace}" 2>/dev/null || cd /workspace 2>/dev/null || true; exec "$0" "$@"' "$SHELL_BIN" "$@"
+# The environment is cleared here, at the last hop, rather than upstream.
+# Everything before this line - the backend's own environment, handed down
+# through spawn, the bridge and `unshare` - still carries AUTH_SECRET,
+# ADMIN_PASSWORD and the OAuth client secrets, and any of them would be visible
+# to the person sitting at the prompt with `env` or `cat /proc/self/environ`.
+# AUTH_SECRET is better-auth's cookie-signing key, so it is not a disclosure to
+# hand it over: it is enough to mint a session for any account, including an
+# administrator's, and nothing outside the chroot is needed to use it.
+#
+# `env -i` clears everything and names only what an interactive shell needs.
+# TERM comes from the bridge, which takes it from the browser. Nothing named
+# here points outside the chroot.
+exec chroot "$ROOT" /bin/sh -c 'cd "${OCM_SANDBOX_CWD:-/workspace}" 2>/dev/null || cd /workspace 2>/dev/null || true; exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/workspace PWD=/workspace SHELL="$0" TERM="${TERM:-xterm-256color}" LANG="${LANG:-C.UTF-8}" "$0" "$@"' "$SHELL_BIN" "$@"

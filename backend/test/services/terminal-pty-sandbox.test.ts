@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
+import { copyFileSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { resolveBridgePath, resolveSandboxScriptPath, SANDBOX_PROBE_FLAGS } from '../../src/services/terminal/pty'
@@ -211,5 +211,42 @@ describe('the sandbox script rejects a bad invocation instead of half-running', 
 
     expect(result.status).toBe(EX_USAGE)
     expect(result.stderr).toMatch(/missing workspace directory/)
+  })
+})
+
+/**
+ * The shell inherits the backend's environment on the way down: `pty.ts` spawns
+ * the bridge with `...process.env`, the bridge copies `os.environ`, and
+ * `unshare` passes it through. The only place that can be taken back is the
+ * script's final exec, which is why the scrub lives there.
+ *
+ * That makes AUTH_SECRET - better-auth's cookie-signing key, and the key stored
+ * secrets are encrypted under - something a normal user could read off their
+ * own prompt with `env`. Reading it is the same as being able to mint a session
+ * for any account, so this is not disclosure to fix, it is the authentication
+ * system.
+ *
+ * Asserted against the source rather than by running it: the script mounts a
+ * tmpfs before it reaches the exec, which needs a user namespace, so the
+ * behaviour cannot be exercised in an ordinary test run. A behavioural check on
+ * a host with user namespaces confirmed the shell receives only these six
+ * variables and none of the sentinel values planted in the parent environment.
+ */
+describe('the sandboxed shell does not inherit the server environment', () => {
+  it('clears the environment on the way to the shell', () => {
+    const script = resolveSandboxScriptPath()
+    expect(script).not.toBeNull()
+
+    const source = readFileSync(script!, 'utf-8')
+    const finalExec = source.trimEnd().split('\n').pop() ?? ''
+
+    expect(finalExec).toMatch(/\benv -i\b/)
+    // The variables an interactive shell needs and nothing else.
+    for (const name of ['PATH', 'HOME', 'TERM']) {
+      expect(finalExec).toContain(`${name}=`)
+    }
+    // Named individually rather than counted, so deleting one is a failure
+    // rather than a different total that still happens to match.
+    expect(finalExec).not.toMatch(/AUTH_SECRET|ADMIN_PASSWORD|OPENCODE_SERVER_PASSWORD/)
   })
 })
