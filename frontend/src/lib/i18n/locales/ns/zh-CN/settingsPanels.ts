@@ -335,6 +335,10 @@ export const settingsPanels = {
     thisProvider: '此提供商',
     models_one: '{{count}} 个模型',
     models_other: '{{count}} 个模型',
+    customProvidersGlobal: '全局服务商',
+    customProvidersGlobalDescription: '为整台服务器上的所有人声明。任何账号启动的会话都会读到它们。',
+    customProvidersOwn: '你自定义的服务商',
+    customProvidersOwnDescription: '只属于你。它们和你的 API 密钥放在一起，别人看不到。',
     customProviders: '自定义服务商',
     customProvidersDescription: '你自己声明的服务商，直接写进 OpenCode 配置。',
     customProvidersEmptyHint: '声明一个 OpenAI 兼容端点或 npm 包，并把它每个模型需要的参数一起填好。',
@@ -348,6 +352,15 @@ export const settingsPanels = {
       '当前生效的是你自己声明的 {{id}}，在你做出选择之前它一直生效。'
       + '管理员并没有改动你的那份。',
     conflictCurrent: '你的那份正在生效，不会被管理员的替换。',
+    conflictAdminTitle: '你自己的 {{id}} 覆盖了全局那份',
+    conflictAdminBody:
+      '你为所有人声明了 {{id}}，自己又有一份。对你生效的是你自己那份；其他人用的是你为服务器声明的那份。',
+    conflictAdminCurrent: '你这份只对你自己生效，不会改变别人拿到的东西。',
+    conflictAdminUseGlobal: '改用全局那份',
+    conflictAdminUseGlobalTitle: '改用全局的 {{id}}？',
+    conflictAdminUseGlobalDescription:
+      '你自己的 {{id}} 会从你的项目里移除。之后可以在这里重新声明，但那时它就不再是其他人用的那一份了。',
+    conflictAdminUseGlobalConfirm: '改用全局那份',
     conflictAcknowledged: '你选择了保留自己的',
     conflictKeepMine: '保留我的',
     conflictUseGlobal: '改用管理员的',

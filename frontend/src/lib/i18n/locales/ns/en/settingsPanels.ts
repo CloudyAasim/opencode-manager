@@ -350,6 +350,12 @@ export const settingsPanels = {
     thisProvider: 'this provider',
     models_one: '{{count}} model',
     models_other: '{{count}} models',
+    customProvidersGlobal: 'Global providers',
+    customProvidersGlobalDescription:
+      'Declared for everyone on this server. A session started by any account reads these.',
+    customProvidersOwn: 'Your custom providers',
+    customProvidersOwnDescription:
+      'Yours alone. These sit next to your API key and nobody else can see them.',
     customProviders: 'Custom providers',
     customProvidersDescription:
       'Providers you declare yourself, written straight into the OpenCode config.',
@@ -365,6 +371,18 @@ export const settingsPanels = {
       'Your own {{id}} is the one in effect, and it stays in effect until you choose here. '
       + 'The administrator did not change yours.',
     conflictCurrent: 'Yours is in effect. Nothing of theirs replaces it.',
+    conflictAdminTitle: 'Your own {{id}} overrides the server-wide one',
+    conflictAdminBody:
+      'You declared {{id}} for everyone, and you have one of your own as well. '
+      + 'For you your own copy is the one in effect; everyone else gets the one you declared for the server.',
+    conflictAdminCurrent:
+      'Your personal copy wins for you alone. It does not change what anybody else gets.',
+    conflictAdminUseGlobal: 'Use the server-wide one',
+    conflictAdminUseGlobalTitle: 'Use the server-wide {{id}}?',
+    conflictAdminUseGlobalDescription:
+      'Your own {{id}} is removed from your projects. You can declare it again here afterwards, '
+      + 'but then it will not be the one everybody else is using.',
+    conflictAdminUseGlobalConfirm: 'Use the server-wide one',
     conflictAcknowledged: 'You are keeping yours',
     conflictKeepMine: 'Keep mine',
     conflictUseGlobal: 'Use the administrator\'s',

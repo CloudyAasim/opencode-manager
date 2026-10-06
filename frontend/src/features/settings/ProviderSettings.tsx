@@ -35,24 +35,200 @@ import { useI18n } from '@/lib/i18n'
 import type { OpenCodeConfigFile } from '@/api/types/settings'
 
 /**
- * Which provider the editor is open on. Carries the id rather than a boolean so
- * a save knows whether it is creating - and has to refuse a collision - or
- * editing one that is already there.
+ * Which copy a declaration lands in. An administrator has both: the one every
+ * session on the server reads, and the one that sits next to their API key.
+ * They are the same shape and share an editor, but they are different files
+ * with different reach, so an id taken in one is not taken in the other.
+ */
+type ProviderScope = 'global' | 'own'
+
+/**
+ * Which provider the editor is open on, in which copy. Carries the id rather
+ * than a boolean so a save knows whether it is creating - and has to refuse a
+ * collision - or editing one that is already there, and which of the two
+ * documents to refuse the collision in.
  */
 type ProviderDialogState =
   | { mode: 'closed' }
-  | { mode: 'create' }
-  | { mode: 'edit'; providerId: string }
+  | { mode: 'create'; scope: ProviderScope }
+  | { mode: 'edit'; scope: ProviderScope; providerId: string }
+
+type ProviderSummary = {
+  id: string
+  name: string
+  modelCount: number
+}
+
+type PendingRemoval = { scope: ProviderScope; id: string; name: string }
+
+function toProviderSummaries(
+  entries: Record<string, Record<string, unknown>> | undefined,
+): ProviderSummary[] {
+  return Object.entries(entries ?? {}).map(([id, entry]) => {
+    const options = (entry.options ?? {}) as Record<string, unknown>
+    void options
+    return {
+      id,
+      name: typeof entry.name === 'string' && entry.name ? entry.name : id,
+      modelCount: Object.keys((entry.models ?? {}) as Record<string, unknown>).length,
+    }
+  })
+}
+
+/**
+ * One copy of the declaring panel: a heading, a count, and the rows.
+ *
+ * Rendered twice for an administrator, once for everybody else. The two copies
+ * are deliberately the same component rather than two blocks of markup - two
+ * front doors onto one behaviour is how they stop agreeing with each other.
+ */
+function ProviderSection({
+  scope,
+  title,
+  description,
+  hint,
+  providers,
+  expanded,
+  onToggle,
+  onCreate,
+  onEdit,
+  onRemove,
+  hasCredentials,
+  isPending,
+  emptyTitle,
+  emptyHint,
+}: {
+  scope: ProviderScope
+  title: string
+  description: string
+  hint: string
+  providers: ProviderSummary[]
+  expanded: boolean
+  onToggle: () => void
+  onCreate: () => void
+  onEdit: (providerId: string) => void
+  onRemove: (provider: ProviderSummary) => void
+  hasCredentials: (providerId: string) => boolean
+  isPending: boolean
+  emptyTitle: string
+  emptyHint: string
+}) {
+  const { t } = useI18n()
+
+  return (
+    <section className="space-y-3" data-providers-scope={scope}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-foreground mb-2">{title}</h2>
+          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCreate}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          {t('settingsPanels.provider.customProvidersAdd')}
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-accent/50 rounded-md transition-colors"
+        >
+          {expanded ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span className="font-medium text-sm">
+            {t('settingsPanels.provider.customProvidersDeclared')}
+          </span>
+          <Badge variant="secondary" className="ml-auto">
+            {providers.length}
+          </Badge>
+        </button>
+
+        {expanded && (
+          <div className="pl-6 space-y-3">
+            {providers.length === 0 ? (
+              <Card className="bg-card border-border">
+                <CardContent className="pt-6">
+                  <p className="text-sm font-medium text-foreground text-center">{emptyTitle}</p>
+                  <p className="mt-1 text-xs text-muted-foreground text-center">{emptyHint}</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="divide-y divide-border">
+                {providers.map((provider) => (
+                  <div
+                    key={provider.id}
+                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{provider.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono truncate">{provider.id}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {t('settingsPanels.provider.customProvidersModels', {
+                            count: provider.modelCount,
+                          })}
+                        </span>
+                        {hasCredentials(provider.id) ? (
+                          <Badge variant="default" className="bg-green-600 hover:bg-green-700 shrink-0">
+                            <Check className="h-3 w-3 mr-1" />
+                            {t('settingsPanels.provider.connected')}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="shrink-0">
+                            {t('settingsPanels.provider.customProvidersNoKey')}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEdit(provider.id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        {t('settingsPanels.provider.customProvidersEdit', { name: provider.name })}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onRemove(provider)}
+                        disabled={isPending}
+                      >
+                        {t('settingsPanels.provider.customProvidersDelete', { name: provider.name })}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
 
 export function ProviderSettings() {
   const { t } = useI18n()
   const auth = useOptionalAuth()
-  // Where a declaration goes, not whether there is one. An administrator
-  // declares into the configuration every session on the server reads;
-  // everyone else declares into their own, alongside the key they already
-  // attach to it. Both are real writes and both are allowed - what the
-  // configuration split buys is that neither of them can reach the other's.
-  const declaresGlobally = auth?.user?.role === 'admin'
+
+  // An administrator is a tenant too. They get the shared copy *and* one of
+  // their own, side by side, because "the one everybody reads" and "the one
+  // next to my API key" are two different promises and collapsing them means
+  // an administrator can never try an endpoint before rolling it out.
+  const isAdmin = auth?.user?.role === 'admin'
+
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false)
   const [oauthCallbackDialogOpen, setOauthCallbackDialogOpen] = useState(false)
@@ -60,10 +236,6 @@ export function ProviderSettings() {
   const [oauthMethodIndex, setOauthMethodIndex] = useState<number | null>(null)
   const [connectedExpanded, setConnectedExpanded] = useState(false)
   const [availableExpanded, setAvailableExpanded] = useState(true)
-  // The declared list folds the way the API key groups above it do. Open by
-  // default: it is what the section is for, and the header already says how
-  // many there are, so folding has to be something you ask for.
-  const [declaredExpanded, setDeclaredExpanded] = useState(true)
   const [availableSearch, setAvailableSearch] = useState('')
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false)
   const [apiKeyProvider, setApiKeyProvider] = useState<Provider | null>(null)
@@ -71,7 +243,10 @@ export function ProviderSettings() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [customProviderError, setCustomProviderError] = useState<string | null>(null)
   const [providerDialog, setProviderDialog] = useState<ProviderDialogState>({ mode: 'closed' })
-  const [pendingRemoval, setPendingRemoval] = useState<{ id: string; name: string } | null>(null)
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
+  // Each copy folds on its own, for the same reason they save on their own.
+  const [globalExpanded, setGlobalExpanded] = useState(true)
+  const [ownExpanded, setOwnExpanded] = useState(true)
   const queryClient = useQueryClient()
 
   const { data: providersData, isLoading: providersLoading } = useQuery({
@@ -103,40 +278,39 @@ export function ProviderSettings() {
   // provider catalogue, and the list this page renders is whatever OpenCode
   // reports.
   //
-  // Two different destinations, decided by role. An administrator declares into
-  // the server-wide configuration every session reads. Everyone else declares
-  // into their own, which is the same set of files their API key already lives
-  // in - so "mine" means the one place a key and a definition cannot get out of
-  // step with each other.
-  const { data: openCodeConfig } = useOpenCodeConfigFile(declaresGlobally)
+  // Two destinations, chosen by the section rather than by the role. The shared
+  // one is only reachable by an administrator and only rendered for one; the
+  // personal one is the same set of files their API key already lives in, so
+  // "mine" means the one place a key and a definition cannot get out of step.
+  const { data: openCodeConfig } = useOpenCodeConfigFile(isAdmin)
   const { data: ownDeclarations } = useQuery({
     queryKey: PROVIDER_DECLARATIONS_QUERY_KEY,
     queryFn: () => providerDeclarationsApi.list(),
-    enabled: !declaresGlobally,
   })
 
-  const declaredProviders = useMemo(() => {
-    const entries = declaresGlobally
-      ? ((openCodeConfig?.content.provider ?? {}) as Record<string, Record<string, unknown>>)
-      : ((ownDeclarations?.declarations ?? {}) as Record<string, Record<string, unknown>>)
-    return Object.entries(entries).map(([id, entry]) => {
-      const options = (entry.options ?? {}) as Record<string, unknown>
-      return {
-        id,
-        name: typeof entry.name === 'string' && entry.name ? entry.name : id,
-        modelCount: Object.keys((entry.models ?? {}) as Record<string, unknown>).length,
-        endpoint:
-          typeof entry.api === 'string' && entry.api
-            ? entry.api
-            : typeof options.baseURL === 'string'
-              ? options.baseURL
-              : null,
-      }
-    })
-  }, [openCodeConfig, ownDeclarations, declaresGlobally])
-  const declaredProviderIds = useMemo(() => declaredProviders.map((p) => p.id), [declaredProviders])
+  const globalProviders = useMemo(
+    () =>
+      toProviderSummaries(
+        (openCodeConfig?.content.provider ?? {}) as Record<string, Record<string, unknown>>,
+      ),
+    [openCodeConfig],
+  )
+  const ownProviders = useMemo(
+    () => toProviderSummaries(ownDeclarations?.declarations),
+    [ownDeclarations],
+  )
 
-  const editingProviderId = providerDialog.mode === 'edit' ? providerDialog.providerId : null
+  const editingScope: ProviderScope | null =
+    providerDialog.mode === 'closed' ? null : providerDialog.scope
+  const editingProviderId =
+    providerDialog.mode === 'edit' ? providerDialog.providerId : null
+  // An id taken in one copy is not taken in the other. Declaring the same
+  // provider globally and again for yourself is how you try an endpoint before
+  // rolling it out, so the editor only refuses a collision inside its own copy.
+  const existingProviderIds = useMemo(
+    () => (editingScope === 'global' ? globalProviders : ownProviders).map((p) => p.id),
+    [editingScope, globalProviders, ownProviders],
+  )
 
   /**
    * The declaration the editor opens on, memoised.
@@ -147,21 +321,21 @@ export function ProviderSettings() {
    * again. Editing a provider would have fought itself.
    */
   const editingDraft = useMemo(() => {
-    if (!editingProviderId) return undefined
-    if (declaresGlobally) {
+    if (!editingProviderId || !editingScope) return undefined
+    if (editingScope === 'global') {
       return openCodeConfig
         ? customProviderDraftFromConfig(editingProviderId, openCodeConfig.content)
         : undefined
     }
     const entry = ownDeclarations?.declarations?.[editingProviderId]
     return entry ? customProviderDraftFromEntry(editingProviderId, entry) : undefined
-  }, [editingProviderId, openCodeConfig, ownDeclarations, declaresGlobally])
+  }, [editingProviderId, editingScope, openCodeConfig, ownDeclarations])
 
   const { keepMine: keepMineOnConflict, isPending: conflictPending } = useKeepMineOnConflict()
 
   const saveCustomProviderMutation = useMutation({
-    mutationFn: async (draft: CustomProviderDraft) => {
-      if (!declaresGlobally) {
+    mutationFn: async ({ draft, scope }: { draft: CustomProviderDraft; scope: ProviderScope }) => {
+      if (scope === 'own') {
         // The entry the dialog built, not the whole document. The per-user
         // endpoint takes one provider and nothing else, so there is no request
         // shape here that could carry a model, a permission or an MCP server.
@@ -179,13 +353,13 @@ export function ProviderSettings() {
         expectedRevision: current.revision,
       })
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       // The provider list is cached from OpenCode's own last answer, and the
-      // config file is what was just changed; both have to be re-read or the
-      // change does not show up until the page is reloaded.
+      // document that was just changed has to be re-read; otherwise the change
+      // does not show up until the page is reloaded.
       invalidateConfigCaches(queryClient)
       invalidateProviderCaches(queryClient)
-      if (!declaresGlobally) {
+      if (variables.scope === 'own') {
         void queryClient.invalidateQueries({ queryKey: PROVIDER_DECLARATIONS_QUERY_KEY })
       }
       setProviderDialog({ mode: 'closed' })
@@ -204,8 +378,8 @@ export function ProviderSettings() {
   })
 
   const removeCustomProviderMutation = useMutation({
-    mutationFn: async (providerId: string) => {
-      if (!declaresGlobally) {
+    mutationFn: async ({ providerId, scope }: { providerId: string; scope: ProviderScope }) => {
+      if (scope === 'own') {
         return providerDeclarationsApi.remove(providerId)
       }
       const current = queryClient.getQueryData<OpenCodeConfigFile>(OPEN_CODE_CONFIG_QUERY_KEY)
@@ -220,9 +394,7 @@ export function ProviderSettings() {
     onSuccess: () => {
       invalidateConfigCaches(queryClient)
       invalidateProviderCaches(queryClient)
-      if (!declaresGlobally) {
-        void queryClient.invalidateQueries({ queryKey: PROVIDER_DECLARATIONS_QUERY_KEY })
-      }
+      void queryClient.invalidateQueries({ queryKey: PROVIDER_DECLARATIONS_QUERY_KEY })
       setPendingRemoval(null)
       showToast.success(t('settingsPanels.provider.customProvidersRemoved'))
     },
@@ -301,8 +473,8 @@ export function ProviderSettings() {
   const filteredAvailableProviders = useMemo(() => {
     if (!availableSearch.trim()) return apiKeyProviders.available
     const search = availableSearch.toLowerCase()
-    return apiKeyProviders.available.filter(provider => 
-      provider.name.toLowerCase().includes(search) || 
+    return apiKeyProviders.available.filter(provider =>
+      provider.name.toLowerCase().includes(search) ||
       provider.id.toLowerCase().includes(search)
     )
   }, [apiKeyProviders.available, availableSearch])
@@ -337,11 +509,23 @@ export function ProviderSettings() {
     }
   }, [])
 
+  const openCreate = useCallback((scope: ProviderScope) => {
+    setCustomProviderError(null)
+    setProviderDialog({ mode: 'create', scope })
+  }, [])
+
+  const openEdit = useCallback((scope: ProviderScope, providerId: string) => {
+    setCustomProviderError(null)
+    setProviderDialog({ mode: 'edit', scope, providerId })
+  }, [])
+
   if (providersLoading || credentialsLoading) {
     return (
       <PanelLoading />
     )
   }
+
+  const conflictVariant = isAdmin ? 'administrator' : 'tenant'
 
   return (
     <div className="@container w-full max-w-7xl space-y-8">
@@ -445,145 +629,65 @@ export function ProviderSettings() {
         </div>
 
         <div className="min-w-0 space-y-6">
-          <section className="space-y-3" data-custom-providers>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-lg font-semibold text-foreground mb-2">
-                  {t('settingsPanels.provider.customProviders')}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {t('settingsPanels.provider.customProvidersDescription')}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {declaresGlobally
-                    ? t('settingsPanels.provider.customProvidersScopeGlobal')
-                    : t('settingsPanels.provider.customProvidersScopeOwn')}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setCustomProviderError(null)
-                  setProviderDialog({ mode: 'create' })
-                }}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                {t('settingsPanels.provider.customProvidersAdd')}
-              </Button>
-            </div>
+          {/* Admin-only, and not hidden by CSS. The raw editor writes the one
+              config every session on the server reads, so showing it to a
+              non-admin and refusing the save would be a button that always
+              fails. */}
+          {isAdmin && (
+            <ProviderSection
+              scope="global"
+              title={t('settingsPanels.provider.customProvidersGlobal')}
+              description={t('settingsPanels.provider.customProvidersGlobalDescription')}
+              hint={t('settingsPanels.provider.customProvidersScopeGlobal')}
+              providers={globalProviders}
+              expanded={globalExpanded}
+              onToggle={() => setGlobalExpanded((open) => !open)}
+              onCreate={() => openCreate('global')}
+              onEdit={(providerId) => openEdit('global', providerId)}
+              onRemove={(provider) => setPendingRemoval({ scope: 'global', id: provider.id, name: provider.name })}
+              hasCredentials={hasCredentials}
+              isPending={removeCustomProviderMutation.isPending}
+              emptyTitle={t('settingsPanels.provider.customProvidersEmptyTitle')}
+              emptyHint={t('settingsPanels.provider.customProvidersEmptyHint')}
+            />
+          )}
 
-            {/* Deliberately outside the disclosure below. A collision is the
-                one thing in this section waiting on a decision, and folding it
-                behind the same toggle as the list is how it stays undecided. */}
-            {!declaresGlobally && (
-              <ProviderConflictNotice
-                conflicts={(ownDeclarations?.conflicts ?? []).filter((c) => !c.acknowledged)}
-                onKeepMine={(id) => {
-                  void keepMineOnConflict(id)
-                }}
-                onUseGlobal={(id) => {
-                  // Straight to the mutation, not through the row's own
-                  // confirmation: the notice already asked, and asking twice
-                  // for one irreversible action is how people click the first
-                  // one without reading the second.
-                  setCustomProviderError(null)
-                  removeCustomProviderMutation.mutate(id)
-                }}
-                isPending={conflictPending || removeCustomProviderMutation.isPending}
-              />
-            )}
+          {/* The notice is deliberately outside the disclosure. A collision is
+              the one thing here waiting on a decision, and folding it behind
+              the same toggle as the list is how it stays undecided. */}
+          <ProviderConflictNotice
+            variant={conflictVariant}
+            conflicts={(ownDeclarations?.conflicts ?? []).filter((c) => !c.acknowledged)}
+            onKeepMine={(id) => {
+              void keepMineOnConflict(id)
+            }}
+            onUseGlobal={(id) => {
+              // Straight to the mutation, not through the row's own
+              // confirmation: the notice already asked, and asking twice
+              // for one irreversible action is how people click the first
+              // one without reading the second.
+              setCustomProviderError(null)
+              removeCustomProviderMutation.mutate({ providerId: id, scope: 'own' })
+            }}
+            isPending={conflictPending || removeCustomProviderMutation.isPending}
+          />
 
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => setDeclaredExpanded(!declaredExpanded)}
-                aria-expanded={declaredExpanded}
-                className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-accent/50 rounded-md transition-colors"
-              >
-                {declaredExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                )}
-                <span className="font-medium text-sm">
-                  {t('settingsPanels.provider.customProvidersDeclared')}
-                </span>
-                <Badge variant="secondary" className="ml-auto">
-                  {declaredProviders.length}
-                </Badge>
-              </button>
-
-              {declaredExpanded && (
-                <div className="pl-6 space-y-3">
-                {declaredProviders.length === 0 ? (
-                  <Card className="bg-card border-border">
-                    <CardContent className="pt-6">
-                      <p className="text-sm font-medium text-foreground text-center">
-                        {t('settingsPanels.provider.customProvidersEmptyTitle')}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground text-center">
-                        {t('settingsPanels.provider.customProvidersEmptyHint')}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="divide-y divide-border">
-                    {declaredProviders.map((provider) => (
-                      <div
-                        key={provider.id}
-                        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{provider.name}</p>
-                          <p className="text-xs text-muted-foreground font-mono truncate">{provider.id}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-1">
-                            <span className="text-xs text-muted-foreground">
-                              {t('settingsPanels.provider.customProvidersModels', {
-                                count: provider.modelCount,
-                              })}
-                            </span>
-                            {hasCredentials(provider.id) ? (
-                              <Badge variant="default" className="bg-green-600 hover:bg-green-700 shrink-0">
-                                <Check className="h-3 w-3 mr-1" />
-                                {t('settingsPanels.provider.connected')}
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="shrink-0">
-                                {t('settingsPanels.provider.customProvidersNoKey')}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setCustomProviderError(null)
-                              setProviderDialog({ mode: 'edit', providerId: provider.id })
-                            }}
-                          >
-                            <Pencil className="h-4 w-4 mr-1" />
-                            {t('settingsPanels.provider.customProvidersEdit', { name: provider.name })}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setPendingRemoval({ id: provider.id, name: provider.name })}
-                            disabled={removeCustomProviderMutation.isPending}
-                          >
-                            {t('settingsPanels.provider.customProvidersDelete', { name: provider.name })}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                </div>
-              )}
-            </div>
-          </section>
+          <ProviderSection
+            scope="own"
+            title={t('settingsPanels.provider.customProvidersOwn')}
+            description={t('settingsPanels.provider.customProvidersOwnDescription')}
+            hint={t('settingsPanels.provider.customProvidersScopeOwn')}
+            providers={ownProviders}
+            expanded={ownExpanded}
+            onToggle={() => setOwnExpanded((open) => !open)}
+            onCreate={() => openCreate('own')}
+            onEdit={(providerId) => openEdit('own', providerId)}
+            onRemove={(provider) => setPendingRemoval({ scope: 'own', id: provider.id, name: provider.name })}
+            hasCredentials={hasCredentials}
+            isPending={removeCustomProviderMutation.isPending}
+            emptyTitle={t('settingsPanels.provider.customProvidersEmptyTitle')}
+            emptyHint={t('settingsPanels.provider.customProvidersEmptyHint')}
+          />
 
           <div className="border-t border-border pt-6">
           <div>
@@ -595,6 +699,7 @@ export function ProviderSettings() {
 
         <div className="space-y-3">
           <button
+            type="button"
             onClick={() => setConnectedExpanded(!connectedExpanded)}
             aria-expanded={connectedExpanded}
             className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-accent/50 rounded-md transition-colors"
@@ -670,6 +775,7 @@ export function ProviderSettings() {
 
         <div className="space-y-3">
           <button
+            type="button"
             onClick={() => setAvailableExpanded(!availableExpanded)}
             aria-expanded={availableExpanded}
             className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-accent/50 rounded-md transition-colors"
@@ -769,7 +875,7 @@ export function ProviderSettings() {
             setCustomProviderError(null)
           }
         }}
-        existingProviderIds={declaredProviderIds}
+        existingProviderIds={existingProviderIds}
         editingProviderId={editingProviderId ?? undefined}
         initialDraft={editingDraft}
         isSubmitting={saveCustomProviderMutation.isPending}
@@ -778,7 +884,8 @@ export function ProviderSettings() {
           // `mutate` is fire-and-forget by design; the dialog closes in the
           // mutation's own `onSuccess` so a failure leaves it open with the
           // fields still in it.
-          saveCustomProviderMutation.mutate(draft)
+          if (providerDialog.mode === 'closed') return
+          saveCustomProviderMutation.mutate({ draft, scope: providerDialog.scope })
         }}
       />
 
@@ -787,7 +894,10 @@ export function ProviderSettings() {
         onOpenChange={(open) => !open && setPendingRemoval(null)}
         onConfirm={() => {
           if (!pendingRemoval) return
-          removeCustomProviderMutation.mutate(pendingRemoval.id)
+          removeCustomProviderMutation.mutate({
+            providerId: pendingRemoval.id,
+            scope: pendingRemoval.scope,
+          })
         }}
         onCancel={() => setPendingRemoval(null)}
         title={t('settingsPanels.provider.customProvidersDeleteTitle')}
