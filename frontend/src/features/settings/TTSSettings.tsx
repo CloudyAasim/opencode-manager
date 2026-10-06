@@ -73,7 +73,7 @@ type TTSFormValues = z.infer<typeof ttsFormSchema>
 
 export function TTSSettings() {
   const { t } = useI18n()
-  const { preferences, updateSettings } = useSettings()
+  const { preferences, updateSettingsAsync } = useSettings()
   const { speakWithConfig, stop, isPlaying, isLoading: isTTSLoading, error: ttsError } = useTTS()
   const { refreshAll } = useTTSDiscovery()
   const [isRefreshingDiscovery, setIsRefreshingDiscovery] = useState(false)
@@ -122,7 +122,9 @@ export function TTSSettings() {
     if (watchProvider === 'builtin') {
       return hasWebSpeechSupport && browserVoices.length > 0 && !!watchVoice && !isCheckingBuiltin
     } else {
-      return !!watchApiKey && !!watchVoice && !isLoadingVoices
+      // must match what /synthesize actually requires, or the button invites a
+      // click that can only come back as a 400 about the wrong field
+      return !!watchApiKey && !!watchEndpoint && !!watchVoice && !!watchModel && !isLoadingVoices
     }
   })()
   
@@ -182,14 +184,27 @@ export function TTSSettings() {
   const saveStatus = useDebouncedFormAutoSave<TTSFormValues>({
     watchedValues: [watchEnabled, watchProvider, watchApiKey, watchEndpoint, watchVoice, watchModel, watchSpeed],
     getValues,
-    onSave: (formData) => updateSettings({ tts: formData }),
+    // async rather than a bare arrow so the promise survives: the hook waits on
+    // it before claiming 'saved', and updateSettingsAsync resolves with the
+    // response object, not void
+    onSave: async (formData) => { await updateSettingsAsync({ tts: formData }) },
     isDirty,
     isValid,
     skipIfUnchanged: true,
   })
   
-  const handleTest = () => {
+  const handleTest = async () => {
     const formData = getValues()
+    // /synthesize reads the persisted settings, not this form. Auto-save is
+    // debounced by 800ms, so a test clicked straight after editing used to ask
+    // the server about the *previous* save - and "TTS is not enabled" came back
+    // for a switch that was plainly on. Persist first, then test what was typed.
+    try {
+      await updateSettingsAsync({ tts: formData })
+    } catch {
+      // the save failed; speakWithConfig reports whatever the server answers,
+      // and a refusal to save is itself worth seeing
+    }
     speakWithConfig(t('settingsPanels.tts.testPhrase'), formData)
   }
   

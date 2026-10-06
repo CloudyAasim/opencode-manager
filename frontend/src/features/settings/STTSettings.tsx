@@ -41,7 +41,7 @@ type STTFormValues = z.infer<typeof sttFormSchema>
 
 export function STTSettings() {
   const { t } = useI18n()
-  const { preferences, updateSettings } = useSettings()
+  const { preferences, updateSettingsAsync } = useSettings()
   const { startRecording, stopRecording, abortRecording, isRecording, isProcessing, transcript, interimTranscript, error: sttError, isExternalProvider } = useSTT()
 
   const [isTesting, setIsTesting] = useState(false)
@@ -75,7 +75,10 @@ export function STTSettings() {
   const saveStatus = useDebouncedFormAutoSave<STTFormValues>({
     watchedValues: [watchEnabled, watchProvider, watchLanguage, watchEndpoint, watchApiKey, watchModel],
     getValues,
-    onSave: (formData) => updateSettings({ stt: formData }),
+    // async rather than a bare arrow so the promise survives: the hook waits on
+    // it before claiming 'saved', and updateSettingsAsync resolves with the
+    // response object, not void
+    onSave: async (formData) => { await updateSettingsAsync({ stt: formData }) },
     isDirty,
     isValid,
   })
