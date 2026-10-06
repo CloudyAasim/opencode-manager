@@ -8,7 +8,8 @@ import { useSettings } from '@/hooks/useSettings'
 import { useSTT } from '@/hooks/useSTT'
 import { isWebRecognitionSupported, getAvailableLanguages } from '@/lib/webSpeechRecognizer'
 import { sttApi } from '@/api/stt'
-import { Mic, Loader2, XCircle, CheckCircle2, RefreshCw, Eye, EyeOff, MicOff } from 'lucide-react'
+import { Mic, Loader2, XCircle, CheckCircle2, RefreshCw, MicOff } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Combobox } from '@/components/ui/combobox'
@@ -46,7 +47,6 @@ export function STTSettings() {
   const [isTesting, setIsTesting] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'failed'>('idle')
-  const [showApiKey, setShowApiKey] = useState(false)
   const [availableModels, setAvailableModels] = useState<string[]>(['whisper-1'])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
 
@@ -278,21 +278,15 @@ export function STTSettings() {
                       <FormItem>
                         <FormLabel>{t('settingsPanels.stt.apiKey')}</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <input
-                              type={showApiKey ? 'text' : 'password'}
-                              placeholder={t('settingsPanels.stt.apiKeyPlaceholder')}
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-[16px] md:text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                              {...field}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowApiKey(!showApiKey)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                            >
-                              {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                          </div>
+                          <Input
+                            type="password"
+                            placeholder={t('settingsPanels.stt.apiKeyPlaceholder')}
+                            className="bg-background"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e)
+                            }}
+                          />
                         </FormControl>
                         <FormDescription>
                           {t('settingsPanels.stt.apiKeyDescription')}
