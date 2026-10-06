@@ -16,6 +16,7 @@ import { ConflictError, NotFoundError, ServiceUnavailableError, ValidationError 
 import { normalizeInputPath, resolveRepoPathInsideBase } from './paths'
 import { createWorktreeSafely } from './worktree'
 import { registerExistingLocalRepo } from './discovery'
+import { syncUserProviderConfigForRepo } from './provider-sync'
 
 const GIT_CLONE_TIMEOUT = 300000
 
@@ -116,6 +117,7 @@ export async function initLocalRepo(
     }
     
     updateRepoStatus(database, repo.id, 'ready')
+    await syncUserProviderConfigForRepo(database, { ...repo, fullPath: targetPath })
     logger.info(`Local git repo ready: ${repoLocalPath}`)
     return { ...repo, cloneStatus: 'ready' }
   } catch (error: unknown) {
@@ -330,6 +332,9 @@ export async function cloneRepo(
           }
           
           updateRepoStatus(database, repo.id, 'ready')
+          // A checkout that already existed may predate this tenant's provider
+          // declarations, so "ready" is not evidence that they are in it.
+          await syncUserProviderConfigForRepo(database, repo)
           return { ...repo, cloneStatus: 'ready' }
         } else {
           logger.warn(`Invalid repository directory found, removing and recloning: ${baseRepoDirName}`)
@@ -394,6 +399,7 @@ export async function cloneRepo(
     }
     
     updateRepoStatus(database, repo.id, 'ready')
+    await syncUserProviderConfigForRepo(database, repo)
     logger.info(`Repo ready: ${normalizedRepoUrl}${branch ? `#${branch}` : ''}${shouldUseWorktree ? ' (worktree)' : ''}`)
     return { ...repo, cloneStatus: 'ready' }
   } catch (error: unknown) {

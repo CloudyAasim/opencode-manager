@@ -302,6 +302,23 @@ export const settingsPanels = {
     customProvidersEmptyHint: '声明一个 OpenAI 兼容端点或 npm 包，并把它每个模型需要的参数一起填好。',
     customProvidersEmptyTitle: '还没有自定义服务商',
     customProvidersAdd: '新建自定义服务商',
+    customProvidersScopeGlobal: '对整台服务器的所有人生效。',
+    customProvidersScopeOwn: '只对你自己生效，别人看不到。',
+    conflictTitle: '管理员也声明了 {{id}}',
+    conflictBody:
+      '当前生效的是你自己声明的 {{id}}，在你做出选择之前它一直生效。'
+      + '管理员并没有改动你的那份。',
+    conflictCurrent: '你的那份正在生效，不会被管理员的替换。',
+    conflictAcknowledged: '你选择了保留自己的',
+    conflictKeepMine: '保留我的',
+    conflictUseGlobal: '改用管理员的',
+    conflictUseGlobalTitle: '改用管理员的 {{id}}？',
+    conflictUseGlobalDescription:
+      '你项目里的 {{id}} 会被移除，之后改用管理员声明的那份。'
+      + '这一步无法在这里撤销，需要重新描述一次才能拿回来。',
+    conflictUseGlobalConfirm: '改用管理员的',
+    conflictKeptMine: '已保留你自己的 {{id}}。',
+    conflictKeepMineFailed: '没能记录你的选择。',
     customProvidersEdit: '编辑 {{name}}',
     customProvidersDelete: '移除 {{name}}',
     customProvidersDeleteTitle: '移除自定义服务商',

@@ -680,12 +680,22 @@ function readInterleaved(value: unknown): InterleavedMode {
  * that can be edited and saved, with the missing numbers blank rather than
  * invented.
  */
-export function customProviderDraftFromConfig(
+/**
+ * Reads one stored provider back into a form.
+ *
+ * The single reader, and it takes the entry rather than the document around it.
+ * Two callers want this and they hold different things: the global
+ * configuration is a merged document with a `provider` map, while a tenant's own
+ * declaration is already the entry. Splitting the lookup from the reading keeps
+ * the part that actually has to be right - modalities, interleaved mode, the
+ * variant's effort versus its leftovers - in one place instead of two copies
+ * free to disagree about it.
+ */
+export function customProviderDraftFromEntry(
   providerId: string,
-  config: Record<string, unknown> | undefined,
+  stored: unknown,
 ): CustomProviderDraft {
-  const providers = asRecord(config?.provider)
-  const entry = asRecord(providers[providerId])
+  const entry = asRecord(stored)
   const baseUrl = asString(entry.api) || asString(asRecord(entry.options).baseURL)
   const models = asRecord(entry.models)
 
@@ -737,4 +747,17 @@ export function customProviderDraftFromConfig(
     npm: asString(entry.npm),
     models: drafts.length > 0 ? drafts : [emptyCustomModelDraft()],
   }
+}
+
+/**
+ * The same reader, for a provider sitting in the server-wide configuration.
+ *
+ * A miss is a blank form rather than a throw: this is what an editor opens on,
+ * and "create" arrives here with an id that is not in the document yet.
+ */
+export function customProviderDraftFromConfig(
+  providerId: string,
+  config: Record<string, unknown> | undefined,
+): CustomProviderDraft {
+  return customProviderDraftFromEntry(providerId, asRecord(config?.provider)[providerId])
 }

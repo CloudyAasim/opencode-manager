@@ -6,6 +6,7 @@ import { ProviderSettings } from './ProviderSettings'
 import { getProviders, providerCredentialsApi } from '@/api/providers'
 import { oauthApi } from '@/api/oauth'
 import { settingsApi } from '@/api/settings'
+import { providerDeclarationsApi } from '@/api/providerDeclarations'
 import { useOptionalAuth } from '@/hooks/useAuth'
 import type { Provider, Model } from '@/api/providers'
 import type { OAuthAuthorizeResponse } from '@/api/oauth'
@@ -44,6 +45,15 @@ vi.mock('@/api/oauth', () => ({
 
 vi.mock('@/hooks/useAuth', () => ({
   useOptionalAuth: vi.fn(),
+}))
+
+vi.mock('@/api/providerDeclarations', () => ({
+  providerDeclarationsApi: {
+    list: vi.fn(),
+    declare: vi.fn(),
+    remove: vi.fn(),
+    keepMine: vi.fn(),
+  },
 }))
 
 vi.mock('./OAuthAuthorizeDialog', () => ({
@@ -172,30 +182,17 @@ describe('ProviderSettings', () => {
     mockProviderData()
   })
 
-  it('keeps the custom provider section away from a non-admin, and never asks for the config', async () => {
-    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'user' } } as never)
+  it('shows the section to an admin and declares into the server-wide configuration', async () => {
     const { container } = renderSettings()
 
-    // The rest of the page still loads: this is a panel everyone has.
-    await screen.findByText('Anthropic')
-
-    expect(container.querySelector('[data-custom-providers]')).toBeNull()
-    expect(screen.queryByRole('button', { name: /New custom provider/ })).not.toBeInTheDocument()
-    expect(screen.queryByText('OpenAI', { selector: 'p.font-mono' })).not.toBeInTheDocument()
-    // Not just hidden: if the request went out it would come back 403, and a
-    // failed query in the console is how a "hidden" panel turns back into a
-    // visible error banner later.
-    expect(settingsApi.getOpenCodeConfig).not.toHaveBeenCalled()
-  })
-
-  it('shows the custom provider section to an admin', async () => {
-    const { container } = renderSettings()
-
-    await screen.findByText('Anthropic')
+    await screen.findByText('OpenAI')
 
     expect(container.querySelector('[data-custom-providers]')).not.toBeNull()
-    expect(screen.getByRole('button', { name: /New custom provider/ })).toBeInTheDocument()
+    expect(screen.getByText('Declared for everyone on this server.')).toBeInTheDocument()
     expect(settingsApi.getOpenCodeConfig).toHaveBeenCalled()
+    // An administrator has no per-user copy to look at. Asking for one would be
+    // a second source of truth for the same panel.
+    expect(providerDeclarationsApi.list).not.toHaveBeenCalled()
   })
 
   it('lays out OAuth and API key columns in a container-query grid that splits at 1000px of content width', async () => {
@@ -680,5 +677,182 @@ describe('ProviderSettings — the custom provider section', () => {
     await waitFor(() => expect(showErrorToast).toHaveBeenCalled())
     expect(screen.getByRole('button', { name: 'Confirm delete' })).toBeInTheDocument()
     expect(vi.mocked(showErrorToast).mock.calls[0]?.[1]).toBe('Could not remove the custom provider')
+  })
+})
+
+describe('ProviderSettings — a tenant declaring their own', () => {
+  const OWN = {
+    mine: {
+      name: 'Mine',
+      options: { baseURL: 'https://mine.test/v1' },
+      models: { 'gpt-4o': { name: 'GPT-4o' } },
+    },
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Every block states its own role: the auth mock is module-wide, so a block
+    // that relied on whichever describe ran first would pass in one order and
+    // fail in another.
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'user' } } as never)
+    mockProviderData()
+    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture(DECLARED))
+    vi.mocked(providerDeclarationsApi.list).mockResolvedValue({ declarations: OWN, conflicts: [] })
+    vi.mocked(providerDeclarationsApi.declare).mockResolvedValue({ success: true })
+    vi.mocked(providerDeclarationsApi.remove).mockResolvedValue({ success: true })
+    vi.mocked(providerDeclarationsApi.keepMine).mockResolvedValue({ success: true, acknowledged: true })
+  })
+
+  it('shows the section, says it is theirs alone, and never asks for the server config', async () => {
+    const { container } = renderSettings()
+
+    await screen.findByText('Mine')
+
+    expect(container.querySelector('[data-custom-providers]')).not.toBeNull()
+    expect(screen.getByText('Declared for you only. Nobody else sees it.')).toBeInTheDocument()
+    // Not merely hidden: the request would come back 403, and a failed query is
+    // how a panel that was meant to be out of the way comes back with an error.
+    expect(settingsApi.getOpenCodeConfig).not.toHaveBeenCalled()
+    expect(providerDeclarationsApi.list).toHaveBeenCalled()
+  })
+
+  it('lists their own declaration rather than anything from the server config', async () => {
+    renderSettings()
+
+    await screen.findByText('Mine')
+
+    expect(screen.getByText('1 model declared')).toBeInTheDocument()
+    // `openai` is in the global config in the fixture. It is not theirs, so
+    // listing it would be claiming a provider they have not declared.
+    expect(screen.queryByText('openai')).not.toBeInTheDocument()
+  })
+
+  it('saves to their own copy and never to the server-wide configuration', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'New custom provider' }))
+    await user.click(screen.getByRole('button', { name: 'Submit provider' }))
+
+    await waitFor(() => expect(providerDeclarationsApi.declare).toHaveBeenCalled())
+    // The whole point of the split. A save here must not be able to reach the
+    // document every session on the server reads.
+    expect(settingsApi.updateOpenCodeConfig).not.toHaveBeenCalled()
+    expect(vi.mocked(providerDeclarationsApi.declare).mock.calls[0]?.[0]).toBe('my-provider')
+  })
+
+  it('removes from their own copy', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'Remove Mine' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
+
+    await waitFor(() => expect(providerDeclarationsApi.remove).toHaveBeenCalledWith('mine'))
+    expect(settingsApi.updateOpenCodeConfig).not.toHaveBeenCalled()
+  })
+
+  it('opens the editor on their own stored declaration', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: 'Edit Mine' }))
+
+    // The dialog reports the draft it was handed. Reading it back is the whole
+    // point of the edit path: a form that opened blank would silently replace
+    // the declaration with an empty one on save.
+    expect(screen.getByTestId('draft-name')).toHaveTextContent('Mine')
+    expect(screen.getByTestId('custom-provider-dialog')).toHaveAttribute('data-editing', 'mine')
+  })
+})
+
+describe('ProviderSettings — a provider an administrator also declared', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'user' } } as never)
+    mockProviderData()
+    vi.mocked(providerDeclarationsApi.list).mockResolvedValue({
+      declarations: { acme: { name: 'Acme', options: { baseURL: 'https://mine.test' } } },
+      conflicts: [
+        {
+          providerId: 'acme',
+          globalEntry: { name: 'Acme', options: { baseURL: 'https://theirs.test' } },
+          userEntry: { name: 'Acme', options: { baseURL: 'https://mine.test' } },
+          acknowledged: false,
+        },
+      ],
+    })
+    vi.mocked(providerDeclarationsApi.keepMine).mockResolvedValue({ success: true, acknowledged: true })
+    vi.mocked(providerDeclarationsApi.remove).mockResolvedValue({ success: true })
+  })
+
+  it('says so, and says which one is in effect', async () => {
+    renderSettings()
+
+    expect(await screen.findByText('An administrator also declared acme')).toBeInTheDocument()
+    expect(screen.getByText('Yours is in effect. Nothing of theirs replaces it.')).toBeInTheDocument()
+    // The whole point: the tenant's own copy keeps working, unchanged, while
+    // they decide. Nothing here is disabled and nothing was overwritten.
+    expect(screen.getByRole('button', { name: 'Edit Acme' })).toBeInTheDocument()
+  })
+
+  it('records keeping their own and takes no definition from the client', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('An administrator also declared acme')
+    await user.click(screen.getByRole('button', { name: 'Keep mine' }))
+
+    await waitFor(() => expect(providerDeclarationsApi.keepMine).toHaveBeenCalledWith('acme'))
+    // The server records the definition it is serving. A client that could name
+    // the definition could acknowledge one it was never shown.
+    expect(vi.mocked(providerDeclarationsApi.keepMine).mock.calls[0]).toHaveLength(1)
+  })
+
+  it('takes theirs by removing their own declaration, behind a confirmation', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('An administrator also declared acme')
+    await user.click(screen.getByRole('button', { name: "Use the administrator's" }))
+
+    // Nothing removed yet: this one cannot be undone from the panel, so the
+    // click that offers it is not the click that does it.
+    expect(providerDeclarationsApi.remove).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Use theirs' }))
+
+    await waitFor(() => expect(providerDeclarationsApi.remove).toHaveBeenCalledWith('acme'))
+    // One confirmation, not two. The notice already asked; routing this through
+    // the row's own delete dialog would ask again for the same irreversible act.
+    expect(screen.queryByRole('button', { name: 'Confirm delete' })).not.toBeInTheDocument()
+  })
+
+  it('leaves an already-answered conflict off the screen', async () => {
+    vi.mocked(providerDeclarationsApi.list).mockResolvedValue({
+      declarations: { acme: { name: 'Acme' } },
+      conflicts: [
+        { providerId: 'acme', globalEntry: {}, userEntry: {}, acknowledged: true },
+      ],
+    })
+    renderSettings()
+
+    await screen.findByText('Acme')
+
+    expect(screen.queryByText('An administrator also declared acme')).not.toBeInTheDocument()
+  })
+
+  it('never raises a conflict against an administrator, who is declaring globally', async () => {
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
+    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture(DECLARED))
+    renderSettings()
+
+    await screen.findByText('Anthropic')
+
+    // There is no per-user copy to collide with on this path, so a notice here
+    // would be a tenant warning an administrator about their own write.
+    expect(screen.queryByText(/An administrator also declared/)).not.toBeInTheDocument()
   })
 })

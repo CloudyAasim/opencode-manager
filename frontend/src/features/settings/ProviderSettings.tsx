@@ -16,10 +16,15 @@ import { ApiKeyDialog } from '@/features/settings/ApiKeyDialog'
 import { CustomProviderDialog } from './CustomProviderDialog'
 import {
   customProviderDraftFromConfig,
+  customProviderDraftFromEntry,
+  buildCustomProviderEntry,
   withCustomProvider,
   withoutCustomProvider,
   type CustomProviderDraft,
 } from './custom-provider'
+import { ProviderConflictNotice } from './ProviderConflictNotice'
+import { useKeepMineOnConflict, PROVIDER_DECLARATIONS_QUERY_KEY } from './useKeepMineOnConflict'
+import { providerDeclarationsApi } from '@/api/providerDeclarations'
 import { settingsApi } from '@/api/settings'
 import { useOpenCodeConfigFile, OPEN_CODE_CONFIG_QUERY_KEY } from '@/hooks/useOpenCodeConfigFile'
 import { useOptionalAuth } from '@/hooks/useAuth'
@@ -42,11 +47,12 @@ type ProviderDialogState =
 export function ProviderSettings() {
   const { t } = useI18n()
   const auth = useOptionalAuth()
-  // Declaring a provider is a config edit, and the config is one file the whole
-  // server reads. Until each tenant has somewhere of their own to declare into,
-  // that makes it an admin action - so the section is not rendered for anyone
-  // else, and the config is not even fetched for them.
-  const canDeclareProviders = auth?.user?.role === 'admin'
+  // Where a declaration goes, not whether there is one. An administrator
+  // declares into the configuration every session on the server reads;
+  // everyone else declares into their own, alongside the key they already
+  // attach to it. Both are real writes and both are allowed - what the
+  // configuration split buys is that neither of them can reach the other's.
+  const declaresGlobally = auth?.user?.role === 'admin'
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false)
   const [oauthCallbackDialogOpen, setOauthCallbackDialogOpen] = useState(false)
@@ -91,11 +97,24 @@ export function ProviderSettings() {
 
   // Declaring a provider is a config edit, not a registration: Manager has no
   // provider catalogue, and the list this page renders is whatever OpenCode
-  // reports. So this writes `provider.<id>` into the OpenCode config and lets
-  // the next load pick it up.
-  const { data: openCodeConfig } = useOpenCodeConfigFile(canDeclareProviders)
+  // reports.
+  //
+  // Two different destinations, decided by role. An administrator declares into
+  // the server-wide configuration every session reads. Everyone else declares
+  // into their own, which is the same set of files their API key already lives
+  // in - so "mine" means the one place a key and a definition cannot get out of
+  // step with each other.
+  const { data: openCodeConfig } = useOpenCodeConfigFile(declaresGlobally)
+  const { data: ownDeclarations } = useQuery({
+    queryKey: PROVIDER_DECLARATIONS_QUERY_KEY,
+    queryFn: () => providerDeclarationsApi.list(),
+    enabled: !declaresGlobally,
+  })
+
   const declaredProviders = useMemo(() => {
-    const entries = (openCodeConfig?.content.provider ?? {}) as Record<string, Record<string, unknown>>
+    const entries = declaresGlobally
+      ? ((openCodeConfig?.content.provider ?? {}) as Record<string, Record<string, unknown>>)
+      : ((ownDeclarations?.declarations ?? {}) as Record<string, Record<string, unknown>>)
     return Object.entries(entries).map(([id, entry]) => {
       const options = (entry.options ?? {}) as Record<string, unknown>
       return {
@@ -110,7 +129,7 @@ export function ProviderSettings() {
               : null,
       }
     })
-  }, [openCodeConfig])
+  }, [openCodeConfig, ownDeclarations, declaresGlobally])
   const declaredProviderIds = useMemo(() => declaredProviders.map((p) => p.id), [declaredProviders])
 
   const editingProviderId = providerDialog.mode === 'edit' ? providerDialog.providerId : null
@@ -123,16 +142,30 @@ export function ProviderSettings() {
    * on every render - and a reset on every render re-renders, which rebuilds it
    * again. Editing a provider would have fought itself.
    */
-  const editingDraft = useMemo(
-    () =>
-      editingProviderId && openCodeConfig
+  const editingDraft = useMemo(() => {
+    if (!editingProviderId) return undefined
+    if (declaresGlobally) {
+      return openCodeConfig
         ? customProviderDraftFromConfig(editingProviderId, openCodeConfig.content)
-        : undefined,
-    [editingProviderId, openCodeConfig],
-  )
+        : undefined
+    }
+    const entry = ownDeclarations?.declarations?.[editingProviderId]
+    return entry ? customProviderDraftFromEntry(editingProviderId, entry) : undefined
+  }, [editingProviderId, openCodeConfig, ownDeclarations, declaresGlobally])
+
+  const { keepMine: keepMineOnConflict, isPending: conflictPending } = useKeepMineOnConflict()
 
   const saveCustomProviderMutation = useMutation({
     mutationFn: async (draft: CustomProviderDraft) => {
+      if (!declaresGlobally) {
+        // The entry the dialog built, not the whole document. The per-user
+        // endpoint takes one provider and nothing else, so there is no request
+        // shape here that could carry a model, a permission or an MCP server.
+        return providerDeclarationsApi.declare(
+          draft.providerId,
+          buildCustomProviderEntry(draft) as unknown as Record<string, unknown>,
+        )
+      }
       const current = queryClient.getQueryData<OpenCodeConfigFile>(OPEN_CODE_CONFIG_QUERY_KEY)
       if (!current) {
         throw new Error('opencode-config-not-loaded')
@@ -148,6 +181,9 @@ export function ProviderSettings() {
       // change does not show up until the page is reloaded.
       invalidateConfigCaches(queryClient)
       invalidateProviderCaches(queryClient)
+      if (!declaresGlobally) {
+        void queryClient.invalidateQueries({ queryKey: PROVIDER_DECLARATIONS_QUERY_KEY })
+      }
       setProviderDialog({ mode: 'closed' })
       setCustomProviderError(null)
       showToast.success(t('settingsPanels.provider.customProvidersSaved'))
@@ -165,6 +201,9 @@ export function ProviderSettings() {
 
   const removeCustomProviderMutation = useMutation({
     mutationFn: async (providerId: string) => {
+      if (!declaresGlobally) {
+        return providerDeclarationsApi.remove(providerId)
+      }
       const current = queryClient.getQueryData<OpenCodeConfigFile>(OPEN_CODE_CONFIG_QUERY_KEY)
       if (!current) {
         throw new Error('opencode-config-not-loaded')
@@ -177,6 +216,9 @@ export function ProviderSettings() {
     onSuccess: () => {
       invalidateConfigCaches(queryClient)
       invalidateProviderCaches(queryClient)
+      if (!declaresGlobally) {
+        void queryClient.invalidateQueries({ queryKey: PROVIDER_DECLARATIONS_QUERY_KEY })
+      }
       setPendingRemoval(null)
       showToast.success(t('settingsPanels.provider.customProvidersRemoved'))
     },
@@ -399,7 +441,6 @@ export function ProviderSettings() {
         </div>
 
         <div className="min-w-0 space-y-6">
-          {canDeclareProviders && (
           <section className="space-y-3" data-custom-providers>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
@@ -408,6 +449,11 @@ export function ProviderSettings() {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {t('settingsPanels.provider.customProvidersDescription')}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {declaresGlobally
+                    ? t('settingsPanels.provider.customProvidersScopeGlobal')
+                    : t('settingsPanels.provider.customProvidersScopeOwn')}
                 </p>
               </div>
               <Button
@@ -422,6 +468,24 @@ export function ProviderSettings() {
                 {t('settingsPanels.provider.customProvidersAdd')}
               </Button>
             </div>
+
+            {!declaresGlobally && (
+              <ProviderConflictNotice
+                conflicts={(ownDeclarations?.conflicts ?? []).filter((c) => !c.acknowledged)}
+                onKeepMine={(id) => {
+                  void keepMineOnConflict(id)
+                }}
+                onUseGlobal={(id) => {
+                  // Straight to the mutation, not through the row's own
+                  // confirmation: the notice already asked, and asking twice
+                  // for one irreversible action is how people click the first
+                  // one without reading the second.
+                  setCustomProviderError(null)
+                  removeCustomProviderMutation.mutate(id)
+                }}
+                isPending={conflictPending || removeCustomProviderMutation.isPending}
+              />
+            )}
 
             {declaredProviders.length === 0 ? (
               <Card className="bg-card border-border">
@@ -488,7 +552,6 @@ export function ProviderSettings() {
               </div>
             )}
           </section>
-          )}
 
           <div className="border-t border-border pt-6">
           <div>

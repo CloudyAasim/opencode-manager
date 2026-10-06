@@ -317,6 +317,23 @@ export const settingsPanels = {
     customProvidersEmptyHint:
       'Declare an OpenAI-compatible endpoint, or an npm sdk, together with everything each of its models needs.',
     customProvidersAdd: 'New custom provider',
+    customProvidersScopeGlobal: 'Declared for everyone on this server.',
+    customProvidersScopeOwn: 'Declared for you only. Nobody else sees it.',
+    conflictTitle: 'An administrator also declared {{id}}',
+    conflictBody:
+      'Your own {{id}} is the one in effect, and it stays in effect until you choose here. '
+      + 'The administrator did not change yours.',
+    conflictCurrent: 'Yours is in effect. Nothing of theirs replaces it.',
+    conflictAcknowledged: 'You are keeping yours',
+    conflictKeepMine: 'Keep mine',
+    conflictUseGlobal: 'Use the administrator\'s',
+    conflictUseGlobalTitle: 'Use the administrator\'s {{id}}?',
+    conflictUseGlobalDescription:
+      'Your own {{id}} is removed from your projects, and the one the administrator declared is used instead. '
+      + 'This cannot be undone from here - you would have to describe it again.',
+    conflictUseGlobalConfirm: 'Use theirs',
+    conflictKeptMine: 'Keeping your own {{id}}.',
+    conflictKeepMineFailed: 'Could not record your choice.',
     customProvidersEdit: 'Edit {{name}}',
     customProvidersDelete: 'Remove {{name}}',
     customProvidersDeleteTitle: 'Remove custom provider',
