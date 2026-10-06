@@ -33,6 +33,7 @@ const ERROR_STATUS: Record<UserAdminErrorCode, 400 | 404 | 409 | 500> = {
   LAST_ADMIN: 400,
   SELF_DELETE: 400,
   NO_CREDENTIAL_ACCOUNT: 400,
+  CLEANUP_FAILED: 500,
   INTERNAL: 500,
 }
 
@@ -41,7 +42,13 @@ function errorResponse(c: Context, error: UserAdminError) {
 }
 
 export interface AdminUserRouteOptions {
-  onUserDeleted?: (userId: string) => void
+  /**
+   * Runs after the delete has been accepted and before anything on disk is
+   * removed, so that live shells belonging to this person are closed while
+   * their working directory still exists. It is not called when the delete is
+   * refused.
+   */
+  onUserWillBeDeleted?: (userId: string) => void
 }
 
 export function createAdminUserRoutes(userAdmin: UserAdminService, options: AdminUserRouteOptions = {}) {
@@ -116,12 +123,11 @@ export function createAdminUserRoutes(userAdmin: UserAdminService, options: Admi
     }
   })
 
-  app.delete('/:id', (c) => {
+  app.delete('/:id', async (c) => {
     try {
       const actingUserId = c.get('user')?.id
       const id = c.req.param('id')
-      userAdmin.deleteUser(id, actingUserId)
-      options.onUserDeleted?.(id)
+      await userAdmin.deleteUser(id, actingUserId, options.onUserWillBeDeleted)
       logger.info('Admin deleted a user')
       return c.json({ success: true })
     } catch (error) {

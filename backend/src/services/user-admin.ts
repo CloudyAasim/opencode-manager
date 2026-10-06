@@ -1,10 +1,12 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
+import path from 'node:path'
 import type { Database } from 'bun:sqlite'
 import { hashPassword } from 'better-auth/crypto'
-import { ENV, getUserSettingPath, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
+import { ENV, getUsersWorkspacePath, getUserSettingPath, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
 import { deriveUsernameFromEmail, isValidUsername, normalizeUsername, uniquifyUsername } from '@opencode-manager/shared/utils'
 import type { AuthInstance } from '../auth'
 import { withInternalSignup } from '../auth/internal-signup'
+import { safeUserDirectoryName } from './terminal/home'
 import { logger } from '../utils/logger'
 
 export type UserRole = 'admin' | 'user'
@@ -39,6 +41,7 @@ export type UserAdminErrorCode =
   | 'LAST_ADMIN'
   | 'SELF_DELETE'
   | 'NO_CREDENTIAL_ACCOUNT'
+  | 'CLEANUP_FAILED'
   | 'INTERNAL'
 
 export class UserAdminError extends Error {
@@ -188,17 +191,97 @@ export class UserAdminService {
     this.db.prepare('DELETE FROM session WHERE userId = ?').run(id)
   }
 
-  deleteUser(id: string, actingUserId?: string): void {
-    const user = this.getUser(id)
-    if (!user) throw new UserAdminError('USER_NOT_FOUND')
-    if (actingUserId && actingUserId === id) {
-      throw new UserAdminError('SELF_DELETE')
+  /**
+ * Every directory this person may own under `users/`, and nothing else.
+ *
+ * There is more than one name, which is the reason this is a function and not an
+ * inline `path.join`. A user with a username owns `users/<username>/`. A user
+ * whose username does not match the terminal's pattern owns
+ * `users/<safeUserDirectoryName(id)>/` instead - `resolveUserTerminalHome`
+ * picks between them, and which one it picked is not recorded anywhere, so
+ * deleting has to consider both. And `resolveAccessRoots`, `resolveBrowseRoot`
+ * and `resolveRepoBase` all fall back to `username ?? id`, so a user row with no
+ * username at all can own `users/<id>/`.
+ *
+ * The id fallback is the one that cannot be taken on trust: a username matches
+ * `/^[a-z][a-z0-9]{2,31}$/` and a generated id may not, so `users/<id>/` could
+ * in principle be another person's username directory. It is therefore skipped
+ * whenever some other row already claims that name.
+ *
+ * Every candidate is checked against `users/` before it is returned. These
+ * strings reach `rm -rf`, and `path.join` is not a containment check -
+ * `../../elsewhere` and an absolute path both survive it.
+ */
+private userDirectories(user: ManagedUser): string[] {
+  const usersRoot = path.resolve(getUsersWorkspacePath())
+
+  const names: string[] = []
+  if (user.username) names.push(user.username)
+  names.push(safeUserDirectoryName(user.id))
+  if (!user.username && !this.isUsernameTaken(user.id)) names.push(user.id)
+
+  const directories: string[] = []
+  const seen = new Set<string>()
+  for (const name of names) {
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    const target = path.resolve(usersRoot, name)
+    const relative = path.relative(usersRoot, target)
+    if (relative === '' || relative.startsWith('..') || path.isAbsolute(relative)) {
+      logger.error(
+        `Refusing to remove ${target} while deleting user ${user.id}: it is not inside ${usersRoot}`,
+      )
+      continue
     }
-    if (user.role === 'admin' && this.countAdmins() <= 1) {
-      throw new UserAdminError('LAST_ADMIN')
-    }
-    this.db.prepare('DELETE FROM "user" WHERE id = ?').run(id)
+    directories.push(target)
   }
+  return directories
+}
+
+/**
+ * Deleting the account is only half of it. Everything this person owns on disk
+ * goes with it, and the order is the point:
+ *
+ * 1. validation, so a refused delete has caused no side effect at all
+ * 2. `beforeCleanup`, so live shells are closed before the directory they are
+ *    sitting in disappears - a process whose cwd has been unlinked keeps
+ *    running in an inode nothing can reach
+ * 3. the directories
+ * 4. the rows
+ *
+ * A failure in step 3 raises `CLEANUP_FAILED` and the rows are left alone. The
+ * other order would delete the account and strand a directory nothing in the
+ * application can name any more, which is exactly the state this exists to
+ * remove; a directory that survived is something an admin can retry, and
+ * retrying converges because the missing half is a no-op.
+ */
+async deleteUser(id: string, actingUserId?: string, beforeCleanup?: (userId: string) => void): Promise<void> {
+  const user = this.getUser(id)
+  if (!user) throw new UserAdminError('USER_NOT_FOUND')
+  if (actingUserId && actingUserId === id) {
+    throw new UserAdminError('SELF_DELETE')
+  }
+  if (user.role === 'admin' && this.countAdmins() <= 1) {
+    throw new UserAdminError('LAST_ADMIN')
+  }
+
+  beforeCleanup?.(id)
+
+  for (const directory of this.userDirectories(user)) {
+    try {
+      await rm(directory, { recursive: true, force: true })
+    } catch (error) {
+      logger.error(
+        `Failed to remove ${directory} while deleting user ${id}; the account has been left in place`,
+        error,
+      )
+      throw new UserAdminError('CLEANUP_FAILED')
+    }
+  }
+
+  this.db.prepare('DELETE FROM repos WHERE user_id = ?').run(id)
+  this.db.prepare('DELETE FROM "user" WHERE id = ?').run(id)
+}
 
   async ensureAdminFromEnv(): Promise<void> {
     const email = ENV.AUTH.ADMIN_EMAIL?.trim().toLowerCase()

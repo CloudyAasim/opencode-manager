@@ -135,7 +135,7 @@ export const en = {
       deleteUser: 'Delete user',
       deleteConfirmTitle: 'Delete user',
       deleteConfirmDescription:
-        'Delete {{email}}? Their sessions will be revoked immediately. This cannot be undone.',
+        'Delete {{email}}? Their sessions are revoked and everything in their workspace - projects, settings and all - is removed from disk. This cannot be undone.',
       create: 'Create',
       cancel: 'Cancel',
       refresh: 'Refresh',
@@ -152,6 +152,8 @@ export const en = {
         LAST_ADMIN: 'You cannot remove the last administrator',
         SELF_DELETE: 'You cannot delete your own account',
         NO_CREDENTIAL_ACCOUNT: 'This user has no password account (OAuth only)',
+        CLEANUP_FAILED:
+          'The account was kept because some of their files could not be removed. Nothing has been deleted - free the space or fix the permissions, then try again.',
         INTERNAL: 'Unexpected server error',
         UNKNOWN: 'Request failed',
       },

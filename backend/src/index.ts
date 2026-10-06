@@ -378,7 +378,7 @@ protectedApi.use('/*', async (c, next) => {
 
 protectedApi.route('/repos', createRepoRoutes(db, gitAuthService, scheduleService, openCodeClient))
 protectedApi.route('/admin/users', createAdminUserRoutes(userAdminService, {
-  onUserDeleted: (id) => terminalManager.closeAllForUser(id),
+  onUserWillBeDeleted: (id) => terminalManager.closeAllForUser(id),
 }))
 protectedApi.route('/admin/audit', createAuditRoutes(db))
 protectedApi.route('/terminal', createTerminalRoutes(terminalManager))

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Hono } from 'hono'
-import { createAdminUserRoutes } from '../../src/routes/admin-users'
+import { createAdminUserRoutes, type AdminUserRouteOptions } from '../../src/routes/admin-users'
 import { UserAdminError, type UserAdminService } from '../../src/services/user-admin'
 import type { Session } from '../../src/auth'
 import { createSessionUser } from '../helpers/session-user'
@@ -9,14 +9,18 @@ vi.mock('../../src/utils/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
-function createApp(service: Partial<UserAdminService>, role: 'admin' | 'user') {
+function createApp(
+  service: Partial<UserAdminService>,
+  role: 'admin' | 'user',
+  options: AdminUserRouteOptions = {},
+) {
   const root = new Hono<{ Variables: { user: Session['user']; session: Session['session'] } }>()
   root.use('/*', async (c, next) => {
     c.set('user', createSessionUser(role))
     c.set('session', { id: 'session-1' } as Session['session'])
     await next()
   })
-  root.route('/', createAdminUserRoutes(service as unknown as UserAdminService) as unknown as Hono)
+  root.route('/', createAdminUserRoutes(service as unknown as UserAdminService, options) as unknown as Hono)
   return root
 }
 
@@ -84,13 +88,39 @@ describe('admin user routes', () => {
     expect(await res.json()).toEqual({ error: 'EMAIL_EXISTS' })
   })
 
-  it('forwards the acting user id when deleting', async () => {
-    const deleteUser = vi.fn()
-    const app = createApp({ deleteUser }, 'admin')
+  it('forwards the acting user id and the pre-cleanup hook when deleting', async () => {
+    const deleteUser = vi.fn(async () => {})
+    const onUserWillBeDeleted = vi.fn()
+    const app = createApp({ deleteUser }, 'admin', { onUserWillBeDeleted })
 
     const res = await app.request('/user-2', { method: 'DELETE' })
 
     expect(res.status).toBe(200)
-    expect(deleteUser).toHaveBeenCalledWith('user-2', 'me')
+    expect(deleteUser).toHaveBeenCalledWith('user-2', 'me', onUserWillBeDeleted)
+  })
+
+  it('leaves the hook to the service, so a refused delete has no side effect', async () => {
+    const deleteUser = vi.fn(async () => {
+      throw new UserAdminError('LAST_ADMIN')
+    })
+    const onUserWillBeDeleted = vi.fn()
+    const app = createApp({ deleteUser }, 'admin', { onUserWillBeDeleted })
+
+    const res = await app.request('/user-2', { method: 'DELETE' })
+
+    expect(res.status).toBe(400)
+    expect(onUserWillBeDeleted).not.toHaveBeenCalled()
+  })
+
+  it('reports a failed disk cleanup as a server error rather than a success', async () => {
+    const deleteUser = vi.fn(async () => {
+      throw new UserAdminError('CLEANUP_FAILED')
+    })
+    const app = createApp({ deleteUser }, 'admin')
+
+    const res = await app.request('/user-2', { method: 'DELETE' })
+
+    expect(res.status).toBe(500)
+    expect(await res.json()).toEqual({ error: 'CLEANUP_FAILED' })
   })
 })
