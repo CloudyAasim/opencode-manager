@@ -14,8 +14,6 @@ import { recordOpenCodeConfigAudit, type OpenCodeConfigAuditActor } from '../ser
 import { getTrustedClientIp } from '../utils/client-ip'
 import { logger } from '../utils/logger'
 import { getAccessScope } from '../auth/access-scope'
-import { principalFrom } from '../auth/ownership'
-import type { Session } from '../auth'
 import type { OpenCodeClient } from '../services/opencode/client'
 import type { OpenCodeSupervisor } from '../services/opencode-supervisor'
 import {

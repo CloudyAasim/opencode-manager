@@ -10,9 +10,6 @@ import {
   listProviderConflicts,
   withAcknowledgements,
 } from '../../src/services/provider-conflicts'
-import { readOpenCodeConfigFile } from '../../src/services/opencode-config-file'
-import { writeOpenCodeConfigFile } from '../../src/services/opencode-config-file'
-
 vi.mock('../../src/utils/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))

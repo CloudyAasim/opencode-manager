@@ -7,10 +7,6 @@ import { UserProviderService } from '../../src/services/user-providers'
 let workspace: string
 const originalWorkspace = process.env.WORKSPACE_PATH
 
-function settingDir(username: string): string {
-  return path.join(workspace, 'users', username, 'setting')
-}
-
 function repoDir(username: string, name: string): string {
   return path.join(workspace, 'users', username, 'workspace', 'repos', name)
 }
