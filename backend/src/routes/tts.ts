@@ -13,6 +13,7 @@ import {
   discoverModelsCached,
   discoverCached,
 } from '../utils/discovery-cache'
+import { describeUpstreamFailure, truncateUpstreamBody } from '../utils/upstream-error'
 
 const TTS_CACHE_DIR = join(getWorkspacePath(), 'cache', 'tts')
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
@@ -23,10 +24,51 @@ const TTSRequestSchema = z.object({
   text: z.string().min(1).max(4096),
 })
 
-function generateCacheKey(text: string, voice: string, model: string, speed: number): string {
+/**
+ * The cache lives at one shared path for every user, so the key has to carry
+ * who asked and against which upstream. Leaving the endpoint and the API key
+ * out meant two users requesting the same sentence were served each other's
+ * audio, and repointing the endpoint or rotating the key replayed the previous
+ * bytes for 24 hours - which reads as "I changed the settings and nothing
+ * happened".
+ */
+function generateCacheKey(
+  text: string,
+  voice: string,
+  model: string,
+  speed: number,
+  endpoint: string,
+  apiKey: string,
+): string {
   const hash = createHash('sha256')
-  hash.update(`${text}|${voice}|${model}|${speed}`)
+  hash.update(
+    `${text}|${voice}|${model}|${speed}|${normalizeToBaseUrl(endpoint)}|${apiKey}`,
+  )
   return hash.digest('hex')
+}
+
+/**
+ * Relays answer an unknown model with HTTP 200 and a JSON error page. Without
+ * this the body was written to the cache as `<key>.mp3` and replayed as audio
+ * for a day. The content type is the primary signal; the magic-number check
+ * covers upstreams that send nothing useful at all.
+ */
+function looksLikeAudio(contentType: string, buffer: Buffer): boolean {
+  if (/^audio\//i.test(contentType)) return true
+  if (buffer.length < 4) return false
+
+  if (buffer.subarray(0, 3).toString('latin1') === 'ID3') return true
+  // MPEG frame sync, 11 set bits
+  if (buffer[0] === 0xff && ((buffer[1] ?? 0) & 0xe0) === 0xe0) return true
+  if (buffer.subarray(0, 4).toString('latin1') === 'RIFF' &&
+      buffer.subarray(8, 12).toString('latin1') === 'WAVE') return true
+  if (buffer.subarray(0, 4).toString('latin1') === 'OggS') return true
+  // ISO base media (m4a/aac)
+  if (buffer.subarray(4, 8).toString('latin1') === 'ftyp') return true
+  // Matroska / WebM
+  if (buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) return true
+
+  return false
 }
 
 async function ensureCacheDir(): Promise<void> {
@@ -112,14 +154,23 @@ async function cacheAudio(cacheKey: string, audioData: Buffer): Promise<void> {
 
 
 
-async function fetchAvailableVoices(endpoint: string, apiKey: string): Promise<string[]> {
+/**
+ * None of these is an OpenAI endpoint - OpenAI has no voices route at all.
+ * They are here because Kokoro-style servers do expose one, and for everyone
+ * else the three requests 404 and the caller is told so via `source`, rather
+ * than being handed OpenAI's six voices as if the provider had offered them.
+ */
+async function fetchAvailableVoices(
+  endpoint: string,
+  apiKey: string,
+): Promise<{ voices: string[]; source: 'discovered' | 'defaults' }> {
   const baseUrl = normalizeToBaseUrl(endpoint)
   const endpointVariations = [
     `${baseUrl}/v1/audio/voices`,
     `${baseUrl}/voices`,
     `${baseUrl}/audio/voices`,
   ]
-  
+
   for (const voiceEndpoint of endpointVariations) {
     try {
       const response = await fetch(voiceEndpoint, {
@@ -128,22 +179,25 @@ async function fetchAvailableVoices(endpoint: string, apiKey: string): Promise<s
           'Content-Type': 'application/json',
         },
       })
-      
+
       if (response.ok) {
         type VoiceItem = { id?: string; name?: string; voice?: string }
         const data = await response.json() as { data?: VoiceItem[]; voices?: string[] } | (string | VoiceItem)[]
-        
+
         if ('data' in data && Array.isArray(data.data)) {
-          return data.data
+          const voices = data.data
             .filter((voice) => voice.id || voice.name)
             .map((voice) => (voice.id || voice.name)!)
+          if (voices.length > 0) return { voices, source: 'discovered' }
         } else if ('voices' in data && Array.isArray(data.voices)) {
-          return data.voices.filter((v): v is string => typeof v === 'string')
+          const voices = data.voices.filter((v): v is string => typeof v === 'string')
+          if (voices.length > 0) return { voices, source: 'discovered' }
         } else if (Array.isArray(data)) {
-          return data.map((item) => {
+          const voices = data.map((item) => {
             if (typeof item === 'string') return item
             return item.name || item.voice || item.id
           }).filter((v): v is string => typeof v === 'string')
+          if (voices.length > 0) return { voices, source: 'discovered' }
         }
       }
     } catch (error) {
@@ -151,8 +205,14 @@ async function fetchAvailableVoices(endpoint: string, apiKey: string): Promise<s
       continue
     }
   }
-  
-  return ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']
+
+  logger.warn(
+    `No voice list discovered at ${baseUrl}; falling back to OpenAI's six names, which the provider may not have`,
+  )
+  return {
+    voices: ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'],
+    source: 'defaults',
+  }
 }
 
 export async function cleanupExpiredCache(): Promise<number> {
@@ -247,7 +307,7 @@ export function createTTSRoutes(db: Database) {
       }
       
       const { endpoint, apiKey, voice, model, speed } = ttsConfig
-      const cacheKey = generateCacheKey(text, voice, model, speed)
+      const cacheKey = generateCacheKey(text, voice, model, speed, endpoint, apiKey)
       
       await ensureCacheDir()
       
@@ -291,31 +351,33 @@ export function createTTSRoutes(db: Database) {
         const errorText = await response.text()
         logger.error(`TTS API error: ${response.status} - ${errorText}`)
         const status = response.status >= 400 && response.status < 600 ? response.status as 400 | 500 : 500
-        
-        let errorDetails = errorText
-        try {
-          const errorJson = JSON.parse(errorText)
-          if (errorJson.detail?.error?.message) {
-            errorDetails = errorJson.detail.error.message
-          } else if (errorJson.detail?.message) {
-            errorDetails = errorJson.detail.message
-          } else if (errorJson.message) {
-            errorDetails = errorJson.message
-          }
-        } catch {
-        void 0
-        }
-        
-        return c.json({ 
-          error: 'TTS API request failed', 
-          details: errorDetails,
+
+        return c.json({
+          ...describeUpstreamFailure({
+            error: 'TTS API request failed',
+            status: response.status,
+            body: errorText,
+          }),
           voice: voice,
           availableVoices: ttsConfig?.availableVoices || []
         }, status)
       }
       
+      const contentType = response.headers.get('content-type') ?? ''
       const audioBuffer = Buffer.from(await response.arrayBuffer())
-      
+
+      if (!looksLikeAudio(contentType, audioBuffer)) {
+        const body = audioBuffer.toString('utf-8')
+        logger.error(
+          `TTS API returned a non-audio body: content-type=${contentType || '(none)'} - ${truncateUpstreamBody(body, 200)}`,
+        )
+        return c.json(describeUpstreamFailure({
+          error: 'TTS API returned a non-audio response',
+          status: 502,
+          body,
+        }), 502)
+      }
+
       await cacheAudio(cacheKey, audioBuffer)
       logger.info(`TTS audio cached: ${cacheKey.substring(0, 8)}...`)
       
@@ -350,7 +412,7 @@ export function createTTSRoutes(db: Database) {
         return c.json({ error: 'TTS not configured' }, 400)
       }
       
-      const { models, cached } = await discoverModelsCached({
+      const { models, cached, source } = await discoverModelsCached({
         baseUrl: ttsConfig.endpoint,
         apiKey: ttsConfig.apiKey,
         type: 'models',
@@ -369,7 +431,7 @@ export function createTTSRoutes(db: Database) {
         }, userId)
       }
 
-      return c.json({ models, cached })
+      return c.json({ models, source, cached })
     } catch (error) {
       logger.error('Failed to fetch TTS models:', error)
       return c.json({ error: 'Failed to fetch models' }, 500)
@@ -389,7 +451,7 @@ export function createTTSRoutes(db: Database) {
         return c.json({ error: 'TTS not configured' }, 400)
       }
       
-      const { value: voices, cached } = await discoverCached({
+      const { value, cached } = await discoverCached({
         baseUrl: ttsConfig.endpoint,
         apiKey: ttsConfig.apiKey,
         type: 'voices',
@@ -401,13 +463,13 @@ export function createTTSRoutes(db: Database) {
         await settingsService.updateSettings({
           tts: {
             ...ttsConfig,
-            availableVoices: voices,
+            availableVoices: value.voices,
             lastVoicesFetch: Date.now(),
           },
         }, userId)
       }
 
-      return c.json({ voices, cached })
+      return c.json({ voices: value.voices, source: value.source, cached })
     } catch (error) {
       logger.error('Failed to fetch TTS voices:', error)
       return c.json({ error: 'Failed to fetch voices' }, 500)

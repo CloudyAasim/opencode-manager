@@ -6,6 +6,7 @@ import {
   normalizeToBaseUrl,
   discoverModelsCached,
 } from '../utils/discovery-cache'
+import { describeUpstreamFailure } from '../utils/upstream-error'
 import { type STTConfig } from '@opencode-manager/shared'
 
 export function createSTTRoutes(db: Database) {
@@ -84,34 +85,22 @@ export function createSTTRoutes(db: Database) {
         logger.error(`STT API error: ${response.status} - ${errorText}`)
         const status = response.status >= 400 && response.status < 600 ? response.status as 400 | 500 : 500
 
-        let errorDetails = errorText
-        try {
-          const errorJson = JSON.parse(errorText)
-          if (errorJson.error?.message) {
-            errorDetails = errorJson.error.message
-          } else if (errorJson.detail?.message) {
-            errorDetails = errorJson.detail.message
-          } else if (errorJson.message) {
-            errorDetails = errorJson.message
-          }
-        } catch {
-        void 0
-        }
-
-        return c.json({
+        return c.json(describeUpstreamFailure({
           error: 'STT API request failed',
-          details: errorDetails,
-        }, status)
+          status: response.status,
+          body: errorText,
+        }), status)
       }
 
       const result = await response.json() as { text?: string } & Record<string, unknown>
 
       if (!result.text || typeof result.text !== 'string') {
         logger.error('STT API response missing text field:', { result })
-        return c.json({ 
-          error: 'STT API returned invalid response', 
-          details: `Response missing text field. Full response: ${JSON.stringify(result)}` 
-        }, 500)
+        return c.json(describeUpstreamFailure({
+          error: 'STT API returned invalid response',
+          status: response.status,
+          body: JSON.stringify(result),
+        }), 500)
       }
 
       logger.info(`STT transcription successful: ${result.text.substring(0, 50)}...`)
@@ -138,7 +127,7 @@ export function createSTTRoutes(db: Database) {
         return c.json({ error: 'STT not configured' }, 400)
       }
 
-      const { models, cached } = await discoverModelsCached({
+      const { models, cached, source } = await discoverModelsCached({
         baseUrl: sttConfig.endpoint,
         apiKey: sttConfig.apiKey,
         type: 'models',
@@ -157,7 +146,7 @@ export function createSTTRoutes(db: Database) {
         }, userId)
       }
 
-      return c.json({ models, cached })
+      return c.json({ models, source, cached })
     } catch (error) {
       logger.error('Failed to fetch STT models:', error)
       return c.json({ error: 'Failed to fetch models' }, 500)

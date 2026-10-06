@@ -30,17 +30,23 @@ vi.mock('../../src/services/settings', () => ({
   })),
 }))
 
-const { mockNormalizeToBaseUrl, mockDiscoverModelsCached, mockDiscoverCached } = vi.hoisted(() => ({
-  mockNormalizeToBaseUrl: vi.fn((url: string) => url.replace(/\/+$/, '')),
+const { mockDiscoverModelsCached, mockDiscoverCached } = vi.hoisted(() => ({
   mockDiscoverModelsCached: vi.fn(),
   mockDiscoverCached: vi.fn(),
 }))
 
-vi.mock('../../src/utils/discovery-cache', () => ({
-  normalizeToBaseUrl: mockNormalizeToBaseUrl,
-  discoverModelsCached: mockDiscoverModelsCached,
-  discoverCached: mockDiscoverCached,
-}))
+// Only the two functions that touch the network are replaced.
+// `normalizeToBaseUrl` is pure, and mocking it with a stub that strips just a
+// trailing slash silently tests a different function than the one that runs in
+// production - which is how a `/v1` bug looks like a passing suite.
+vi.mock('../../src/utils/discovery-cache', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/utils/discovery-cache')>()
+  return {
+    normalizeToBaseUrl: actual.normalizeToBaseUrl,
+    discoverModelsCached: mockDiscoverModelsCached,
+    discoverCached: mockDiscoverCached,
+  }
+})
 vi.mock('../../src/utils/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -81,8 +87,8 @@ describe('TTS Routes', () => {
     createTTSRoutes(mockDb)
     mockGetSettings.mockReturnValue({ preferences: { tts: createTtsConfig() } })
     mockUpdateSettings.mockReturnValue(undefined)
-    mockDiscoverModelsCached.mockResolvedValue({ models: ['tts-1'], cached: false })
-    mockDiscoverCached.mockImplementation(async (options: { fetcher: () => Promise<string[]> }) => ({
+    mockDiscoverModelsCached.mockResolvedValue({ models: ['tts-1'], cached: false, source: 'discovered' })
+    mockDiscoverCached.mockImplementation(async (options: { fetcher: () => Promise<{ voices: string[]; source: 'discovered' | 'defaults' }> }) => ({
       value: await options.fetcher(),
       cached: false,
     }))
@@ -90,23 +96,44 @@ describe('TTS Routes', () => {
 
   describe('generateCacheKey', () => {
     it('should generate consistent cache keys for identical inputs', () => {
-      const text = 'Hello world'
-      const voice = 'alloy'
-      const model = 'tts-1'
-      const speed = 1.0
-      
-      const key1 = generateCacheKey(text, voice, model, speed)
-      const key2 = generateCacheKey(text, voice, model, speed)
-      
+      const key1 = generateCacheKey('Hello world', 'alloy', 'tts-1', 1.0, 'https://tts.example.com', 'key-1')
+      const key2 = generateCacheKey('Hello world', 'alloy', 'tts-1', 1.0, 'https://tts.example.com', 'key-1')
+
       expect(key1).toBe(key2)
       expect(key1).toMatch(/^[a-f0-9]{64}$/)
     })
 
     it('should generate different cache keys for different inputs', () => {
-      const key1 = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0)
-      const key2 = generateCacheKey('World', 'alloy', 'tts-1', 1.0)
-      
+      const key1 = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0, 'https://tts.example.com', 'key-1')
+      const key2 = generateCacheKey('World', 'alloy', 'tts-1', 1.0, 'https://tts.example.com', 'key-1')
+
       expect(key1).not.toBe(key2)
+    })
+
+    it('changes when the endpoint is repointed', () => {
+      const key1 = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0, 'https://a.example.com', 'key-1')
+      const key2 = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0, 'https://b.example.com', 'key-1')
+
+      expect(key1).not.toBe(key2)
+    })
+
+    it('changes when the API key is rotated', () => {
+      const key1 = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0, 'https://a.example.com', 'key-1')
+      const key2 = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0, 'https://a.example.com', 'key-2')
+
+      expect(key1).not.toBe(key2)
+    })
+
+    it('does not distinguish two spellings of the same endpoint', () => {
+      const key1 = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0, 'https://a.example.com', 'key-1')
+      const key2 = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0, 'https://a.example.com/v1', 'key-1')
+
+      expect(key1).toBe(key2)
+    })
+
+    it('does not leak the API key into the cache file name', () => {
+      const key = generateCacheKey('Hello', 'alloy', 'tts-1', 1.0, 'https://a.example.com', 'sk-secret-value')
+      expect(key).not.toContain('sk-secret-value')
     })
   })
 
@@ -249,8 +276,8 @@ describe('TTS route handlers', () => {
     app = createTTSRoutes(mockDb)
     mockGetSettings.mockReturnValue({ preferences: { tts: createTtsConfig() } })
     mockUpdateSettings.mockReturnValue(undefined)
-    mockDiscoverModelsCached.mockResolvedValue({ models: ['tts-1'], cached: false })
-    mockDiscoverCached.mockImplementation(async (options: { fetcher: () => Promise<string[]> }) => ({
+    mockDiscoverModelsCached.mockResolvedValue({ models: ['tts-1'], cached: false, source: 'discovered' })
+    mockDiscoverCached.mockImplementation(async (options: { fetcher: () => Promise<{ voices: string[]; source: 'discovered' | 'defaults' }> }) => ({
       value: await options.fetcher(),
       cached: false,
     }))
@@ -316,9 +343,12 @@ describe('TTS route handlers', () => {
 
   it('synthesizes and caches audio on a cache miss', async () => {
     mockStat.mockRejectedValue(new Error('not found'))
+    const fresh = Buffer.concat([Buffer.from('ID3'), Buffer.from('fresh-audio')])
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      arrayBuffer: async () => Buffer.from('fresh-audio'),
+      status: 200,
+      headers: { get: () => 'audio/mpeg' },
+      arrayBuffer: async () => fresh,
     })
     vi.stubGlobal('fetch', fetchMock)
 
@@ -330,7 +360,7 @@ describe('TTS route handlers', () => {
 
     expect(res.status).toBe(200)
     expect(res.headers.get('X-Cache')).toBe('MISS')
-    expect(Buffer.from(await res.arrayBuffer()).toString()).toBe('fresh-audio')
+    expect(Buffer.from(await res.arrayBuffer()).toString()).toBe(fresh.toString())
     expect(fetchMock).toHaveBeenCalledWith(
       'https://tts.example.com/v1/audio/speech',
       expect.objectContaining({
@@ -342,6 +372,102 @@ describe('TTS route handlers', () => {
       expect.stringContaining('.mp3'),
       expect.any(Buffer),
     )
+  })
+
+  it('refuses to cache a JSON error page that arrived with a 200', async () => {
+    mockStat.mockRejectedValue(new Error('not found'))
+    const relayBody = JSON.stringify({ error: { message: 'model gpt-4o-mini-tts not found' } })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      arrayBuffer: async () => Buffer.from(relayBody),
+    }))
+
+    const res = await app.request('/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Hello' }),
+    })
+    const json = await res.json() as Record<string, unknown>
+
+    expect(res.status).toBe(502)
+    expect(mockWriteFile).not.toHaveBeenCalled()
+    expect(String(json.details)).toContain('not found')
+  })
+
+  it('refuses to cache a non-audio body when the upstream sends no content-type', async () => {
+    mockStat.mockRejectedValue(new Error('not found'))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      arrayBuffer: async () => Buffer.from('<html>404</html>'),
+    }))
+
+    const res = await app.request('/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Hello' }),
+    })
+
+    expect(res.status).toBe(502)
+    expect(mockWriteFile).not.toHaveBeenCalled()
+  })
+
+  it('still accepts real audio when the upstream sends no content-type', async () => {
+    mockStat.mockRejectedValue(new Error('not found'))
+    const wav = Buffer.concat([
+      Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVEfmt '),
+    ])
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      arrayBuffer: async () => wav,
+    }))
+
+    const res = await app.request('/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Hello' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(mockWriteFile).toHaveBeenCalled()
+  })
+
+  it('does not replay the cached bytes after the API key is fixed', async () => {
+    // The acceptance scenario: a bad key first, then the corrected one. With
+    // the key outside the cache key, the second call returned the first one's
+    // body and the user concluded the fix had no effect.
+    mockStat.mockRejectedValue(new Error('not found'))
+    const goodAudio = Buffer.concat([Buffer.from('ID3'), Buffer.from('real-audio')])
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'audio/mpeg' },
+      arrayBuffer: async () => goodAudio,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const first = await app.request('/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Same sentence' }),
+    })
+
+    const second = await app.request('/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Same sentence' }),
+    })
+
+    // second call is a different user/key, so it must not read the first entry
+    expect(Buffer.from(await second.arrayBuffer()).toString()).toBe(goodAudio.toString())
+    expect(Buffer.from(await first.arrayBuffer()).toString()).toBe(goodAudio.toString())
+    // both went upstream, neither was served from the other's slot
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('returns the upstream error details when synthesis fails', async () => {
@@ -362,18 +488,47 @@ describe('TTS route handlers', () => {
     expect(await res.json()).toEqual({
       error: 'TTS API request failed',
       details: 'Voice not supported',
+      upstreamStatus: 400,
+      upstreamBody: '{"detail":{"error":{"message":"Voice not supported"}}}',
+      detailsIsRawBody: false,
       voice: 'alloy',
       availableVoices: [],
     })
   })
 
+  it('hands the relay\'s status code and body back so the UI can show them', async () => {
+    mockStat.mockRejectedValue(new Error('not found'))
+    const relayBody = JSON.stringify({
+      error: { message: 'The model `gpt-4o-mini-tts` does not exist', code: 'model_not_found' },
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: async () => relayBody,
+    }))
+
+    const res = await app.request('/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Hello' }),
+    })
+    const json = await res.json() as Record<string, unknown>
+
+    // a 404 from the relay must stay a 404 on the way out, and the reason must
+    // still be here - this is the whole reason the panel stopped being usable
+    expect(res.status).toBe(404)
+    expect(json.upstreamStatus).toBe(404)
+    expect(json.upstreamBody).toBe(relayBody)
+    expect(String(json.details)).toContain('does not exist')
+  })
+
   it('lists models and stores them when not cached', async () => {
-    mockDiscoverModelsCached.mockResolvedValue({ models: ['tts-1', 'tts-1-hd'], cached: false })
+    mockDiscoverModelsCached.mockResolvedValue({ models: ['tts-1', 'tts-1-hd'], cached: false, source: 'discovered' })
 
     const res = await app.request('/models')
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ models: ['tts-1', 'tts-1-hd'], cached: false })
+    expect(await res.json()).toEqual({ models: ['tts-1', 'tts-1-hd'], source: 'discovered', cached: false })
     expect(mockUpdateSettings).toHaveBeenCalledWith(
       expect.objectContaining({ tts: expect.objectContaining({ availableModels: ['tts-1', 'tts-1-hd'] }) }),
       'default',
@@ -398,7 +553,7 @@ describe('TTS route handlers', () => {
     const res = await app.request('/voices')
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ voices: ['alloy', 'echo'], cached: false })
+    expect(await res.json()).toEqual({ voices: ['alloy', 'echo'], source: 'discovered', cached: false })
     expect(mockUpdateSettings).toHaveBeenCalledWith(
       expect.objectContaining({ tts: expect.objectContaining({ availableVoices: ['alloy', 'echo'] }) }),
       'default',
@@ -414,7 +569,7 @@ describe('TTS route handlers', () => {
     const res = await app.request('/voices')
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ voices: ['alloy', 'echo'], cached: false })
+    expect(await res.json()).toEqual({ voices: ['alloy', 'echo'], source: 'discovered', cached: false })
   })
 
   it('falls back to the default voices when every endpoint fails', async () => {
@@ -425,6 +580,7 @@ describe('TTS route handlers', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({
       voices: ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'],
+      source: 'defaults',
       cached: false,
     })
   })

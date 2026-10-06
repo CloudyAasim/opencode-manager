@@ -294,6 +294,10 @@ describe('STT Routes', () => {
       expect(res.status).toBe(401)
       expect(json.error).toBe('STT API request failed')
       expect(json.details).toBe('Invalid API key')
+      expect(json.upstreamStatus).toBe(401)
+      expect(json.upstreamBody).toBe(
+        JSON.stringify({ error: { message: 'Invalid API key' } }),
+      )
 
       globalThis.fetch = originalFetch
     })
@@ -315,6 +319,7 @@ describe('STT Routes', () => {
 
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
+        status: 200,
         json: async () => ({ error: 'some error', text: undefined }),
       })
       globalThis.fetch = mockFetch as unknown as typeof fetch
@@ -333,7 +338,10 @@ describe('STT Routes', () => {
 
       expect(res.status).toBe(500)
       expect(json.error).toBe('STT API returned invalid response')
-      expect(json.details).toContain('Response missing text field')
+      // the upstream body is what the user needs here, and it is carried
+      // verbatim rather than paraphrased
+      expect(json.upstreamBody).toBe('{"error":"some error"}')
+      expect(json.upstreamStatus).toBe(200)
 
       globalThis.fetch = originalFetch
     })
@@ -413,7 +421,11 @@ describe('STT Routes', () => {
       mockStat.mockResolvedValue({
         mtimeMs: Date.now() - 1000,
       })
-      mockReadFile.mockResolvedValue(JSON.stringify(['whisper-1', 'whisper-large']))
+      // the cache now stores {models, source}; the key is versioned so entries
+      // written by an older build are never read
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({ models: ['whisper-1', 'whisper-large'], source: 'discovered' }),
+      )
 
       const req = new Request('http://localhost/models?userId=test')
       const res = await sttApp.fetch(req)
@@ -421,7 +433,54 @@ describe('STT Routes', () => {
 
       expect(res.status).toBe(200)
       expect(json.models).toEqual(['whisper-1', 'whisper-large'])
+      expect(json.source).toBe('discovered')
       expect(json.cached).toBe(true)
+    })
+
+    it('rediscovers instead of trusting a cache entry written by an older build', async () => {
+      const originalFetch = globalThis.fetch
+      // a bare array is what the previous build wrote
+      mockStat.mockResolvedValue({ mtimeMs: Date.now() - 1000 })
+      mockReadFile.mockResolvedValue(JSON.stringify(['whisper-1']))
+      mockWriteFile.mockResolvedValue(undefined)
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [{ id: 'whisper-large-v3' }] }),
+      })
+      globalThis.fetch = mockFetch as unknown as typeof fetch
+
+      const req = new Request('http://localhost/models?userId=test')
+      const res = await sttApp.fetch(req)
+      const json = await res.json() as Record<string, unknown>
+
+      // the legacy entry must not surface as models: undefined
+      expect(json.models).toEqual(['whisper-large-v3'])
+      expect(json.source).toBe('discovered')
+
+      globalThis.fetch = originalFetch
+    })
+
+    it('reports defaults when the provider lists nothing usable', async () => {
+      const originalFetch = globalThis.fetch
+      mockStat.mockRejectedValue(new Error('not cached'))
+      mockWriteFile.mockResolvedValue(undefined)
+
+      // a relay's full catalogue: chat, embedding and image, no whisper
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [{ id: 'gpt-4o' }, { id: 'text-embedding-3-large' }] }),
+      })
+      globalThis.fetch = mockFetch as unknown as typeof fetch
+
+      const req = new Request('http://localhost/models?userId=test')
+      const res = await sttApp.fetch(req)
+      const json = await res.json() as Record<string, unknown>
+
+      expect(json.models).toEqual(['whisper-1'])
+      expect(json.source).toBe('defaults')
+
+      globalThis.fetch = originalFetch
     })
 
     it('should fetch models from API when cache is expired', async () => {

@@ -48,6 +48,7 @@ export function STTSettings() {
   const [testTranscript, setTestTranscript] = useState('')
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'failed'>('idle')
   const [availableModels, setAvailableModels] = useState<string[]>(['whisper-1'])
+  const [modelsSourceIsDefault, setModelsSourceIsDefault] = useState(false)
   const [isLoadingModels, setIsLoadingModels] = useState(false)
 
   const isWebSpeechAvailable = isWebRecognitionSupported()
@@ -86,12 +87,15 @@ export function STTSettings() {
     try {
       const response = await sttApi.getModels('default', forceRefresh)
       setAvailableModels(response.models.length > 0 ? response.models : ['whisper-1'])
+      // 'whisper-1' here is a built-in guess, not something the provider offered
+      setModelsSourceIsDefault(response.source === 'defaults' || response.models.length === 0)
 
       if (!watchModel && response.models.length > 0) {
         setValue('model', response.models[0])
       }
     } catch {
       setAvailableModels(['whisper-1'])
+      setModelsSourceIsDefault(true)
     } finally {
       setIsLoadingModels(false)
     }
@@ -327,7 +331,9 @@ export function STTSettings() {
                           />
                         </FormControl>
                         <FormDescription>
-                          {t('settingsPanels.stt.modelDescription')}
+                          {modelsSourceIsDefault
+                            ? t('settingsPanels.stt.modelListIsDefault')
+                            : t('settingsPanels.stt.modelDescription')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -338,6 +344,10 @@ export function STTSettings() {
 
               {watchProvider === 'builtin' && (
                 <>
+                  <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-[13px] text-muted-foreground">
+                    {t('settingsPanels.stt.builtinProviderNotice')}
+                  </p>
+
                   <FormField
                     control={form.control}
                     name="language"

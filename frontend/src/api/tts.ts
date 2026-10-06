@@ -1,14 +1,23 @@
 import { API_BASE_URL } from '@/config'
-import { fetchWrapper, fetchWrapperBlob } from './fetchWrapper'
+import { fetchWrapper } from './fetchWrapper'
+
+/**
+ * `discovered` means the provider's own list; `defaults` means the endpoint was
+ * asked and nothing usable came back, so what follows is a hardcoded list. The
+ * UI has to say so, otherwise a default looks like an offer.
+ */
+export type DiscoverySource = 'discovered' | 'defaults'
 
 export interface TTSModelsResponse {
   models: string[]
   cached: boolean
+  source?: DiscoverySource
 }
 
 export interface TTSVoicesResponse {
   voices: string[]
   cached: boolean
+  source?: DiscoverySource
 }
 
 export interface TTSStatusResponse {
@@ -39,16 +48,6 @@ export const ttsApi = {
   getStatus: async (userId = 'default'): Promise<TTSStatusResponse> => {
     return fetchWrapper(`${API_BASE_URL}/api/tts/status`, {
       params: { userId },
-    })
-  },
-
-  synthesize: async (text: string, userId = 'default', signal?: AbortSignal): Promise<Blob> => {
-    return fetchWrapperBlob(`${API_BASE_URL}/api/tts/synthesize`, {
-      method: 'POST',
-      params: { userId },
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-      signal,
     })
   },
 }

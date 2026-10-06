@@ -3,6 +3,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { API_BASE_URL } from '@/config'
 import { TTSContext, type TTSState, type TTSConfig } from './tts-context'
 import { sanitizeForTTS } from '@/lib/utils'
+import { formatUpstreamFailure } from '@/lib/upstream-error'
 import { getWebSpeechSynthesizer, isWebSpeechSupported } from '@/lib/webSpeechSynthesizer'
 
 export { TTSContext, type TTSContextValue, type TTSState, type TTSConfig } from './tts-context'
@@ -118,10 +119,9 @@ export function TTSProvider({ children }: TTSProviderProps) {
       if (stoppedRef.current) return null
 
       if (!response.ok) {
-        let errorMessage = 'TTS request failed'
+        let errorMessage = `TTS request failed (HTTP ${response.status})`
         try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorData.details || errorMessage
+          errorMessage = formatUpstreamFailure(await response.json(), response.status, 'TTS request failed')
         } catch {
           if (response.status === 401) errorMessage = 'Invalid API key'
           else if (response.status === 429) errorMessage = 'Rate limit exceeded'

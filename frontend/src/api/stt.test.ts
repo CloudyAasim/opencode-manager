@@ -218,3 +218,47 @@ describe('sttApi.transcribe cancellation and timeout', () => {
     vi.useRealTimers()
   })
 })
+
+describe('sttApi.transcribe error reporting', () => {
+  const originalFetch = global.fetch
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    global.fetch = originalFetch
+  })
+
+  it('surfaces the relay\'s own message and status, not a fixed string', async () => {
+    const mockFetch = global.fetch as ReturnType<typeof vi.fn>
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({
+        error: 'STT API request failed',
+        details: 'no such endpoint: /v1/audio/transcriptions',
+        upstreamStatus: 404,
+        upstreamBody: '{"error":{"message":"no such endpoint"}}',
+      }),
+    })
+
+    const promise = sttApi.transcribe(new Blob([], { type: 'audio/webm' }), 'test-user')
+
+    await expect(promise).rejects.toThrow(/404/)
+    await expect(promise).rejects.toThrow(/no such endpoint/)
+    await expect(promise).rejects.not.toThrow(/^STT API request failed$/)
+  })
+
+  it('reports the status even when the backend sent no details', async () => {
+    const mockFetch = global.fetch as ReturnType<typeof vi.fn>
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => null,
+    })
+
+    await expect(sttApi.transcribe(new Blob([]), 'test-user')).rejects.toThrow(/HTTP 429/)
+  })
+})

@@ -1,9 +1,12 @@
 import { API_BASE_URL } from '@/config'
 import { fetchWrapper, FetchError } from './fetchWrapper'
+import { formatUpstreamFailure } from '@/lib/upstream-error'
 
 export interface STTModelsResponse {
   models: string[]
   cached: boolean
+  /** 'defaults' means the provider offered no list; the models are built-in */
+  source?: 'discovered' | 'defaults'
 }
 
 export interface STTStatusResponse {
@@ -77,8 +80,11 @@ export const sttApi = {
       signal?.removeEventListener('abort', onAbort)
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Transcription failed' }))
-        throw new FetchError(data.error || 'Transcription failed', response.status)
+        const data = await response.json().catch(() => null)
+        throw new FetchError(
+          formatUpstreamFailure(data, response.status, 'Transcription failed'),
+          response.status,
+        )
       }
 
       return response.json()

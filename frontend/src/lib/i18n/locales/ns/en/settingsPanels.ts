@@ -230,6 +230,8 @@ export const settingsPanels = {
     availableVoicesComposite:
       'Available voices ({{count}}) - Support composite voices (e.g., am_adam+am_echo)',
     noVoices: 'No voices available - check endpoint and API key',
+    voiceListIsDefault:
+      "Could not read a voice list from this provider - the names below are built-in defaults, not its voices. Type the exact name your provider uses.",
     configureTtsVoices: 'Configure TTS to discover voices',
     model: 'Model',
     modelPlaceholder: 'Select a model or type custom name...',
@@ -237,6 +239,8 @@ export const settingsPanels = {
     availableModelsCached: 'Available models ({{count}}) - cached',
     availableModels: 'Available models ({{count}})',
     noModels: 'No models available - check endpoint and API key',
+    modelListIsDefault:
+      "Could not read a model list from this provider - the names below are built-in defaults, not its models. Type the exact name your provider uses.",
     configureTtsModels: 'Configure TTS to discover models',
     refreshDiscoveryTitle: 'Refresh Discovery Data',
     refreshDiscoveryDescription:
@@ -303,6 +307,10 @@ export const settingsPanels = {
     refresh: 'Refresh',
     selectModel: 'Select model...',
     modelDescription: 'The speech-to-text model to use (e.g., whisper-1)',
+    modelListIsDefault:
+      "Could not read a model list from this provider - the names below are built-in defaults, not its models. Type the exact name your provider uses.",
+    builtinProviderNotice:
+      'The built-in browser provider is selected, so your endpoint, API key and model are not used. Switch to the external API to send audio to a service.',
     language: 'Language',
     selectLanguage: 'Select language...',
     languageDescription: 'Select the language for speech recognition',

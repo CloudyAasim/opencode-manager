@@ -102,6 +102,9 @@ export function TTSSettings() {
   const availableVoices = voicesData?.voices || preferences?.tts?.availableVoices || []
   const modelsCached = modelsData?.cached || false
   const voicesCached = voicesData?.cached || false
+  // A built-in list is not the provider's list, and has to be labelled as such
+  const modelsSourceIsDefault = modelsData?.source === 'defaults'
+  const voicesSourceIsDefault = voicesData?.source === 'defaults'
   
   const watchEnabled = form.watch('enabled')
   const watchProvider = form.watch('provider')
@@ -395,7 +398,8 @@ export function TTSSettings() {
                           />
                         </FormControl>
                         <FormDescription>
-                          {isLoadingVoices ? t('settingsPanels.tts.loadingVoices') : 
+                          {isLoadingVoices ? t('settingsPanels.tts.loadingVoices') :
+                           voicesSourceIsDefault ? t('settingsPanels.tts.voiceListIsDefault') :
                            voicesCached ? t('settingsPanels.tts.availableVoicesCached', { count: availableVoices.length }) :
                            availableVoices.length > 0 ? (hasKokoroVoices ? t('settingsPanels.tts.availableVoicesComposite', { count: availableVoices.length }) : t('settingsPanels.tts.availableVoices', { count: availableVoices.length })) :
                            watchEnabled && watchApiKey ? t('settingsPanels.tts.noVoices') :
@@ -427,7 +431,8 @@ export function TTSSettings() {
                           />
                         </FormControl>
                         <FormDescription>
-                          {isLoadingModels ? t('settingsPanels.tts.loadingModels') : 
+                          {isLoadingModels ? t('settingsPanels.tts.loadingModels') :
+                           modelsSourceIsDefault ? t('settingsPanels.tts.modelListIsDefault') :
                            modelsCached ? t('settingsPanels.tts.availableModelsCached', { count: availableModels.length }) :
                            availableModels.length > 0 ? t('settingsPanels.tts.availableModels', { count: availableModels.length }) :
                            watchEnabled && watchApiKey ? t('settingsPanels.tts.noModels') :

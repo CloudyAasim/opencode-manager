@@ -221,6 +221,8 @@ export const settingsPanels = {
     availableVoicesComposite:
       '可用语音 ({{count}}) - 支持复合语音（例如 am_adam+am_echo）',
     noVoices: '没有可用语音 - 请检查端点和 API 密钥',
+    voiceListIsDefault:
+      '未能从该服务商读取到语音列表 - 下列名称是内置默认值，并非该服务商的语音。请直接输入你的服务商实际使用的名称。',
     configureTtsVoices: '配置 TTS 以发现语音',
     model: '模型',
     modelPlaceholder: '选择模型或输入自定义名称...',
@@ -228,6 +230,8 @@ export const settingsPanels = {
     availableModelsCached: '可用模型 ({{count}}) - 已缓存',
     availableModels: '可用模型 ({{count}})',
     noModels: '没有可用模型 - 请检查端点和 API 密钥',
+    modelListIsDefault:
+      '未能从该服务商读取到模型列表 - 下列名称是内置默认值，并非该服务商的模型。请直接输入你的服务商实际使用的名称。',
     configureTtsModels: '配置 TTS 以发现模型',
     refreshDiscoveryTitle: '刷新发现数据',
     refreshDiscoveryDescription: '强制从端点刷新可用的模型和语音',
@@ -290,6 +294,10 @@ export const settingsPanels = {
     refresh: '刷新',
     selectModel: '选择模型...',
     modelDescription: '要使用的语音转文本模型（例如 whisper-1）',
+    modelListIsDefault:
+      '未能从该服务商读取到模型列表 - 下列名称是内置默认值，并非该服务商的模型。请直接输入你的服务商实际使用的名称。',
+    builtinProviderNotice:
+      '当前选择的是浏览器内置服务商，因此接口地址、API 密钥和模型都不会生效。切换到外部 API 才会把音频发送给该服务。',
     language: '语言',
     selectLanguage: '选择语言...',
     languageDescription: '选择语音识别的语言',
