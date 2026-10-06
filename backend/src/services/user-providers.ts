@@ -58,7 +58,16 @@ async function upsertProvider(configPath: string, providerId: string, apiKey: st
 
   if (apiKey === null) {
     if (!(providerId in providers)) return
-    delete providers[providerId]
+    const entry = providers[providerId]
+    const remainingOptions: Record<string, unknown> = { ...((entry?.options ?? {}) as Record<string, unknown>) }
+    delete remainingOptions.apiKey
+    const next: ProviderEntry = { ...entry, options: remainingOptions }
+    if (Object.keys(remainingOptions).length === 0) delete next.options
+    if (Object.keys(next).length === 0) {
+      delete providers[providerId]
+    } else {
+      providers[providerId] = next
+    }
   } else {
     const existing = providers[providerId] ?? {}
     providers[providerId] = { ...existing, options: { ...(existing.options ?? {}), apiKey } }
