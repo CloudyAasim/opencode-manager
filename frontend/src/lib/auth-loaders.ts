@@ -117,3 +117,21 @@ export async function terminalLoader() {
 
   return redirect('/')
 }
+
+/**
+ * The OpenCode configuration writes one shared document that every session on
+ * the server reads, so the route is closed to administrators only.
+ *
+ * Redirecting rather than rendering a 403 keeps the URL out of a tenant's
+ * history and sends them somewhere they can actually do something.
+ */
+export async function openCodeSettingsLoader() {
+  const session = await getSession()
+  const user = session.data?.user as { role?: string } | undefined
+
+  if (!user) {
+    return redirect('/login')
+  }
+
+  return user.role === 'admin' ? null : redirect('/settings')
+}

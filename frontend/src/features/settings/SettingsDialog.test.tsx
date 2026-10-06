@@ -18,10 +18,6 @@ vi.mock('@/features/settings/KeyboardShortcuts', () => ({
   KeyboardShortcuts: () => <div data-testid="shortcuts-settings">Keyboard Shortcuts Content</div>,
 }))
 
-vi.mock('@/features/settings/OpenCodeConfigManager', () => ({
-  OpenCodeConfigManager: () => <div data-testid="opencode-settings">OpenCode Config Content</div>,
-}))
-
 vi.mock('@/features/settings/ProviderSettings', () => ({
   ProviderSettings: () => <div data-testid="providers-settings">Provider Settings Content</div>,
 }))
@@ -138,7 +134,7 @@ describe('SettingsDialog', () => {
     expect(screen.queryByTestId('opencode-settings')).not.toBeInTheDocument()
   })
 
-  it('shows the raw config editor to an admin', () => {
+  it('offers an admin the configuration page rather than a second copy of its editor', () => {
     vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
 
     render(
@@ -147,7 +143,27 @@ describe('SettingsDialog', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByTestId('opencode-settings')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open the configuration page' })).toHaveAttribute(
+      'href',
+      '/settings/opencode',
+    )
+    // One shared document, one editor. A second copy in the dialog is how the
+    // two drift and one of them stops being the thing anybody checks.
+    expect(screen.queryByTestId('opencode-settings')).not.toBeInTheDocument()
+  })
+
+  it('does not offer a tenant the configuration page at all', () => {
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'user' } } as never)
+
+    render(
+      <MemoryRouter initialEntries={['/?settings=open&settingsTab=opencode']}>
+        <SettingsDialog />
+      </MemoryRouter>
+    )
+
+    // Not merely a link that fails: the route redirects a tenant to /settings,
+    // and an entry that always bounces is worse than no entry.
+    expect(screen.queryByRole('link', { name: 'Open the configuration page' })).not.toBeInTheDocument()
   })
 
   it('resets to menu state when dialog closes and reopens', () => {

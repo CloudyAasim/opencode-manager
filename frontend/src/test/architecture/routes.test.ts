@@ -38,10 +38,17 @@ describe('路由清单', () => {
     expect(leaked, render('公开页被预取', leaked)).toEqual([])
   })
 
-  it('已登录预取 8 个 chunk，管理员再加 1 个', () => {
+  it('已登录预取 8 个 chunk，管理员再加 2 个', () => {
     expect(prefetchLoaders(['authenticated'])).toHaveLength(8)
-    expect(prefetchLoaders(['authenticated', 'admin'])).toHaveLength(9)
-    expect(prefetchLoaders(['admin'])).toHaveLength(1)
+    expect(prefetchLoaders(['authenticated', 'admin'])).toHaveLength(10)
+    expect(prefetchLoaders(['admin'])).toHaveLength(2)
+  })
+
+  it('OpenCode 配置页只在管理员那一组里预取', () => {
+    const page = appRoutes.find((route) => route.path === '/settings/opencode')
+    expect(page?.prefetch?.group).toBe('admin')
+    // A tenant must never download the chunk that edits the document every
+    // session on the server reads, even though the route would refuse them.
   })
 
   it('管理员的终端页排在已登录页面之后', () => {

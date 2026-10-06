@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { GeneralSettings } from '@/features/settings/GeneralSettings'
 import { GitSettings } from '@/features/settings/GitSettings'
 import { KeyboardShortcuts } from '@/features/settings/KeyboardShortcuts'
-import { OpenCodeConfigManager } from '@/features/settings/OpenCodeConfigManager'
 import { LogsViewer } from '@/features/settings/LogsViewer'
 import { OpenCodeServerAuthSettings } from '@/features/settings/OpenCodeServerAuthSettings'
 import { ManagerTokenSettings } from '@/features/settings/ManagerTokenSettings'
@@ -39,12 +39,20 @@ function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => 
     <RowActionsMenuContext.Provider value={true}>
       <div className="group/opencode-settings space-y-4" data-opencode-settings>
         <ServerHealthStatus onOpenVersionDialog={onOpenVersionDialog} />
-        {/* Admin-only, and not hidden by CSS. The raw editor writes the one
-            config every session on the server reads, so showing it to a
-            non-admin and refusing the save would be a button that always
-            fails; the server refuses it either way, and this stops the page
-            from offering it at all. */}
-        {auth?.user?.role === 'admin' && <OpenCodeConfigManager />}
+        {/* Admin-only, and a link rather than a copy. The configuration lives on
+            its own page now; leaving a second editor here would give one shared
+            document two front doors, and the two would drift. */}
+        {auth?.user?.role === 'admin' && (
+          <div className="rounded-md border border-border p-4">
+            <h2 className="text-sm font-medium text-foreground">{t('settingsPanels.coreConfig.pageTitle')}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t('settingsPanels.coreConfig.pageDescription')}
+            </p>
+            <Button asChild variant="outline" size="sm" className="mt-3">
+              <Link to="/settings/opencode">{t('settingsPanels.coreConfig.openPage')}</Link>
+            </Button>
+          </div>
+        )}
         <section className="space-y-4 border-t border-border pt-4" aria-label={t('settingsPanels.server.maintenance')}>
           <h2 className="text-lg font-semibold">{t('settingsPanels.server.maintenance')}</h2>
           <div className="grid grid-cols-1 items-start gap-x-6 gap-y-4 @min-[1000px]:grid-cols-2">

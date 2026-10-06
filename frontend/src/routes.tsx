@@ -8,6 +8,7 @@ import {
   setupLoader,
   protectedLoader,
   terminalLoader,
+  openCodeSettingsLoader,
 } from '@/lib/auth-loaders'
 
 export type PrefetchGroup = 'authenticated' | 'admin'
@@ -48,6 +49,12 @@ export const appRoutes: AppRoute[] = [
     lazy: async () => ({ Component: (await import('./pages/SessionDetail')).SessionDetail }),
     loader: protectedLoader,
     prefetch: { group: 'authenticated', order: 4 },
+  },
+  {
+    path: '/settings/opencode',
+    lazy: async () => ({ Component: (await import('./pages/OpenCodeSettings')).OpenCodeSettings }),
+    loader: openCodeSettingsLoader,
+    prefetch: { group: 'admin', order: 10 },
   },
   {
     path: '/files',
