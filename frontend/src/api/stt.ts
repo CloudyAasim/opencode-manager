@@ -26,21 +26,18 @@ export interface STTErrorResponse {
 }
 
 export const sttApi = {
-  getModels: async (userId = 'default', forceRefresh = false): Promise<STTModelsResponse> => {
+  getModels: async (forceRefresh = false): Promise<STTModelsResponse> => {
     return fetchWrapper(`${API_BASE_URL}/api/stt/models`, {
-      params: { userId, ...(forceRefresh && { refresh: 'true' }) },
+      params: { ...(forceRefresh && { refresh: 'true' }) },
     })
   },
 
-  getStatus: async (userId = 'default'): Promise<STTStatusResponse> => {
-    return fetchWrapper(`${API_BASE_URL}/api/stt/status`, {
-      params: { userId },
-    })
+  getStatus: async (): Promise<STTStatusResponse> => {
+    return fetchWrapper(`${API_BASE_URL}/api/stt/status`)
   },
 
   transcribe: async (
     audioBlob: Blob,
-    userId = 'default',
     signal?: AbortSignal
   ): Promise<STTTranscribeResponse> => {
     const formData = new FormData()
@@ -54,7 +51,6 @@ export const sttApi = {
     formData.append('audio', audioBlob, `recording.${extension}`)
 
     const urlObj = new URL(`${API_BASE_URL}/api/stt/transcribe`, window.location.origin)
-    urlObj.searchParams.set('userId', userId)
 
     const controller = new AbortController()
     let timeoutFired = false

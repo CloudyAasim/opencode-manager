@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { Hono } from 'hono'
 import * as fs from 'fs/promises'
 
 vi.mock('fs/promises', () => ({
@@ -641,5 +642,69 @@ describe('cacheAudio', () => {
       expect.stringContaining('cache-key.mp3'),
       expect.any(Buffer),
     )
+  })
+})
+
+
+describe('TTS routes take their owner from the session, not the query string', () => {
+  let app: ReturnType<typeof createTTSRoutes>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    const inner = createTTSRoutes({} as any)
+    app = new Hono().use('*', async (c, next) => {
+      c.set('user' as never, { id: 'real-user' } as never)
+      await next()
+    }).route('/', inner)
+    mockGetSettings.mockReturnValue({ preferences: { tts: createTtsConfig() } })
+    mockUpdateSettings.mockReturnValue(undefined)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('ignores ?userId= when reading the configuration', async () => {
+    const res = await app.request('/status?userId=someone-else')
+
+    expect(res.status).toBe(200)
+    expect(mockGetSettings).toHaveBeenCalledWith('real-user')
+    // the whole bug: writes went to the session user, this read went elsewhere
+    expect(mockGetSettings).not.toHaveBeenCalledWith('someone-else')
+  })
+
+  it('ignores ?userId= when listing models and voices', async () => {
+    mockDiscoverModelsCached.mockResolvedValue({
+      models: ['tts-1'], cached: false, source: 'discovered',
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ data: [{ id: 'alloy' }] }),
+    }))
+
+    await app.request('/models?userId=someone-else')
+    await app.request('/voices?userId=someone-else')
+
+    expect(mockGetSettings).not.toHaveBeenCalledWith('someone-else')
+    expect(mockGetSettings).toHaveBeenCalledWith('real-user')
+  })
+
+  it('synthesises with the session user\'s settings, so an enabled TTS is heard', async () => {
+    mockStat.mockRejectedValue(new Error('not cached'))
+    const audio = Buffer.concat([Buffer.from('ID3'), Buffer.from('sound')])
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'audio/mpeg' },
+      arrayBuffer: async () => audio,
+    }))
+
+    const res = await app.request('/synthesize?userId=someone-else', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Hello' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(mockGetSettings).toHaveBeenCalledWith('real-user')
   })
 })

@@ -150,7 +150,6 @@ export function useSTT(userId = 'default') {
         abortControllerRef.current = new AbortController()
         const result = await sttApi.transcribe(
           blob,
-          userIdRef.current || 'default',
           abortControllerRef.current.signal
         )
         

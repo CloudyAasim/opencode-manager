@@ -32,22 +32,23 @@ export interface TTSStatusResponse {
   }
 }
 
+// No userId is sent. The TTS routes take their owner from the session, and
+// while they still honoured `?userId=` the panel was writing one user and
+// asking about another - which is why an enabled TTS could never be heard.
 export const ttsApi = {
-  getModels: async (userId = 'default', forceRefresh = false): Promise<TTSModelsResponse> => {
+  getModels: async (forceRefresh = false): Promise<TTSModelsResponse> => {
     return fetchWrapper(`${API_BASE_URL}/api/tts/models`, {
-      params: { userId, ...(forceRefresh && { refresh: 'true' }) },
+      params: { ...(forceRefresh && { refresh: 'true' }) },
     })
   },
 
-  getVoices: async (userId = 'default', forceRefresh = false): Promise<TTSVoicesResponse> => {
+  getVoices: async (forceRefresh = false): Promise<TTSVoicesResponse> => {
     return fetchWrapper(`${API_BASE_URL}/api/tts/voices`, {
-      params: { userId, ...(forceRefresh && { refresh: 'true' }) },
+      params: { ...(forceRefresh && { refresh: 'true' }) },
     })
   },
 
-  getStatus: async (userId = 'default'): Promise<TTSStatusResponse> => {
-    return fetchWrapper(`${API_BASE_URL}/api/tts/status`, {
-      params: { userId },
-    })
+  getStatus: async (): Promise<TTSStatusResponse> => {
+    return fetchWrapper(`${API_BASE_URL}/api/tts/status`)
   },
 }

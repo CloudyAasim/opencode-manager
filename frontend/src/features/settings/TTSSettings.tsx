@@ -88,15 +88,9 @@ export function TTSSettings() {
   
   const { reset, formState: { isDirty, isValid }, getValues } = form
   
-  const { data: modelsData, isLoading: isLoadingModels, refetch: refetchModels } = useTTSModels(
-    undefined,
-    true
-  )
+  const { data: modelsData, isLoading: isLoadingModels, refetch: refetchModels } = useTTSModels(true)
   
-  const { data: voicesData, isLoading: isLoadingVoices, refetch: refetchVoices } = useTTSVoices(
-    undefined,
-    true
-  )
+  const { data: voicesData, isLoading: isLoadingVoices, refetch: refetchVoices } = useTTSVoices(true)
   
   const availableModels = modelsData?.models || preferences?.tts?.availableModels || []
   const availableVoices = voicesData?.voices || preferences?.tts?.availableVoices || []

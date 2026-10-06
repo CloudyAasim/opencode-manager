@@ -243,7 +243,7 @@ describe('useSTT external provider lifecycle', () => {
       onDataAvailable(audioBlob)
     })
 
-    const signalArg = mocks.sttApi.transcribe.mock.calls[0][2] as AbortSignal
+    const signalArg = mocks.sttApi.transcribe.mock.calls[0][1] as AbortSignal
     expect(signalArg).toBeDefined()
     expect(signalArg.aborted).toBe(false)
 

@@ -5,6 +5,7 @@ import type { OpenCodeClient } from '../../services/opencode/client'
 import type { OpenCodeSupervisor } from '../../services/opencode-supervisor'
 import type { GitAuthService } from '../../services/git-auth'
 import { principalFrom, type Principal } from '../../auth/ownership'
+import { settingsOwnerId } from '../../auth/settings-owner'
 import type { Session } from '../../auth'
 
 export interface SettingsRouteContext {
@@ -39,10 +40,7 @@ export function createSettingsRouteContext(
     openCodeClient,
     openCodeSupervisor,
     settingsService: new SettingsService(db),
-    currentUserId: (c: Context) => {
-      const ctx = c as unknown as { get?: (key: string) => { id?: string } | undefined }
-      return ctx.get?.('user')?.id ?? 'default'
-    },
+    currentUserId: settingsOwnerId,
     currentPrincipal: (c: Context) =>
       principalFrom((c as unknown as { get?: (key: string) => Session['user'] | undefined }).get?.('user')),
   }

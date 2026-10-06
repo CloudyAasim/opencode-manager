@@ -88,7 +88,7 @@ export function STTSettings() {
 
     setIsLoadingModels(true)
     try {
-      const response = await sttApi.getModels('default', forceRefresh)
+      const response = await sttApi.getModels(forceRefresh)
       setAvailableModels(response.models.length > 0 ? response.models : ['whisper-1'])
       // 'whisper-1' here is a built-in guess, not something the provider offered
       setModelsSourceIsDefault(response.source === 'defaults' || response.models.length === 0)

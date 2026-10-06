@@ -14,6 +14,7 @@ import {
   discoverCached,
 } from '../utils/discovery-cache'
 import { describeUpstreamFailure, truncateUpstreamBody } from '../utils/upstream-error'
+import { settingsOwnerId } from '../auth/settings-owner'
 
 const TTS_CACHE_DIR = join(getWorkspacePath(), 'cache', 'tts')
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
@@ -292,7 +293,7 @@ export function createTTSRoutes(db: Database) {
     try {
       const body = await c.req.json()
       const { text } = TTSRequestSchema.parse(body)
-      const userId = c.req.query('userId') || 'default'
+      const userId = settingsOwnerId(c)
       
       const settingsService = new SettingsService(db)
       const settings = settingsService.getSettings(userId)
@@ -401,7 +402,7 @@ export function createTTSRoutes(db: Database) {
 
   app.get('/models', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = settingsOwnerId(c)
       const forceRefresh = c.req.query('refresh') === 'true'
       
       const settingsService = new SettingsService(db)
@@ -440,7 +441,7 @@ export function createTTSRoutes(db: Database) {
 
   app.get('/voices', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = settingsOwnerId(c)
       const forceRefresh = c.req.query('refresh') === 'true'
       
       const settingsService = new SettingsService(db)
@@ -477,7 +478,7 @@ export function createTTSRoutes(db: Database) {
   })
 
   app.get('/status', async (c) => {
-    const userId = c.req.query('userId') || 'default'
+    const userId = settingsOwnerId(c)
     const settingsService = new SettingsService(db)
     const settings = settingsService.getSettings(userId)
     const ttsConfig = settings.preferences.tts

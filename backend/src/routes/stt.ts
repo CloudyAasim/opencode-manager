@@ -7,6 +7,7 @@ import {
   discoverModelsCached,
 } from '../utils/discovery-cache'
 import { describeUpstreamFailure } from '../utils/upstream-error'
+import { settingsOwnerId } from '../auth/settings-owner'
 import { type STTConfig } from '@opencode-manager/shared'
 
 export function createSTTRoutes(db: Database) {
@@ -21,7 +22,7 @@ export function createSTTRoutes(db: Database) {
     })
 
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = settingsOwnerId(c)
 
       const settingsService = new SettingsService(db)
       const settings = settingsService.getSettings(userId)
@@ -116,7 +117,7 @@ export function createSTTRoutes(db: Database) {
 
   app.get('/models', async (c) => {
     try {
-      const userId = c.req.query('userId') || 'default'
+      const userId = settingsOwnerId(c)
       const forceRefresh = c.req.query('refresh') === 'true'
 
       const settingsService = new SettingsService(db)
@@ -154,7 +155,7 @@ export function createSTTRoutes(db: Database) {
   })
 
   app.get('/status', async (c) => {
-    const userId = c.req.query('userId') || 'default'
+    const userId = settingsOwnerId(c)
     const settingsService = new SettingsService(db)
     const settings = settingsService.getSettings(userId)
     const sttConfig = settings.preferences.stt as STTConfig | undefined

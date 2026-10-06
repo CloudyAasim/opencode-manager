@@ -26,7 +26,7 @@ describe('WAV extension selection logic', () => {
     const blob = new Blob([], { type: 'audio/wav' })
     mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'test' }))
 
-    await sttApi.transcribe(blob, 'test-user')
+    await sttApi.transcribe(blob)
 
     const callArgs = mockFetch.mock.calls[0]
     const formData = callArgs[1]?.body as FormData
@@ -38,7 +38,7 @@ describe('WAV extension selection logic', () => {
     const blob = new Blob([], { type: 'audio/webm' })
     mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'test' }))
 
-    await sttApi.transcribe(blob, 'test-user')
+    await sttApi.transcribe(blob)
 
     const callArgs = mockFetch.mock.calls[0]
     const formData = callArgs[1]?.body as FormData
@@ -50,7 +50,7 @@ describe('WAV extension selection logic', () => {
     const blob = new Blob([], { type: 'audio/ogg' })
     mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'test' }))
 
-    await sttApi.transcribe(blob, 'test-user')
+    await sttApi.transcribe(blob)
 
     const callArgs = mockFetch.mock.calls[0]
     const formData = callArgs[1]?.body as FormData
@@ -62,7 +62,7 @@ describe('WAV extension selection logic', () => {
     const blob = new Blob([], { type: 'audio/mp4' })
     mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'test' }))
 
-    await sttApi.transcribe(blob, 'test-user')
+    await sttApi.transcribe(blob)
 
     const callArgs = mockFetch.mock.calls[0]
     const formData = callArgs[1]?.body as FormData
@@ -74,7 +74,7 @@ describe('WAV extension selection logic', () => {
     const blob = new Blob([], { type: 'audio/webm;codecs=opus' })
     mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'test' }))
 
-    await sttApi.transcribe(blob, 'test-user')
+    await sttApi.transcribe(blob)
 
     const callArgs = mockFetch.mock.calls[0]
     const formData = callArgs[1]?.body as FormData
@@ -86,7 +86,7 @@ describe('WAV extension selection logic', () => {
     const blob = new Blob([], { type: 'audio/unknown' })
     mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'test' }))
 
-    await sttApi.transcribe(blob, 'test-user')
+    await sttApi.transcribe(blob)
 
     const callArgs = mockFetch.mock.calls[0]
     const formData = callArgs[1]?.body as FormData
@@ -98,7 +98,7 @@ describe('WAV extension selection logic', () => {
     const blob = new Blob([], { type: 'audio/wav;codecs=pcm' })
     mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'test' }))
 
-    await sttApi.transcribe(blob, 'test-user')
+    await sttApi.transcribe(blob)
 
     const callArgs = mockFetch.mock.calls[0]
     const formData = callArgs[1]?.body as FormData
@@ -106,22 +106,26 @@ describe('WAV extension selection logic', () => {
     expect(audioFile.name).toBe('recording.wav')
   })
 
-  it('should include userId in request URL', async () => {
-    const blob = new Blob([], { type: 'audio/wav' })
-    mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'test' }))
+  it('must NOT name a tenant in the request URL', async () => {
+    // The STT routes resolve their owner from the session. While they honoured
+    // `?userId=` the panel was writing one user and asking about another, which
+    // is why an enabled, saved, correctly configured STT never transcribed.
+    const blob = new Blob([], { type: 'audio/webm' })
+    const mockFetch = global.fetch as ReturnType<typeof vi.fn>
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ text: 'ok' }) })
 
-    await sttApi.transcribe(blob, 'custom-user')
+    await sttApi.transcribe(blob)
 
-    const callArgs = mockFetch.mock.calls[0]
-    const url = callArgs[0] as string
-    expect(url).toContain('userId=custom-user')
+    const url = String(mockFetch.mock.calls[0][0])
+    expect(url).toContain('/api/stt/transcribe')
+    expect(url).not.toContain('userId')
   })
 
   it('should send FormData with audio file', async () => {
     const blob = new Blob(['audio data'], { type: 'audio/wav' })
     mockFetch.mockResolvedValueOnce(createMockResponse(true, { text: 'transcribed text' }))
 
-    await sttApi.transcribe(blob, 'test-user')
+    await sttApi.transcribe(blob)
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/stt/transcribe'),
@@ -171,7 +175,7 @@ describe('sttApi.transcribe cancellation and timeout', () => {
       })
     })
 
-    const promise = sttApi.transcribe(blob, 'test-user', abortController.signal)
+    const promise = sttApi.transcribe(blob, abortController.signal)
 
     abortController.abort()
 
@@ -205,7 +209,7 @@ describe('sttApi.transcribe cancellation and timeout', () => {
       })
     })
 
-    const promise = sttApi.transcribe(blob, 'test-user')
+    const promise = sttApi.transcribe(blob)
 
     vi.advanceTimersByTime(60000)
 
@@ -244,7 +248,7 @@ describe('sttApi.transcribe error reporting', () => {
       }),
     })
 
-    const promise = sttApi.transcribe(new Blob([], { type: 'audio/webm' }), 'test-user')
+    const promise = sttApi.transcribe(new Blob([], { type: 'audio/webm' }))
 
     await expect(promise).rejects.toThrow(/404/)
     await expect(promise).rejects.toThrow(/no such endpoint/)
@@ -259,6 +263,6 @@ describe('sttApi.transcribe error reporting', () => {
       json: async () => null,
     })
 
-    await expect(sttApi.transcribe(new Blob([]), 'test-user')).rejects.toThrow(/HTTP 429/)
+    await expect(sttApi.transcribe(new Blob([]))).rejects.toThrow(/HTTP 429/)
   })
 })

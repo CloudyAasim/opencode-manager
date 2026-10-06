@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Hono } from 'hono'
 import * as fs from 'fs/promises'
 
 vi.mock('fs/promises', () => ({
@@ -636,5 +637,59 @@ describe('STT Routes', () => {
 
       globalThis.fetch = originalFetch
     })
+  })
+})
+
+
+describe('STT routes take their owner from the session, not the query string', () => {
+  let app: ReturnType<typeof createSTTRoutes>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    const inner = createSTTRoutes({} as any)
+    app = new Hono().use('*', async (c, next) => {
+      c.set('user' as never, { id: 'real-user' } as never)
+      await next()
+    }).route('/', inner)
+    mockGetSettings.mockReturnValue({
+      preferences: {
+        stt: {
+          enabled: true,
+          provider: 'external',
+          apiKey: 'test-api-key',
+          endpoint: 'https://relay.example.com',
+          model: 'whisper-1',
+          language: 'en-US',
+        },
+      },
+    })
+    mockUpdateSettings.mockReturnValue(undefined)
+  })
+
+  it('ignores ?userId= when reporting status', async () => {
+    const res = await app.request('/status?userId=someone-else')
+
+    expect(res.status).toBe(200)
+    expect(mockGetSettings).toHaveBeenCalledWith('real-user')
+    expect(mockGetSettings).not.toHaveBeenCalledWith('someone-else')
+  })
+
+  it('discovers models for the session user', async () => {
+    mockStat.mockRejectedValue(new Error('not cached'))
+    mockWriteFile.mockResolvedValue(undefined)
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ id: 'whisper-1' }] }),
+    }) as unknown as typeof fetch
+
+    const res = await app.request('/models?userId=someone-else')
+    const json = await res.json() as Record<string, unknown>
+
+    expect(json.models).toEqual(['whisper-1'])
+    expect(mockGetSettings).toHaveBeenCalledWith('real-user')
+    expect(mockGetSettings).not.toHaveBeenCalledWith('someone-else')
+
+    globalThis.fetch = originalFetch
   })
 })
