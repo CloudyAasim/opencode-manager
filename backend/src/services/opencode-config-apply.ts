@@ -1,4 +1,6 @@
+import type { Database } from 'bun:sqlite'
 import { ServiceUnavailableError } from '../utils/errors'
+import { logger } from '../utils/logger'
 import { isDeepStrictEqual } from 'node:util'
 import type {
   OpenCodeConfigFile,
@@ -8,11 +10,19 @@ import {
   buildOpenCodeConfigSeedSnapshot,
   readOpenCodeConfigFile,
   readOpenCodeConfigSnapshot,
+  resolveWritableOpenCodeConfigSourceName,
   restoreOpenCodeConfigSnapshot,
   serializeOpenCodeConfigSnapshot,
   updateOpenCodeConfigFile,
   withOpenCodeConfigLock,
 } from './opencode-config-file'
+import {
+  UNATTRIBUTED_ACTOR,
+  diffOpenCodeConfig,
+  recordOpenCodeConfigAudit,
+  type OpenCodeConfigAuditActor,
+  type OpenCodeConfigAuditScope,
+} from './opencode-config-audit'
 import { opencodeServerManager } from './opencode-single-server'
 import type { SettingsService } from './settings'
 
@@ -25,6 +35,15 @@ export interface ApplyOpenCodeConfigInput {
   source?: OpenCodeConfigSourceName
   expectedRevision?: string
   settingsService: SettingsService
+  /**
+   * Where the audit row goes. Absent means no row is written, which is how the
+   * seed and restore paths - which are the app starting up, not a person
+   * acting - call in without pretending to be an edit somebody made.
+   */
+  db?: Database
+  actor?: OpenCodeConfigAuditActor | null
+  scope?: OpenCodeConfigAuditScope
+  subject?: string | null
 }
 
 export async function captureLastKnownGoodOpenCodeConfig(settingsService: SettingsService): Promise<OpenCodeConfigFile | null> {
@@ -87,7 +106,7 @@ export async function applyOpenCodeConfigUpdate(
   input: ApplyOpenCodeConfigInput,
 ): Promise<ApplyOpenCodeConfigResult> {
   return withOpenCodeConfigLock(async () => {
-    const { content, source, expectedRevision, settingsService } = input
+    const { content, source, expectedRevision, settingsService, db, actor, scope, subject } = input
 
     const snapshot = await readOpenCodeConfigSnapshot()
     const previous = await readOpenCodeConfigFile(snapshot)
@@ -104,8 +123,35 @@ export async function applyOpenCodeConfigUpdate(
       }
     }
 
-    if (requiresOpenCodeRestart(previous, next)) {
+    const restartPending = requiresOpenCodeRestart(previous, next)
+    if (restartPending) {
       opencodeServerManager.markRestartPending()
+    }
+
+    // Inside the lock, so the row describes the write that actually landed
+    // rather than one that raced it. Swallowed on failure on purpose: refusing
+    // to save a configuration because the log could not be written would trade a
+    // recorded change for an unrecorded one, and a loud log is what makes the
+    // gap visible.
+    if (db) {
+      try {
+        const { changedKeys, details } = diffOpenCodeConfig(previous?.content, next.content)
+        recordOpenCodeConfigAudit(db, {
+          actor: actor ?? UNATTRIBUTED_ACTOR,
+          scope: scope ?? 'global',
+          subject: subject ?? null,
+          source: resolveWritableOpenCodeConfigSourceName(snapshot.sources, source),
+          revision: next.revision,
+          changedKeys,
+          details,
+          restartPending,
+        })
+      } catch (error) {
+        logger.error('Failed to record OpenCode config audit', error)
+      }
+    }
+
+    if (restartPending) {
       return { status: 'restart_pending', config: next }
     }
 

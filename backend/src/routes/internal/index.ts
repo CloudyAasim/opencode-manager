@@ -29,13 +29,16 @@ export function createInternalRoutes(
   app.route('/notifications', createInternalNotificationRoutes(notificationService))
   app.route('/settings', createInternalSettingsRoutes(settingsService))
   // One OpenCode configuration for the whole server, so there is no per-tenant
-  // copy of it to scope anything to. It is left unfiltered rather than given an
-  // invented rule: the settings page has always let any signed-in user edit
-  // this file, so restricting only this path would leave the same action one
-  // click away where it matters more. What did change is who can reach here at
-  // all - the shared token alone no longer gets in, so "any tenant's agent
-  // rewrites everyone's config" is no longer something a copied token can do.
-  app.route('/opencode-config', createOpenCodeConfigRoutes(settingsService, openCodeClient))
+  // copy of it to scope anything to and no rule here that could tell two
+  // tenants apart - which is why this route is admin-only rather than
+  // filtered. The check lives in the route factory, where the web mount gets
+  // it too, because the point of it is that there is nowhere else to reach this
+  // file from: a user token or the agent plugin would otherwise be one URL away
+  // from the edit the web page just refused. What the token middleware still
+  // buys is who is asking - a shared token alone no longer gets in, so "any
+  // tenant's agent rewrites everyone's config" is not something a copied token
+  // can do either.
+  app.route('/opencode-config', createOpenCodeConfigRoutes(settingsService, openCodeClient, db))
   const repos = new Hono()
   repos.route('/', createInternalRepoRoutes(db, settingsService))
   // The per-repo schedule routes carry their own ownership check now, the same

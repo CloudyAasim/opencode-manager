@@ -116,7 +116,7 @@ export function createPreferencesRoutes(ctx: SettingsRouteContext) {
     }
   })
 
-  app.route('/opencode-config', createOpenCodeConfigRoutes(settingsService, openCodeClient))
+  app.route('/opencode-config', createOpenCodeConfigRoutes(settingsService, openCodeClient, ctx.db))
 
   return app
 }

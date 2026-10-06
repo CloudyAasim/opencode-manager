@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, CheckCircle, History, Loader2, RefreshCw, Trash2 } from 'lucide-react'
-import { auditApi } from '@/api/audit'
+import { AlertCircle, CheckCircle, History, Loader2, RefreshCw, Trash2, FileCog } from 'lucide-react'
+import { auditApi, type OpenCodeConfigAuditEntry } from '@/api/audit'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +36,54 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/**
+ * What a config write touched.
+ *
+ * The provider ids are pulled out of `details` and shown next to the key
+ * instead of inside it, because "provider" on its own does not tell an admin
+ * whether somebody added an endpoint of their own or rewrote the models of one
+ * everybody is already using. When there are no ids either way - a write that
+ * only edited a provider that was already declared - the key is still shown,
+ * because a blank cell reads as "nothing happened" and something did.
+ */
+function ChangedKeys({ entry }: { entry: OpenCodeConfigAuditEntry }) {
+  const { t } = useI18n()
+  const provider = entry.details?.provider as { added?: unknown; removed?: unknown } | undefined
+  const added = Array.isArray(provider?.added) ? (provider?.added as string[]) : []
+  const removed = Array.isArray(provider?.removed) ? (provider?.removed as string[]) : []
+  const touchedProviderOnly = entry.changedKeys.length === 1
+    && entry.changedKeys[0] === 'provider'
+    && added.length === 0
+    && removed.length === 0
+  const otherKeys = touchedProviderOnly
+    ? []
+    : entry.changedKeys.filter((key) => key !== 'provider')
+
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {otherKeys.map((key) => (
+        <Badge key={key} variant="outline" className="font-mono text-[10px]">{key}</Badge>
+      ))}
+      {added.map((id) => (
+        <Badge key={`+${id}`} className="bg-green-600 hover:bg-green-700 font-mono text-[10px]">
+          {t('settings.audit.configProviderAdded', { ids: id })}
+        </Badge>
+      ))}
+      {removed.map((id) => (
+        <Badge key={`-${id}`} variant="destructive" className="font-mono text-[10px]">
+          {t('settings.audit.configProviderRemoved', { ids: id })}
+        </Badge>
+      ))}
+      {touchedProviderOnly && (
+        <Badge variant="outline" className="font-mono text-[10px]">provider</Badge>
+      )}
+      {entry.changedKeys.length === 0 && (
+        <span className="text-muted-foreground">{t('settings.audit.configNoChanges')}</span>
+      )}
+    </span>
+  )
+}
+
 export function AuditSettings() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
@@ -53,13 +101,19 @@ export function AuditSettings() {
     queryFn: () => auditApi.listTerminal({ email: appliedEmail || undefined, active, limit: 100 }),
   })
 
+  const configQuery = useQuery({
+    queryKey: ['config-audit', appliedEmail],
+    queryFn: () => auditApi.listConfig({ email: appliedEmail || undefined, limit: 100 }),
+  })
+
   const pruneMutation = useMutation({
-    mutationFn: () => auditApi.pruneTerminal(Date.now() - PRUNE_WINDOW_MS),
+    mutationFn: () => auditApi.prune(Date.now() - PRUNE_WINDOW_MS),
     onSuccess: (result) => {
       setError(null)
       setNotice(t('settings.audit.pruned', { count: result.deleted }))
       setPruneOpen(false)
       void queryClient.invalidateQueries({ queryKey: ['terminal-audit'] })
+      void queryClient.invalidateQueries({ queryKey: ['config-audit'] })
     },
     onError: (err) => {
       setNotice(null)
@@ -70,6 +124,8 @@ export function AuditSettings() {
 
   const entries = auditQuery.data?.entries ?? []
   const total = auditQuery.data?.total ?? 0
+  const configEntries = configQuery.data?.entries ?? []
+  const configTotal = configQuery.data?.total ?? 0
 
   const applyEmailFilter = () => setAppliedEmail(emailInput.trim())
 
@@ -192,6 +248,65 @@ export function AuditSettings() {
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{entry.ipAddress ?? '—'}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-xs">{formatBytes(entry.totalBytes)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-none">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <FileCog className="h-4 w-4 sm:h-5 sm:w-5" />
+            {t('settings.audit.configTitle')}
+          </CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            {t('settings.audit.configDescription')} · {t('settings.audit.total', { count: configTotal })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {configQuery.isLoading ? (
+            <PanelLoading className="py-8" size="sm" />
+          ) : configQuery.isError ? (
+            <p className="py-6 text-center text-sm text-destructive">{t('settings.audit.loadFailed')}</p>
+          ) : configEntries.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">{t('settings.audit.configEmpty')}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs text-muted-foreground">
+                    <th className="px-3 py-2 font-medium">{t('settings.audit.when')}</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.audit.user')}</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.audit.configScope')}</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.audit.configChangedKeys')}</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.audit.configSource')}</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.audit.ipAddress')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {configEntries.map((entry) => (
+                    <tr key={entry.id} className="border-b border-border/60 last:border-b-0">
+                      <td className="whitespace-nowrap px-3 py-2 text-xs">{formatTimestamp(entry.createdAt)}</td>
+                      <td className="px-3 py-2 text-xs">
+                        {entry.userEmail ?? entry.userId ?? t('settings.audit.configUnattributed')}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs">
+                        {entry.scope === 'user'
+                          ? t('settings.audit.configScopeUser', { name: entry.subject ?? '' })
+                          : t('settings.audit.configScopeGlobal')}
+                        {entry.restartPending && (
+                          <Badge variant="secondary" className="ml-1">{t('settings.audit.configRestart')}</Badge>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        <ChangedKeys entry={entry} />
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{entry.source ?? '—'}</td>
+                      <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{entry.ipAddress ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>

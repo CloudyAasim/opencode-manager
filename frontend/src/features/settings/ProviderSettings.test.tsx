@@ -6,6 +6,7 @@ import { ProviderSettings } from './ProviderSettings'
 import { getProviders, providerCredentialsApi } from '@/api/providers'
 import { oauthApi } from '@/api/oauth'
 import { settingsApi } from '@/api/settings'
+import { useOptionalAuth } from '@/hooks/useAuth'
 import type { Provider, Model } from '@/api/providers'
 import type { OAuthAuthorizeResponse } from '@/api/oauth'
 import type { OpenCodeConfigFile } from '@/api/types/settings'
@@ -39,6 +40,10 @@ vi.mock('@/api/oauth', () => ({
     authorize: vi.fn(),
     callback: vi.fn(),
   },
+}))
+
+vi.mock('@/hooks/useAuth', () => ({
+  useOptionalAuth: vi.fn(),
 }))
 
 vi.mock('./OAuthAuthorizeDialog', () => ({
@@ -161,7 +166,36 @@ function renderSettings() {
 describe('ProviderSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Admin by default, because the declaring section is admin-only and the
+    // tests that are about how it behaves should not each have to say so.
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
     mockProviderData()
+  })
+
+  it('keeps the custom provider section away from a non-admin, and never asks for the config', async () => {
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'user' } } as never)
+    const { container } = renderSettings()
+
+    // The rest of the page still loads: this is a panel everyone has.
+    await screen.findByText('Anthropic')
+
+    expect(container.querySelector('[data-custom-providers]')).toBeNull()
+    expect(screen.queryByRole('button', { name: /New custom provider/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('OpenAI', { selector: 'p.font-mono' })).not.toBeInTheDocument()
+    // Not just hidden: if the request went out it would come back 403, and a
+    // failed query in the console is how a "hidden" panel turns back into a
+    // visible error banner later.
+    expect(settingsApi.getOpenCodeConfig).not.toHaveBeenCalled()
+  })
+
+  it('shows the custom provider section to an admin', async () => {
+    const { container } = renderSettings()
+
+    await screen.findByText('Anthropic')
+
+    expect(container.querySelector('[data-custom-providers]')).not.toBeNull()
+    expect(screen.getByRole('button', { name: /New custom provider/ })).toBeInTheDocument()
+    expect(settingsApi.getOpenCodeConfig).toHaveBeenCalled()
   })
 
   it('lays out OAuth and API key columns in a container-query grid that splits at 1000px of content width', async () => {
@@ -438,6 +472,10 @@ const DECLARED = {
 describe('ProviderSettings — the custom provider section', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Stated here as well as above, because the auth mock is module-wide: a
+    // block that relied on whichever describe ran first would pass in one
+    // order and fail in another, which is exactly what shuffling tests for.
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
     mockProviderData()
     vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture(DECLARED))
   })

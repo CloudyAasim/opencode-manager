@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, within, act } from '@testing-library/react'
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { SettingsDialog } from './SettingsDialog'
+import { useOptionalAuth } from '@/hooks/useAuth'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { DESKTOP_MEDIA_QUERY } from '@/hooks/useMediaQuery'
 
@@ -43,6 +44,27 @@ vi.mock('@/features/settings/VersionSelectDialog', () => ({
 
 vi.mock('@/features/settings/LogsViewer', () => ({
   LogsViewer: () => <div data-testid="logs-settings">Logs Content</div>,
+}))
+
+vi.mock('@/features/settings/ServerHealthStatus', () => ({
+  ServerHealthStatus: () => <div data-testid="server-health">Healthy</div>,
+}))
+
+vi.mock('@/features/settings/OpenCodeServerAuthSettings', () => ({
+  OpenCodeServerAuthSettings: () => <div data-testid="server-auth">Server Auth</div>,
+}))
+
+vi.mock('@/features/settings/ManagerTokenSettings', () => ({
+  ManagerTokenSettings: () => <div data-testid="manager-token">Manager Token</div>,
+}))
+
+vi.mock('@/features/settings/ServerEnvVarsSettings', () => ({
+  ServerEnvVarsSettings: () => <div data-testid="server-env">Server Env</div>,
+}))
+
+vi.mock('@/hooks/useAuth', () => ({
+  useOptionalAuth: vi.fn(),
+  useAuth: vi.fn(),
 }))
 
 vi.mock('@/hooks/useMobile', () => ({
@@ -92,10 +114,40 @@ function stubMatchMedia(matches: boolean): () => void {
 describe('SettingsDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // A non-admin by default, which is what this file rendered before the raw
+    // config editor became admin-only. The admin case states its own role in
+    // the test that is about it.
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'user' } } as never)
   })
 
   afterEach(() => {
     restoreMatchMedia()
+  })
+
+  it('keeps the raw config editor out of the OpenCode section for a non-admin', () => {
+    render(
+      <MemoryRouter initialEntries={['/?settings=open&settingsTab=opencode']}>
+        <SettingsDialog />
+      </MemoryRouter>
+    )
+
+    // The section itself is still reachable - server health and the
+    // maintenance settings do not depend on being an admin. It is the editor,
+    // which writes the one config every session on the server reads, that is
+    // not offered.
+    expect(screen.queryByTestId('opencode-settings')).not.toBeInTheDocument()
+  })
+
+  it('shows the raw config editor to an admin', () => {
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
+
+    render(
+      <MemoryRouter initialEntries={['/?settings=open&settingsTab=opencode']}>
+        <SettingsDialog />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByTestId('opencode-settings')).toBeInTheDocument()
   })
 
   it('resets to menu state when dialog closes and reopens', () => {

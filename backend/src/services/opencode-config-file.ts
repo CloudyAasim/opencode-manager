@@ -269,6 +269,24 @@ function selectWritableSource(sources: OpenCodeConfigSourceFile[]): OpenCodeConf
   return name ? sources.find((source) => source.name === name) ?? null : null
 }
 
+/**
+ * Which source file a write lands in.
+ *
+ * Exported so the audit row can name the same file the write actually did. The
+ * two have to agree: a log that says `opencodode.jsonc` while `opencode.json`
+ * is the file that changed is worse than no log, because it looks like an
+ * answer.
+ */
+export function resolveWritableOpenCodeConfigSourceName(
+  sources: OpenCodeConfigSourceFile[],
+  requested?: OpenCodeConfigSourceName,
+): OpenCodeConfigSourceName {
+  if (requested !== undefined) {
+    return assertOpenCodeConfigSourceName(requested)
+  }
+  return selectWritableSource(sources)?.name ?? DEFAULT_OPENCODE_CONFIG_SOURCE_NAME
+}
+
 function computeOpenCodeConfigRevision(sources: OpenCodeConfigSourceFile[]): string {
   const hash = createHash('sha256')
   const byName = new Map(sources.map((source) => [source.name, source]))
@@ -420,9 +438,7 @@ export async function updateOpenCodeConfigFile(
     throw new OpenCodeConfigConflictError(options.expectedRevision, snapshot.revision)
   }
 
-  const targetName = options.source !== undefined
-    ? assertOpenCodeConfigSourceName(options.source)
-    : selectWritableSource(snapshot.sources)?.name ?? DEFAULT_OPENCODE_CONFIG_SOURCE_NAME
+  const targetName = resolveWritableOpenCodeConfigSourceName(snapshot.sources, options.source)
   const targetSource = snapshot.sources.find((source) => source.name === targetName)
   const targetPath = getOpenCodeConfigSourcePath(targetName)
 

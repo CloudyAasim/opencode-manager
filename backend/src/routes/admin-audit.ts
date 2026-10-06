@@ -5,6 +5,7 @@ import type { Database } from 'bun:sqlite'
 import { requireAdmin } from '../auth/middleware'
 import type { Session } from '../auth'
 import { listTerminalAudit, pruneTerminalAudit } from '../services/terminal/audit'
+import { listOpenCodeConfigAudit, pruneOpenCodeConfigAudit } from '../services/opencode-config-audit'
 import { logger } from '../utils/logger'
 import { getErrorMessage } from '../utils/error-utils'
 
@@ -12,6 +13,7 @@ const querySchema = z.object({
   userId: z.string().min(1).max(200).optional(),
   email: z.string().min(1).max(320).optional(),
   active: z.enum(['true', 'false']).optional(),
+  scope: z.enum(['global', 'user']).optional(),
   from: z.coerce.number().int().optional(),
   to: z.coerce.number().int().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
@@ -65,12 +67,38 @@ export function createAuditRoutes(db: Database) {
     }
   })
 
-  app.post('/terminal/prune', async (c) => {
+  app.get('/opencode-config', (c) => {
+    try {
+      const query = querySchema.parse(c.req.query())
+      const result = listOpenCodeConfigAudit(db, {
+        userId: query.userId,
+        email: query.email,
+        scope: query.scope,
+        from: query.from,
+        to: query.to,
+        limit: query.limit,
+        offset: query.offset,
+      })
+      return c.json(result)
+    } catch (error) {
+      return handleError(c, error)
+    }
+  })
+
+  // One button, both tables.
+  //
+  // It used to live at `/terminal/prune` and answer with a single count, which
+  // left no room for a second kind of audited event. An admin who prunes the
+  // audit log and then finds the config half still there has been told the log
+  // was pruned when it was not, so the two are one action that reports each
+  // table separately and sums them for the toast.
+  app.post('/prune', async (c) => {
     try {
       const input = pruneSchema.parse(await c.req.json())
-      const deleted = pruneTerminalAudit(db, input.before)
-      logger.info(`Pruned ${deleted} terminal audit rows`)
-      return c.json({ deleted })
+      const terminal = pruneTerminalAudit(db, input.before)
+      const config = pruneOpenCodeConfigAudit(db, input.before)
+      logger.info(`Pruned ${terminal} terminal and ${config} OpenCode config audit rows`)
+      return c.json({ terminal, config, deleted: terminal + config })
     } catch (error) {
       return handleError(c, error)
     }

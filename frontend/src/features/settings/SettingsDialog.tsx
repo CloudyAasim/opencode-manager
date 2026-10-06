@@ -31,6 +31,7 @@ type SettingsView = 'menu' | SettingsContentTab
 
 function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => void }) {
   const [authSectionsOpen, setAuthSectionsOpen] = useState(true)
+  const auth = useOptionalAuth()
   const { t } = useI18n()
   const toggleAuthSections = useCallback(() => setAuthSectionsOpen((open) => !open), [])
 
@@ -38,7 +39,12 @@ function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => 
     <RowActionsMenuContext.Provider value={true}>
       <div className="group/opencode-settings space-y-4" data-opencode-settings>
         <ServerHealthStatus onOpenVersionDialog={onOpenVersionDialog} />
-        <OpenCodeConfigManager />
+        {/* Admin-only, and not hidden by CSS. The raw editor writes the one
+            config every session on the server reads, so showing it to a
+            non-admin and refusing the save would be a button that always
+            fails; the server refuses it either way, and this stops the page
+            from offering it at all. */}
+        {auth?.user?.role === 'admin' && <OpenCodeConfigManager />}
         <section className="space-y-4 border-t border-border pt-4" aria-label={t('settingsPanels.server.maintenance')}>
           <h2 className="text-lg font-semibold">{t('settingsPanels.server.maintenance')}</h2>
           <div className="grid grid-cols-1 items-start gap-x-6 gap-y-4 @min-[1000px]:grid-cols-2">

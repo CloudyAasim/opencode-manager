@@ -275,6 +275,8 @@ vi.mock('@opencode-manager/shared/config/env', () => ({
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { createSettingsRoutes } from '../../src/routes/settings'
+import { createSessionUser } from '../helpers/session-user'
+import type { Session } from '../../src/auth'
 import { getImportedSessionDirectories, getOpenCodeImportStatus, OpenCodeImportProtectionError, syncOpenCodeImport } from '../../src/services/opencode-import'
 import { relinkReposFromSessionDirectories } from '../../src/services/repo'
 import { opencodeServerManager } from '../../src/services/opencode-single-server'
@@ -292,8 +294,31 @@ const mockSyncOpenCodeImport = syncOpenCodeImport as ReturnType<typeof vi.fn>
 const mockGetImportedSessionDirectories = getImportedSessionDirectories as ReturnType<typeof vi.fn>
 const mockRelinkReposFromSessionDirectories = relinkReposFromSessionDirectories as ReturnType<typeof vi.fn>
 
+/**
+ * The settings routes behind a signed-in user.
+ *
+ * Wrapped rather than fetched directly because the OpenCode config routes are
+ * admin-only, so a test that calls them has to say who it is. Going through the
+ * real middleware is also what proves the gate is the middleware's and not
+ * something each test remembers to assert.
+ */
+function withSessionUser(db: unknown, role: 'admin' | 'user') {
+  const app = new Hono<{ Variables: { user: Session['user']; session: Session['session'] } }>()
+  app.use('*', async (c, next) => {
+    c.set('user', createSessionUser(role))
+    c.set('session', { id: 'session-1' } as Session['session'])
+    await next()
+  })
+  app.route('/', createSettingsRoutes(
+    db as never,
+    { getGitEnvironment: vi.fn().mockReturnValue({}) } as never,
+    createStubOpenCodeClient(),
+  ) as unknown as Hono)
+  return app
+}
+
 describe('Settings Routes - OpenCode Upgrade', () => {
-  let settingsApp: ReturnType<typeof createSettingsRoutes>
+  let settingsApp: ReturnType<typeof withSessionUser>
   let testDb: any
 
   beforeEach(() => {
@@ -317,7 +342,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
     mockApplyOpenCodeConfigUpdate.mockReset()
     
     testDb = {} as any
-    settingsApp = createSettingsRoutes(testDb, { getGitEnvironment: vi.fn().mockReturnValue({}) } as any, createStubOpenCodeClient())
+    settingsApp = withSessionUser(testDb, 'admin')
 
     mockRestart.mockResolvedValue(undefined)
     mockClearStartupError.mockReturnValue(undefined)
@@ -342,6 +367,61 @@ describe('Settings Routes - OpenCode Upgrade', () => {
   })
 
   describe('OpenCode config routes', () => {
+    it('refuses every route to a signed-in non-admin', async () => {
+      const app = withSessionUser(testDb, 'user')
+
+      const get = await app.fetch(new Request('http://localhost/opencode-config'))
+      const effective = await app.fetch(new Request('http://localhost/opencode-config/effective'))
+      const put = await app.fetch(new Request('http://localhost/opencode-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: { provider: { mine: { options: { baseURL: 'https://x' } } } } }),
+      }))
+
+      expect([get.status, effective.status, put.status]).toEqual([403, 403, 403])
+      // The refusal has to happen before the body is even looked at: a route
+      // that validated first would still tell a stranger whether their payload
+      // was well formed.
+      expect((await put.json() as { error: string }).error).toBe('Forbidden')
+      expect(mockReadOpenCodeConfigFile).not.toHaveBeenCalled()
+      expect(mockApplyOpenCodeConfigUpdate).not.toHaveBeenCalled()
+    })
+
+    it('carries the caller and their address into the apply so the write can be attributed', async () => {
+      const config = {
+        path: '/tmp/test-workspace/.config/opencode.json',
+        content: { theme: 'light' },
+        rawContent: '{"theme":"light"}',
+        isValid: true,
+        updatedAt: 4,
+        sources: [],
+        revision: 'rev-1',
+      }
+      mockApplyOpenCodeConfigUpdate.mockResolvedValueOnce({ status: 'applied', config })
+      const app = withSessionUser(testDb, 'admin')
+
+      await app.fetch(new Request('http://localhost/opencode-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'user-agent': 'vitest', 'x-real-ip': '203.0.113.9' },
+        body: JSON.stringify({ content: { theme: 'light' } }),
+      }))
+
+      expect(mockApplyOpenCodeConfigUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actor: {
+            userId: 'me',
+            userEmail: 'me@example.com',
+            // The suite runs without TRUST_PROXY, so a forwarded address is
+            // not believed. Recording it anyway would let anyone who can reach
+            // the app forge the address on a row that is meant to say where the
+            // write came from.
+            ipAddress: null,
+            userAgent: 'vitest',
+          },
+        }),
+      )
+    })
+
     it('returns the on-disk config state from GET /opencode-config', async () => {
       const fileState = {
         path: '/tmp/test-workspace/.config/opencode.json',
@@ -393,6 +473,13 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         source: undefined,
         expectedRevision: undefined,
         settingsService: expect.anything(),
+        db: testDb,
+        actor: {
+          userId: 'me',
+          userEmail: 'me@example.com',
+          ipAddress: null,
+          userAgent: null,
+        },
       })
     })
 
@@ -420,6 +507,8 @@ describe('Settings Routes - OpenCode Upgrade', () => {
         source: undefined,
         expectedRevision: undefined,
         settingsService: expect.anything(),
+        db: testDb,
+        actor: expect.objectContaining({ userId: 'me' }),
       })
     })
 

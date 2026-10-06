@@ -12,6 +12,7 @@ import { allMigrations } from '../../src/db/migrations'
 import { createInternalCaller } from '../helpers/internal-caller'
 import { migrate } from '../../src/db/migration-runner'
 import { OPENCODE_CONFIG_SEED, readOpenCodeConfigFile, writeOpenCodeConfigFile } from '../../src/services/opencode-config-file'
+import { listOpenCodeConfigAudit } from '../../src/services/opencode-config-audit'
 import { createTempAssistantWorkspace } from '../helpers/assistant-workspace'
 import type { ScheduleWorktreeManager } from '../../src/services/schedule-worktree'
 
@@ -47,7 +48,11 @@ describe('internal/opencode-config routes', () => {
     const settingsService = new SettingsService(db)
     app = new Hono()
     app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
-    token = createInternalCaller(db).token
+    // An admin, because the route under test is admin-only. The non-admin case
+    // has its own test below: leaving it to the default caller would have made
+    // every other test in this file assert 403 and prove nothing about the
+    // behaviour it names.
+    token = createInternalCaller(db, { role: 'admin' }).token
   })
 
   afterEach(async () => {
@@ -57,6 +62,46 @@ describe('internal/opencode-config routes', () => {
   it('GET /api/internal/opencode-config returns 401 without bearer token', async () => {
     const res = await app.request('/api/internal/opencode-config')
     expect(res.status).toBe(401)
+  })
+
+  it('refuses a non-admin token on every route, so the internal path is not a way around the web gate', async () => {
+    const userToken = createInternalCaller(db, { role: 'user' }).token
+    const headers = { authorization: `Bearer ${userToken}` }
+    await writeOpenCodeConfigFile('{"theme":"dark"}', 'opencode.jsonc')
+
+    const get = await app.request('/api/internal/opencode-config', { headers })
+    const effective = await app.request('/api/internal/opencode-config/effective', { headers })
+    const put = await app.request('/api/internal/opencode-config', {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: { provider: { mine: { options: { baseURL: 'https://x' } } } } }),
+    })
+
+    expect([get.status, effective.status, put.status]).toEqual([403, 403, 403])
+    // Nothing was written, and nothing was read: the file on disk still says
+    // what it said before the attempt.
+    const onDisk = await readOpenCodeConfigFile()
+    expect(onDisk?.content).toEqual({ theme: 'dark' })
+    expect(getJsonMock).not.toHaveBeenCalled()
+  })
+
+  it('records the token owner as the actor on a write', async () => {
+    const caller = createInternalCaller(db, { role: 'admin', id: 'u-admin', username: 'root' })
+    await writeOpenCodeConfigFile('{"theme":"dark"}', 'opencode.jsonc')
+
+    const res = await app.request('/api/internal/opencode-config', {
+      method: 'PUT',
+      headers: { authorization: `Bearer ${caller.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: { theme: 'light' } }),
+    })
+    const entry = listOpenCodeConfigAudit(db).entries[0]
+
+    expect(res.status).toBe(200)
+    expect(entry).toMatchObject({ userId: 'u-admin', scope: 'global', changedKeys: ['theme'] })
+    // The internal middleware resolves a token to `{ id, role, username }` and
+    // nothing else, so there is no email to record. A row that said
+    // "undefined" here would read as a bug in the log rather than the truth.
+    expect(entry?.userEmail).toBeNull()
   })
 
   it('GET /api/internal/opencode-config returns 404 when no config file exists', async () => {

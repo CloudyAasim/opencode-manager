@@ -22,6 +22,7 @@ import {
 } from './custom-provider'
 import { settingsApi } from '@/api/settings'
 import { useOpenCodeConfigFile, OPEN_CODE_CONFIG_QUERY_KEY } from '@/hooks/useOpenCodeConfigFile'
+import { useOptionalAuth } from '@/hooks/useAuth'
 import { invalidateConfigCaches, invalidateProviderCaches } from '@/lib/queryInvalidation'
 import { showErrorToast } from '@/lib/error-toast'
 import { showToast } from '@/lib/toast'
@@ -40,6 +41,12 @@ type ProviderDialogState =
 
 export function ProviderSettings() {
   const { t } = useI18n()
+  const auth = useOptionalAuth()
+  // Declaring a provider is a config edit, and the config is one file the whole
+  // server reads. Until each tenant has somewhere of their own to declare into,
+  // that makes it an admin action - so the section is not rendered for anyone
+  // else, and the config is not even fetched for them.
+  const canDeclareProviders = auth?.user?.role === 'admin'
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false)
   const [oauthCallbackDialogOpen, setOauthCallbackDialogOpen] = useState(false)
@@ -86,7 +93,7 @@ export function ProviderSettings() {
   // provider catalogue, and the list this page renders is whatever OpenCode
   // reports. So this writes `provider.<id>` into the OpenCode config and lets
   // the next load pick it up.
-  const { data: openCodeConfig } = useOpenCodeConfigFile()
+  const { data: openCodeConfig } = useOpenCodeConfigFile(canDeclareProviders)
   const declaredProviders = useMemo(() => {
     const entries = (openCodeConfig?.content.provider ?? {}) as Record<string, Record<string, unknown>>
     return Object.entries(entries).map(([id, entry]) => {
@@ -392,7 +399,8 @@ export function ProviderSettings() {
         </div>
 
         <div className="min-w-0 space-y-6">
-          <section className="space-y-3">
+          {canDeclareProviders && (
+          <section className="space-y-3" data-custom-providers>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-foreground mb-2">
@@ -480,6 +488,7 @@ export function ProviderSettings() {
               </div>
             )}
           </section>
+          )}
 
           <div className="border-t border-border pt-6">
           <div>

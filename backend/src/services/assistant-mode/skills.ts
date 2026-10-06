@@ -401,6 +401,8 @@ Reload the assistant workspace by disposing the current OpenCode instance. Use t
 
 The global configuration files on disk are the source of truth. Use the \`ocm\` tool's \`request\` action with the endpoints below to read or change them; never edit the files directly. Global sources merge in order: \`config.json\`, \`opencode.json\`, then \`opencode.jsonc\`.
 
+**All three endpoints below are administrator-only and answer \`403\` otherwise.** There is one configuration for the whole server, so a change to it is not yours alone to make. If you are running as a non-admin and the user asked for a provider or a model to be added, say that it needs an administrator, and offer to show them the exact change instead of attempting it. Do not try to reach these endpoints by another route; the internal token is not a way around the check.
+
 ### GET /opencode-config
 
 Read the merged persisted global configuration and its source files. Returns \`404\` when no source exists. This is not the running instance configuration: project overrides and expanded environment values are not included. \`GET /opencode-config/effective\` reads the running server's effective global configuration separately; never copy that response into a save.
@@ -469,6 +471,7 @@ When the response contains \`restartRequired: true\`, tell the user to restart t
 
 - The settings PATCH endpoint rejects any attempt to modify credentials, API keys, or other sensitive settings; guide the user to the full UI for Git, TTS, and STT credentials
 - PUT /opencode-config patches changed global settings, including \`plugin\`, \`mcp\`, and \`provider\` entries; change only the keys the user explicitly asked for and never add plugins, MCP servers, or provider credentials the user did not request
+- Every write to the global configuration is recorded with the user who made it, the keys that changed, and whether a restart is needed. A change nobody asked for is therefore visible to an administrator afterwards
 - The settings PATCH endpoint does NOT trigger OpenCode reload or restart
 `
 }

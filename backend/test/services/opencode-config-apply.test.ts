@@ -48,6 +48,7 @@ import {
   readOpenCodeConfigFile,
   writeOpenCodeConfigFile,
 } from '../../src/services/opencode-config-file'
+import { listOpenCodeConfigAudit, type OpenCodeConfigAuditEntry } from '../../src/services/opencode-config-audit'
 
 function expectStatus<T extends ApplyOpenCodeConfigResult['status']>(
   result: ApplyOpenCodeConfigResult,
@@ -343,5 +344,123 @@ describe('opencode-config-apply', () => {
     expect(seeded.content).toEqual({ $schema: 'https://opencode.ai/config.json' })
     expect(seeded.isValid).toBe(true)
     await expect(readdir(workDir)).resolves.toEqual(['opencode.jsonc'])
+  })
+
+  describe('audit', () => {
+    const actor = {
+      userId: 'u-1',
+      userEmail: 'admin@example.test',
+      ipAddress: '203.0.113.7',
+      userAgent: 'vitest',
+    }
+
+    function rows(): OpenCodeConfigAuditEntry[] {
+      return listOpenCodeConfigAudit(db).entries
+    }
+
+    it('records who wrote the config, which keys changed, and where it landed', async () => {
+      await writeFile(sourcePath('opencode.json'), '{"theme":"dark"}', 'utf8')
+
+      await applyOpenCodeConfigUpdate({
+        content: { theme: 'light' },
+        settingsService,
+        db,
+        actor,
+      })
+
+      const entry = rows()[0]
+      expect(entry).toMatchObject({
+        userId: 'u-1',
+        userEmail: 'admin@example.test',
+        ipAddress: '203.0.113.7',
+        userAgent: 'vitest',
+        scope: 'global',
+        subject: null,
+        source: 'opencode.json',
+        changedKeys: ['theme'],
+        restartPending: true,
+      })
+      expect(entry?.revision).toBeTruthy()
+      expect(entry?.details).toBeNull()
+    })
+
+    it('names the provider ids a write added and removed', async () => {
+      await writeFile(sourcePath('opencode.json'), JSON.stringify({
+        provider: { keep: { npm: '@ai-sdk/openai' }, drop: { npm: 'x' } },
+      }), 'utf8')
+
+      await applyOpenCodeConfigUpdate({
+        content: { provider: { keep: { npm: '@ai-sdk/openai' }, added: { npm: 'y' } } },
+        settingsService,
+        db,
+        actor,
+      })
+
+      const entry = rows()[0]
+      expect(entry?.changedKeys).toEqual(['provider'])
+      expect(entry?.details).toEqual({ provider: { added: ['added'], removed: ['drop'] } })
+    })
+
+    it('records nothing when the write was refused as a conflict', async () => {
+      const snapshot = await writeOpenCodeConfigFile('{"theme":"dark"}', 'opencode.jsonc')
+      await writeFile(sourcePath('opencode.json'), '{"theme":"light"}', 'utf8')
+
+      await expect(applyOpenCodeConfigUpdate({
+        content: { theme: 'system' },
+        expectedRevision: 'not-the-current-one',
+        settingsService,
+        db,
+        actor,
+      })).rejects.toBeInstanceOf(OpenCodeConfigConflictError)
+
+      expect(rows()).toEqual([])
+      expect(snapshot.revision).toBeTruthy()
+    })
+
+    it('records an unattributed row rather than inventing an owner', async () => {
+      await writeFile(sourcePath('opencode.json'), '{"theme":"dark"}', 'utf8')
+
+      await applyOpenCodeConfigUpdate({
+        content: { theme: 'light' },
+        settingsService,
+        db,
+      })
+
+      expect(rows()[0]).toMatchObject({
+        userId: null,
+        userEmail: null,
+        scope: 'global',
+      })
+    })
+
+    it('writes no row when no database was supplied', async () => {
+      await writeFile(sourcePath('opencode.json'), '{"theme":"dark"}', 'utf8')
+
+      const result = expectStatus(await applyOpenCodeConfigUpdate({
+        content: { theme: 'light' },
+        settingsService,
+        actor,
+      }), 'restart_pending')
+
+      expect(result.config.content).toEqual({ theme: 'light' })
+      expect(rows()).toEqual([])
+    })
+
+    it('keeps the applied config when the audit row cannot be written', async () => {
+      await writeFile(sourcePath('opencode.json'), '{"theme":"dark"}', 'utf8')
+      const brokenDb = {
+        prepare: () => ({ run: () => { throw new Error('audit table gone') } }),
+      } as unknown as Database
+
+      const result = expectStatus(await applyOpenCodeConfigUpdate({
+        content: { theme: 'light' },
+        settingsService,
+        db: brokenDb,
+        actor,
+      }), 'restart_pending')
+
+      expect(result.config.content).toEqual({ theme: 'light' })
+      await expect(readFile(sourcePath('opencode.json'), 'utf8')).resolves.toContain('"light"')
+    })
   })
 })
