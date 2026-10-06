@@ -131,4 +131,36 @@ describe('UserProviderService', () => {
     expect(await service.list('alice')).toEqual([])
     expect(await service.has('alice', 'relay-ab')).toBe(false)
   })
+
+  it('removes a provider entry that is not an object instead of spreading it', async () => {
+    const service = new UserProviderService()
+    const configPath = path.join(workspace, 'users', 'alice', 'setting', 'opencode.json')
+
+    await fs.mkdir(path.dirname(configPath), { recursive: true })
+    await fs.writeFile(configPath, JSON.stringify({ model: 'x/y', provider: { relay: 'not-an-object' } }))
+
+    await service.delete('alice', 'relay')
+
+    const config = JSON.parse(await fs.readFile(configPath, 'utf-8')) as {
+      model: string
+      provider: Record<string, unknown>
+    }
+    expect(config.model).toBe('x/y')
+    expect(config.provider.relay).toBeUndefined()
+  })
+
+  it('leaves an array entry alone in shape while removing the credential', async () => {
+    const service = new UserProviderService()
+    const configPath = path.join(workspace, 'users', 'alice', 'setting', 'opencode.json')
+
+    await fs.mkdir(path.dirname(configPath), { recursive: true })
+    await fs.writeFile(configPath, JSON.stringify({ provider: { relay: ['a', 'b'] } }))
+
+    await service.delete('alice', 'relay')
+
+    const config = JSON.parse(await fs.readFile(configPath, 'utf-8')) as {
+      provider: Record<string, unknown>
+    }
+    expect(config.provider.relay).toBeUndefined()
+  })
 })
