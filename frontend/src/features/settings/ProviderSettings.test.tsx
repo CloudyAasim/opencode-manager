@@ -511,6 +511,47 @@ describe('ProviderSettings — the custom provider section', () => {
     expect(screen.queryByRole('button', { name: /^Edit / })).not.toBeInTheDocument()
   })
 
+  it('folds the declared list away behind a disclosure, and opens it again', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('Mine')
+
+    const disclosure = screen.getByRole('button', { name: /Declared providers/ })
+    // Open on arrival: the list is what the section is for, and the count in the
+    // header already answers "how many" without opening anything.
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true')
+    expect(within(disclosure).getByText('2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit Mine' })).toBeInTheDocument()
+
+    await user.click(disclosure)
+
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('button', { name: 'Edit Mine' })).not.toBeInTheDocument()
+    // The count is what makes folding safe: what is in the list stays readable
+    // while the rows themselves are not on the page.
+    expect(within(disclosure).getByText('2')).toBeInTheDocument()
+
+    await user.click(disclosure)
+
+    expect(screen.getByRole('button', { name: 'Edit Mine' })).toBeInTheDocument()
+  })
+
+  it('leaves the heading, the scope and the add action alone when the list is folded', async () => {
+    const user = userEvent.setup()
+    const { container } = renderSettings()
+
+    await screen.findByText('Mine')
+    await user.click(screen.getByRole('button', { name: /Declared providers/ }))
+
+    const section = container.querySelector('[data-custom-providers]') as HTMLElement
+    expect(within(section).getByRole('heading', { name: 'Custom providers' })).toBeInTheDocument()
+    expect(screen.getByText('Declared for everyone on this server.')).toBeInTheDocument()
+    // Folding a list must not fold the way in - or the section could only ever
+    // be re-entered by folding it back open first.
+    expect(screen.getByRole('button', { name: 'New custom provider' })).toBeInTheDocument()
+  })
+
   it('opens a blank editor for a create, with every declared id offered as taken', async () => {
     const user = userEvent.setup()
     renderSettings()
@@ -797,6 +838,23 @@ describe('ProviderSettings — a provider an administrator also declared', () =>
     // The whole point: the tenant's own copy keeps working, unchanged, while
     // they decide. Nothing here is disabled and nothing was overwritten.
     expect(screen.getByRole('button', { name: 'Edit Acme' })).toBeInTheDocument()
+  })
+
+  it('keeps the collision notice on screen while the list is folded', async () => {
+    // A collision is the one thing in this section waiting on a decision. The
+    // rows below it are a list; folding that is tidiness, folding this is a
+    // prompt that quietly expires.
+    const user = userEvent.setup()
+    renderSettings()
+
+    await screen.findByText('An administrator also declared acme')
+    await user.click(screen.getByRole('button', { name: /Declared providers/ }))
+
+    expect(screen.getByText('An administrator also declared acme')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Keep mine' })).toBeInTheDocument()
+    // The folded rows really are gone, so this is not passing because the
+    // toggle does nothing at all.
+    expect(screen.queryByRole('button', { name: 'Edit Acme' })).not.toBeInTheDocument()
   })
 
   it('records keeping their own and takes no definition from the client', async () => {

@@ -60,6 +60,10 @@ export function ProviderSettings() {
   const [oauthMethodIndex, setOauthMethodIndex] = useState<number | null>(null)
   const [connectedExpanded, setConnectedExpanded] = useState(false)
   const [availableExpanded, setAvailableExpanded] = useState(true)
+  // The declared list folds the way the API key groups above it do. Open by
+  // default: it is what the section is for, and the header already says how
+  // many there are, so folding has to be something you ask for.
+  const [declaredExpanded, setDeclaredExpanded] = useState(true)
   const [availableSearch, setAvailableSearch] = useState('')
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false)
   const [apiKeyProvider, setApiKeyProvider] = useState<Provider | null>(null)
@@ -469,6 +473,9 @@ export function ProviderSettings() {
               </Button>
             </div>
 
+            {/* Deliberately outside the disclosure below. A collision is the
+                one thing in this section waiting on a decision, and folding it
+                behind the same toggle as the list is how it stays undecided. */}
             {!declaresGlobally && (
               <ProviderConflictNotice
                 conflicts={(ownDeclarations?.conflicts ?? []).filter((c) => !c.acknowledged)}
@@ -487,70 +494,95 @@ export function ProviderSettings() {
               />
             )}
 
-            {declaredProviders.length === 0 ? (
-              <Card className="bg-card border-border">
-                <CardContent className="pt-6">
-                  <p className="text-sm font-medium text-foreground text-center">
-                    {t('settingsPanels.provider.customProvidersEmptyTitle')}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground text-center">
-                    {t('settingsPanels.provider.customProvidersEmptyHint')}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="divide-y divide-border">
-                {declaredProviders.map((provider) => (
-                  <div
-                    key={provider.id}
-                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{provider.name}</p>
-                      <p className="text-xs text-muted-foreground font-mono truncate">{provider.id}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-1">
-                        <span className="text-xs text-muted-foreground">
-                          {t('settingsPanels.provider.customProvidersModels', {
-                            count: provider.modelCount,
-                          })}
-                        </span>
-                        {hasCredentials(provider.id) ? (
-                          <Badge variant="default" className="bg-green-600 hover:bg-green-700 shrink-0">
-                            <Check className="h-3 w-3 mr-1" />
-                            {t('settingsPanels.provider.connected')}
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="shrink-0">
-                            {t('settingsPanels.provider.customProvidersNoKey')}
-                          </Badge>
-                        )}
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setDeclaredExpanded(!declaredExpanded)}
+                aria-expanded={declaredExpanded}
+                className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-accent/50 rounded-md transition-colors"
+              >
+                {declaredExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="font-medium text-sm">
+                  {t('settingsPanels.provider.customProvidersDeclared')}
+                </span>
+                <Badge variant="secondary" className="ml-auto">
+                  {declaredProviders.length}
+                </Badge>
+              </button>
+
+              {declaredExpanded && (
+                <div className="pl-6 space-y-3">
+                {declaredProviders.length === 0 ? (
+                  <Card className="bg-card border-border">
+                    <CardContent className="pt-6">
+                      <p className="text-sm font-medium text-foreground text-center">
+                        {t('settingsPanels.provider.customProvidersEmptyTitle')}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground text-center">
+                        {t('settingsPanels.provider.customProvidersEmptyHint')}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {declaredProviders.map((provider) => (
+                      <div
+                        key={provider.id}
+                        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{provider.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">{provider.id}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            <span className="text-xs text-muted-foreground">
+                              {t('settingsPanels.provider.customProvidersModels', {
+                                count: provider.modelCount,
+                              })}
+                            </span>
+                            {hasCredentials(provider.id) ? (
+                              <Badge variant="default" className="bg-green-600 hover:bg-green-700 shrink-0">
+                                <Check className="h-3 w-3 mr-1" />
+                                {t('settingsPanels.provider.connected')}
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="shrink-0">
+                                {t('settingsPanels.provider.customProvidersNoKey')}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setCustomProviderError(null)
+                              setProviderDialog({ mode: 'edit', providerId: provider.id })
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            {t('settingsPanels.provider.customProvidersEdit', { name: provider.name })}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setPendingRemoval({ id: provider.id, name: provider.name })}
+                            disabled={removeCustomProviderMutation.isPending}
+                          >
+                            {t('settingsPanels.provider.customProvidersDelete', { name: provider.name })}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setCustomProviderError(null)
-                          setProviderDialog({ mode: 'edit', providerId: provider.id })
-                        }}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        {t('settingsPanels.provider.customProvidersEdit', { name: provider.name })}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setPendingRemoval({ id: provider.id, name: provider.name })}
-                        disabled={removeCustomProviderMutation.isPending}
-                      >
-                        {t('settingsPanels.provider.customProvidersDelete', { name: provider.name })}
-                      </Button>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                )}
+                </div>
+              )}
+            </div>
           </section>
 
           <div className="border-t border-border pt-6">

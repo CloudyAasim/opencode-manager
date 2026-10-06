@@ -317,6 +317,7 @@ export const settingsPanels = {
     customProvidersEmptyHint:
       'Declare an OpenAI-compatible endpoint, or an npm sdk, together with everything each of its models needs.',
     customProvidersAdd: 'New custom provider',
+    customProvidersDeclared: 'Declared providers',
     customProvidersScopeGlobal: 'Declared for everyone on this server.',
     customProvidersScopeOwn: 'Declared for you only. Nobody else sees it.',
     conflictTitle: 'An administrator also declared {{id}}',

@@ -302,6 +302,7 @@ export const settingsPanels = {
     customProvidersEmptyHint: '声明一个 OpenAI 兼容端点或 npm 包，并把它每个模型需要的参数一起填好。',
     customProvidersEmptyTitle: '还没有自定义服务商',
     customProvidersAdd: '新建自定义服务商',
+    customProvidersDeclared: '已声明的服务商',
     customProvidersScopeGlobal: '对整台服务器的所有人生效。',
     customProvidersScopeOwn: '只对你自己生效，别人看不到。',
     conflictTitle: '管理员也声明了 {{id}}',
