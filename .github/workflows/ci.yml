@@ -147,3 +147,60 @@ jobs:
           # and out of the update path so neither can turn into a red build.
           OPENCODE_DISABLE_AUTOUPDATE: "1"
           DO_NOT_TRACK: "1"
+
+  desktop-client:
+    name: Desktop Client
+    needs: check-ready
+    if: needs.check-ready.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # Deliberately npm, not pnpm, and deliberately --ignore-scripts.
+      #
+      # electron-app is not a workspace member: adding it would put electron's
+      # 266 MB binary into the lockfile, so every server CI run and every Docker
+      # build would download a desktop runtime the server never loads.
+      #
+      # The tests never need that binary - vitest aliases `electron` to a stub,
+      # because what is under test is this app's wiring (does the proxy start,
+      # is the window pointed at it, are the guards attached), not electron's.
+      # So the binary is skipped and the job costs about a second.
+      - name: Install without the Electron binary
+        working-directory: electron-app
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Confirm the binary really is absent
+        working-directory: electron-app
+        run: |
+          if [ -e node_modules/electron/dist/electron ]; then
+            echo "the Electron binary was downloaded; the tests will silently"
+            echo "depend on it and stop proving anything about a clean checkout"
+            exit 1
+          fi
+          echo "ok - no Electron binary, so these are the tests CI can run"
+
+      - name: Type check
+        working-directory: electron-app
+        run: npm run typecheck
+
+      - name: Run tests
+        working-directory: electron-app
+        run: npm test
+
+      - name: Build the bundle
+        working-directory: electron-app
+        # The build script also stages the built frontend, which does not exist
+        # in a clean checkout. Proving the bundle itself still compiles is worth
+        # more than asserting on a file that is not there yet.
+        run: node scripts/build.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-main-bundle
+          path: electron-app/dist/main.js
+          retention-days: 7

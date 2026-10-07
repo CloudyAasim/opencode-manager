@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["node"],
+    "paths": {
+      "@opencode-manager/shared/utils/server-url": ["../shared/src/utils/server-url.ts"]
+    }
+  },
+  "include": [
+    "src",
+    "../desktop/src/proxy.ts",
+    "../desktop/src/proxy-headers.ts",
+    "../desktop/src/static-files.ts",
+    "../desktop/src/detect.ts",
+    "../shared/src/utils/server-url.ts"
+  ]
+}
