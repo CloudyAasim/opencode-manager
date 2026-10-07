@@ -204,3 +204,65 @@ jobs:
           name: desktop-main-bundle
           path: electron-app/dist/main.js
           retention-days: 7
+
+  android-proxy:
+    name: Android Proxy
+    needs: check-ready
+    if: needs.check-ready.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # 17, because that is the toolchain `android/proxy/build.gradle.kts`
+          # pins and therefore the bytecode its tests run on. Compiling against
+          # a newer JDK and asserting on 17 output is how a JVM-only module
+          # quietly stops being runnable where it has to run.
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # `--settings-file settings-proxy-only.gradle.kts` is the whole point of
+      # this job. `:proxy` is a plain JVM module with no Android dependency, and
+      # excluding `:app` means no Android SDK is installed, no platform is
+      # downloaded and no `sdk.dir` has to be guessed. The streaming assertions
+      # in here are about the proxy, which is the part of the client that has to
+      # be provably correct; making every push fetch a multi-gigabyte SDK to run
+      # them would mean either skipping them or not running them often.
+      - name: Run the proxy tests
+        working-directory: android
+        run: ./gradlew --settings-file settings-proxy-only.gradle.kts :proxy:test
+
+      # A green run that silently executed zero tests is the failure mode this
+      # repository has already been bitten by once, on the Electron job. The XML
+      # is the only place the real count is recorded, so it is the only thing
+      # worth asserting on.
+      #
+      # `awk`, not `bc`: bc is not installed on a stock runner. And the count is
+      # checked for being a number first - `["" -lt 50]` is a shell error whose
+      # exit status `if` treats as "not true", which turns this gate into one
+      # that passes no matter what. A check that cannot fail is not a check.
+      - name: Confirm the tests actually ran
+        working-directory: android
+        run: |
+          RESULTS=proxy/build/test-results/test
+          if [ ! -d "$RESULTS" ]; then
+            echo "no test results were produced, so nothing was actually verified"
+            exit 1
+          fi
+          COUNT=$(grep -ho 'tests="[0-9]*"' "$RESULTS"/*.xml \
+            | grep -o '[0-9]\+' \
+            | awk '{ total += $1 } END { print total + 0 }')
+          echo "tests executed: $COUNT"
+          case "$COUNT" in
+            ''|*[!0-9]*)
+              echo "could not read a test count out of $RESULTS"
+              exit 1
+              ;;
+          esac
+          if [ "$COUNT" -lt 50 ]; then
+            echo "expected the proxy suite to run at least 50 tests; $COUNT is too few to be the real suite"
+            exit 1
+          fi

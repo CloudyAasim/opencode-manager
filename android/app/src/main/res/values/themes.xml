@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      A no-action-bar theme, from the platform rather than from a support
+      library. The app is one WebView, and a system bar floating over it would
+      put the page's own header under an app title bar saying the same thing
+      twice.
+    -->
+    <style name="Theme.OpenCodeManager" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ocm_background</item>
+        <item name="android:statusBarColor">@color/ocm_background</item>
+    </style>
+</resources>

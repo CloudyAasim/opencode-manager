@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A terminal prompt: the app is a remote coding session, and an icon that
+     says so is more use than a letterform. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:strokeColor="#7EE787"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M40,42 L50,52 L40,62" />
+    <path
+        android:strokeColor="#7EE787"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M58,64 L70,64" />
+</vector>

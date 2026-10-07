@@ -1,0 +1,66 @@
+# Recorded from shared/src/utils/server-url.ts.
+# Regenerate with: node --experimental-strip-types android/tools/gen-server-url-cases.mjs
+#
+# Normalisation is shared by the browser, the desktop client and the Android
+# client. A disagreement here is not a cosmetic difference between two
+# functions: it is a person who types that address getting a different server
+# depending on which client they opened. So this file is a contract.
+#
+# TSV rather than JSON so a reviewer can read the diff and see which behaviour
+# moved, and so the test needs no JSON parser to consume it.
+# columns: normalize input \t normalized output
+code.aasim.l.cd	https://code.aasim.l.cd
+https://code.aasim.l.cd	https://code.aasim.l.cd
+https://code.aasim.l.cd/	https://code.aasim.l.cd
+https://code.aasim.l.cd///	https://code.aasim.l.cd
+code.aasim.l.cd/	https://code.aasim.l.cd
+  code.aasim.l.cd  	https://code.aasim.l.cd
+HTTP://Code.Example.COM	http://code.example.com
+http://localhost:3000	http://localhost:3000
+http://192.168.1.10:5551	http://192.168.1.10:5551
+http://127.0.0.1:8080/base/	http://127.0.0.1:8080/base
+https://example.com/opencode-manager	https://example.com/opencode-manager
+https://example.com/api	https://example.com
+https://example.com/api/	https://example.com
+https://example.com/api/health	https://example.com
+https://example.com/api/v1/models	https://example.com
+https://example.com/api/v1/openai/voices	https://example.com
+https://example.com/v1/chat/completions	https://example.com/v1/chat/completions
+https://example.com/api/speech	https://example.com
+https://example.com/api/transcriptions	https://example.com
+https://example.com/api/audio/speech	https://example.com
+https://example.com/api-manager	https://example.com/api-manager
+https://example.com/apifoo	https://example.com/apifoo
+https://example.com/api-manager/v2/health	https://example.com/api-manager/v2/health
+https://example.com/?q=1	https://example.com
+https://example.com/api/health?token=abc#frag	https://example.com
+https://example.com/api/health#frag	https://example.com
+https://example.com/V1/Models	https://example.com
+ftp://example.com	ftp://example.com
+javascript:alert(1)	javascript:alert(1)
+file:///etc/passwd	file:///etc/passwd
+not a url	not a url
+https://	https:
+://example.com	://example.com
+/just/a/path	https://just/a/path
+my_box.local:3000	https://my_box.local:3000
+http://[::1]:3000	http://[::1]:3000
+https://[2001:db8::1]/api/health	https://[2001:db8::1]
+	
+   	
+/	
+//	
+https://user:pw@example.com	https://user:pw@example.com
+https://example.com:443	https://example.com
+http://example.com:80	http://example.com
+https://example.com:8443	https://example.com:8443
+http://example.com:99999	http://example.com:99999
+http://example.com:0	http://example.com:0
+http://example.com:70000	http://example.com:70000
+https://example.com/a/b/c	https://example.com/a/b/c
+https://example.com/api/models/v2/voices	https://example.com
+# columns: join base \t join path \t joined
+https://example.com	/api/health	https://example.com/api/health
+https://example.com/	api/health	https://example.com/api/health
+	/api/health	/api/health
+https://example.com/base/	/api/health	https://example.com/base/api/health

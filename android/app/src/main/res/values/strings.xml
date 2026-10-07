@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenCode Manager</string>
+
+    <string name="server_dialog_title">Server address</string>
+    <string name="server_dialog_hint">code.example.com or https://code.example.com</string>
+    <string name="server_dialog_message">Which server should this app open? A bare hostname is treated as https.</string>
+    <string name="server_dialog_save">Connect</string>
+    <string name="server_dialog_cancel">Cancel</string>
+    <string name="server_dialog_change">Change server</string>
+
+    <string name="error_bad_address">That is not a server address this app can reach: %1$s</string>
+    <string name="error_proxy_failed">The local proxy could not start: %1$s</string>
+    <string name="error_loading_page">The app could not be loaded from %1$s</string>
+    <string name="retry">Retry</string>
+</resources>

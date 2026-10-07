@@ -1,0 +1,20 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Machine-specific: points at one developer's Android SDK and must never be
+# committed, because it is the single fastest way to break a build on every
+# other machine and in CI.
+local.properties
+
+# The Android Studio generated files, which are per-IDE rather than per-project.
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# The mutation harness's backups. Left behind by an interrupted run; never part
+# of a source tree.
+*.bak
