@@ -193,6 +193,56 @@ describe('AudioRecorder start', () => {
     expect(mr.mimeType).toBe('audio/webm;codecs=opus')
   })
 
+  // The default fake only supports WebM, so the test above passes whatever the
+  // order is. These pin it, because the order is the fix: a relay answered
+  // `unsupported audio format "matroska,webm"; supported: "mp3, aac, opus,
+  // ogg"` to a recording that was Opus in a WebM container.
+  it.each([
+    [
+      'Chrome 126+, which can write MP4',
+      new Set(['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']),
+      'audio/mp4;codecs=mp4a.40.2',
+    ],
+    [
+      'a browser that supports plain mp4 but not the AAC profile',
+      new Set(['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']),
+      'audio/mp4',
+    ],
+    [
+      'Firefox, which writes Opus in Ogg',
+      new Set(['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm']),
+      'audio/ogg;codecs=opus',
+    ],
+    [
+      'Chromium below 126, where WebM is the only option',
+      new Set(['audio/webm;codecs=opus', 'audio/webm']),
+      'audio/webm;codecs=opus',
+    ],
+    [
+      'a browser with both MP4 and Ogg, where MP4 must still win',
+      new Set([
+        'audio/mp4;codecs=mp4a.40.2', 'audio/mp4',
+        'audio/ogg;codecs=opus', 'audio/ogg',
+        'audio/webm;codecs=opus', 'audio/webm',
+      ]),
+      'audio/mp4;codecs=mp4a.40.2',
+    ],
+  ])('prefers a container a transcription provider accepts: %s', async (_label, supported, expected) => {
+    FakeMediaRecorder._supportedTypes = supported as Set<string>
+    await recorder.start()
+    const mr = FakeMediaRecorder._instances[0]
+    expect(mr.mimeType).toBe(expected)
+  })
+
+  it('never selects audio/wav, which no MediaRecorder can produce', async () => {
+    FakeMediaRecorder._supportedTypes = new Set([
+      'audio/wav', 'audio/webm;codecs=opus', 'audio/webm',
+    ])
+    await recorder.start()
+    const mr = FakeMediaRecorder._instances[0]
+    expect(mr.mimeType).toBe('audio/webm;codecs=opus')
+  })
+
   it('selects a lower-priority MIME when higher ones are unsupported', async () => {
     FakeMediaRecorder._supportedTypes = new Set(['audio/ogg;codecs=opus'])
     await recorder.start()

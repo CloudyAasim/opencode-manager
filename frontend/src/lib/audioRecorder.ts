@@ -6,13 +6,33 @@ const DEFAULT_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   autoGainControl: true,
 }
 
+/**
+ * Order matters, and not for audio quality: this is the order in which a
+ * speech-to-text provider is likely to accept what comes out.
+ *
+ * One relay answered `unsupported audio format "matroska,webm"; supported:
+ * "mp3, aac, opus, ogg (2013)"`. MediaRecorder's first choice,
+ * `audio/webm;codecs=opus`, is Opus inside a WebM container, and that
+ * provider reads "opus" as bare Opus or as Ogg - so a recording the browser
+ * considered ideal was refused by the thing being sent to.
+ *
+ * Chrome 126+ writes `audio/mp4` (AAC LC), Firefox writes
+ * `audio/ogg;codecs=opus`, Safari writes `audio/mp4`; all three land on a
+ * container such a provider takes. WebM stays last for Chromium below 126,
+ * which cannot write MP4 at all, and for the rare browser that supports only
+ * it.
+ *
+ * `audio/wav` used to sit in this list and could never be picked: nothing in
+ * MediaRecorder produces WAV. It is gone rather than left to look like a
+ * fallback that exists.
+ */
 const PREFERRED_MIME_TYPES = [
-  'audio/webm;codecs=opus',
-  'audio/webm',
+  'audio/mp4;codecs=mp4a.40.2',
+  'audio/mp4',
   'audio/ogg;codecs=opus',
   'audio/ogg',
-  'audio/mp4',
-  'audio/wav',
+  'audio/webm;codecs=opus',
+  'audio/webm',
 ]
 const SPEECH_RMS_THRESHOLD = 0.005
 const SPEECH_PEAK_THRESHOLD = 0.02
