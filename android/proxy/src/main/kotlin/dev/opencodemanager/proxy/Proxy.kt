@@ -226,7 +226,7 @@ class ProxyServer(
 
         if (path.startsWith(CONTROL_PREFIX)) {
             handleControl(head.method, path, readBody(input, head), output)
-            // The control responses already say `connection: close`.
+            // A control response has said so itself; see `json`.
             return false
         }
         // A response that may never end owns its connection until it does, and
@@ -275,6 +275,12 @@ class ProxyServer(
                 append("HTTP/1.1 ").append(status).append(' ').append(reasonFor(status)).append("\r\n")
                 append("content-type: application/json; charset=utf-8\r\n")
                 append("content-length: ").append(bytes.size).append("\r\n")
+                // The control plane is answered by this proxy rather than by
+                // the upstream, so it never goes out through `forward` and never
+                // picks up the framing that path adds. Saying so here is the
+                // only chance: without it the connection closes silently and a
+                // client that reused it finds it dead.
+                append("connection: close\r\n")
                 append("cache-control: no-store\r\n\r\n")
             }
             output.write(head.toByteArray(Charsets.ISO_8859_1))
@@ -429,7 +435,11 @@ class ProxyServer(
         val head = buildString {
             append("HTTP/1.1 ").append(status).append(' ').append(reasonFor(status)).append("\r\n")
             append("content-type: application/json; charset=utf-8\r\n")
-            append("content-length: ").append(bytes.size).append("\r\n\r\n")
+            append("content-length: ").append(bytes.size).append("\r\n")
+            // `forward` returns false right after this, so the connection is
+            // about to go. An error the caller was told nothing about closing is
+            // a connection they will reuse.
+            append("connection: close\r\n\r\n")
         }
         output.write(head.toByteArray(Charsets.ISO_8859_1))
         output.write(bytes)

@@ -818,4 +818,41 @@ class ProxyKeepAliveTest {
             }
         }
     }
+
+    @Test
+    fun `a control response says it is closing the connection, because it is`() {
+        // The two responses the proxy writes itself - the control plane and the
+        // 502 - both end the connection, because neither has a framing that
+        // could survive into the next request on it. Neither used to say so.
+        // The comment in `serve` claimed they did. A client that reads the
+        // header is entitled to reuse that connection, and then finds it dead,
+        // which is the whole failure this file exists to prevent - arriving via
+        // a path that never went through `forward`, and therefore through none
+        // of the fixes there.
+        runningProxy("http://127.0.0.1:1").use { proxy ->
+            openToProxy(proxy.port, simpleGet("/__ocm/target")).use { client ->
+                assertEquals(
+                    "a control response ends the connection and must say so",
+                    "close",
+                    client.readResponse().header("connection"),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `an upstream that cannot be reached says it is closing the connection, because it is`() {
+        // Port 1 refuses, so this is the 502 path rather than the control path.
+        runningProxy("http://127.0.0.1:1").use { proxy ->
+            openToProxy(proxy.port, simpleGet("/api/projects")).use { client ->
+                val response = client.readResponse()
+                assertEquals(502, response.status)
+                assertEquals(
+                    "the 502 ends the connection and must say so, or the next request on it dies",
+                    "close",
+                    response.header("connection"),
+                )
+            }
+        }
+    }
 }
