@@ -14,6 +14,14 @@ await mkdir(dist, { recursive: true })
 // path map plus a rewrite step for the emitted specifiers; esbuild follows the
 // real resolution and inlines it, which is what the packaged app needs anyway.
 //
+// The alias is not optional. `desktop/src/proxy.ts` imports
+// `@opencode-manager/shared/utils/server-url`, which resolves through
+// `desktop/node_modules` - something that exists in a pnpm checkout and in
+// nothing else. Without this line the build succeeds on a developer machine and
+// fails in CI, which is the worst possible split: the only place that runs it
+// regularly is the place it does not work.
+const SHARED_ENTRY = path.resolve(root, '..', 'shared/src/utils/server-url.ts')
+
 // CommonJS on purpose, for the preload more than for the main process: a
 // sandboxed preload runs in a context with only a subset of node available and
 // does not support ESM, so an ESM preload is not a style question - it does not
@@ -27,6 +35,7 @@ await build({
   format: 'cjs',
   target: 'node22',
   sourcemap: true,
+  alias: { '@opencode-manager/shared/utils/server-url': SHARED_ENTRY },
   // electron is provided by the runtime; bundling it would produce a second,
   // broken copy inside the app.
   external: ['electron'],
