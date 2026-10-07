@@ -1,6 +1,25 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind scans this whole repo as plain text for anything shaped like a class
+ * name, and a test file is prose with class-shaped words in it. The gate added
+ * for the runtime-config load order carries a comment about the order
+ * inverting, and `inverts` alone was enough to emit a real `.invert` rule into
+ * the shipped stylesheet.
+ *
+ * 746 bytes today, which is not the problem. The problem is that it makes the
+ * stylesheet a function of the test suite: adding a test rewrites the
+ * production bundle, so "this change touches no production code" stops being
+ * checkable by comparing artifacts, and a class can reach the build because
+ * some test happened to mention it.
+ *
+ * The globs are vitest's own `include`, verbatim - a file vitest will not run
+ * is not allowed to contribute a byte to the bundle. Everything else stays
+ * scanned, including src/test/setup.ts, src/test/test-utils.tsx and the
+ * fixtures, which are ordinary source and must keep working. */
+@source not "./**/*.test.ts";
+@source not "./**/*.test.tsx";
+
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
