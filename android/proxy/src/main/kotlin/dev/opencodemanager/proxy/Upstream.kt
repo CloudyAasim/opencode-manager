@@ -197,6 +197,19 @@ class UpstreamResponse internal constructor(
     }
 
     /**
+     * How the body is delimited.
+     *
+     * Exposed because `CHUNKED` and `EOF` are what a live stream looks like, and
+     * the caller has to treat those differently: a stream can still be
+     * abandoned by the client at any moment, so the connection it is on cannot
+     * be handed back to the keep-alive loop.
+     */
+    val framing: BodyFraming get() = bodyFraming
+
+    /** True when the body may never end: a terminal, an event feed. */
+    val isOpenEnded: Boolean get() = bodyFraming == BodyFraming.CHUNKED || bodyFraming == BodyFraming.EOF
+
+    /**
      * Stream the body to `sink`, decoded.
      *
      * Nothing is accumulated here. Flushing is the sink's business, not this

@@ -167,9 +167,15 @@ fun rewriteLocation(location: String): String {
 
 /** Response headers worth passing back, minus the hop-by-hop set.
  *
- *  Mutable because the caller also removes `content-length` and
- *  `transfer-encoding` from it: those two are consumed by the framing on the way
- *  out and must not be forwarded alongside it. */
+ *  Mutable because the caller removes `content-length` from it: that one is a
+ *  real header that reaches here, and it is consumed by the framing on the way
+ *  out and must not be forwarded alongside it.
+ *
+ *  The caller also removes `transfer-encoding`, which cannot arrive - it is in
+ *  [HOP_BY_HOP] and is dropped above. That removal is kept as a guard rather
+ *  than removed as dead code: it is the second half of a pair that has to stay
+ *  in step, and a mutation removing it is indistinguishable from removing the
+ *  line above, so the safety is worth more than the redundancy costs. */
 fun buildDownstreamHeaders(
     headers: Map<String, List<String>>,
     target: TargetOrigin,

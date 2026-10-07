@@ -18,7 +18,14 @@ private const val CONTROL_PREFIX = "/__ocm/"
 /** A control body is a short JSON document; anything larger is a mistake. */
 private const val MAX_CONTROL_BODY = 64 * 1024
 
-/** An `InputStream` that stops after `limit` bytes, for a `content-length` body. */
+/** An `InputStream` that stops after `limit` bytes, for a `content-length` body.
+ *
+ *  `close()` deliberately does nothing. The source is the client socket, and
+ *  [BodySource.writeTo] closes the stream it is given; a wrapper that forwarded
+ *  that would shut the client's input down the moment a request body was read,
+ *  so every request *with a body* would leave the connection dead for reuse
+ *  afterwards. Requests without a body never went through here, which is why
+ *  this cost a real device to find: the GETs kept working and the POSTs did not. */
 internal class BoundedInputStream(
     private val source: InputStream,
     private var limit: Long,
@@ -38,14 +45,28 @@ internal class BoundedInputStream(
     }
 
     override fun available(): Int = minOf(source.available().toLong(), limit).toInt()
+
+    /** This wrapper owns the limit, not the socket underneath it. */
+    override fun close() = Unit
 }
 
 private class RequestHead(
     val method: String,
     /** Request target, query string included, with any absolute-form prefix removed. */
     val target: String,
+    val version: String,
     val headers: Map<String, List<String>>,
-)
+) {
+    /** Whether the client asked for this connection to be closed after one
+     *  request. HTTP/1.1 keeps it open unless told otherwise; HTTP/1.0 is the
+     *  other way round. */
+    val wantsClose: Boolean
+        get() {
+            val connection = headers["connection"]?.joinToString(",")?.lowercase() ?: return version == "HTTP/1.0"
+            if (connection.contains("close")) return true
+            return version == "HTTP/1.0" && !connection.contains("keep-alive")
+        }
+}
 
 /**
  * A same-origin reverse proxy between the Android client and an OpenCode Manager
@@ -167,31 +188,52 @@ class ProxyServer(
         }
     }
 
+    /**
+     * One connection, many requests.
+     *
+     * HTTP/1.1 keeps a connection open unless either side says otherwise, and a
+     * browser will send its next request down it the moment the first response
+     * ends. Answering one request and then closing - which is what this did
+     * before a real device caught it - looks fine to every test here, because
+     * each of them opens its own socket, and fails in a browser as a *connection
+     * error*: curl retries an idempotent GET and hides it, but a POST is not
+     * retried, and neither is a request that was already in flight. The symptom
+     * on screen is the whole app reporting itself offline.
+     */
     private fun handleConnection(client: Socket) {
         client.use { connection ->
             connection.tcpNoDelay = true
             val input = connection.getInputStream()
             val output = BufferedOutputStream(connection.getOutputStream(), 32 * 1024)
             try {
-                serve(input, output)
+                while (serve(input, output)) {
+                    // Another request is coming down the same connection.
+                }
             } catch (error: Throwable) {
-                // A browser that navigates away mid-stream closes the socket
+                // A browser that navigates away mid-request closes the socket
                 // underneath us. That is ordinary traffic, not a fault, and it
-                // must not be reported as "the app is broken".
-                if (error !is ProxyConnectionLost) onError?.invoke(error, "/")
+                // must not be reported as "the app is broken". An IOException is
+                // that; anything else is ours.
+                if (error !is ProxyConnectionLost && error !is IOException) onError?.invoke(error, "/")
             }
         }
     }
 
-    private fun serve(input: InputStream, output: OutputStream) {
-        val head = readRequestHead(input) ?: return
+    /** Serve one request. Returns true when this connection may be reused. */
+    private fun serve(input: InputStream, output: OutputStream): Boolean {
+        val head = readRequestHead(input) ?: return false
         val path = head.target.substringBefore('?')
 
         if (path.startsWith(CONTROL_PREFIX)) {
             handleControl(head.method, path, readBody(input, head), output)
-            return
+            // The control responses already say `connection: close`.
+            return false
         }
-        forward(head, head.target, input, output)
+        // A response that may never end owns its connection until it does, and
+        // the thread watching for the client leaving would consume the next
+        // request if we tried to keep it alive.
+        if (forward(head, head.target, input, output)) return false
+        return !head.wantsClose
     }
 
     private fun readRequestHead(input: InputStream): RequestHead? {
@@ -212,13 +254,16 @@ class ProxyServer(
         // An absolute-form target (`GET http://host/path`) is legal in HTTP/1.1
         // and some clients send it; the proxy only wants the path and query.
         val target = parts[1].removePrefix("http://").removePrefix("https://")
-        return RequestHead(parts[0], target, headers)
+        return RequestHead(parts[0], target, parts.getOrElse(2) { "HTTP/1.1" }, headers)
     }
 
     private fun readBody(input: InputStream, head: RequestHead): BodySource {
         val chunked = head.headers["transfer-encoding"]
             ?.any { it.contains("chunked", ignoreCase = true) } == true
-        if (chunked) return BodySource.ofChunked(input)
+        // Both paths go through `BoundedInputStream`, and both have to: it is the
+        // thing that refuses to close the client socket out from under the
+        // keep-alive loop.
+        if (chunked) return BodySource.ofChunked(BoundedInputStream(input, Long.MAX_VALUE))
         val declared = head.headers["content-length"]?.firstOrNull()?.trim()?.toIntOrNull() ?: return BodySource.EMPTY
         return BodySource.ofStream(BoundedInputStream(input, declared.toLong()), declared)
     }
@@ -275,7 +320,9 @@ class ProxyServer(
         return if (out.size() > MAX_CONTROL_BODY) null else out.toString(Charsets.UTF_8.name())
     }
 
-    private fun forward(head: RequestHead, fullPath: String, input: InputStream, output: OutputStream) {
+    /** Forward one request. Returns true when the response was an open-ended
+     *  stream, which owns its connection until it ends. */
+    private fun forward(head: RequestHead, fullPath: String, input: InputStream, output: OutputStream): Boolean {
         val address = upstream.get()
         val origin = targetOrigin(address)
         // The server may be mounted under a sub-path, so the request target is
@@ -290,31 +337,37 @@ class ProxyServer(
             // returns a complete response head or throws before there is one.
             onError?.invoke(error, fullPath)
             writeError(output, 502, "upstream_unreachable", "${origin.origin} did not answer")
-            return
+            return false
         }
 
-        // The request body has been consumed from `input` by now, so nothing
-        // else reads it. Watching it to end-of-stream is how a client that
-        // navigates away mid-stream gets noticed: without this the proxy sits in
-        // a blocking read from a terminal stream nobody is listening to any more,
-        // and that session stays open on the server until its own heartbeat
-        // gives up on it. One request per connection, so draining here cannot
-        // swallow a pipelined one.
-        val abandoned = { response.close() }
-        Thread({
-            try {
-                while (input.read() >= 0) {
-                    // waiting for the client to hang up
+        val hasBody = response.status !in 100..199 && response.status != 204 &&
+            response.status != 304 && head.method != "HEAD"
+        val isStream = hasBody && response.isOpenEnded
+
+        if (isStream) {
+            // Only a stream needs watching. The request body has been consumed
+            // from `input` by now, so a thread blocked on it is how a client that
+            // navigates away mid-stream gets noticed - without it the proxy sits
+            // in a read from a terminal nobody is listening to any more, and that
+            // session stays open on the server until its own heartbeat gives up.
+            //
+            // This is also why a stream ends the connection: the watcher is
+            // holding `input`, and a thread still holding it cannot be stopped
+            // without closing the socket. A stream has the whole connection to
+            // itself anyway.
+            Thread({
+                try {
+                    while (input.read() >= 0) {
+                        // waiting for the client to hang up
+                    }
+                } catch (_: Exception) {
+                    // the connection is gone, which is the point
                 }
-            } catch (_: Exception) {
-                // the connection is gone, which is the point
-            }
-            abandoned()
-        }, "ocm-proxy-downstream").apply { isDaemon = true; start() }
+                response.close()
+            }, "ocm-proxy-downstream").apply { isDaemon = true; start() }
+        }
 
         response.use {
-            val hasBody = response.status !in 100..199 && response.status != 204 &&
-                response.status != 304 && head.method != "HEAD"
             val downstream = buildDownstreamHeaders(response.headers, origin, secureTransport)
             // Framing is decided once, here, and the body is re-emitted chunk by
             // chunk so a stream of unknown length reaches the WebView live.
@@ -326,6 +379,10 @@ class ProxyServer(
                 append("HTTP/1.1 ").append(response.status).append(' ')
                 append(response.reason.ifEmpty { reasonFor(response.status) }).append("\r\n")
                 if (hasBody) append("transfer-encoding: chunked\r\n")
+                // Say what we are about to do. A response that silently closes
+                // the connection is a response the browser will reuse and then
+                // find dead.
+                if (head.wantsClose || isStream) append("connection: close\r\n")
                 for ((name, values) in downstream) {
                     if (values.isEmpty()) continue
                     // Repeated headers (set-cookie especially) must stay
@@ -336,12 +393,13 @@ class ProxyServer(
             }
             output.write(head2.toByteArray(Charsets.ISO_8859_1))
             output.flush()
-            if (!hasBody) return
-
-            response.copyBodyTo(ChunkedSink(output))
-            output.write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
-            output.flush()
+            if (hasBody) {
+                response.copyBodyTo(ChunkedSink(output))
+                output.write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
+                output.flush()
+            }
         }
+        return isStream
     }
 
     /** `Transfer-Encoding: chunked` framing on the way back to the browser.

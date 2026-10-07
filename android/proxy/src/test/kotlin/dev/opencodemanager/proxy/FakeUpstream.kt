@@ -196,13 +196,22 @@ fun Socket.readResponse(timeoutMs: Int = 5000): RecordedResponse {
     return RecordedResponse(statusLine, headers, body)
 }
 
-/** Decode a chunked body until its terminator, blocking until each chunk lands. */
+/** Decode a chunked body until its terminator, blocking until each chunk lands.
+ *
+ *  Both CRLFs after the last-chunk are consumed: the one ending the `0` line and
+ *  the one ending the (empty) trailer section. Leaving the second behind puts a
+ *  stray CRLF in front of the next response on the same connection, and every
+ *  assertion after the first is then reading shifted bytes - which looks like a
+ *  proxy that answers once and hangs up, and is not. */
 fun readChunkedBody(input: InputStream): ByteArray {
     val out = ByteArrayOutputStream()
     while (true) {
         val sizeLine = readLine(input) ?: break
         val size = sizeLine.substringBefore(';').trim().toInt(16)
-        if (size == 0) break
+        if (size == 0) {
+            readLine(input)
+            break
+        }
         val buffer = ByteArray(size)
         var read = 0
         while (read < size) {

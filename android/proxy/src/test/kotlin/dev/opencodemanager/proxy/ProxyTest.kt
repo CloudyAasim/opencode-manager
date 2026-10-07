@@ -1,5 +1,7 @@
 package dev.opencodemanager.proxy
 
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -585,6 +587,233 @@ class ProxyTest {
                     val response = client.readResponse()
                     assertEquals(200, response.status)
                     assertEquals("""{"status":"healthy"}""", response.bodyText)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Connection reuse.
+ *
+ * Every other test in this file opens its own socket, which is exactly why a
+ * proxy that answered one request per connection passed all of them and then
+ * showed a real phone an app that believed it was offline: a browser sends its
+ * next request down the connection it already has, and finds it dead. curl
+ * hides that by retrying idempotent GETs. These are the tests that cannot be
+ * written that way.
+ */
+class ProxyKeepAliveTest {
+    @Test
+    fun `several requests travel down one connection`() {
+        val seen = java.util.Collections.synchronizedList(mutableListOf<RecordedRequest>())
+        val counter = java.util.concurrent.atomic.AtomicInteger(0)
+        FakeUpstream { socket, request ->
+            seen.add(request)
+            socket.respond(body = """{"n":${counter.incrementAndGet()}}""")
+        }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                Socket().use { client ->
+                    client.connect(InetSocketAddress("127.0.0.1", proxy.port), 5000)
+                    client.soTimeout = 5000
+                    val bodies = mutableListOf<String>()
+                    repeat(3) {
+                        client.getOutputStream().write(simpleGet("/api/x?i=$it").toByteArray(Charsets.ISO_8859_1))
+                        client.getOutputStream().flush()
+                        bodies.add(client.readResponse().bodyText)
+                    }
+                    assertEquals(
+                        listOf("""{"n":1}""", """{"n":2}""", """{"n":3}"""),
+                        bodies,
+                    )
+                }
+            }
+        }
+        assertEquals("the upstream should have seen all three, saw ${seen.size}", 3, seen.size)
+    }
+
+    @Test
+    fun `a POST down a reused connection is not lost`() {
+        // A browser does not retry a POST when the connection turns out to be
+        // dead, so this is the request that turns a missing keep-alive into a
+        // silent failure instead of a visible one.
+        val seen = java.util.Collections.synchronizedList(mutableListOf<RecordedRequest>())
+        val first = """{"name":"one"}"""
+        val second = """{"name":"two"}"""
+        FakeUpstream { socket, request ->
+            seen.add(request)
+            socket.respond(body = "{}")
+        }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                Socket().use { client ->
+                    client.connect(InetSocketAddress("127.0.0.1", proxy.port), 5000)
+                    client.soTimeout = 5000
+                    val payloads = listOf(first, second)
+                    payloads.forEachIndexed { index, payload ->
+                        client.getOutputStream().write(
+                            ("POST /api/projects HTTP/1.1\r\nhost: 127.0.0.1\r\n" +
+                                "content-type: application/json\r\ncontent-length: ${payload.length}\r\n\r\n$payload")
+                                .toByteArray(Charsets.ISO_8859_1),
+                        )
+                        client.getOutputStream().flush()
+                        val response = client.readResponse()
+                        assertEquals("request ${index + 1} of ${payloads.size} on the shared connection", 200, response.status)
+                    }
+                }
+            }
+        }
+        assertEquals("both POSTs should have reached the upstream, saw ${seen.size}", 2, seen.size)
+        assertEquals(second, seen[1].bodyText)
+    }
+
+    @Test
+    fun `a response that keeps the connection says nothing about closing it`() {
+        FakeUpstream { socket, _ -> socket.respond(body = "ok") }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(proxy.port, simpleGet("/api/x")).use { client ->
+                    assertEquals(
+                        "saying `connection: close` while the connection is being kept makes the browser" +
+                            "open a new one for everything; saying nothing while it is about to be closed makes" +
+                            "the browser reuse a socket that is about to die",
+                        null,
+                        client.readResponse().header("connection"),
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a client that asks to close is told so`() {
+        FakeUpstream { socket, _ -> socket.respond(body = "ok") }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(proxy.port, "GET /api/x HTTP/1.1\r\nhost: 127.0.0.1\r\nconnection: close\r\n\r\n").use { client ->
+                    assertEquals("close", client.readResponse().header("connection"))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a client that asks to close finds the connection shut, not just told so`() {
+        // The test above reads the header and stops, which settles the promise
+        // but not the fact behind it. A proxy that sends `connection: close`
+        // and then goes on waiting to read another request off the same socket
+        // has told the client something it has not done, and holds a thread for
+        // as long as the client takes to hang up.
+        //
+        // So the socket is read to its end rather than asked a question: shut,
+        // the read comes back immediately; open and idle, it blocks until the
+        // timeout. Checking for end-of-stream rather than for a second response
+        // is what keeps this from being a race.
+        FakeUpstream { socket, _ -> socket.respond(body = "ok") }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(proxy.port, "GET /api/x HTTP/1.1\r\nhost: 127.0.0.1\r\nconnection: close\r\n\r\n").use { client ->
+                    assertEquals("close", client.readResponse().header("connection"))
+                    client.soTimeout = 3000
+                    val shut = try {
+                        client.getInputStream().read() == -1
+                    } catch (_: java.net.SocketTimeoutException) {
+                        false
+                    }
+                    assertTrue(
+                        "the proxy said `connection: close` and then kept waiting on that same socket",
+                        shut,
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    // HTTP/1.0 closes by default; only the version's spelling changes, so the name
+    // says "legacy" rather than putting a dot in a backtick identifier.
+    fun `a legacy client without keep-alive gets a close`() {
+        FakeUpstream { socket, _ -> socket.respond(body = "ok") }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(proxy.port, "GET /api/x HTTP/1.0\r\nhost: 127.0.0.1\r\n\r\n").use { client ->
+                    assertEquals("close", client.readResponse().header("connection"))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a legacy client that asks for keep-alive is served on that connection`() {
+        val seen = java.util.Collections.synchronizedList(mutableListOf<RecordedRequest>())
+        FakeUpstream { socket, request ->
+            seen.add(request)
+            socket.respond(body = "ok")
+        }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                Socket().use { client ->
+                    client.connect(InetSocketAddress("127.0.0.1", proxy.port), 5000)
+                    client.soTimeout = 5000
+                    repeat(2) { index ->
+                        client.getOutputStream().write(
+                            "GET /api/x HTTP/1.0\r\nhost: 127.0.0.1\r\nconnection: keep-alive\r\n\r\n"
+                                .toByteArray(Charsets.ISO_8859_1),
+                        )
+                        client.getOutputStream().flush()
+                        val response = client.readResponse()
+                        assertEquals("request ${index + 1} of 2 on the shared connection", 200, response.status)
+                    }
+                }
+            }
+        }
+        assertEquals("both HTTP/1.0 requests should have been served, saw ${seen.size}", 2, seen.size)
+    }
+
+    @Test
+    fun `a stream ends its connection, and says so`() {
+        FakeUpstream { socket, _ ->
+            socket.respondHead(headers = listOf("content-type" to "text/event-stream", "transfer-encoding" to "chunked"))
+            socket.writeChunk("data: one\n\n")
+            socket.getOutputStream().write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
+            socket.getOutputStream().flush()
+        }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(proxy.port, simpleGet("/api/sse/stream")).use { client ->
+                    assertEquals("close", client.readResponse().header("connection"))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a finished stream leaves its connection shut rather than waiting for more`() {
+        // The header above is half the promise; this is the other half. A proxy
+        // that says `connection: close` and then sits waiting for the next
+        // request is holding the socket open while a second thread reads the
+        // same input stream to notice the client hanging up - so the next
+        // request is a race between two readers, and it is not a request the
+        // proxy ever agreed to serve.
+        //
+        // Checking that the socket is *closed* rather than asking for a second
+        // response is what makes this deterministic: with the connection shut,
+        // the read returns end-of-stream immediately; with it open and idle, it
+        // blocks until the timeout. Asking for another response would leave the
+        // verdict up to which of two threads won.
+        FakeUpstream { socket, _ ->
+            socket.respondHead(headers = listOf("content-type" to "text/event-stream", "transfer-encoding" to "chunked"))
+            socket.writeChunk("data: one\n\n")
+            socket.getOutputStream().write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
+            socket.getOutputStream().flush()
+        }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(proxy.port, simpleGet("/api/sse/stream")).use { client ->
+                    assertEquals("close", client.readResponse().header("connection"))
+                    client.soTimeout = 3000
+                    val closed = try {
+                        client.getInputStream().read() == -1
+                    } catch (_: java.net.SocketTimeoutException) {
+                        false
+                    }
+                    assertTrue(
+                        "the proxy is still holding this connection open after a stream ended, " +
+                            "waiting for a request it has already refused by sending `connection: close`",
+                        closed,
+                    )
                 }
             }
         }
