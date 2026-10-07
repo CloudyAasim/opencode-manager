@@ -3,6 +3,7 @@ packages:
   - backend
   - frontend
   - ocm-cli
+  - desktop
   - '!workspace/**'
 
 onlyBuiltDependencies:
