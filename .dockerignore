@@ -39,3 +39,9 @@ backend/data
 
 **/__pycache__
 **/*.pyc
+
+# Gradle output from the Android client. Not copied into the image, but
+# the build context is the whole directory and these are tens of megabytes.
+android/.gradle
+android/**/build
+android/local.properties
