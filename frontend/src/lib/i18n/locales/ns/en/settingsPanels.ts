@@ -972,6 +972,24 @@ export const settingsPanels = {
     rotateSucceeded: 'Token rotated',
     rotateFailed: 'Could not rotate the token',
   },
+  connection: {
+    title: 'Server Address',
+    description:
+      'Which server this app talks to. Leave it empty to use the one serving this page. Saving reloads the page, because the address is fixed while the app starts.',
+    label: 'Server address',
+    placeholder: 'code.example.com',
+    check: 'Test',
+    checkUnreachable: 'Could not reach that server.',
+    checkFailedStatus: 'The server answered, but not with a healthy status (HTTP {{status}}).',
+    checkUnhealthy: 'The server is reachable but reports itself as {{status}}.',
+    resolvesTo: 'Will use: {{url}}',
+    resolvesToSameOrigin: 'Will use: the server serving this page',
+    save: 'Save and reload',
+    saved: 'Saved.',
+    recent: 'Recently used',
+    reloadNotice:
+      'Saving reloads the page. Changing the address cannot be done live: the app fixes its server when it starts, so a reload is the only way every part of it moves to the new server at once.',
+  },
   server: {
     maintenance: 'Server maintenance',
     upToDate: 'OpenCode is already up to date',

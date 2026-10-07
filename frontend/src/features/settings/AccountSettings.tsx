@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Loader2, User, KeyRound, LogOut, Plus, Trash2, AlertCircle, CheckCircle, Lock } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { joinServerUrl } from '@opencode-manager/shared/utils'
+import { API_BASE_URL } from '@/config'
 import { passkey, changePassword } from '@/lib/auth-client'
 import { useI18n } from '@/lib/i18n'
 
@@ -37,7 +39,7 @@ export function AccountSettings() {
   const { data: passkeys, isLoading: passkeysLoading } = useQuery({
     queryKey: ['passkeys'],
     queryFn: async () => {
-      const response = await fetch('/api/auth/passkey/list-user-passkeys', {
+      const response = await fetch(joinServerUrl(API_BASE_URL, '/api/auth/passkey/list-user-passkeys'), {
         credentials: 'include',
       })
       if (!response.ok) return []

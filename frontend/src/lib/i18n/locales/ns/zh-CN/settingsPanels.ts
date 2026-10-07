@@ -945,6 +945,24 @@ export const settingsPanels = {
     rotateSucceeded: '令牌已轮换',
     rotateFailed: '轮换令牌失败',
   },
+  connection: {
+    title: '服务器地址',
+    description:
+      '这个应用要连接哪台服务器。留空表示使用正在提供当前页面的那台。保存后会刷新页面，因为地址是在应用启动时确定的。',
+    label: '服务器地址',
+    placeholder: 'code.example.com',
+    check: '测试',
+    checkUnreachable: '无法连接到该服务器。',
+    checkFailedStatus: '服务器有响应，但状态不健康（HTTP {{status}}）。',
+    checkUnhealthy: '服务器可以访问，但它自报状态为 {{status}}。',
+    resolvesTo: '将使用：{{url}}',
+    resolvesToSameOrigin: '将使用：正在提供当前页面的服务器',
+    save: '保存并刷新',
+    saved: '已保存。',
+    recent: '最近使用',
+    reloadNotice:
+      '保存会刷新页面。地址无法热切换：应用在启动时就确定了服务器，只有重新加载，才能让它的每一个部分同时切到新服务器。',
+  },
   server: {
     maintenance: '服务器维护',
     upToDate: 'OpenCode 已是最新版本',

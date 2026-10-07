@@ -6,6 +6,8 @@ import { invalidateConfigCaches, invalidateSettingsCaches } from '@/lib/queryInv
 import { fetchWrapper } from '@/api/fetchWrapper'
 import { useSettingsDialog } from '@/hooks/useSettingsDialog'
 import { useI18n } from '@/lib/i18n'
+import { joinServerUrl } from '@opencode-manager/shared/utils'
+import { API_BASE_URL } from '@/config'
 
 const MISSING_PASSWORD_ERROR_PATTERN = /no password is configured|OPENCODE_SERVER_PASSWORD/i
 
@@ -28,7 +30,7 @@ interface HealthResponse {
 }
 
 async function fetchHealth(): Promise<HealthResponse> {
-  return fetchWrapper<HealthResponse>('/api/health')
+  return fetchWrapper<HealthResponse>(joinServerUrl(API_BASE_URL, '/api/health'))
 }
 
 export function useServerHealth(enabled = true) {

@@ -10,6 +10,10 @@ vi.mock('@/features/settings/GeneralSettings', () => ({
   GeneralSettings: () => <div data-testid="general-settings">General Settings Content</div>,
 }))
 
+vi.mock('@/features/settings/ServerSettings', () => ({
+  ServerSettings: () => <div data-testid="connection-settings">Connection Settings Content</div>,
+}))
+
 vi.mock('@/features/settings/GitSettings', () => ({
   GitSettings: () => <div data-testid="git-settings">Git Settings Content</div>,
 }))
@@ -414,8 +418,8 @@ describe('SettingsDialog', () => {
     expect(tablist).toHaveAttribute('aria-orientation', 'vertical')
 
     const triggers = screen.getAllByRole('tab')
-    expect(triggers).toHaveLength(10)
-    const expected = ['Account', 'General Settings', 'Notifications', 'Voice', 'Git', 'Keyboard Shortcuts', 'OpenCode Config', 'Assistant Workspace', 'Logs', 'Providers']
+    expect(triggers).toHaveLength(11)
+    const expected = ['Account', 'General Settings', 'Server Address', 'Notifications', 'Voice', 'Git', 'Keyboard Shortcuts', 'OpenCode Config', 'Assistant Workspace', 'Logs', 'Providers']
     expect(triggers.map((trigger) => trigger.textContent)).toEqual(expected)
 
     const logsTrigger = screen.getByRole('tab', { name: 'Logs' })
@@ -431,6 +435,19 @@ describe('SettingsDialog', () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
     })
     expect(screen.getByRole('tab', { name: 'Keyboard Shortcuts' })).toHaveFocus()
+  })
+
+  // A tab can be registered and still lead nowhere, and the panel's own test
+  // would never know: it renders the panel directly. This is the only place
+  // that can see the two halves are actually joined.
+  it('opens the server address panel from its tab', () => {
+    render(
+      <MemoryRouter initialEntries={['/?settings=open&settingsTab=connection']}>
+        <SettingsDialog />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByTestId('connection-settings')).toBeInTheDocument()
   })
 
   it('keeps Settings open when Escape fires inside a nested dialog', () => {

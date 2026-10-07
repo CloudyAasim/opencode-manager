@@ -78,6 +78,7 @@ export const en = {
     menu: {
       account: { label: 'Account', description: 'Profile, passkeys, and sign out' },
       general: { label: 'General Settings', description: 'App preferences and behavior' },
+      connection: { label: 'Server Address', description: 'Which server this app talks to' },
       notifications: { label: 'Notifications', description: 'Push notification preferences' },
       voice: { label: 'Voice', description: 'Text-to-speech and speech-to-text settings' },
       git: { label: 'Git', description: 'Git identity and credentials for repositories' },

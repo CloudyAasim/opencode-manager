@@ -1,4 +1,6 @@
 import { DEFAULTS } from '@opencode-manager/shared/config'
+import { joinServerUrl } from '@opencode-manager/shared/utils'
+import { API_BASE_URL } from '@/config'
 import type { SSEEventEnvelope } from '@opencode-manager/shared'
 import { createBrowserEventStreamTransport } from './browserTransport'
 import type {
@@ -177,7 +179,7 @@ export class OpenCodeEventStream {
   }
 
   private buildUrl(): string {
-    const url = new URL('/api/sse/stream', window.location.origin)
+    const url = new URL(joinServerUrl(API_BASE_URL, '/api/sse/stream'), window.location.origin)
     const directories = Array.from(this.directoryRefCounts.keys())
     if (directories.length > 0) {
       url.searchParams.set('directories', directories.join(','))

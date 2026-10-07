@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { useMobile } from '@/hooks/useMobile'
+import { API_BASE_URL } from '@/config'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 import type { FileInfo } from '@/types/files'
@@ -193,7 +194,10 @@ export const FileTree = memo(function FileTree({
             {!file.isDirectory && (
               <DropdownMenuItem
                 onClick={() => {
-                  const url = `/api/files?path=${encodeURIComponent(file.path)}&download=true`
+                  // A top-level navigation, so the session cookie travels as a
+                  // first-party cookie for the server's own origin - this is the one
+                  // call site where a plain prefix is enough and no fetch wrapper applies.
+                  const url = `${API_BASE_URL}/api/files?path=${encodeURIComponent(file.path)}&download=true`
                   window.open(url, '_blank')
                 }}
               >

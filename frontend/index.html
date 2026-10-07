@@ -64,6 +64,13 @@
       <div class="row"><div class="dot"></div><div class="lines"><div class="bar wide"></div><div class="bar narrow"></div></div></div>
       <div class="row"><div class="dot"></div><div class="lines"><div class="bar wide"></div><div class="bar narrow"></div></div></div>
     </div>
+    <!--
+      Runtime configuration, loaded before the bundle because the bundle reads
+      the server base while its modules are still evaluating. A self-hoster
+      edits public/config.js (or regenerates it from an environment variable in
+      the image) to point this build at their own server, with no rebuild.
+    -->
+    <script src="/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

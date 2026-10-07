@@ -1,4 +1,6 @@
 import type { EventStreamConnection, EventStreamTransport, EventStreamTransportHandlers } from './types'
+import { joinServerUrl } from '@opencode-manager/shared/utils'
+import { API_BASE_URL } from '@/config'
 
 export function createBrowserEventStreamTransport(): EventStreamTransport {
   return {
@@ -19,7 +21,10 @@ export function createBrowserEventStreamTransport(): EventStreamTransport {
     },
 
     async post(path: string, body: unknown): Promise<boolean> {
-      const response = await fetch(path, {
+      // The four subscribe/unsubscribe/visibility posts all arrive here as bare
+      // paths. Resolving them in one place is what stops an installed client
+      // from quietly posting to its own origin instead of the chosen server.
+      const response = await fetch(joinServerUrl(API_BASE_URL, path), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { GeneralSettings } from '@/features/settings/GeneralSettings'
+import { ServerSettings } from '@/features/settings/ServerSettings'
 import { GitSettings } from '@/features/settings/GitSettings'
 import { KeyboardShortcuts } from '@/features/settings/KeyboardShortcuts'
 import { LogsViewer } from '@/features/settings/LogsViewer'
@@ -19,7 +20,7 @@ import { VersionSelectDialog } from '@/features/settings/VersionSelectDialog'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { RowActionsMenuContext } from '@/components/ui/settings-list'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Users, History, Volume2, Bell, X, ScrollText, Bot, type LucideIcon } from 'lucide-react'
+import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Users, History, Volume2, Bell, X, ScrollText, Bot, Server, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSettingsDialog, isSettingsContentTab, type SettingsContentTab } from '@/hooks/useSettingsDialog'
 import { useOptionalAuth } from '@/hooks/useAuth'
@@ -149,6 +150,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
   }> = [
     { id: 'account', icon: User, label: t('settings.menu.account.label'), description: t('settings.menu.account.description'), contentClassName: 'max-w-7xl', render: () => <AccountSettings /> },
     { id: 'general', icon: Settings2, label: t('settings.menu.general.label'), description: t('settings.menu.general.description'), contentClassName: 'max-w-4xl', render: () => <GeneralSettings /> },
+    { id: 'connection', icon: Server, label: t('settings.menu.connection.label'), description: t('settings.menu.connection.description'), contentClassName: 'max-w-4xl', render: () => <ServerSettings /> },
     { id: 'notifications', icon: Bell, label: t('settings.menu.notifications.label'), description: t('settings.menu.notifications.description'), contentClassName: 'max-w-7xl', render: () => <NotificationSettings /> },
     { id: 'voice', icon: Volume2, label: t('settings.menu.voice.label'), description: t('settings.menu.voice.description'), contentClassName: 'max-w-7xl', render: () => <VoiceSettings /> },
     { id: 'git', icon: GitBranch, label: t('settings.menu.git.label'), description: t('settings.menu.git.description'), contentClassName: 'max-w-7xl', render: () => <GitSettings /> },

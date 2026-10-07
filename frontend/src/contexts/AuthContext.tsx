@@ -2,6 +2,8 @@
 import { createContext, useEffect, useMemo, useState, useCallback, type ReactNode } from 'react'
 import { useSession, signIn, signUp, signOut, authClient, type AuthUser } from '@/lib/auth-client'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { joinServerUrl } from '@opencode-manager/shared/utils'
+import { API_BASE_URL } from '@/config'
 
 interface AuthConfig {
   enabledProviders: string[]
@@ -39,7 +41,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const response = await fetch('/api/auth-info/config')
+        const response = await fetch(joinServerUrl(API_BASE_URL, '/api/auth-info/config'))
         if (response.ok) {
           const data = await response.json()
           setConfig(data)

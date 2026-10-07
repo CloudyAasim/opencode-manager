@@ -80,6 +80,7 @@ export const zhCN: DeepString<typeof en> = {
     menu: {
       account: { label: '账号', description: '个人资料、通行密钥与退出登录' },
       general: { label: '通用设置', description: '应用偏好与行为' },
+      connection: { label: '服务器地址', description: '这个应用要连接哪台服务器' },
       notifications: { label: '通知', description: '推送通知偏好' },
       voice: { label: '语音', description: '语音合成与语音转文字设置' },
       git: { label: 'Git', description: '仓库的 Git 身份与凭据' },

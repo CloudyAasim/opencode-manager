@@ -1,5 +1,7 @@
 import { redirect } from 'react-router-dom'
 import { getSession } from './auth-client'
+import { joinServerUrl } from '@opencode-manager/shared/utils'
+import { API_BASE_URL } from '@/config'
 
 export interface AuthConfig {
   enabledProviders: string[]
@@ -15,7 +17,7 @@ async function fetchAuthConfig(): Promise<AuthConfig> {
     isFirstUser: false,
     adminConfigured: false,
   }
-  const response = await fetch('/api/auth-info/config')
+  const response = await fetch(joinServerUrl(API_BASE_URL, '/api/auth-info/config'))
   if (!response.ok) {
     return defaultConfig
   }
@@ -104,7 +106,7 @@ export async function terminalLoader() {
   }
 
   try {
-    const response = await fetch('/api/terminal/config')
+    const response = await fetch(joinServerUrl(API_BASE_URL, '/api/terminal/config'))
     if (response.ok) {
       const config = (await response.json()) as { enabled?: boolean; adminsOnly?: boolean }
       if (config.enabled && !config.adminsOnly) {
