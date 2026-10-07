@@ -44,6 +44,7 @@ vi.mock('../../src/utils/discovery-cache', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/utils/discovery-cache')>()
   return {
     normalizeToBaseUrl: actual.normalizeToBaseUrl,
+    selectModels: actual.selectModels,
     discoverModelsCached: mockDiscoverModelsCached,
     discoverCached: mockDiscoverCached,
   }
@@ -62,6 +63,23 @@ const mockStat = fs.stat as any
 const mockUnlink = fs.unlink as any
 
 import { createTTSRoutes, cleanupExpiredCache, getCacheStats, generateCacheKey, ensureCacheDir, getCachedAudio, getCacheSize, cleanupOldestFiles, cacheAudio } from '../../src/routes/tts'
+import { selectModels } from '../../src/utils/discovery-cache'
+
+/**
+ * The `/v1/models` body a self-hosted gateway answers with: chat models plus
+ * media models carrying the non-standard `relay` block that names the
+ * capability. RelayAB is the shape - `speech-2.8-hd`/`audio.tts` and
+ * `asr-1.0`/`audio.stt` are its seeded MiniMax models, and neither id says what
+ * it does.
+ */
+const RELAY_MODEL_LIST = {
+  object: 'list',
+  data: [
+    { id: 'gpt-4o', relay: { kind: 'chat' } },
+    { id: 'speech-2.8-hd', relay: { kind: 'media', capability: 'audio.tts' } },
+    { id: 'asr-1.0', relay: { kind: 'media', provider: 'minimax', capability: 'audio.stt' } },
+  ],
+}
 
 const mockWriteFile = fs.writeFile as any
 
@@ -534,6 +552,26 @@ describe('TTS route handlers', () => {
       expect.objectContaining({ tts: expect.objectContaining({ availableModels: ['tts-1', 'tts-1-hd'] }) }),
       'default',
     )
+  })
+
+  // The route's own filter, run against a real gateway body. `discoverModelsCached`
+  // is mocked here, so asserting the returned list would only prove the mock;
+  // what matters is which models these options select, and that the STT model
+  // cannot reach this picker.
+  it('asks for the speech capability, so the ASR model cannot land on this picker', async () => {
+    mockDiscoverModelsCached.mockResolvedValue({
+      models: ['speech-2.8-hd'],
+      cached: false,
+      source: 'discovered',
+    })
+
+    const res = await app.request('/models')
+    expect(res.status).toBe(200)
+
+    const opts = mockDiscoverModelsCached.mock.calls[0]![0]
+    expect(opts.capability).toBe('audio.tts')
+    expect(selectModels(RELAY_MODEL_LIST, opts.capability, opts.filterPattern))
+      .toEqual(['speech-2.8-hd'])
   })
 
   it('returns 400 when models are requested without configuration', async () => {

@@ -96,11 +96,22 @@ async function cacheDiscovery<T>(cacheKey: string, data: T): Promise<void> {
  * build are then simply never read - they are not deleted eagerly, they age
  * out through the TTL on the next lookup of the same key.
  */
-const DISCOVERY_CACHE_VERSION = 'v2'
+const DISCOVERY_CACHE_VERSION = 'v3'
 
-function generateDiscoveryCacheKey(baseUrl: string, apiKey: string, type: string): string {
+/**
+ * The capability is part of the key, not just the filter. TTS and STT both pass
+ * `type: 'models'`, so against one endpoint they collided on a single entry:
+ * whichever panel refreshed first wrote its own list, and the other panel read
+ * it back and offered speech-to-text models to a text-to-speech field.
+ */
+function generateDiscoveryCacheKey(
+  baseUrl: string,
+  apiKey: string,
+  type: string,
+  capability?: string,
+): string {
   const hash = createHash('sha256')
-  hash.update(`${DISCOVERY_CACHE_VERSION}|${baseUrl}|${apiKey}|${type}`)
+  hash.update(`${DISCOVERY_CACHE_VERSION}|${baseUrl}|${apiKey}|${type}|${capability ?? ''}`)
   return hash.digest('hex')
 }
 
@@ -112,11 +123,91 @@ function generateDiscoveryCacheKey(baseUrl: string, apiKey: string, type: string
  */
 export type DiscoverySource = 'discovered' | 'defaults'
 
+/**
+ * One entry of a `/v1/models` list. `relay` is not part of the OpenAI schema -
+ * it is the extra block a self-hosted gateway adds - so every field of it is
+ * treated as optional and possibly absent.
+ */
+interface ModelListEntry {
+  id?: string
+  relay?: { capability?: unknown; kind?: unknown }
+}
+
+/**
+ * Whether one entry belongs on the TTS or the STT picker.
+ *
+ * Matching the model id was a guess dressed up as a filter: `/whisper|transcri/`
+ * keeps every model ever named after its own purpose, and it drops the ones
+ * named after the vendor instead. RelayAB lists `asr-1.0` on `/v1/models` and
+ * tags it `relay.capability: "audio.stt"`; the name contains neither `whisper`
+ * nor `transcri`, so the only speech-to-text model the provider actually offered
+ * was the one we discarded - and the picker then showed `whisper-1`, which that
+ * provider does not have.
+ *
+ * A gateway that tags its entries is believed over the name, in both
+ * directions: a tag keeps a model whose name says nothing, and excludes one
+ * whose name would have matched by accident (`speech-2.8-hd` is a TTS model, and
+ * the STT filter must never offer it). A provider with no tags still gets the
+ * name test, widened to cover `asr` and `stt` alongside the old two.
+ *
+ * With no capability asked for the call site wants the whole list - the
+ * OpenCode model picker passes a pattern that matches every name - and the tags
+ * are left alone.
+ */
+function entryMatchesCapability(
+  entry: ModelListEntry,
+  capability: string | undefined,
+  filterPattern: RegExp,
+): boolean {
+  if (capability === undefined) {
+    return filterPattern.test((entry.id ?? '').toLowerCase())
+  }
+
+  const tagged = typeof entry.relay?.capability === 'string' ? entry.relay.capability : undefined
+  if (tagged !== undefined) return tagged === capability
+
+  return filterPattern.test((entry.id ?? '').toLowerCase())
+}
+
+/**
+ * The model ids from one `/v1/models` body that belong on this call site's
+ * picker. Exported because the decision is the whole of model discovery: a
+ * route-level test that mocks `discoverModelsCached` out never reaches it.
+ */
+export function selectModels(
+  data: unknown,
+  capability: string | undefined,
+  filterPattern: RegExp,
+): string[] {
+  if (data !== null && typeof data === 'object' && 'data' in data) {
+    const entries = (data as { data?: unknown }).data
+    if (!Array.isArray(entries)) return []
+
+    return entries
+      .filter((model): model is ModelListEntry =>
+        model !== null && typeof model === 'object')
+      .filter((model) => model.id && typeof model.id === 'string')
+      .filter((model) => entryMatchesCapability(model, capability, filterPattern))
+      .map((model) => model.id!)
+  }
+
+  // Some gateways answer with a bare array of ids. There are no tags to read,
+  // so the name is all there is.
+  if (Array.isArray(data)) {
+    return data.filter((item): item is string =>
+      typeof item === 'string' && filterPattern.test(item.toLowerCase())
+    )
+  }
+
+  return []
+}
+
 async function fetchAvailableModels(
   baseUrl: string,
   apiKey: string,
   filterPattern: RegExp,
   defaultModels: string[],
+  capability?: string,
 ): Promise<{ models: string[]; source: DiscoverySource }> {
   const normalizedUrl = normalizeToBaseUrl(baseUrl)
   const endpointVariations = [
@@ -134,24 +225,11 @@ async function fetchAvailableModels(
       })
 
       if (response.ok) {
-        const data = await response.json() as { data?: { id?: string }[] } | unknown[]
+        const data: unknown = await response.json()
 
-        if ('data' in data && Array.isArray(data.data)) {
-          const filtered = data.data
-            .filter((model) => model.id && typeof model.id === 'string')
-            .filter((model) => filterPattern.test(model.id!.toLowerCase()))
-            .map((model) => model.id!)
-
-          if (filtered.length > 0) {
-            return { models: filtered, source: 'discovered' }
-          }
-        } else if (Array.isArray(data)) {
-          const filtered = data.filter((item): item is string =>
-            typeof item === 'string' && filterPattern.test(item.toLowerCase())
-          )
-          if (filtered.length > 0) {
-            return { models: filtered, source: 'discovered' }
-          }
+        const filtered = selectModels(data, capability, filterPattern)
+        if (filtered.length > 0) {
+          return { models: filtered, source: 'discovered' }
         }
       }
     } catch (error) {
@@ -173,10 +251,12 @@ export async function discoverCached<T>(opts: {
   baseUrl: string
   apiKey: string
   type: string
+  /** Narrows the cache entry to one capability; see `discoverModelsCached`. */
+  capability?: string
   forceRefresh: boolean
   fetcher: () => Promise<T>
 }): Promise<{ value: T; cached: boolean }> {
-  const cacheKey = generateDiscoveryCacheKey(opts.baseUrl, opts.apiKey, opts.type)
+  const cacheKey = generateDiscoveryCacheKey(opts.baseUrl, opts.apiKey, opts.type, opts.capability)
 
   if (!opts.forceRefresh) {
     const cached = await getCachedDiscovery<T>(cacheKey)
@@ -197,15 +277,30 @@ export async function discoverModelsCached(opts: {
   apiKey: string
   type: string
   filterPattern: RegExp
+  /**
+   * The capability the call site is looking for, e.g. `audio.stt`. A provider
+   * that tags its `/v1/models` entries with `relay.capability` is filtered on
+   * that tag; one that does not falls back to `filterPattern`.
+   */
+  capability?: string
   defaultModels: string[]
   forceRefresh: boolean
 }): Promise<{ models: string[]; cached: boolean; source: DiscoverySource }> {
+  const fetchModels = () => fetchAvailableModels(
+    opts.baseUrl,
+    opts.apiKey,
+    opts.filterPattern,
+    opts.defaultModels,
+    opts.capability,
+  )
+
   const { value, cached } = await discoverCached({
     baseUrl: opts.baseUrl,
     apiKey: opts.apiKey,
     type: opts.type,
+    capability: opts.capability,
     forceRefresh: opts.forceRefresh,
-    fetcher: () => fetchAvailableModels(opts.baseUrl, opts.apiKey, opts.filterPattern, opts.defaultModels),
+    fetcher: fetchModels,
   })
 
   // A cache entry from an older build is a bare array, not this shape. Reading
@@ -219,8 +314,9 @@ export async function discoverModelsCached(opts: {
       baseUrl: opts.baseUrl,
       apiKey: opts.apiKey,
       type: opts.type,
+      capability: opts.capability,
       forceRefresh: true,
-      fetcher: () => fetchAvailableModels(opts.baseUrl, opts.apiKey, opts.filterPattern, opts.defaultModels),
+      fetcher: fetchModels,
     })
     return { models: fresh.models, source: fresh.source, cached: false }
   }

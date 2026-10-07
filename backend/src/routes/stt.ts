@@ -132,7 +132,12 @@ export function createSTTRoutes(db: Database) {
         baseUrl: sttConfig.endpoint,
         apiKey: sttConfig.apiKey,
         type: 'models',
-        filterPattern: /whisper|transcri/,
+        capability: 'audio.stt',
+        // `whisper` and `transcri` are only the names OpenAI happens to use.
+        // A provider that names its ASR model after the vendor instead (`asr-1.0`
+        // is what RelayAB serves) has to survive on the name test alone, so the
+        // pattern carries `asr` and `stt` too.
+        filterPattern: /whisper|transcri|asr|speech[-_]?to[-_]?text|\bstt\b/,
         defaultModels: ['whisper-1'],
         forceRefresh,
       })

@@ -417,6 +417,7 @@ export function createTTSRoutes(db: Database) {
         baseUrl: ttsConfig.endpoint,
         apiKey: ttsConfig.apiKey,
         type: 'models',
+        capability: 'audio.tts',
         filterPattern: /tts|audio|speech/,
         defaultModels: ['tts-1', 'tts-1-hd'],
         forceRefresh,

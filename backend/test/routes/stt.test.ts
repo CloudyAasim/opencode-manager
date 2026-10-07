@@ -533,6 +533,111 @@ describe('STT Routes', () => {
       globalThis.fetch = originalFetch
     })
 
+    // The gateway lists a real speech-to-text model under a vendor name. The
+    // picker used to filter it out and offer `whisper-1` instead - a model that
+    // gateway does not have, so the panel was wrong in a way that looked like
+    // "the model cannot be fetched". Asserted end to end through the real
+    // `discoverModelsCached`, because a route test that mocks it proves nothing
+    // about which models a user is shown.
+    it('offers the model the gateway actually lists', async () => {
+      const originalFetch = globalThis.fetch
+      mockStat.mockRejectedValue(new Error('not cached'))
+      mockWriteFile.mockResolvedValue(undefined)
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          object: 'list',
+          data: [
+            { id: 'gpt-4o', relay: { kind: 'chat' } },
+            { id: 'speech-2.8-hd', relay: { kind: 'media', capability: 'audio.tts' } },
+            { id: 'asr-1.0', relay: { kind: 'media', provider: 'minimax', capability: 'audio.stt' } },
+          ],
+        }),
+      }) as unknown as typeof fetch
+
+      const res = await sttApp.fetch(new Request('http://localhost/models?userId=test'))
+      const json = await res.json() as Record<string, unknown>
+
+      expect(json.models).toEqual(['asr-1.0'])
+      expect(json.source).toBe('discovered')
+      expect(json.models).not.toContain('whisper-1')
+
+      globalThis.fetch = originalFetch
+    })
+
+    it('keeps the speech model off this picker even when the gateway tags nothing', async () => {
+      const originalFetch = globalThis.fetch
+      mockStat.mockRejectedValue(new Error('not cached'))
+      mockWriteFile.mockResolvedValue(undefined)
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          object: 'list',
+          data: [{ id: 'speech-2.8-hd' }, { id: 'asr-1.0' }],
+        }),
+      }) as unknown as typeof fetch
+
+      const res = await sttApp.fetch(new Request('http://localhost/models?userId=test'))
+      const json = await res.json() as Record<string, unknown>
+
+      expect(json.models).toEqual(['asr-1.0'])
+
+      globalThis.fetch = originalFetch
+    })
+
+    // `asr-1.0` is reachable two ways - the widened name pattern catches it -
+    // so these two use ids that no name pattern can see. Only the capability
+    // tag decides them, which is what pins this route to asking for one.
+    it('takes a transcription model whose name no pattern could ever match', async () => {
+      const originalFetch = globalThis.fetch
+      mockStat.mockRejectedValue(new Error('not cached'))
+      mockWriteFile.mockResolvedValue(undefined)
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          object: 'list',
+          data: [
+            { id: 'gpt-4o', relay: { kind: 'chat' } },
+            { id: 'paraformer-1.0', relay: { kind: 'media', capability: 'audio.stt' } },
+          ],
+        }),
+      }) as unknown as typeof fetch
+
+      const res = await sttApp.fetch(new Request('http://localhost/models?userId=test'))
+      const json = await res.json() as Record<string, unknown>
+
+      expect(json.models).toEqual(['paraformer-1.0'])
+      expect(json.source).toBe('discovered')
+
+      globalThis.fetch = originalFetch
+    })
+
+    it('drops a model whose name says transcription when the gateway calls it speech', async () => {
+      const originalFetch = globalThis.fetch
+      mockStat.mockRejectedValue(new Error('not cached'))
+      mockWriteFile.mockResolvedValue(undefined)
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          object: 'list',
+          // `whisper` is in the STT pattern, so only the tag can keep this out
+          data: [{ id: 'whisper-large-v3', relay: { capability: 'audio.tts' } }],
+        }),
+      }) as unknown as typeof fetch
+
+      const res = await sttApp.fetch(new Request('http://localhost/models?userId=test'))
+      const json = await res.json() as Record<string, unknown>
+
+      expect(json.models).toEqual(['whisper-1'])
+      expect(json.source).toBe('defaults')
+
+      globalThis.fetch = originalFetch
+    })
+
     it('should force refresh when refresh=true', async () => {
       const originalFetch = globalThis.fetch
       mockWriteFile.mockResolvedValue(undefined)
