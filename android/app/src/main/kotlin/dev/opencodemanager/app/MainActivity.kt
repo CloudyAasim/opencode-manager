@@ -63,36 +63,30 @@ class MainActivity : Activity() {
     }
 
     private fun layout(): View {
-        val root = android.widget.FrameLayout(this)
-        root.addView(
-            webView,
-            android.widget.FrameLayout.LayoutParams(
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-            ),
-        )
-        // A single affordance, kept faint and out of the way. There is no action
-        // bar because the page has its own header and two of them is worse than
-        // none; but changing server has to be reachable, because the reason a
-        // person installed this is that servers move.
-        val menu = android.widget.ImageButton(this).apply {
-            setImageResource(R.drawable.ic_menu)
-            alpha = 0.55f
-            setBackgroundColor(0x00000000)
-            contentDescription = getString(R.string.server_dialog_title)
-            setOnClickListener { showMenu() }
+        // Nothing floats over the page.
+        //
+        // This used to be a WebView with a 55%-alpha, background-less
+        // ImageButton pinned to the top-right corner - which is the one place a
+        // page is guaranteed to have something. On the login screen it sat over
+        // the language toggle; on every other screen it sat over the page's own
+        // header. Being faint and borderless is what made it look like a
+        // rendering artefact rather than a control, and it could not be moved
+        // because the shell has no idea what the page has put underneath it.
+        //
+        // So the shell stopped drawing it. "Change server" is rendered by the
+        // login page itself, in the footer slot that layout already provides,
+        // through the bridge below. The page knows its own layout, so the
+        // control cannot land on top of anything, and it is only reachable
+        // where it belongs: before anyone has signed in.
+        return android.widget.FrameLayout(this).apply {
+            addView(
+                webView,
+                android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                ),
+            )
         }
-        val size = (40 * resources.displayMetrics.density).toInt()
-        val margin = (8 * resources.displayMetrics.density).toInt()
-        root.addView(
-            menu,
-            android.widget.FrameLayout.LayoutParams(size, size).apply {
-                gravity = android.view.Gravity.TOP or android.view.Gravity.END
-                topMargin = margin
-                marginEnd = margin
-            },
-        )
-        return root
     }
 
     private fun configure(view: WebView) {
@@ -117,6 +111,23 @@ class MainActivity : Activity() {
         }
         view.overScrollMode = View.OVER_SCROLL_NEVER
         view.isVerticalScrollBarEnabled = false
+
+        // The page learns that a shell is around it by finding this object, and
+        // renders its own "change server" affordance only when it is there. That
+        // is what keeps the browser and desktop builds free of a control that
+        // would do nothing for them.
+        //
+        // Exposing a bridge rather than injecting DOM is deliberate: the page
+        // re-renders, and an element planted in it from outside gets wiped, or
+        // worse, ends up duplicated. A method cannot go stale.
+        //
+        // On the risk of `addJavascriptInterface`: it is reachable from any
+        // script in this WebView, and the only script that runs here is the
+        // user's own server's app, which this proxy already forwards every byte
+        // of. The exposed method opens a dialog the person then fills in - it
+        // cannot read anything, cannot navigate, and cannot reach the network.
+        // An attacker who could call it could already replace the login page.
+        view.addJavascriptInterface(HostBridge(), "OCMAndroidHost")
 
         view.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -194,11 +205,19 @@ class MainActivity : Activity() {
         }
 
         stopProxy()
-        val created = ProxyServer(normalized, onError = { error, path ->
-            runOnUiThread {
-                Log.w(TAG, "proxy: ${error.javaClass.simpleName} $path")
-            }
-        })
+        val created = ProxyServer(
+            normalized,
+            onError = { error, path ->
+                runOnUiThread { Log.w(TAG, "proxy: ${error.javaClass.simpleName} $path") }
+            },
+            // The proxy worked and relayed something the app needs to be able to
+            // say: a failure, or a cookie. On a phone there is no debugger, so
+            // this log is the only account of what actually crossed the wire.
+            onRelay = { status, path, cookies ->
+                val suffix = if (cookies.isEmpty()) "" else " $cookies"
+                Log.i(TAG, "relay: $status $path$suffix")
+            },
+        )
         val bound = try {
             created.start(preferences.port)
         } catch (error: Exception) {
@@ -237,20 +256,22 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun showMenu() {
-        AlertDialog.Builder(this)
-            .setItems(
-                arrayOf<CharSequence>(
-                    getString(R.string.server_dialog_change),
-                    getString(R.string.app_name) + " — " + (preferences.serverUrl ?: ""),
-                )
-            ) { _, which ->
-                when (which) {
-                    0 -> askForServer()
-                    1 -> preferences.serverUrl?.let { openExternally(Uri.parse(it)) }
-                }
-            }
-            .show()
+    /**
+     * What the page is allowed to ask the shell to do.
+     *
+     * One method, because there is one thing the page cannot do itself: the
+     * server address lives in the shell's storage, not the page's, so the page
+     * has no way to change it. Everything else the page already does over HTTP
+     * through the proxy.
+     *
+     * `@JavascriptInterface` methods are invoked on a WebView-owned thread, so
+     * anything touching a dialog has to be posted to the UI thread.
+     */
+    private inner class HostBridge {
+        @android.webkit.JavascriptInterface
+        fun changeServer() {
+            runOnUiThread { askForServer() }
+        }
     }
 
     private fun askForServer(errorMessage: String? = null) {

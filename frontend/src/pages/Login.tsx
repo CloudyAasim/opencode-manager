@@ -6,7 +6,8 @@ import { z } from 'zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
-import { Loader2, Github, KeyRound, Mail } from 'lucide-react'
+import { Loader2, Github, KeyRound, Mail, Server } from 'lucide-react'
+import { hostShell } from '@/lib/host-shell'
 import type { AuthConfig } from '@/lib/auth-loaders'
 import { AuthCard, AuthError, AuthField, AuthInput, AuthShell, AuthSubmit } from '@/framework/shell/AuthShell'
 
@@ -27,6 +28,11 @@ export function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
+
+  // Non-null only inside the Android shell. Everything below renders on
+  // the web and desktop builds too, so this is what keeps a control that
+  // would do nothing there from appearing at all.
+  const shell = hostShell()
 
   const loginSchema = useMemo(
     () => createLoginSchema(t('auth.emailInvalid'), t('auth.passwordRequired')),
@@ -85,7 +91,33 @@ export function Login() {
   const hasCredentials = config.enabledProviders.includes('credentials')
 
   return (
-    <AuthShell>
+    <AuthShell
+      footer={
+        shell && (
+          <div className="space-y-2">
+            {/*
+              A real button, not a floating icon: it is bordered and
+              opaque like every other control on this page, and it sits
+              in the flow below the card, so it cannot cover anything.
+              The shell used to pin a 55%-alpha icon over this screen's
+              top-right corner, which is where the language toggle is.
+            */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-border hover:bg-accent transition-all duration-200"
+              onClick={() => shell.changeServer()}
+            >
+              <Server className="mr-2 h-4 w-4" />
+              {t('auth.changeServer')}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              {t('auth.changeServerHint')}
+            </p>
+          </div>
+        )
+      }
+    >
       <AuthCard>
         <AuthError message={error} />
 

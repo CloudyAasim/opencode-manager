@@ -33,6 +33,8 @@ export const zhCN: DeepString<typeof en> = {
     password: '密码',
     emailInvalid: '邮箱地址无效',
     passwordRequired: '请输入密码',
+    changeServer: '更换服务器',
+    changeServerHint: '把这个应用连接到另一台 OpenCode Manager 服务器',
   },
   register: {
     createAccount: '创建账号',

@@ -31,6 +31,8 @@ export const en = {
     password: 'Password',
     emailInvalid: 'Invalid email address',
     passwordRequired: 'Password is required',
+    changeServer: 'Change server',
+    changeServerHint: 'Connect this app to a different OpenCode Manager server',
   },
   register: {
     createAccount: 'Create Account',
