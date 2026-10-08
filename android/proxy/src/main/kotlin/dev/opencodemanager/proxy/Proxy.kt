@@ -96,6 +96,15 @@ class ProxyServer(
     initialTarget: String,
     private val secureTransport: Boolean = false,
     private val onError: ((Throwable, String) -> Unit)? = null,
+    /**
+     * Called for any response that failed or that carried a cookie.
+     *
+     * The proxy is the app's only way to the network, so when something does
+     * not work the only place the reason can live is here. Kept separate from
+     * [onError] because that one means "the proxy broke" and this one means
+     * "the proxy worked and relayed something worth knowing".
+     */
+    private val onRelay: ((Int, String, String) -> Unit)? = null,
 ) : java.io.Closeable {
     /** Validated when the object is built, so a bad address is reported while
      *  there is still somewhere to report it to. */
@@ -399,6 +408,17 @@ class ProxyServer(
             }
             output.write(head2.toByteArray(Charsets.ISO_8859_1))
             output.flush()
+            // Two events worth saying out loud, because both are invisible from
+            // the outside and both make the app look like something it is not.
+            // A >= 400 that the page turns into "Sign in failed" with no other
+            // detail, and a session cookie arriving or not - the difference
+            // between "logged in" and "logged in and then bounced straight back
+            // to the login screen" is entirely whether this header survived.
+            // Everything else stays quiet; this runs on a phone where there is
+            // no debugger to attach to.
+            if (response.status >= 400 || downstream["set-cookie"] != null) {
+                onRelay?.invoke(response.status, fullPath, describeCookies(downstream["set-cookie"]))
+            }
             if (hasBody) {
                 response.copyBodyTo(ChunkedSink(output))
                 output.write("0\r\n\r\n".toByteArray(Charsets.ISO_8859_1))
@@ -508,4 +528,24 @@ private fun reasonFor(status: Int): String = when (status) {
     404 -> "Not Found"
     502 -> "Bad Gateway"
     else -> "Status"
+}
+/**
+ * Cookie names and attributes, never values.
+ *
+ * A browser that refuses a cookie says nothing: no console error, no network
+ * error, the next request simply arrives without it. So the only way to find
+ * out is to print what was offered - and the value is a session token that must
+ * not end up in a buffer anyone can read with `adb logcat`.
+ */
+internal fun describeCookies(values: List<String>?): String {
+    if (values.isNullOrEmpty()) return ""
+    return values.joinToString(" | ") { cookie ->
+        val parts = cookie.split(';').map { it.trim() }
+        val name = parts.firstOrNull()?.substringBefore('=') ?: "?"
+        val attributes = parts.drop(1)
+            .map { it.substringBefore('=').trim() }
+            .filter { it.isNotEmpty() }
+            .joinToString(",")
+        "$name{$attributes}"
+    }
 }

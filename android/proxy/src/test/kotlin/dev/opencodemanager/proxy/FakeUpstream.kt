@@ -37,6 +37,23 @@ data class RecordedResponse(
 }
 
 /**
+ * What every strict parser does with a request that declares its length twice:
+ * refuse it. nginx answers 400, Bun answers 400.
+ *
+ * This fake used to read the first `Content-Length` and carry on, and that is
+ * exactly where a real bug hid for a whole round: the proxy forwards the
+ * client's `Content-Length` *and* writes one of its own from the body framing,
+ * so every POST went upstream with the header twice. The unit tests drove POSTs
+ * through this helper every day and passed, because a fake that is more
+ * forgiving than the servers it stands in for cannot see the difference. It
+ * only showed up when a phone could not sign in and the upstream answered 400.
+ *
+ * So the fake answers 400 here too, the way the real thing does.
+ */
+class DuplicateContentLength(val count: Int) :
+    Exception("content-length was sent $count times in one request")
+
+/**
  * A real HTTP server on a real loopback socket.
  *
  * Not a mock: the point of these tests is what happens to bytes on a wire, and a
@@ -61,8 +78,15 @@ class FakeUpstream(private val handler: (Socket, RecordedRequest) -> Unit) : jav
                 val thread = Thread({
                     try {
                         handler(socket, readRequest(socket))
-                    } catch (_: Exception) {
-                        // A test that closes early is not a failure here.
+                    } catch (error: Exception) {
+                        // A test that closes early is not a failure here - but a
+                        // silent swallow means a fixture bug and a proxy bug
+                        // look identical, which is how the duplicate
+                        // content-length stayed invisible: the handler simply
+                        // never ran, and the test saw a null.
+                        if (error !is DuplicateContentLength) {
+                            System.err.println("[fake-upstream] ${error.javaClass.simpleName}: ${error.message}")
+                        }
                     } finally {
                         try {
                             socket.close()
@@ -91,15 +115,38 @@ class FakeUpstream(private val handler: (Socket, RecordedRequest) -> Unit) : jav
             headers.getOrPut(line.substring(0, colon).trim().lowercase()) { ArrayList(1) }
                 .add(line.substring(colon + 1).trim())
         }
+
+        // Two `Content-Length` values is a request smuggling primitive, and
+        // every real server here refuses it. Answering the way they do is what
+        // makes this fake able to see a proxy that emits one.
+        val declaredLengths = headers["content-length"] ?: emptyList<String>()
+        if (declaredLengths.size > 1) {
+            socket.respond(
+                status = "HTTP/1.1 400 Bad Request",
+                headers = listOf("content-type" to "text/plain"),
+                body = "duplicate content-length",
+            )
+            throw DuplicateContentLength(declaredLengths.size)
+        }
+
         val body = ByteArrayOutputStream()
-        val declared = headers["content-length"]?.firstOrNull()?.trim()?.toIntOrNull() ?: 0
-        val buffer = ByteArray(4096)
-        var remaining = declared
-        while (remaining > 0) {
-            val read = input.read(buffer, 0, minOf(remaining, buffer.size))
-            if (read < 0) break
-            body.write(buffer, 0, read)
-            remaining -= read
+        val chunked = headers["transfer-encoding"]?.any { it.contains("chunked", ignoreCase = true) } == true
+        if (chunked) {
+            // A real server decodes the frames. A fake that only ever looked at
+            // `content-length` would see an empty body for every chunked request
+            // and report success - the same blindness as tolerating a duplicate
+            // length, in the other direction.
+            body.write(readChunkedBody(input))
+        } else {
+            val declared = declaredLengths.firstOrNull()?.trim()?.toIntOrNull() ?: 0
+            val buffer = ByteArray(4096)
+            var remaining = declared
+            while (remaining > 0) {
+                val read = input.read(buffer, 0, minOf(remaining, buffer.size))
+                if (read < 0) break
+                body.write(buffer, 0, read)
+                remaining -= read
+            }
         }
         return RecordedRequest(parts[0], parts.getOrElse(1) { "/" }, headers, body.toByteArray())
     }

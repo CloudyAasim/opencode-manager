@@ -68,6 +68,15 @@ fun buildUpstreamHeaders(headers: Map<String, List<String>>, target: TargetOrigi
 
         when (name) {
             "host" -> out["host"] = listOf(target.host)
+            // `content-length` describes the body this proxy is about to write,
+            // so it belongs to the framing rather than to the client's headers -
+            // exactly like `transfer-encoding`, which is already dropped as
+            // hop-by-hop. Forwarding it *and* emitting one from the framing
+            // puts the header on the wire twice, and a request that declares its
+            // length twice is a smuggling primitive that nginx and Bun both
+            // refuse with a 400. GETs were unaffected, which is why every test
+            // that only fetched something passed and every POST failed.
+            "content-length" -> Unit
             // A literal `Origin: null` from a sandboxed document is replaced with
             // the upstream's own origin for the same reason a real one is: the
             // upstream's origin checks would reject `null` outright.
@@ -116,8 +125,25 @@ fun rewriteSetCookie(cookies: List<String>, secureTransport: Boolean): List<Stri
     cookie.split(';')
         .filter { part ->
             val attribute = part.substringBefore('=').trim().lowercase()
+            // `Domain` names the real host, and the browser never talks to that
+            // host - it talks to loopback. Left in place the cookie is scoped
+            // to somewhere it will never be sent.
             if (attribute == "domain") return@filter false
-            if (attribute == "secure" && !secureTransport) return@filter false
+            // `Secure` is deliberately NOT stripped, which is the opposite of
+            // what this function used to do.
+            //
+            // better-auth names its session cookies `__Secure-...`, and a
+            // `__Secure-` prefixed cookie without the `Secure` attribute is
+            // **rejected outright** - silently, with no console message and no
+            // network error. Stripping it therefore did not "make the cookie
+            // work over plain http"; it made the browser throw the cookie away.
+            // The symptom was a sign-in that returned 200, a navigation to the
+            // app, a `getSession` that came back null, and a bounce straight
+            // back to the login screen with nothing to explain it.
+            //
+            // And the removal was never necessary in the first place: `http://
+            // 127.0.0.1` and `http://localhost` are potentially-trustworthy
+            // origins, so a browser accepts a `Secure` cookie there anyway.
             true
         }
         .joinToString(";")

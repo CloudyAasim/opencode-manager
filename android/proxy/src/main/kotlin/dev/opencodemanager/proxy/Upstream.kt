@@ -76,9 +76,18 @@ class BodySource private constructor(
                             sink.write("0\r\n\r\n".toByteArray())
                             break
                         }
+                        // A chunk frame is `<size>\r\n<data>\r\n`. The size
+                        // line used to be written *after* the data it
+                        // describes, and the CRLF that terminates the data was
+                        // never written at all, so every chunked request the
+                        // proxy forwarded was malformed - a parser looking for
+                        // a length found the payload instead. Both halves were
+                        // invisible until the fake upstream started decoding
+                        // chunked bodies rather than only content-length ones.
+                        sink.write("${size.toString(16)}\r\n".toByteArray())
                         copyExactly(stream, sink, size)
                         readLine(stream) // the CRLF that follows the chunk data
-                        sink.write("${size.toString(16)}\r\n".toByteArray())
+                        sink.write("\r\n".toByteArray(Charsets.ISO_8859_1))
                         sink.flush()
                     }
                 }

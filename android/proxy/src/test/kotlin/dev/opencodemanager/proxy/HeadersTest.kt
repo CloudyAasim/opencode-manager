@@ -110,10 +110,30 @@ class HeadersTest {
     }
 
     @Test
-    fun `secure is dropped over loopback http and kept over https`() {
+    fun `secure is kept whatever the transport, because the prefix demands it`() {
+        // This test used to assert the opposite - that `Secure` is stripped on
+        // plain http - and it was wrong in the way that costs a session.
+        //
+        // better-auth names its session cookies `__Secure-opencode.session_token`.
+        // A `__Secure-` prefixed cookie MUST carry `Secure`, or every browser
+        // discards it, silently. So stripping `Secure` did not make the cookie
+        // work over the loopback connection; it destroyed it, and the app
+        // bounced between a 200 sign-in and a login screen with no explanation.
+        //
+        // There was also nothing to strip it for. `http://127.0.0.1` is a
+        // potentially-trustworthy origin, so a Secure cookie is accepted there.
         val cookie = "better-auth.session_token=abc; Secure; HttpOnly; SameSite=Lax"
-        assertEquals("better-auth.session_token=abc; HttpOnly; SameSite=Lax", rewriteSetCookie(listOf(cookie), false)[0])
+        assertEquals(cookie, rewriteSetCookie(listOf(cookie), false)[0])
         assertEquals(cookie, rewriteSetCookie(listOf(cookie), true)[0])
+    }
+
+    @Test
+    fun `a host prefixed session cookie keeps the attributes that make it valid`() {
+        // The production shape, verbatim from a live sign-in. Asserting on the
+        // whole string rather than on "contains Secure" means losing any other
+        // attribute is a failure too.
+        val cookie = "__Secure-opencode.session_token=abc; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax"
+        assertEquals(cookie, rewriteSetCookie(listOf(cookie), false)[0])
     }
 
     @Test

@@ -26,7 +26,12 @@ tasks.test {
     // with a hundred other classes in it is only a source of flakiness.
     maxParallelForks = 1
     testLogging {
-        events("failed")
+        // `standardOut` and `standardError` are here because the fake upstream
+        // runs on daemon threads and would otherwise fail in silence: Gradle
+        // swallows a test's output unless it is asked for, and a fixture that
+        // throws in a thread the test never joins looks exactly like a proxy
+        // that never sent anything.
+        events("failed", "standardOut", "standardError")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }

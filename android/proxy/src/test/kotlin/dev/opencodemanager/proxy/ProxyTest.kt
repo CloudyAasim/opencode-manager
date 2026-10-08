@@ -117,9 +117,19 @@ class ProxyTest {
                     val cookies = response.headerValues("set-cookie")
                     assertEquals(2, cookies.size)
                     assertEquals("better-auth.session_token=abc; Path=/; HttpOnly", cookies[0])
+                    // This assertion used to read `"ocm_pref=x; Path=/"` under
+                    // the message "Secure is dropped on loopback http, or the
+                    // cookie never works". That is exactly backwards, and it
+                    // certified a bug that cost a session: dropping `Secure`
+                    // does not make a cookie work over http, it makes the
+                    // browser throw the cookie away when the name carries the
+                    // `__Secure-` prefix - which is what better-auth uses.
+                    // A loopback origin is potentially trustworthy anyway, so
+                    // there was never anything to work around.
                     assertEquals(
-                        "Secure is dropped on loopback http, or the cookie never works",
-                        "ocm_pref=x; Path=/",
+                        "Secure must survive: `__Secure-` prefixed cookies are rejected without it," +
+                            " and a loopback origin accepts a Secure cookie as it is",
+                        "ocm_pref=x; Secure; Path=/",
                         cookies[1],
                     )
                 }
@@ -139,6 +149,53 @@ class ProxyTest {
                 openToProxy(proxy.port, simpleGet("/api/x")).use { client ->
                     val response = client.readResponse()
                     assertEquals("a=1; Secure; Path=/", response.header("set-cookie"))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the real session cookie survives the trip, prefix and all`() {
+        // This is the exact shape better-auth sends, captured from a live
+        // sign-in:
+        //
+        //   __Secure-opencode.session_token{Max-Age,Path,HttpOnly,SameSite}
+        //
+        // A `__Secure-` prefixed cookie MUST carry `Secure`; without it every
+        // browser drops it silently - no console message, no network error, the
+        // next request simply arrives unauthenticated. That produced a sign-in
+        // returning 200, a navigation to the app, a null session, and a bounce
+        // to the login screen with nothing on screen to explain it.
+        //
+        // The assertion is on the whole header rather than on "contains Secure"
+        // so that dropping any other attribute is a failure too.
+        val fromBetterAuth = "__Secure-opencode.session_token=abc123; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax"
+        FakeUpstream { socket, _ ->
+            socket.respond(
+                status = "HTTP/1.1 200 OK",
+                headers = listOf(
+                    "content-type" to "application/json",
+                    "set-cookie" to fromBetterAuth,
+                    "set-cookie" to "__Secure-opencode.session_data=xyz; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax",
+                ),
+                body = "{}",
+            )
+        }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(proxy.port, simpleGet("/api/auth/sign-in/email")).use { client ->
+                    val cookies = client.readResponse().headerValues("set-cookie")
+                    assertEquals(2, cookies.size)
+                    assertEquals(
+                        "a __Secure- cookie without Secure is discarded by the browser, and this is the cookie that keeps the person signed in",
+                        fromBetterAuth,
+                        cookies[0],
+                    )
+                    assertEquals("xyz", cookies[1].substringAfter("session_data=").substringBefore(';'))
+                    assertEquals(
+                        "the second cookie needs its prefix intact too",
+                        true,
+                        cookies[1].startsWith("__Secure-opencode.session_data=xyz"),
+                    )
                 }
             }
         }
@@ -207,6 +264,70 @@ class ProxyTest {
         }
         assertEquals(payload, seen.get().bodyText)
         assertEquals(payload.length.toString(), seen.get().header("content-length"))
+    }
+
+    @Test
+    fun `a body is described by exactly one content-length`() {
+        // The test above already asserts the header is right. This asserts it
+        // is right *once*, which is a different claim and the one nginx cares
+        // about: a request carrying the header twice is a smuggling primitive,
+        // and the upstream answers 400 without ever looking at the body.
+        //
+        // It went out twice for a whole round. The client sent one, the header
+        // copy forwarded it, and the framing wrote another - and every test
+        // still passed, because the fake upstream read the first value and
+        // moved on. The fake now refuses duplicates the way a real server does,
+        // but that is a side effect of the fixture; this states the invariant
+        // where someone changing the header copy will actually read it.
+        val payload = """{"name":"one header only"}"""
+        val seen = AtomicReference<RecordedRequest>()
+        FakeUpstream { socket, request ->
+            seen.set(request)
+            socket.respond(body = "{}")
+        }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(
+                    proxy.port,
+                    "POST /api/projects HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/json\r\n" +
+                        "content-length: ${payload.length}\r\n\r\n",
+                    payload,
+                ).use { it.readResponse() }
+            }
+        }
+        assertEquals(
+            "the proxy must not forward the client's content-length *and* write its own",
+            1,
+            seen.get().headerValues("content-length").size,
+        )
+    }
+
+    @Test
+    fun `a body with a chunked request is described by transfer-encoding, never by a length`() {
+        // The other half of the same rule: when the client frames the body with
+        // `Transfer-Encoding: chunked` there is no length to forward, and
+        // inventing one - or leaving the client's `content-length` behind -
+        // would produce a request whose declared length disagrees with how it
+        // is actually framed.
+        val seen = AtomicReference<RecordedRequest>()
+        FakeUpstream { socket, request ->
+            seen.set(request)
+            socket.respond(body = "{}")
+        }.use { upstream ->
+            runningProxy(upstream.url).use { proxy ->
+                openToProxy(
+                    proxy.port,
+                    "POST /api/projects HTTP/1.1\r\nhost: 127.0.0.1\r\ncontent-type: application/json\r\n" +
+                        "transfer-encoding: chunked\r\n\r\n",
+                    "5\r\nhello\r\n0\r\n\r\n",
+                ).use { it.readResponse() }
+            }
+        }
+        assertEquals("hello", seen.get().bodyText)
+        assertEquals(
+            "a chunked request has no length to state",
+            emptyList<String>(),
+            seen.get().headerValues("content-length"),
+        )
     }
 
     @Test
