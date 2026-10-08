@@ -443,6 +443,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       
       <div 
         ref={contentRef}
+        data-testid="file-preview-scroller"
         className={`flex min-w-0 flex-1 ${viewMode === 'edit' && !shouldVirtualize ? 'overflow-hidden' : shouldVirtualize ? '' : 'overflow-y-auto overscroll-contain'} min-h-0 overflow-x-hidden`}
       >
         {/*
@@ -461,7 +462,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
           carry their own `overflow-x-auto`, and the box above keeps
           `overflow-x-hidden` for whatever else might be wide.
         */}
-        <div className={`${shouldVirtualize ? 'h-full' : 'p-2'} min-w-0 w-full max-w-full`}>
+        <div data-testid="file-preview-body" className={`${shouldVirtualize ? 'h-full' : 'p-2'} min-w-0 w-full max-w-full`}>
           {renderContent()}
         </div>
       </div>
