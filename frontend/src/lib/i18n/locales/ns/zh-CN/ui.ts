@@ -105,6 +105,9 @@ export const ui = {
   sideDrawer: {
     close: '关闭',
   },
+  filePreview: {
+    close: '关闭预览',
+  },
   unsavedChangesDialog: {
     title: '未保存的更改',
     description: '你有未保存的编辑。',

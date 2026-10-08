@@ -445,7 +445,23 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
         ref={contentRef}
         className={`flex min-w-0 flex-1 ${viewMode === 'edit' && !shouldVirtualize ? 'overflow-hidden' : shouldVirtualize ? '' : 'overflow-y-auto overscroll-contain'} min-h-0 overflow-x-hidden`}
       >
-        <div className={`${shouldVirtualize ? 'h-full' : 'p-2'} min-w-0 w-full max-w-full overflow-x-hidden`}>
+        {/*
+          No `overflow-x-hidden` on this one, and that is not an oversight.
+
+          It is a flex item of the container above, so it is stretched to that
+          container's height. With `overflow-x: hidden` on it, CSS computes the
+          vertical overflow of the other axis to `auto`, which quietly turned
+          this element into the scroll container: the box above reported
+          `clientHeight == scrollHeight` and never scrolled, and everything
+          here scrolled instead - including the `overscroll-contain` on the
+          box above, which is there to stop a scroll from chaining into the
+          page and never applied to the element that was actually scrolling.
+
+          Horizontal overflow is still handled: the content elements inside
+          carry their own `overflow-x-auto`, and the box above keeps
+          `overflow-x-hidden` for whatever else might be wide.
+        */}
+        <div className={`${shouldVirtualize ? 'h-full' : 'p-2'} min-w-0 w-full max-w-full`}>
           {renderContent()}
         </div>
       </div>

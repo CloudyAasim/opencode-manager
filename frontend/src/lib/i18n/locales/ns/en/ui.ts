@@ -105,6 +105,9 @@ export const ui = {
   sideDrawer: {
     close: 'Close',
   },
+  filePreview: {
+    close: 'Close preview',
+  },
   unsavedChangesDialog: {
     title: 'Unsaved Changes',
     description: 'You have unsaved edits.',

@@ -158,7 +158,7 @@ export const FileTreeExplorer = memo(function FileTreeExplorer({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto py-1">
+      <div data-testid="file-tree-scroller" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">
         {error ? (
           <div className="px-3 py-6 text-center text-sm text-destructive">{error}</div>
         ) : loading && children === null ? (
