@@ -143,25 +143,41 @@ class MainActivity : Activity() {
     }
 
     /**
-     * The page has its own server preference (`ocm.serverUrl`), read at module
-     * load, and the shell has one here. Two answers to the same question is how
-     * a person ends up looking at a server's login page after typing their
-     * password into the real one. So the shell's answer is written into the
-     * page's storage, and the page reloads if that actually changed anything -
-     * which is once, on the first load or after a change, and never again.
+     * Take the server address away from the page rather than handing it over.
+     *
+     * The page is served from the proxy origin and everything it asks for is
+     * forwarded, so the only correct base for it is "the origin I was served
+     * from" - the empty string, which is what `resolveServerUrl` falls back to.
+     * Writing the upstream address into the page's own `ocm.serverUrl` made it
+     * build absolute, cross-origin URLs instead, and those are refused twice
+     * over: the proxy narrows CSP to `connect-src 'self'`, and a `SameSite=Lax`
+     * session cookie would not ride on them anyway. The result was the whole
+     * app reporting itself offline against a server it could demonstrably reach.
+     *
+     * Removing rather than setting empty is deliberate: a stored empty string
+     * and an absent key both fall through to `config.js` and `VITE_API_URL`,
+     * but only one of them also leaves nothing on screen in the settings panel
+     * suggesting the page is choosing its own server. The shell owns that
+     * choice - it has its own dialog and its own storage - and duplicating it
+     * into the page is what caused this.
+     *
+     * The page's settings panel can still write the key if someone types into
+     * it there. That fails safe rather than open: the proxy's CSP blocks the
+     * resulting cross-origin call, so the outcome is the offline page again
+     * rather than a credential sent somewhere it should not go.
      */
     private fun syncServerSelectionIntoThePage(view: WebView) {
-        val want = preferences.serverUrl ?: return
         val script = """
             (function () {
-              var want = ${jsString(want)};
-              if (localStorage.getItem('ocm.serverUrl') === want) return 'same';
-              localStorage.setItem('ocm.serverUrl', want);
-              return 'changed';
+              if (localStorage.getItem('ocm.serverUrl') === null) return 'absent';
+              localStorage.removeItem('ocm.serverUrl');
+              return 'removed';
             })()
         """.trimIndent()
         view.evaluateJavascript(script) { result ->
-            if (result == "\"changed\"") view.reload()
+            // Only when something was actually there, so a launch does not
+            // reload forever: after the removal the key is gone for good.
+            if (result == "\"removed\"") view.reload()
         }
     }
 
@@ -295,21 +311,6 @@ class MainActivity : Activity() {
         stopProxy()
         webView.destroy()
         super.onDestroy()
-    }
-
-    /** A JSON string literal, so an address can never break out of the script. */
-    private fun jsString(value: String): String {
-        val out = StringBuilder("\"")
-        for (c in value) {
-            when (c) {
-                '"' -> out.append("\\\"")
-                '\\' -> out.append("\\\\")
-                '\n' -> out.append("\\n")
-                '\r' -> out.append("\\r")
-                else -> if (c < ' ') out.append("\\u%04x".format(c.code)) else out.append(c)
-            }
-        }
-        return out.append('"').toString()
     }
 
     private companion object {
