@@ -5,9 +5,12 @@ import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -51,6 +54,14 @@ class MainActivity : Activity() {
         webView = WebView(this)
         configure(webView)
         setContentView(layout())
+        // After `setContentView`, and that ordering is not a style choice.
+        // `window.insetsController` reads like a nullable getter, but
+        // `PhoneWindow` dereferences the decor view inside it and throws
+        // NullPointerException when there is not one yet. The safe-call
+        // operator does not help, because the throw happens inside the getter
+        // rather than at the call site. `setContentView` is what builds the
+        // decor. Called one line earlier, the app dies on launch.
+        hideTheStatusBar()
 
         val saved = preferences.serverUrl
         if (saved == null) {
@@ -60,6 +71,61 @@ class MainActivity : Activity() {
         } else {
             open(saved)
         }
+    }
+
+    /**
+     * The status bar is the system's, and it is in the way.
+     *
+     * Android 15 lays every app out edge to edge, so the page underneath runs
+     * the full height of the screen and the status bar floats over the top of
+     * it - clock, signal, battery, on top of the page's own header. The theme
+     * painted the bar the same colour as the background, which Android 15
+     * ignores outright, so what looked like the app having a title bar was the
+     * system's, drawn on top and never asked to go away.
+     *
+     * Only the status bar is hidden. The navigation bar stays: on a gesture
+     * device it is the one thing that says where the app ends, and the page
+     * measures its own bottom safe-area padding against it. Hiding that too
+     * would change layout the sheet's footer depends on, in a direction
+     * nothing on this machine is able to test.
+     *
+     * Swiping from the top edge brings the bar back for a moment. That is the
+     * platform refusing to let it become unreachable, not a setting of ours.
+     *
+     * The platform API rather than `WindowInsetsControllerCompat`, because this
+     * app carries no AndroidX dependency and a one-line system-bar request is
+     * not worth a support library.
+     *
+     * Must be called once the decor view exists - see the note at the call
+     * site in `onCreate`.
+     */
+    private fun hideTheStatusBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.apply {
+                hide(WindowInsets.Type.statusBars())
+                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        }
+    }
+
+    /**
+     * The bars come back on their own, so the request has to be re-issued.
+     *
+     * Android restores them whenever the window regains focus - after the
+     * notification shade, after a permission dialog, after the launcher. A
+     * request made once in `onCreate` survives none of those, and an app that
+     * hides its status bar and then shows it halfway through a session reads
+     * as broken rather than as intentional.
+     */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideTheStatusBar()
     }
 
     private fun layout(): View {
