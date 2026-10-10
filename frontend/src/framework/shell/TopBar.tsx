@@ -56,7 +56,22 @@ export function TopBar() {
   }
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border bg-card px-3">
+    <header className="flex min-h-11 shrink-0 items-center gap-2 border-b border-border bg-card px-3 pt-safe">
+      {/* `pt-safe`, and `min-h-11` rather than `h-11`.
+        *
+        * This is the one box that touches the top edge of the screen, so this is
+        * where the top safe-area inset belongs: on a phone with a punch hole it
+        * is 52px, and without it the title sat behind the hole. It used to be on
+        * `components/ui/page-header.tsx` instead - one layer down, under this
+        * bar - which did not move anything out of the hole and added 52px of
+        * blank between the two headers on every screen.
+        *
+        * `min-h-11` rather than `h-11` because the two are not compatible: a
+        * fixed 44px height cannot also hold 52px of padding, and the inset would
+        * be squeezed out of the content box. With a minimum, a phone without a
+        * notch still gets 44px and a phone with one gets 44px of bar below the
+        * inset.
+        */}
       <span className="shrink-0 text-sm font-semibold tracking-tight">OpenCode Manager</span>
       <RepoSwitcher />
 
