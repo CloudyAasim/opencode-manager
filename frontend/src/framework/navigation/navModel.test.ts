@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { buildMoreItems, buildNavModel, isNavItemActive } from './navModel'
+import {
+  buildGlobalMoreItems,
+  buildNavModel,
+  buildProjectToolItems,
+  isNavItemActive,
+} from './navModel'
 
 const GLOBAL_KEYS = ['projects', 'assistant', 'files', 'schedules', 'settings', 'logout']
 const TOOL_KEYS = ['mcp', 'skills', 'source-control', 'schedules', 'reset-permissions']
 
-function keys(items: ReturnType<typeof buildMoreItems>) {
+function keys(items: ReturnType<typeof buildGlobalMoreItems>) {
   return items.map((item) => item.key)
 }
 
@@ -38,36 +43,64 @@ describe('buildNavModel', () => {
   })
 })
 
-describe('buildMoreItems', () => {
-  it('returns only the global set outside a project', () => {
-    expect(keys(buildMoreItems('/'))).toEqual(GLOBAL_KEYS)
-    expect(keys(buildMoreItems('/schedules'))).toEqual(GLOBAL_KEYS)
-    expect(keys(buildMoreItems('/unknown/path'))).toEqual(GLOBAL_KEYS)
+describe('the two phone drawers', () => {
+  it('the global drawer lists only places you can go', () => {
+    // It no longer takes a pathname at all. It used to, and used it to decide
+    // whether to prepend the project's tools - which is how five rows of
+    // project furniture ended up inside the app's navigation menu.
+    expect(keys(buildGlobalMoreItems())).toEqual(GLOBAL_KEYS)
   })
 
-  it('adds project tooling inside a project', () => {
+  it('the project drawer lists only what you can do to this project', () => {
     for (const path of ['/repos/42', '/repos/42/sessions/abc', '/repos/42/assistant', '/assistant']) {
-      // the project already has its own Schedules, so the global one steps aside
-      const withoutGlobalSchedules = GLOBAL_KEYS.filter((key) => key !== 'schedules')
-      expect(keys(buildMoreItems(path))).toEqual([...TOOL_KEYS, ...withoutGlobalSchedules])
+      expect(keys(buildProjectToolItems(path)), path).toEqual(TOOL_KEYS)
     }
   })
 
-  it('never shows two rows both reading Schedules', () => {
-    for (const path of ['/', '/repos/42', '/repos/42/sessions/abc', '/assistant', '/unknown']) {
-      const labels = buildMoreItems(path).map((item) => item.labelKey ?? item.label)
-      expect(
-        labels.filter((label) => label === 'navigation.schedules'),
-        'two Schedules rows in ' + path,
-      ).toHaveLength(1)
+  it('the project drawer is empty away from a project', () => {
+    for (const path of ['/', '/schedules', '/files', '/unknown/path']) {
+      expect(buildProjectToolItems(path), path).toEqual([])
     }
+  })
+
+  it('the two drawers do not both offer the same destination', () => {
+    // The regression this split exists for. On a session page the global menu
+    // showed MCP, Skills, Source Control, Schedules and Reset Permissions above
+    // Projects, Assistant, Settings and Logout.
+    const global = buildGlobalMoreItems()
+    const project = buildProjectToolItems('/repos/42/sessions/abc')
+
+    // `schedules` is allowed to appear in both, and is the one key that does.
+    // The two rows are different places - the global one is /schedules, the
+    // project's is /repos/42/schedules - and they only ever collided because
+    // the old union put them next to each other in one list. Anything else
+    // appearing in both is the bug coming back.
+    const sharedKeys = global.map((item) => item.key).filter((key) => project.some((item) => item.key === key))
+    expect(sharedKeys).toEqual(['schedules'])
+    for (const key of sharedKeys) {
+      expect(global.find((item) => item.key === key)?.to).not.toBe(
+        project.find((item) => item.key === key)?.to,
+      )
+    }
+  })
+
+  it('each drawer offers Schedules exactly once, and not the same one', () => {
+    const count = (items: ReturnType<typeof buildGlobalMoreItems>) =>
+      items.filter((item) => (item.labelKey ?? item.label) === 'navigation.schedules')
+
+    const global = count(buildGlobalMoreItems())
+    const project = count(buildProjectToolItems('/repos/42/sessions/abc'))
+    expect(global).toHaveLength(1)
+    expect(project).toHaveLength(1)
+    expect(global[0]?.to).toBe('/schedules')
+    expect(project[0]?.to).toBe('/repos/42/schedules')
   })
 
   it('links schedules to the current project', () => {
-    const schedules = buildMoreItems('/repos/42').find((item) => item.key === 'schedules')
+    const schedules = buildProjectToolItems('/repos/42').find((item) => item.key === 'schedules')
     expect(schedules?.to).toBe('/repos/42/schedules')
 
-    const assistantSchedules = buildMoreItems('/assistant').find((item) => item.key === 'schedules')
+    const assistantSchedules = buildProjectToolItems('/assistant').find((item) => item.key === 'schedules')
     expect(assistantSchedules?.to).toBe('/repos/0/schedules')
   })
 
@@ -96,7 +129,7 @@ describe('buildMoreItems', () => {
   })
 
   it('marks reset permissions as dangerous', () => {
-    const reset = buildMoreItems('/repos/42').find((item) => item.key === 'reset-permissions')
+    const reset = buildProjectToolItems('/repos/42').find((item) => item.key === 'reset-permissions')
     expect(reset?.danger).toBe(true)
   })
 })

@@ -31,6 +31,13 @@ interface SkillLibraryListProps {
 
 const getSkillKey = (skill: SkillFileInfo) => `${skill.scope}-${skill.repoId ?? 'global'}-${skill.name}`
 
+/**
+ * A module-level constant rather than a fresh `[]` per render: it is the
+ * dependency of both memos below, and a new array each render would make every
+ * memo miss on every render for no reason.
+ */
+const EMPTY: readonly SkillFileInfo[] = []
+
 const matchesSkillSearch = (skill: SkillFileInfo, search: string) => {
   const query = search.trim().toLowerCase()
   if (!query) return true
@@ -67,20 +74,31 @@ export function SkillLibraryList({
     global: 'misc.skills.filterGlobal',
   }
 
+  // `data ?? []` looks like a guard and is not one. `??` only catches null and
+  // undefined; an object, a string or a number from the server sails straight
+  // through, and this component's first array call is a `.filter`, so it threw
+  // `n.filter is not a function` and the error boundary ate the page. This is
+  // the first `.filter` to run when the skills list opens, which is why the
+  // crash always presented as the Skills screen.
+  //
+  // `listManagedSkills` now rejects a non-array before it gets this far. This
+  // is the second line of defence, and it is here because the cost of being
+  // wrong is a dead page rather than a wrong count.
+  const skills = Array.isArray(data) ? data : EMPTY
+
   const counts = useMemo(() => {
-    const skills = data ?? []
     return {
       all: skills.length,
       project: skills.filter((skill) => skill.scope === 'project').length,
       global: skills.filter((skill) => skill.scope === 'global').length,
     }
-  }, [data])
+  }, [skills])
 
   const filteredSkills = useMemo(() => {
-    return (data ?? [])
+    return skills
       .filter((skill) => filter === 'all' || skill.scope === filter)
       .filter((skill) => matchesSkillSearch(skill, search))
-  }, [data, filter, search])
+  }, [skills, filter, search])
 
   return (
     <div className="space-y-3">

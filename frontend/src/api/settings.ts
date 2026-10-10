@@ -212,7 +212,26 @@ export const settingsApi = {
     if (repoId) searchParams.set('repoId', String(repoId))
     if (directory) searchParams.set('directory', directory)
     const query = searchParams.toString() ? `?${searchParams.toString()}` : ''
-    return fetchWrapper(`${API_BASE_URL}/api/settings/skills${query}`)
+    const payload: unknown = await fetchWrapper(`${API_BASE_URL}/api/settings/skills${query}`)
+    // `fetchWrapper` is generic and defaults to `unknown`; returning it from a
+    // function annotated `Promise<SkillFileInfo[]>` asserted the shape without
+    // checking it, and nothing between the socket and this return value did
+    // either. A payload that is not an array used to travel straight into
+    // SkillLibraryList, where `data ?? []` let it through - `??` catches null
+    // and undefined and nothing else, and an object is neither - and the first
+    // `.filter` on it threw, taking the whole page to the error boundary.
+    //
+    // Failing here instead means the dialog shows its own error state and the
+    // payload is logged, rather than the app dying with `n.filter is not a
+    // function` and no clue what the server actually sent.
+    if (!Array.isArray(payload)) {
+      console.warn(
+        '[settings] /api/settings/skills did not return an array',
+        { repoId, directory, received: typeof payload, payload },
+      )
+      throw new FetchError('Unexpected skills response', 200, 'INVALID_SHAPE')
+    }
+    return payload as SkillFileInfo[]
   },
 
   getSkill: async (name: string, scope: SkillScope, repoId?: number): Promise<SkillFileInfo> => {

@@ -7,8 +7,8 @@ vi.mock('@/hooks/useMobileSheets', () => ({
   useMobileSheets: vi.fn(),
 }))
 vi.mock('@/features/navigation/MoreDrawer', () => ({
-  MoreDrawer: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="more-drawer">MoreDrawer</div> : null,
+  MoreDrawer: ({ isOpen, scope }: { isOpen: boolean; scope: string }) =>
+    isOpen ? <div data-testid={`more-drawer-${scope}`}>{scope}</div> : null,
 }))
 
 import { render, screen } from '@testing-library/react'
@@ -47,7 +47,7 @@ describe('MobileSheetHost', () => {
       </MemoryRouter>,
     )
     // lazy(), so it lands asynchronously
-    expect(await screen.findByTestId('more-drawer')).toBeInTheDocument()
+    expect(await screen.findByTestId('more-drawer-global')).toBeInTheDocument()
   })
 
   it('renders nothing on a wide screen, where that button is not shown', () => {
@@ -98,7 +98,28 @@ describe('MobileSheetHost', () => {
         <MobileSheetHost />
       </MemoryRouter>,
     )
-    expect(await screen.findByTestId('more-drawer')).toBeInTheDocument()
+    expect(await screen.findByTestId('more-drawer-global')).toBeInTheDocument()
+    expect(screen.queryByTestId('more-drawer-project')).not.toBeInTheDocument()
+  })
+
+  /**
+   * The two drawers used to be one. `mobileTab=project` is what the session
+   * page's own `⋮` sets, and it has to reach a drawer that answers a different
+   * question - otherwise that button is a duplicate of the hamburger.
+   */
+  it('opens the project drawer, and only it, on mobileTab=project', async () => {
+    vi.mocked(useMobileSheets).mockReturnValue({
+      openSheet: 'project',
+      open: vi.fn(),
+      close: vi.fn(),
+    })
+    render(
+      <MemoryRouter initialEntries={['/repos/1/sessions/s1?mobileTab=project']}>
+        <MobileSheetHost />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByTestId('more-drawer-project')).toBeInTheDocument()
+    expect(screen.queryByTestId('more-drawer-global')).not.toBeInTheDocument()
   })
 
   it('closes the drawer when onClose is called', async () => {
@@ -113,6 +134,6 @@ describe('MobileSheetHost', () => {
         <MobileSheetHost />
       </MemoryRouter>,
     )
-    expect(await screen.findByTestId('more-drawer')).toBeInTheDocument()
+    expect(await screen.findByTestId('more-drawer-global')).toBeInTheDocument()
   })
 })

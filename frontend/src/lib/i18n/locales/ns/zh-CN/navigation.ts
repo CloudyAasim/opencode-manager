@@ -12,6 +12,9 @@ export const navigation = {
   newRepo: '新建项目',
   repos: '项目',
   more: '更多',
+  // 会话页的 ⋮ 不是顶栏的汉堡：同一个图标、同一个词、两份不同的列表，
+  // 所以需要两个名字。
+  projectMore: '项目操作',
   detail: '详情',
   sessions: '会话',
   close: '关闭',

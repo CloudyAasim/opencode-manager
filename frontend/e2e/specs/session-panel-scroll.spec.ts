@@ -44,6 +44,18 @@ const DRAG_STEP_MS = 8
 const FLICK = 700
 const FLICK_BUDGET = 30
 
+// Playwright's default per-test ceiling is 30s, and this test is the one thing
+// in the suite that is slow by construction: roughly 17 rounds, each of which
+// is a fresh CDP session plus eight touch events. On an idle box that is a few
+// seconds. Run with the suite's eight workers on a loaded machine, each CDP
+// round trip costs several times more and the run crossed 30s - so it failed on
+// wall clock with `reached` still false, which says nothing about the panel.
+//
+// Giving this test its own ceiling is not lowering the bar: the assertion below
+// is unchanged, and a panel that genuinely does not scroll to the end still
+// fails, just later.
+const REACH_TIMEOUT_MS = 120_000
+
 /**
  * A finger on the listing, dispatched through CDP.
  *
@@ -134,6 +146,7 @@ test.describe('the file tree in a session panel', () => {
   })
 
   test('the whole listing in the session panel stays reachable by touch', async ({ page }) => {
+    test.setTimeout(REACH_TIMEOUT_MS)
     const scroller = await openSessionPanelFiles(page)
     const lastRow = page.getByText('file-399.ts')
 

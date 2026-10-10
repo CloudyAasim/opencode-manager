@@ -12,6 +12,9 @@ export const navigation = {
   newRepo: 'New Project',
   repos: 'Projects',
   more: 'More',
+  // The `⋮` on a session page is not the top bar's hamburger. Same glyph,
+  // same word, two different lists, so they need two names.
+  projectMore: 'Project actions',
   detail: 'Detail',
   sessions: 'Sessions',
   close: 'Close',

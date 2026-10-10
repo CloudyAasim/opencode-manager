@@ -94,20 +94,37 @@ describe('移动端抽屉：每张都要有入口，入口不能无限膨胀', (
    * The rule that survives: two entry points, never three.
    */
   it('打开同一个抽屉的按钮不多不少', () => {
-    const buttonCallers = production
-      .filter((source) =>
-        /<(Button|button)\b[\s\S]{0,400}?onClick=\{\(\) => open\('more'\)\}/.test(source.text),
-      )
-      .map((source) => source.rel)
-      .sort()
+    // Grouped by key rather than filtered for one key. There are two drawers
+    // now - the top bar's global one and the session page's project one - and
+    // they have different owners, so a check that only looks for 'more' would
+    // have passed on a build that dropped the session page's button entirely.
+    const byKey = new Map<string, string[]>()
+    for (const source of production) {
+      const matches = source.text.matchAll(/<(Button|button)\b[\s\S]{0,400}?onClick=\{\(\) => open\('([a-z]+)'\)\}/g)
+      for (const match of matches) {
+        const key = match[2]!
+        const callers = byKey.get(key) ?? []
+        callers.push(source.rel)
+        byKey.set(key, callers)
+      }
+    }
 
-    expect(buttonCallers, `抽屉入口变成了 ${buttonCallers.join(', ')}`).toContain(TOPBAR)
-    expect(buttonCallers.length, '抽屉入口在膨胀').toBeLessThanOrEqual(2)
-    // The button is defined in its own component and mounted by SessionDetail,
-    // so the caller looks for the file that actually owns the click handler.
+    // The bar renders on every screen, so the global drawer is reachable from
+    // anywhere without scrolling back to the top.
+    expect(byKey.get('more') ?? [], '顶栏没有打开全局抽屉的入口').toContain(TOPBAR)
+
+    // The session page keeps its own way out. It used to be a second button for
+    // the same drawer; it is now a second drawer scoped to the project, which is
+    // the point of the split - a phone user who has scrolled a long
+    // conversation still needs an exit that is not the bar at the very top.
     expect(
-      buttonCallers.some((rel) => rel.endsWith('navigation/SessionMoreButton.tsx')),
+      (byKey.get('project') ?? []).some((rel) => rel.endsWith('navigation/SessionMoreButton.tsx')),
       '会话页没有自己的抽屉入口了，手机上滚长了就出不去了',
     ).toBe(true)
+
+    // The rule that survives: two entry points per drawer, never three.
+    for (const [key, callers] of byKey) {
+      expect(callers.length, `抽屉 ${key} 的入口在膨胀：${callers.join(', ')}`).toBeLessThanOrEqual(2)
+    }
   })
 })

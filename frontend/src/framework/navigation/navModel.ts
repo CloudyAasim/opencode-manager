@@ -120,13 +120,22 @@ export function buildProjectToolItems(pathname: string): NavItem[] {
   ]
 }
 
-export function buildMoreItems(pathname: string, options: NavModelOptions = {}): NavItem[] {
-  const tools = buildProjectToolItems(pathname)
-  // Inside a project the repo's Schedules is the one that matters. Showing the
-  // global one next to it produced two rows both reading "Schedules".
-  const insideProject = tools.some((item) => item.key === 'schedules')
-  const globalItems = buildNavModel(options).items.filter(
-    (item) => !(insideProject && item.key === 'schedules'),
-  )
-  return [...tools, ...globalItems]
+/**
+ * The two drawers a phone can open, kept apart on purpose.
+ *
+ * The hamburger in the top bar and the `⋮` on a session page are different
+ * buttons asking different questions - "where do I go" and "what can I do to
+ * this project" - and they used to open one drawer that answered both. On a
+ * session page that meant MCP, Skills, Source Control, Schedules and Reset
+ * Permissions stacked up inside the global navigation menu, five rows of
+ * project furniture in a list that also held Projects, Assistant, Settings and
+ * Logout.
+ *
+ * So the list is now chosen by intent instead of concatenated. Nothing is lost:
+ * `buildProjectToolItems` is still reachable from the page you are on, one tap
+ * away on the `⋮` that was already there and already said "more" about *this
+ * session* rather than about the app.
+ */
+export function buildGlobalMoreItems(options: NavModelOptions = {}): NavItem[] {
+  return buildNavModel(options).items
 }

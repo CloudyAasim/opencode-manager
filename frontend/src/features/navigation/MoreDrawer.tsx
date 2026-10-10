@@ -9,17 +9,33 @@ import { useQuery } from '@tanstack/react-query'
 import { getRepo } from '@/api/repos'
 import { useRefreshOnOpen } from '@/hooks/useRefreshOnOpen'
 import { SideDrawer, SideDrawerContent } from '@/components/ui/side-drawer'
-import { buildMoreItems } from '@/framework/navigation/navModel'
+import { buildGlobalMoreItems, buildProjectToolItems, type NavItem } from '@/framework/navigation/navModel'
 import { useSwipeBack } from '@/hooks/useMobile'
 import { getRepoDisplayName } from '@/lib/utils'
 import { getPathWithReturnTo, isAssistantPath } from '@/lib/navigation'
 import { useI18n } from '@/lib/i18n'
+
+/**
+ * Which question this drawer is answering.
+ *
+ * `global` is the top bar's hamburger and lists where you can go.
+ * `project` is the `⋮` on a session page and lists what you can do to the
+ * repository you are looking at.
+ *
+ * They used to be one list built by concatenating both, which on a session page
+ * put MCP, Skills, Source Control, Schedules and Reset Permissions inside the
+ * global menu next to Projects, Assistant, Settings and Logout. The two buttons
+ * said different things, so the drawer behind them should too.
+ */
+export type MoreDrawerScope = 'global' | 'project'
+
 interface MoreDrawerProps {
   isOpen: boolean
   onClose: () => void
+  scope: MoreDrawerScope
 }
 
-export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
+export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { id } = useParams<{ id: string }>()
@@ -71,7 +87,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
     }
   }
 
-  const handleItemClick = (item: ReturnType<typeof buildMoreItems>[0]) => {
+  const handleItemClick = (item: NavItem) => {
     if (item.to) {
       const to = item.key === 'schedules'
         ? getPathWithReturnTo(item.to, `${location.pathname}${location.search}`)
@@ -85,7 +101,9 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
     }
   }
 
-  const items = buildMoreItems(location.pathname, { isAdmin: user?.role === 'admin', terminalAllowed })
+  const items = scope === 'project'
+    ? buildProjectToolItems(location.pathname)
+    : buildGlobalMoreItems({ isAdmin: user?.role === 'admin', terminalAllowed })
 
   const opencodeVersion = health?.opencodeVersion
   const managerVersion = health?.opencodeManagerVersion
@@ -111,7 +129,7 @@ export function MoreDrawer({ isOpen, onClose }: MoreDrawerProps) {
               <X className="h-5 w-5" />
             </button>
           </div>
-          {(repoDisplayName || currentBranch) && (
+          {scope === 'project' && (repoDisplayName || currentBranch) && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {repoDisplayName && (
                 <span className="font-medium text-primary">{repoDisplayName}</span>

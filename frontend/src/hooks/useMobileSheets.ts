@@ -2,13 +2,20 @@ import { useCallback, useMemo } from 'react'
 import { useUrlParams } from './useUrlParams'
 
 /**
- * Only 'more' has ever had an entry point. The other three keys were still
- * declared here and still rendered by MobileSheetHost, so a hand-typed
- * ?mobileTab=repos could open a drawer no button in the app could reach.
- * They are deleted rather than kept "in case": the components behind them
- * have no producer, and git keeps them if they ever come back.
+ * 'more' is the top bar's hamburger: global navigation.
+ * 'project' is the `⋮` on a session page: what you can do to this project.
+ *
+ * They are separate keys rather than one key with a remembered "where did this
+ * come from", because the drawer is deep-linkable through `?mobileTab=`. A
+ * shared key meant a hand-typed or stale URL opened whichever list was correct
+ * for the path, which is the bug this split removes.
+ *
+ * The keys are validated on read. An unrecognised value opens nothing, so a
+ * stale `?mobileTab=` cannot resurrect a drawer nothing points at.
  */
-type MobileSheetKey = 'more'
+type MobileSheetKey = 'more' | 'project'
+
+const SHEET_KEYS: readonly MobileSheetKey[] = ['more', 'project']
 
 interface UseMobileSheetsReturn {
   openSheet: MobileSheetKey | null
@@ -21,7 +28,7 @@ export function useMobileSheets(): UseMobileSheetsReturn {
 
   const openSheet = useMemo<MobileSheetKey | null>(() => {
     const v = searchParams.get('mobileTab')
-    return v === 'more' ? v : null
+    return SHEET_KEYS.find((key) => key === v) ?? null
   }, [searchParams])
 
   const open = useCallback((key: MobileSheetKey) => {

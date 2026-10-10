@@ -74,15 +74,17 @@ const renderMoreDrawer = ({
   initialEntry = '/',
   routePath = '*',
   onClose = vi.fn(),
+  scope = 'global',
 }: {
   initialEntry?: string
   routePath?: string
   onClose?: () => void
+  scope?: 'global' | 'project'
 } = {}) => render(
   <QueryClientProvider client={createQueryClient()}>
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path={routePath} element={<MoreDrawer isOpen onClose={onClose} />} />
+        <Route path={routePath} element={<MoreDrawer isOpen onClose={onClose} scope={scope} />} />
       </Routes>
     </MemoryRouter>
   </QueryClientProvider>,
@@ -197,7 +199,7 @@ describe('MoreDrawer', () => {
     mockAuth()
     mockServerHealth()
     const handleClose = vi.fn()
-    renderMoreDrawer({ initialEntry: '/repos/1/assistant', routePath: '/repos/:id/assistant', onClose: handleClose })
+    renderMoreDrawer({ initialEntry: '/repos/1/assistant', routePath: '/repos/:id/assistant', onClose: handleClose, scope: 'project' })
 
     expect(screen.getAllByText('Assistant').length).toBeGreaterThan(0)
     expect(screen.queryByText('wrong-repo')).not.toBeInTheDocument()
@@ -207,7 +209,7 @@ describe('MoreDrawer', () => {
     mockAuth()
     mockServerHealth()
     const handleClose = vi.fn()
-    renderMoreDrawer({ initialEntry: '/assistant', routePath: '/assistant', onClose: handleClose })
+    renderMoreDrawer({ initialEntry: '/assistant', routePath: '/assistant', onClose: handleClose, scope: 'project' })
 
     expect(screen.getAllByText('Assistant').length).toBeGreaterThan(0)
     expect(screen.queryByText('wrong-repo')).not.toBeInTheDocument()
@@ -218,11 +220,53 @@ describe('MoreDrawer', () => {
     vi.mocked(useNavigate).mockReturnValue(navigateMock)
     mockAuth()
     mockServerHealth()
-    renderMoreDrawer({ initialEntry: '/repos/1/sessions/session-1?assistant=1', routePath: '/repos/:id/sessions/:sessionId' })
+    renderMoreDrawer({ initialEntry: '/repos/1/sessions/session-1?assistant=1', routePath: '/repos/:id/sessions/:sessionId', scope: 'project' })
 
     fireEvent.click(screen.getByText('Schedules'))
 
     expect(navigateMock).toHaveBeenCalledWith('/repos/1/schedules?returnTo=%2Frepos%2F1%2Fsessions%2Fsession-1%3Fassistant%3D1')
+  })
+
+  /**
+   * The report this split answers: on a phone, the menu showed MCP, Skills,
+   * Source Control, Schedules and Reset Permissions - five rows belonging to
+   * the project - stacked above Projects, Assistant, Settings and Logout.
+   *
+   * Both halves are asserted on a session route, because that is where the two
+   * used to be concatenated into one list. Asserting only the global half would
+   * pass on a build that simply dropped the project tools.
+   */
+  it('keeps the project tools out of the global drawer, even on a session route', () => {
+    mockAuth()
+    mockServerHealth()
+    renderMoreDrawer({
+      initialEntry: '/repos/1/sessions/session-1',
+      routePath: '/repos/:id/sessions/:sessionId',
+      scope: 'global',
+    })
+
+    for (const label of ['MCP', 'Skills', 'Source Control', 'Reset Permissions']) {
+      expect(screen.queryByText(label), label + ' leaked into the global menu').not.toBeInTheDocument()
+    }
+    expect(screen.getByText('Settings')).toBeInTheDocument()
+    expect(screen.getByText('Projects')).toBeInTheDocument()
+  })
+
+  it('keeps the global navigation out of the project drawer', () => {
+    mockAuth()
+    mockServerHealth()
+    renderMoreDrawer({
+      initialEntry: '/repos/1/sessions/session-1',
+      routePath: '/repos/:id/sessions/:sessionId',
+      scope: 'project',
+    })
+
+    for (const label of ['Skills', 'MCP', 'Source Control', 'Reset Permissions', 'Schedules']) {
+      expect(screen.getByText(label), label + ' missing from the project menu').toBeInTheDocument()
+    }
+    for (const label of ['Settings', 'Logout', 'Files']) {
+      expect(screen.queryByText(label), label + ' leaked into the project menu').not.toBeInTheDocument()
+    }
   })
 
 })
