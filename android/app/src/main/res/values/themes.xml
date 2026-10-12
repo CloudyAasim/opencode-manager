@@ -2,9 +2,22 @@
 <resources>
     <!--
       A no-action-bar theme, from the platform rather than from a support
-      library. The app is one WebView, and a system bar floating over it would
-      put the page's own header under an app title bar saying the same thing
-      twice.
+      library. The app is one WebView and it draws its own header, so it must not
+      also be handed an ActionBar saying the same thing twice.
+
+      That used to be the whole justification for hiding the system's status bar
+      as well - the reasoning being that a bar floating over the page would sit on
+      top of the page's own header. It did, and the app hid it rather than making
+      room.
+
+      The page makes room now. `framework/shell/TopBar.tsx` carries `pt-safe`, so
+      the box at the top of the screen reserves `env(safe-area-inset-top)` and the
+      system bar lands in space that belongs to it. The status bar is visible.
+
+      `android:statusBarColor` is kept but not relied on: Android 15 lays every
+      app out edge to edge and ignores this attribute outright. It does no harm
+      on older releases, where the bar is opaque, and it is not what makes the
+      bar look right on the current one.
     -->
     <style name="Theme.OpenCodeManager" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/ocm_background</item>
