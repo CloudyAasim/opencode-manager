@@ -45,11 +45,11 @@
 
 ### Architecture gates
 
-`frontend/src/test/architecture/` (21 suites) and `backend/test/architecture/`
-are executable rules, not tests of behaviour. They encode decisions that are
-easy to state and easy to forget: one component per panel state, one face for
-the navigation, one timeout budget per route, one place that knows the layer
-names. Run them on their own:
+`frontend/src/test/architecture/` and `backend/test/architecture/` hold the
+executable rules - not tests of behaviour. They encode decisions that are easy
+to state and easy to forget: one component per panel state, one face for the
+navigation, one timeout budget per route, one place that knows the layer names.
+Run them on their own:
 
 ```bash
 pnpm --filter frontend exec vitest run src/test/architecture

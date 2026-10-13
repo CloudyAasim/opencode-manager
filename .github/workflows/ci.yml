@@ -79,6 +79,46 @@ jobs:
       - name: Run type check
         run: pnpm typecheck
 
+  build:
+    name: Build
+    needs: check-ready
+    if: needs.check-ready.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Nothing else in this workflow proves the app can be built. Type check
+      # reads the sources without emitting anything, and the test suites import
+      # modules directly, so a bundler-level break - a bad `import.meta.env`
+      # reference, a dynamic import that only resolves under a bundler, a Vite
+      # plugin that throws - reaches `main` with every job green.
+      #
+      # It is not caught on the way out either: `deploy.yml` runs on every push
+      # to main independently of this workflow's conclusion, so the failure
+      # surfaces as a failed deploy rather than as a failed commit.
+      - name: Build
+        run: pnpm build
+
+      - name: Confirm the artefact exists
+        run: |
+          test -f frontend/dist/index.html || { echo "frontend/dist/index.html was not produced"; exit 1; }
+          test -f backend/dist/index.js || { echo "backend/dist/index.js was not produced"; exit 1; }
+          ls frontend/dist/assets/main-*.js
+
   test:
     name: Test
     needs: check-ready

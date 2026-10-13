@@ -10,22 +10,35 @@ const PRECACHE_ROOT_FILES = [
   "favicon.svg",
   "icons/icon-192x192.png",
 ];
-const ROUTE_CHUNK_NAMES = new Set([
-  "Login",
-  "Register",
-  "Setup",
-  "Repos",
-  "RepoDetail",
-  "SessionDetail",
-  "Files",
-  "Settings",
-  "Schedules",
-  "GlobalSchedules",
-  "Terminal",
-  "AssistantRedirect",
-]);
 const SMALL_ASSET_LIMIT_BYTES = 128 * 1024;
 const ENTRY_ASSET_LIMIT_BYTES = 400 * 1024;
+
+export const LAZY_ROUTE_PAGE = /import\(['"]\.\/pages\/([A-Za-z0-9_]+)['"]\)/g;
+
+/**
+ * Which chunks are lazy route pages is a fact about `src/routes.tsx`, so it is
+ * read from there. A hand-written copy of the list is a second source of truth
+ * for something the router already states, and it drifts the first time a route
+ * is renamed: the chunk then stops being recognised and quietly falls through
+ * to the size heuristics below. It sits under the small-asset limit today, so
+ * nothing looks broken; the day it grows past 128 KB it becomes "shell" and is
+ * precached during install, which is exactly the bandwidth the deferred tier
+ * exists to hold back.
+ */
+export async function readRouteChunkNames(root: string): Promise<Set<string>> {
+  const routesPath = path.join(root, "src/routes.tsx");
+  const source = await readFile(routesPath, "utf-8");
+  const names = new Set(
+    Array.from(source.matchAll(LAZY_ROUTE_PAGE), (match) => match[1])
+  );
+  if (names.size === 0) {
+    throw new Error(
+      `[sw-precache-manifest] found no lazy route pages in ${routesPath}; ` +
+        `every route chunk would fall through to the size heuristics`
+    );
+  }
+  return names;
+}
 
 async function collectFiles(dir: string, base = dir): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -45,14 +58,17 @@ function toUrl(relativePath: string): string {
 
 export function swPrecacheManifest(): Plugin {
   let outDir = "";
+  let root = "";
 
   return {
     name: "sw-precache-manifest",
     apply: "build",
     configResolved(config) {
+      root = config.root;
       outDir = path.resolve(config.root, config.build.outDir);
     },
     async closeBundle() {
+      const routeChunkNames = await readRouteChunkNames(root);
       const swPath = path.join(outDir, SW_FILENAME);
       let swSource: string;
       try {
@@ -84,7 +100,7 @@ export function swPrecacheManifest(): Plugin {
         const baseName = path.basename(relativePath);
         if (!baseName.endsWith(".js")) return false;
         const chunkName = baseName.split("-")[0];
-        if (ROUTE_CHUNK_NAMES.has(chunkName)) return "deferred";
+        if (routeChunkNames.has(chunkName)) return "deferred";
         const info = await stat(path.join(outDir, relativePath));
         return info.size <= SMALL_ASSET_LIMIT_BYTES ? "deferred" : false;
       };
