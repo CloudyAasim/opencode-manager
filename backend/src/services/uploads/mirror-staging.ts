@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'child_process'
+import { childEnvFor } from '../../utils/child-env'
 import { ValidationError } from '../../utils/errors'
 import { existsSync, mkdtempSync, readdirSync, statSync } from 'fs'
 import * as fsp from 'fs/promises'
@@ -204,6 +205,7 @@ function listIgnoredPaths(dir: string): string[] {
   const res = spawnSync('git', ['ls-files', '--others', '--ignored', '--exclude-standard', '--directory'], {
     cwd: dir,
     encoding: 'utf-8',
+    env: childEnvFor('git'),
   })
   if (res.status !== 0) return []
   return (res.stdout ?? '').split('\n').filter((line) => line.length > 0)

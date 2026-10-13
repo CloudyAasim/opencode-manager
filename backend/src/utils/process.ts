@@ -1,4 +1,5 @@
 import { spawn, spawnSync, type ChildProcess } from 'child_process'
+import { childEnvFor } from './child-env'
 import { logger } from './logger'
 
 interface ExecuteCommandOptions {
@@ -28,7 +29,7 @@ export async function executeCommand(
   return new Promise((resolve, reject) => {
     const [command, ...cmdArgs] = args
     
-    const effectiveEnv = { ...process.env, ...options.env }
+    const effectiveEnv = childEnvFor(command || '', options.env)
     
     if (command === 'git') {
       logger.info(`executeCommand: ${args.join(' ')}`)
@@ -115,7 +116,7 @@ export function execWithTimeout(
     encoding: 'utf8',
     timeout: timeoutMs,
     killSignal: 'SIGKILL',
-    env: env ? { ...process.env, ...env } : undefined
+    env: childEnvFor(args[0], env)
   })
 
   if (result.signal === 'SIGKILL' || result.error?.message?.includes('TIMEOUT')) {
@@ -139,7 +140,7 @@ export function spawnWithTimeout(args: string[], timeoutMs: number, env?: Record
     encoding: 'utf8',
     timeout: timeoutMs,
     killSignal: 'SIGKILL',
-    env: env ? { ...process.env, ...env } : undefined
+    env: childEnvFor(args[0]!, env)
   })
 
   if (result.signal === 'SIGKILL' || result.error?.message?.includes('TIMEOUT')) {

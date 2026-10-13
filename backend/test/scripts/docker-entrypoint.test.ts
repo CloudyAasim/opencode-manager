@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { spawnSync } from 'child_process'
-import { mkdirSync, writeFileSync, rmSync, chmodSync, existsSync, readFileSync } from 'fs'
+import { mkdirSync, writeFileSync, rmSync, chmodSync, existsSync, readFileSync, symlinkSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { repoRoot } from '../helpers/repo-root'
@@ -163,7 +163,9 @@ describe('install_opencode', () => {
 
   it('reinstalls the bundled verified version when opencode is missing', () => {
     stubInstallTools()
-    const res = runOpenCodeSection(`${installPrelude()}\n${extractOpenCodeInstallSection()}`)
+    const res = runOpenCodeSection(`${installPrelude()}\n${extractOpenCodeInstallSection()}`, {
+      PATH: noOpencodePath(),
+    })
     expect(res.status).toBe(0)
     expect(res.stdout).toContain('OpenCode not found. Installing...')
     const urls = curlLog().join(' ')
@@ -193,6 +195,39 @@ const writeBinary = (dir: string, version: string) => {
 const homeBinPath = () => join(stubDir, 'home/.opencode/bin/opencode')
 const bundledBinPath = () => join(stubDir, 'bundled/opencode')
 const bundledFirstPath = () => `${join(stubDir, 'home/.opencode/bin')}:${join(stubDir, 'bundled')}:${stubDir}:/usr/bin:/bin`
+
+/**
+ * Every command the extracted functions actually execve, and nothing else.
+ * `opencode` is deliberately absent from this list.
+ */
+const HERMETIC_TOOLS = [
+  'bash', 'cat', 'chmod', 'dirname', 'grep', 'head', 'mkdir', 'mktemp',
+  'mv', 'rm', 'sed', 'sort', 'uname',
+] as const
+
+/**
+ * `install_opencode` only ever runs where `command -v opencode` finds nothing,
+ * and the image guarantees that by installing into `$HOME/.opencode/bin` and
+ * never into a system directory. Reaching that state by inheriting `/usr/bin`
+ * therefore tests the host, not the entrypoint: a developer who has OpenCode
+ * from their package manager installed cannot run the scenario at all, and the
+ * suite goes red against code that is correct.
+ *
+ * So the system tail of PATH is replaced by a directory holding symlinks to the
+ * listed tools and no `opencode` at all. The absence becomes something the test
+ * builds rather than something it hopes the machine happens to have.
+ */
+const noOpencodePath = () => {
+  const binDir = join(stubDir, 'hermetic-bin')
+  mkdirSync(binDir, { recursive: true })
+  for (const tool of HERMETIC_TOOLS) {
+    const resolved = spawnSync('sh', ['-c', `command -v ${tool}`], { encoding: 'utf-8' })
+    const source = resolved.stdout.trim()
+    if (!source) throw new Error(`无法构造封闭 PATH：本机找不到 ${tool}`)
+    symlinkSync(source, join(binDir, tool))
+  }
+  return `${stubDir}:${join(stubDir, 'home/.opencode/bin')}:${binDir}`
+}
 
 describe('persisted opencode reconciliation', () => {
   it('probes the persisted binary version through runuser, never directly', () => {

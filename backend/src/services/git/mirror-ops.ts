@@ -5,13 +5,14 @@ import { join } from 'path'
 import { getReposPath } from '@opencode-manager/shared/config/env'
 import { ConflictError, ValidationError } from '../../utils/errors'
 import { mkdirSyncSafe } from '../../utils/fs-safe'
+import { childEnvFor } from '../../utils/child-env'
 import { swallow } from '../../utils/swallow'
 import { getStagingRoot } from '../uploads/mirror-staging'
 import { safeGitOut } from './git-commands'
 
 function gitRaw(repoPath: string, args: string[], env: NodeJS.ProcessEnv = process.env, input?: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn('git', args, { cwd: repoPath, env })
+    const child = spawn('git', args, { cwd: repoPath, env: childEnvFor('git', env) })
     let stdout = ''
     let stderr = ''
     child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString() })

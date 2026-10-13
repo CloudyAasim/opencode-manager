@@ -4,6 +4,7 @@ import { readdir, stat, unlink } from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { logger } from '../utils/logger'
+import { childEnvFor } from '../utils/child-env'
 import { canonicalPath } from '../utils/fs-safe'
 import { assertWithinAccessScope } from '../auth/access-scope'
 import { fileBase } from './file-paths'
@@ -26,7 +27,8 @@ async function findGitRoot(startPath: string): Promise<string | null> {
     return new Promise((resolve) => {
       const proc = spawn('git', ['rev-parse', '--show-toplevel'], {
         cwd: startPath,
-        shell: false
+        shell: false,
+        env: childEnvFor('git')
       })
 
       let stdout = ''
@@ -79,7 +81,8 @@ async function getIgnoredPaths(gitRoot: string, targetPath: string, paths: strin
       const ignored = new Set<string>()
       const proc = spawn('git', ['check-ignore', '--stdin'], {
         cwd: gitRoot,
-        shell: false
+        shell: false,
+        env: childEnvFor('git')
       })
 
       let stdout = ''

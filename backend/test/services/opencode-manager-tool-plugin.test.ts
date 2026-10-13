@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { promises as fs } from 'fs'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { spawn, spawnSync } from 'child_process'
 import http from 'http'
 import type { AddressInfo } from 'net'
@@ -10,6 +10,7 @@ import { pathToFileURL } from 'url'
 import { ASSISTANT_NOTIFICATION_LIMITS, AssistantNotificationRequestSchema } from '@opencode-manager/shared/schemas'
 import { MANAGER_TOOL_NAME, MANAGER_TOOL_ALLOWED_ROUTES, parseAllowedRoute } from '../../src/services/opencode-manager-tool-plugin'
 import { installManagedPlugins, getOpenCodePluginDir } from '../../src/services/opencode/plugin-registry'
+import { repoRoot } from '../helpers/repo-root'
 
 type ZodLike = { safeParse: (value: unknown) => { success: boolean } }
 
@@ -407,27 +408,74 @@ describe('ocm-manager plugin session labelling', () => {
   })
 })
 
-function resolveOpencodeBinary(): string | null {
+/**
+ * The version this repository actually ships, read from the same place `ci.yml`
+ * reads it. A hardcoded literal here would be a second copy of the pin, and the
+ * two would drift - which is exactly what happened: the entrypoint test still
+ * said 1.18.16 long after the Dockerfile moved to 1.18.31.
+ */
+function pinnedOpencodeVersion(): string | null {
+  try {
+    const dockerfile = readFileSync(path.join(repoRoot, 'Dockerfile'), 'utf-8')
+    return dockerfile.match(/^ARG OPENCODE_VERSION=([^\s]+)$/m)?.[1] ?? null
+  } catch {
+    return null
+  }
+}
+
+function versionOf(binary: string): string | null {
+  try {
+    const result = spawnSync(binary, ['--version'], { encoding: 'utf8', timeout: 5000 })
+    if (result.status !== 0 || !result.stdout) return null
+    return result.stdout.match(/[0-9]+\.[0-9]+\.[0-9]+/)?.[0] ?? null
+  } catch {
+    return null
+  }
+}
+
+type BinaryResolution = {
+  bin: string | null
+  pinned: string | null
+  rejected: { candidate: string; version: string | null }[]
+}
+
+/**
+ * "Is there an opencode?" and "is it the opencode this project ships?" are
+ * different questions, and answering only the first one is how a machine with
+ * an unrelated OpenCode ends up asserting this plugin's contract against a
+ * different major version's plugin API: the suite un-skips, runs, and fails
+ * against code that was never wrong.
+ *
+ * So a candidate has to report the pinned version. Candidates that were found
+ * but rejected are kept, not discarded - a skip is only honest if it can say
+ * what it skipped and why.
+ */
+function resolveOpencodeBinary(): BinaryResolution {
+  const pinned = pinnedOpencodeVersion()
   const candidates = [
     process.env.OPENCODE_BIN,
     'opencode',
     '/usr/local/bin/opencode',
     '/opt/opencode/bin/opencode',
   ].filter((value): value is string => typeof value === 'string' && value.length > 0)
+  const rejected: { candidate: string; version: string | null }[] = []
   for (const candidate of candidates) {
-    try {
-      const result = spawnSync(candidate, ['--version'], { encoding: 'utf8', timeout: 5000 })
-      if (result.status === 0 && result.stdout && result.stdout.trim().length > 0) {
-        return candidate
-      }
-    } catch {
+    const version = versionOf(candidate)
+    if (!version) {
+      rejected.push({ candidate, version: null })
       continue
     }
+    if (pinned && version !== pinned) {
+      rejected.push({ candidate, version })
+      continue
+    }
+    return { bin: candidate, pinned, rejected }
   }
-  return null
+  return { bin: null, pinned, rejected }
 }
 
-const SHIPPED_OPENCODE_BIN = resolveOpencodeBinary()
+const RESOLUTION = resolveOpencodeBinary()
+const SHIPPED_OPENCODE_BIN = RESOLUTION.bin
 
 /**
  * Everywhere but a job that installed the binary on purpose, the block below
@@ -439,6 +487,10 @@ const SHIPPED_OPENCODE_BIN = resolveOpencodeBinary()
  * OpenCode actually loading the plugin and handing it a session - would go
  * unverified behind a green build. So a job that wants the binary says so, and
  * a skip then fails.
+ *
+ * Requiring the *pinned* version extends that: a job that installed OpenCode
+ * and got a different one has not verified the plugin either, and the mismatch
+ * is a real failure of the build rather than something to skip past.
  */
 describe('shipped OpenCode binary availability', () => {
   it('is present when the job required it', () => {
@@ -447,6 +499,28 @@ describe('shipped OpenCode binary availability', () => {
       SHIPPED_OPENCODE_BIN,
       'OCM_REQUIRE_OPENCODE_BIN=1 but no usable opencode binary was found, so the plugin end-to-end test silently skipped',
     ).not.toBeNull()
+  })
+
+  it('reads the pinned version out of the Dockerfile rather than a second copy of it', () => {
+    expect(RESOLUTION.pinned, 'Dockerfile 的 ARG OPENCODE_VERSION 没有解析出来，版本门禁会形同虚设').toMatch(
+      /^\d+\.\d+\.\d+$/,
+    )
+  })
+
+  it('never runs the plugin contract against a binary of a different version', () => {
+    if (SHIPPED_OPENCODE_BIN === null) return
+    expect(versionOf(SHIPPED_OPENCODE_BIN)).toBe(RESOLUTION.pinned)
+  })
+
+  it('reports every candidate it turned down, so a skip can explain itself', () => {
+    const required = process.env.OCM_REQUIRE_OPENCODE_BIN === '1'
+    if (!required && SHIPPED_OPENCODE_BIN !== null) return
+    expect(
+      RESOLUTION.rejected.map(({ candidate, version }) => `${candidate} -> ${version ?? 'unreadable'}`),
+      required
+        ? 'OCM_REQUIRE_OPENCODE_BIN=1，但没有任何候选的 OpenCode 版本与 Dockerfile 里钉住的一致'
+        : '这些候选都不可用，所以端到端用例整块跳过',
+    ).not.toHaveLength(0)
   })
 })
 
