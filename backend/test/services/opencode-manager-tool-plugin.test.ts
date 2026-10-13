@@ -513,13 +513,10 @@ describe('shipped OpenCode binary availability', () => {
   })
 
   it('reports every candidate it turned down, so a skip can explain itself', () => {
-    const required = process.env.OCM_REQUIRE_OPENCODE_BIN === '1'
-    if (!required && SHIPPED_OPENCODE_BIN !== null) return
+    if (SHIPPED_OPENCODE_BIN !== null) return
     expect(
       RESOLUTION.rejected.map(({ candidate, version }) => `${candidate} -> ${version ?? 'unreadable'}`),
-      required
-        ? 'OCM_REQUIRE_OPENCODE_BIN=1，但没有任何候选的 OpenCode 版本与 Dockerfile 里钉住的一致'
-        : '这些候选都不可用，所以端到端用例整块跳过',
+      '端到端用例跳过了，却说不清是哪些候选、它们各自是什么版本',
     ).not.toHaveLength(0)
   })
 })

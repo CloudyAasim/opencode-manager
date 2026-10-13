@@ -25,19 +25,52 @@ const SOURCES = graph.files.map((file) => ({
  * helper does not do will reach for `child_process` directly, and nothing else
  * would notice.
  */
-const DIRECT_GIT_SPAWN = /\b(?:spawn|spawnSync|execFileSync|execFile)\(\s*['"]git['"]/
-const USES_HELPER = /\bchildEnvFor\b/
+const DIRECT_GIT_SPAWN = /\b(?:spawn|spawnSync|execFileSync|execFile)\(\s*['"]git['"]/g
 
 const HELPER_MODULE = 'utils/process.ts'
 
-const DIRECT_SPAWN_SITES = SOURCES.filter((source) => source.rel !== HELPER_MODULE)
-  .filter((source) => DIRECT_GIT_SPAWN.test(source.text))
+/**
+ * The slice of source that is the spawn call itself, found by balancing
+ * parentheses rather than by counting characters.
+ *
+ * Matching the whole file for `childEnvFor` looks equivalent and is not: the
+ * file's own import statement carries the name, so deleting `env:
+ * childEnvFor('git')` from the call while leaving the import in place keeps
+ * the file matching, and the rule goes green over the exact thing it exists to
+ * catch. The obligation belongs to the call, so the check has to read the call.
+ */
+function spawnCallAt(text: string, start: number): string {
+  let depth = 0
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index]
+    if (char === '(') depth += 1
+    else if (char === ')') {
+      depth -= 1
+      if (depth === 0) return text.slice(start, index + 1)
+    }
+  }
+  return text.slice(start)
+}
 
 function unpinnedGitSpawnSites(): string[] {
-  return DIRECT_SPAWN_SITES
-    .filter((source) => !USES_HELPER.test(source.text))
-    .map((source) => source.rel)
-    .sort()
+  const offenders: string[] = []
+  for (const source of SOURCES) {
+    if (source.rel === HELPER_MODULE) continue
+    for (const match of source.text.matchAll(DIRECT_GIT_SPAWN)) {
+      const call = spawnCallAt(source.text, match.index ?? 0)
+      if (!call.includes('childEnvFor')) offenders.push(`${source.rel}: ${match[0]}`)
+    }
+  }
+  return offenders.sort()
+}
+
+function directGitSpawnCount(): number {
+  let count = 0
+  for (const source of SOURCES) {
+    if (source.rel === HELPER_MODULE) continue
+    count += [...source.text.matchAll(DIRECT_GIT_SPAWN)].length
+  }
+  return count
 }
 
 function render(title: string, offenders: string[]): string {
@@ -52,7 +85,7 @@ describe('git 子进程的 locale 契约', () => {
   it('门禁自己看得见东西', () => {
     expect(SOURCES.length, '一张空图上跑出来的门禁证明不了任何事').toBeGreaterThan(100)
     expect(
-      DIRECT_SPAWN_SITES.length,
+      directGitSpawnCount(),
       '一个直接 spawn git 的地方都没有，这条规则正在空跑',
     ).toBeGreaterThan(0)
   })
@@ -82,8 +115,8 @@ describe('git 子进程的 locale 契约', () => {
     expect(env.LC_ALL, 'locale 是 git 专属的，不该改写别的命令').toBe('zh_CN.UTF-8')
   })
 
-  it('直接 spawn git 的地方必须经过 childEnvFor', () => {
+  it('直接 spawn git 的调用本身必须带 childEnvFor', () => {
     const offenders = unpinnedGitSpawnSites()
-    expect(offenders, render('绕过 childEnvFor 直接 spawn git', offenders)).toEqual([])
+    expect(offenders, render('spawn 调用本身没有带 childEnvFor', offenders)).toEqual([])
   })
 })
