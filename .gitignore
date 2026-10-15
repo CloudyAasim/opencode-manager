@@ -1,5 +1,9 @@
 node_modules/
 .pnpm-store/
+# The workspace resolves from one lockfile at the root. Running an install from
+# inside a package writes a second one next to it, which is not a resolution
+# anybody reads and quietly disagrees with the root.
+*/pnpm-lock.yaml
 *.log
 .env
 .env.local
