@@ -46,7 +46,7 @@ pnpm lint
 
 ## 架构门禁
 
-位置：`frontend/src/test/architecture/`（21 个 suite）与 `backend/test/architecture/`。
+位置：`frontend/src/test/architecture/` 与 `backend/test/architecture/`。
 它们和单元测试跑在同一个 vitest 里（`vitest run` 已经包含），但值得单独跑——
 改架构约定时，它们是第一个该绿的东西。
 

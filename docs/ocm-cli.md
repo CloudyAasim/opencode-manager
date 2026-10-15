@@ -160,6 +160,18 @@ The CLI's environment and token inputs:
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `/api/internal/opencode-workspaces` | GET | List ready repos with directory + originUrl |
-| `/api/internal/repo-mirror/:repoId/up` | POST | Receive tarball, write to repo dir |
-| `/api/internal/repo-mirror/:repoId/down` | GET | Stream tarball of repo dir |
+| `/api/internal/repos/:repoId/mirror` | GET | Mirror state for a repo |
+| `/api/internal/repos/:repoId/mirror` | POST | Start a mirror operation |
+| `/api/internal/repos/:repoId/mirror/bundle` | GET | Download the repo as a tarball |
+| `/api/internal/repos/:repoId/mirror/bundle` | POST | Receive a tarball and write it into the repo dir |
+| `/api/internal/repos/:repoId/mirror/patch` | GET | Read a patch for a commit |
+| `/api/internal/repos/:repoId/mirror/patch` | POST | Apply a patch |
 | `/api/opencode-proxy/*` | ALL | Token-protected proxy from Manager to single OpenCode server |
+
+> These paths changed. An earlier revision of this table listed
+> `/api/internal/repo-mirror/:repoId/up` and `.../down`; neither the prefix nor
+> the path shape exists, and a client written against it gets a 404. The mirror
+> routes live under `/api/internal/repos/`, and the chunked upload pair
+> (`:repoId/mirror/begin`, `:repoId/mirror/parts/:uploadId/:index`,
+> `:repoId/mirror/commit`) is the third way to move repo content — see
+> `backend/src/routes/internal/repo-mirror.ts` for the full set.

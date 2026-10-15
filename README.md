@@ -56,6 +56,13 @@ cd deploy && ./install.sh --domain opencode.example.com --email you@example.com
 
 See [docs/cloud/one-click-deploy.md](docs/cloud/one-click-deploy.md) for the full guide.
 
+> **This fork's own deployment is Dokku, not Caddy.** The installer above is the
+> upstream path and still works; it is simply not what this fork runs. Here,
+> `main` is deployed by `.github/workflows/deploy.yml`, which pushes to a Dokku
+> app behind the host's nginx with a ZeroSSL certificate. Certificate state,
+> domains and environment variables live on the server, not in CI. See
+> `上下文/13-域名与证书配置.md` for that topology.
+
 For local development setup, see the [Development Guide](https://chriswritescode-dev.github.io/opencode-manager/development/setup/).
 
 
