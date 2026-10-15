@@ -145,3 +145,10 @@ pnpm --filter frontend test:e2e
   the site only means *something* is being served. Build locally and compare
   the hashed chunk name against the one the live `index.html` references; equal
   names mean the running build is the build you verified.
+  **This comparison only holds on the Node major the image builds with.**
+  `.nvmrc`, `engines.node` and `ci.yml` all say 24, and
+  `backend/test/architecture/node-version.test.ts` keeps them from drifting.
+  On a different major the same commit yields a different hash *and* a
+  different size (862 kB on 24, 924 kB on 26), so the check reports a mismatch
+  against a perfectly healthy deploy and sends you hunting a problem that is
+  not there. Check `node -v` before believing a mismatch.
