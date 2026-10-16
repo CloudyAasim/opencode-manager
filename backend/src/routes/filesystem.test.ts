@@ -60,4 +60,59 @@ describe('GET /api/filesystem/browse', () => {
     const res = await scopedRequest('/filesystem/browse', { roots: [], browseRoot: '', repoBase: tmpRoot })
     expect(res.status).toBe(403)
   })
+
+  // The containment check compares `realpath` on *both* sides, and that is the
+  // only reason a symlink cannot be used to list another account's workspace.
+  // It is easy to "simplify" into comparing the resolved paths instead, which
+  // reads better and passes every other test here - so it is pinned directly.
+  it('returns 403 for a symlink inside the root that points outside it', async () => {
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'ocm-fs-link-target-'))
+    try {
+      await fs.writeFile(path.join(outside, 'secret.txt'), 'not yours')
+
+      const link = path.join(tmpRoot, 'innocent-looking')
+      await fs.symlink(outside, link, 'dir')
+
+      const res = await scopedRequest(
+        `/filesystem/browse?path=${encodeURIComponent(link)}`,
+        { roots: [tmpRoot], browseRoot: tmpRoot, repoBase: tmpRoot },
+      )
+
+      expect(res.status).toBe(403)
+      // Belt and braces: the listing must not have leaked either.
+      expect(await res.text()).not.toContain('secret.txt')
+    } finally {
+      await fs.rm(outside, { recursive: true, force: true })
+    }
+  })
+
+  it('returns 403 for a sibling directory whose name shares the root prefix', async () => {
+    // `/tmp/ocm-fs-abc` must not match `/tmp/ocm-fs-abc2`. A prefix string test
+    // would let this through; a path-segment comparison does not.
+    const sibling = `${tmpRoot}2`
+    await fs.mkdir(sibling)
+    try {
+      const res = await scopedRequest(
+        `/filesystem/browse?path=${encodeURIComponent(sibling)}`,
+        { roots: [tmpRoot], browseRoot: tmpRoot, repoBase: sibling },
+      )
+      expect(res.status).toBe(403)
+    } finally {
+      await fs.rm(sibling, { recursive: true, force: true })
+    }
+  })
+
+  it('reports the parent only below the root', async () => {
+    const nested = path.join(tmpRoot, 'a', 'b')
+    await fs.mkdir(nested, { recursive: true })
+
+    const res = await scopedRequest(
+      `/filesystem/browse?path=${encodeURIComponent(nested)}`,
+      { roots: [tmpRoot], browseRoot: tmpRoot, repoBase: tmpRoot },
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json() as { isRoot: boolean; parentPath: string | null }
+    expect(body.isRoot).toBe(false)
+    expect(body.parentPath).toBe(path.join(tmpRoot, 'a'))
+  })
 })

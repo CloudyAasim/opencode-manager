@@ -19,27 +19,46 @@ import { registerExistingLocalRepo } from './discovery'
 
 const GIT_CLONE_TIMEOUT = 300000
 
+/**
+ * Strips `user:password@` from a URL for storage, logging and error messages.
+ *
+ * Cloning a private repository with the token in the URL is ordinary practice,
+ * and `normalizeRepoUrl` passes such URLs through untouched - so without this
+ * the token ends up in the `repos` table, in the logs, in every clone error
+ * message and in the repo listings returned to the owner and to admins.
+ *
+ * The credential is deliberately *not* removed from the URL handed to `git`:
+ * the askpass handler supplies stored credentials, but a user who put the token
+ * in the URL is relying on it, and stripping it there would break them.
+ */
+export function redactRepoUrlCredentials(url: string): string {
+  return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]*@/i, '$1')
+}
+
 function enhanceCloneError(error: unknown, repoUrl: string, originalMessage: string): Error {
+  // Redact here rather than at each call site: every branch below interpolates
+  // the URL into a message that is both logged and returned to the client.
+  const safeUrl = redactRepoUrlCredentials(repoUrl)
   const message = originalMessage.toLowerCase()
   
   if (message.includes('authentication failed') || message.includes('could not authenticate') || message.includes('invalid credentials')) {
-    return new Error(`Authentication failed for ${repoUrl}. Please add your credentials in Settings > Git Credentials.`)
+    return new Error(`Authentication failed for ${safeUrl}. Please add your credentials in Settings > Git Credentials.`)
   }
   
   if (message.includes('repository not found') || message.includes('404')) {
-    return new Error(`Repository not found: ${repoUrl}. Check the URL and ensure you have access to it.`)
+    return new Error(`Repository not found: ${safeUrl}. Check the URL and ensure you have access to it.`)
   }
   
   if (isSSHUrl(repoUrl) && message.includes('permission denied')) {
-    return new Error(`Access denied to ${repoUrl}. Please add your SSH credentials in Settings > Git Credentials and ensure your SSH key has access to this repository.`)
+    return new Error(`Access denied to ${safeUrl}. Please add your SSH credentials in Settings > Git Credentials and ensure your SSH key has access to this repository.`)
   }
   
   if (isGitHubHttpsUrl(repoUrl) && (message.includes('permission denied') || message.includes('fatal'))) {
-    return new Error(`Access denied to ${repoUrl}. Please add your credentials in Settings > Git Credentials and ensure you have proper access.`)
+    return new Error(`Access denied to ${safeUrl}. Please add your credentials in Settings > Git Credentials and ensure you have proper access.`)
   }
   
   if (message.includes('timed out')) {
-    return new Error(`Clone timed out for ${repoUrl}. The repository might be too large or there could be network issues. Try again or verify the repository exists.`)
+    return new Error(`Clone timed out for ${safeUrl}. The repository might be too large or there could be network issues. Try again or verify the repository exists.`)
   }
   
   return error instanceof Error ? error : new Error(originalMessage)
@@ -161,6 +180,10 @@ export async function cloneRepo(
   const isSSH = isSSHUrl(effectiveUrl)
   const preserveSSH = isSSH
   const { url: normalizedRepoUrl, name: repoName } = normalizeRepoUrl(effectiveUrl, preserveSSH)
+  // What we persist and display. `normalizedRepoUrl` stays as-is for every
+  // `git` invocation, because a user who put the token in the URL is relying on
+  // it being passed through.
+  const storedRepoUrl = redactRepoUrlCredentials(normalizedRepoUrl)
   const dirName = directoryName === undefined
     ? sanitizeRepoDirectoryName(repoName)
     : normalizeRepoDirectoryName(directoryName)
@@ -170,10 +193,17 @@ export async function cloneRepo(
 
   // Owned, not global: two users cloning the same URL is two repositories, and
   // returning the first user's row here is what turned that into a 403.
-  const existing = getRepoByUrlAndBranch(database, normalizedRepoUrl, branch, ownedBy(userId))
+  //
+  // Both spellings are looked up. Rows created before the redaction store the
+  // credential-bearing URL, and new rows store the clean one - so keying on
+  // only one of them would make a re-clone of an already-cloned repository
+  // silently create a duplicate.
+  const existing =
+    getRepoByUrlAndBranch(database, normalizedRepoUrl, branch, ownedBy(userId)) ??
+    getRepoByUrlAndBranch(database, storedRepoUrl, branch, ownedBy(userId))
 
   if (existing) {
-    logger.info(`Repo branch already exists: ${normalizedRepoUrl}${branch ? `#${branch}` : ''}`)
+    logger.info(`Repo branch already exists: ${redactRepoUrlCredentials(normalizedRepoUrl)}${branch ? `#${branch}` : ''}`)
     return existing
   }
 
@@ -183,7 +213,7 @@ export async function cloneRepo(
   const shouldUseWorktree = useWorktree && branch && baseRepoExists
 
   const createRepoInput: CreateRepoInput = {
-    repoUrl: normalizedRepoUrl,
+    repoUrl: storedRepoUrl,
     localPath,
     sourcePath: path.resolve(reposBase(), localPath),
     branch: branch || undefined,
@@ -289,12 +319,15 @@ export async function cloneRepo(
           ).then((output) => output.trim()).catch(() => '')
 
           if (existingOriginUrl && normalizeRepoUrlForCompare(existingOriginUrl) !== normalizeRepoUrlForCompare(normalizedRepoUrl)) {
-            const collisionError = new Error(`Directory '${baseRepoDirName}' already contains a different repository (${existingOriginUrl}). Choose a different directory name.`) as Error & { statusCode: number }
+            // `git remote get-url` hands back whatever was cloned, credentials
+            // and all, so this message has to be redacted too - it is returned
+            // to the client and logged by the outer handler.
+            const collisionError = new Error(`Directory '${baseRepoDirName}' already contains a different repository (${redactRepoUrlCredentials(existingOriginUrl)}). Choose a different directory name.`) as Error & { statusCode: number }
             collisionError.statusCode = 409
             throw collisionError
           }
 
-          logger.info(`Valid repository found: ${normalizedRepoUrl}`)
+          logger.info(`Valid repository found: ${storedRepoUrl}`)
           
           if (branch) {
             logger.info(`Switching to branch: ${branch}`)
@@ -337,7 +370,7 @@ export async function cloneRepo(
         }
       }
       
-      logger.info(`Cloning repo: ${normalizedRepoUrl}${branch ? ` to branch ${branch}` : ''}`)
+      logger.info(`Cloning repo: ${storedRepoUrl}${branch ? ` to branch ${branch}` : ''}`)
       
       const worktreeExists = existsSync(path.join(reposBase(), worktreeDirName))
       if (worktreeExists) {
@@ -394,10 +427,10 @@ export async function cloneRepo(
     }
     
     updateRepoStatus(database, repo.id, 'ready')
-    logger.info(`Repo ready: ${normalizedRepoUrl}${branch ? `#${branch}` : ''}${shouldUseWorktree ? ' (worktree)' : ''}`)
+    logger.info(`Repo ready: ${storedRepoUrl}${branch ? `#${branch}` : ''}${shouldUseWorktree ? ' (worktree)' : ''}`)
     return { ...repo, cloneStatus: 'ready' }
   } catch (error: unknown) {
-    logger.error(`Failed to create repo: ${normalizedRepoUrl}${branch ? `#${branch}` : ''}`, error)
+    logger.error(`Failed to create repo: ${storedRepoUrl}${branch ? `#${branch}` : ''}`, error)
     deleteRepo(database, repo.id)
     throw error
   } finally {
