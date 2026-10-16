@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Hono } from 'hono'
 import { createNotificationRoutes } from '../../src/routes/notifications'
 import type { NotificationService } from '../../src/services/notification'
 
@@ -16,6 +17,14 @@ describe('Notification Routes', () => {
   let service: NotificationServiceStub
   let app: ReturnType<typeof createNotificationRoutes>
 
+  /**
+   * The routes act as whoever the session says they are. These tests used to
+   * assert the opposite - that `?userId=` chooses the account - which is how
+   * the hole survived a green suite: the tests were not missing it, they were
+   * holding it in place.
+   */
+  const SESSION_USER_ID = 'session-user-1'
+
   beforeEach(() => {
     vi.clearAllMocks()
     service = {
@@ -27,7 +36,14 @@ describe('Notification Routes', () => {
       isConfigured: vi.fn(),
       sendTestNotification: vi.fn(),
     }
-    app = createNotificationRoutes(service as unknown as NotificationService)
+    const routes = createNotificationRoutes(service as unknown as NotificationService)
+    const withSession = new Hono<{ Variables: { user: { id: string } } }>()
+      .use('*', async (c, next) => {
+        c.set('user', { id: SESSION_USER_ID })
+        await next()
+      })
+      .route('/', routes)
+    app = withSession as unknown as ReturnType<typeof createNotificationRoutes>
   })
 
   describe('GET /vapid-public-key', () => {
@@ -51,10 +67,10 @@ describe('Notification Routes', () => {
   })
 
   describe('POST /subscribe', () => {
-    it('saves a subscription with the default userId', async () => {
+    it('saves a subscription under the session user', async () => {
       const subscription = {
         id: 1,
-        userId: 'default',
+        userId: SESSION_USER_ID,
         endpoint: 'https://push.example.com/abc',
         p256dh: 'p256dh-key',
         auth: 'auth-key',
@@ -77,7 +93,7 @@ describe('Notification Routes', () => {
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({ subscription })
       expect(service.saveSubscription).toHaveBeenCalledWith(
-        'default',
+        SESSION_USER_ID,
         'https://push.example.com/abc',
         'p256dh-key',
         'auth-key',
@@ -85,7 +101,7 @@ describe('Notification Routes', () => {
       )
     })
 
-    it('saves a subscription with an overridden userId', async () => {
+    it('ignores ?userId= and saves under the session user', async () => {
       const subscription = { id: 2 }
       service.saveSubscription.mockReturnValue(subscription)
 
@@ -101,7 +117,7 @@ describe('Notification Routes', () => {
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({ subscription })
       expect(service.saveSubscription).toHaveBeenCalledWith(
-        'user-9',
+        SESSION_USER_ID,
         'https://push.example.com/abc',
         'p256dh-key',
         'auth-key',
@@ -124,7 +140,7 @@ describe('Notification Routes', () => {
   })
 
   describe('DELETE /subscribe', () => {
-    it('removes a subscription with the default userId', async () => {
+    it('removes a subscription under the session user', async () => {
       service.removeSubscription.mockReturnValue(true)
 
       const res = await app.fetch(new Request('http://localhost/subscribe', {
@@ -135,7 +151,7 @@ describe('Notification Routes', () => {
 
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({ success: true })
-      expect(service.removeSubscription).toHaveBeenCalledWith('https://push.example.com/abc', 'default')
+      expect(service.removeSubscription).toHaveBeenCalledWith('https://push.example.com/abc', SESSION_USER_ID)
     })
 
     it('returns 400 for an invalid endpoint', async () => {
@@ -153,7 +169,7 @@ describe('Notification Routes', () => {
   })
 
   describe('GET /subscriptions', () => {
-    it('lists subscriptions for the requested user', async () => {
+    it('lists the session user subscriptions regardless of ?userId=', async () => {
       const subscriptions = [{ id: 1 }, { id: 2 }]
       service.getSubscriptions.mockReturnValue(subscriptions)
 
@@ -161,12 +177,12 @@ describe('Notification Routes', () => {
 
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({ subscriptions })
-      expect(service.getSubscriptions).toHaveBeenCalledWith('user-9')
+      expect(service.getSubscriptions).toHaveBeenCalledWith(SESSION_USER_ID)
     })
   })
 
   describe('DELETE /subscriptions/:id', () => {
-    it('removes a subscription by numeric id', async () => {
+    it('removes a subscription by numeric id under the session user', async () => {
       service.removeSubscriptionById.mockReturnValue(true)
 
       const res = await app.fetch(new Request('http://localhost/subscriptions/12?userId=user-9', {
@@ -175,7 +191,7 @@ describe('Notification Routes', () => {
 
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({ success: true })
-      expect(service.removeSubscriptionById).toHaveBeenCalledWith(12, 'user-9')
+      expect(service.removeSubscriptionById).toHaveBeenCalledWith(12, SESSION_USER_ID)
     })
 
     it('returns 400 for a non-numeric id', async () => {
@@ -211,7 +227,7 @@ describe('Notification Routes', () => {
       expect(service.sendTestNotification).not.toHaveBeenCalled()
     })
 
-    it('sends a test notification and reports the device count', async () => {
+    it('sends the test notification to the session user devices', async () => {
       service.isConfigured.mockReturnValue(true)
       service.getSubscriptions.mockReturnValue([{ id: 1 }, { id: 2 }])
       service.sendTestNotification.mockResolvedValue(undefined)
@@ -220,7 +236,7 @@ describe('Notification Routes', () => {
 
       expect(res.status).toBe(200)
       await expect(res.json()).resolves.toEqual({ success: true, devicesNotified: 2 })
-      expect(service.sendTestNotification).toHaveBeenCalledWith('user-9')
+      expect(service.sendTestNotification).toHaveBeenCalledWith(SESSION_USER_ID)
     })
   })
 })

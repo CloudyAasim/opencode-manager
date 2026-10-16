@@ -35,9 +35,14 @@ function rowToPromptTemplate(row: PromptTemplateRow): PromptTemplate {
 }
 
 export function listPromptTemplates(db: Database, userId: string | null, includeAll = false): PromptTemplate[] {
-  const rows = (includeAll || userId === null
+  // A null user means the shared rows, not every row. Returning everything for
+  // null is an authorisation hole dressed as a default: reach this without a
+  // principal and you read every account's private templates.
+  const rows = (includeAll
     ? db.prepare('SELECT * FROM prompt_templates ORDER BY id ASC').all()
-    : db.prepare('SELECT * FROM prompt_templates WHERE user_id IS NULL OR user_id = ? ORDER BY id ASC').all(userId)
+    : userId === null
+      ? db.prepare('SELECT * FROM prompt_templates WHERE user_id IS NULL ORDER BY id ASC').all()
+      : db.prepare('SELECT * FROM prompt_templates WHERE user_id IS NULL OR user_id = ? ORDER BY id ASC').all(userId)
   ) as PromptTemplateRow[]
   return rows.map(rowToPromptTemplate)
 }

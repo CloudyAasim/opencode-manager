@@ -18,7 +18,11 @@ export function ensureSessionPinsTable(db: Database): void {
 }
 
 function whereFor(userId: string | null, includeAll: boolean): { clause: string; params: string[] } {
-  if (includeAll || userId === null) return { clause: '', params: [] }
+  if (includeAll) return { clause: '', params: [] }
+  // A null user used to mean "no filter", which is an authorisation hole wearing
+  // the costume of a default: anyone who reached a route without a principal
+  // read every account's pins. It now means the shared rows and nothing else.
+  if (userId === null) return { clause: 'WHERE user_id IS NULL', params: [] }
   return { clause: 'WHERE user_id = ?', params: [userId] }
 }
 

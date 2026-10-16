@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { PushSubscriptionRequestSchema } from "@opencode-manager/shared/schemas";
 import type { NotificationService } from "../services/notification";
+import { settingsOwnerId } from "../auth/settings-owner";
 
 export function createNotificationRoutes(
   notificationService: NotificationService
@@ -20,7 +21,7 @@ export function createNotificationRoutes(
   });
 
   app.post("/subscribe", async (c) => {
-    const userId = c.req.query('userId') || 'default'
+    const userId = settingsOwnerId(c)
     const body = await c.req.json();
     const parsed = PushSubscriptionRequestSchema.safeParse(body);
 
@@ -42,7 +43,7 @@ export function createNotificationRoutes(
   });
 
   app.delete("/subscribe", async (c) => {
-    const userId = c.req.query('userId') || 'default'
+    const userId = settingsOwnerId(c)
     const body = await c.req.json();
     const parsed = z.object({ endpoint: z.string().url() }).safeParse(body);
 
@@ -55,13 +56,13 @@ export function createNotificationRoutes(
   });
 
   app.get("/subscriptions", (c) => {
-    const userId = c.req.query('userId') || 'default'
+    const userId = settingsOwnerId(c)
     const subscriptions = notificationService.getSubscriptions(userId);
     return c.json({ subscriptions });
   });
 
   app.delete("/subscriptions/:id", (c) => {
-    const userId = c.req.query('userId') || 'default'
+    const userId = settingsOwnerId(c)
     const id = parseInt(c.req.param("id"), 10);
 
     if (isNaN(id)) {
@@ -73,7 +74,7 @@ export function createNotificationRoutes(
   });
 
   app.post("/test", async (c) => {
-    const userId = c.req.query('userId') || 'default'
+    const userId = settingsOwnerId(c)
 
     if (!notificationService.isConfigured()) {
       return c.json(
