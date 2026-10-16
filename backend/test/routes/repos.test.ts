@@ -28,6 +28,8 @@ vi.mock('../../src/db/queries', () => ({
   updateRepoName: vi.fn(),
 }))
 
+// The route reads credentials out of the repository owner's settings
+// namespace, so the test needs to observe which namespace it asked for.
 vi.mock('../../src/services/repo', () => ({
   getCurrentBranch: vi.fn(),
   initLocalRepo: vi.fn(),
@@ -1330,6 +1332,30 @@ describe('Repo Routes', () => {
 
       expect(denied.status, '存在的仓库与不存在的仓库必须给出同一个状态码').toBe(absent.status)
       expect(denied.status).toBe(404)
+    })
+  })
+  describe('git 凭据按仓库归属人的命名空间校验', () => {
+    it('a key saved under the owner is accepted for their repository', async () => {
+      // The write path for credentials has always been per-user. This check
+      // was the last place still reading the process-wide namespace, so every
+      // key a person had saved was rejected here with "Credential not found" -
+      // and the suite stayed green, because nothing set a credential through
+      // this route for a non-default owner.
+      vi.mocked(db.getRepoById).mockReturnValue(createMockRepo({ id: 42, userId: 'owner-1' }))
+      vi.mocked(db.setRepoGitCredentialId).mockReturnValue(undefined)
+      mockGetSettings.mockReturnValue({
+        preferences: { gitCredentials: [{ id: 'cred-1', name: 'k', host: 'github.com', token: 't' }] },
+      })
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+      const res = await app.request('/42/git-credential', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credentialId: 'cred-1' }),
+      })
+
+      expect(mockGetSettings).toHaveBeenCalledWith('owner-1')
+      expect(res.status, '用户自己存的凭据被判成不存在').toBe(200)
     })
   })
 })

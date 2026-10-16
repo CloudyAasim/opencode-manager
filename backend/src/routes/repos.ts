@@ -281,7 +281,14 @@ app.get('/', async (c) => {
 
       if (credentialId) {
         const settingsService = new SettingsService(database)
-        const settings = settingsService.getSettings()
+        // The credential gets read back for *this* repository, so it has to
+        // exist in the namespace it will be read from. Checking `'default'`
+        // - the namespace every read used before - rejected every key a person
+        // had saved under their own account: the write path has always been
+        // per-user, and this check was the last place still looking at the
+        // process-wide one. Same split as the credential provider, one route
+        // further out.
+        const settings = settingsService.getSettings(repo.userId ?? 'default')
         if (!(settings.preferences.gitCredentials || []).some((credential) => credential.id === credentialId)) {
           return c.json({ error: 'Credential not found' }, 400)
         }
