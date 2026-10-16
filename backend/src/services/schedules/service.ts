@@ -330,45 +330,54 @@ export class ScheduleService {
 
       return runWithSession
     } catch (error) {
-      const finishedAt = Date.now()
-      const errorText = getErrorMessage(error)
-      logger.error(`Failed to run schedule ${jobId}:`, error)
-
-      const failedRun = updateScheduleRun(this.db, repoId, jobId, run.id, {
-        status: 'failed',
-        finishedAt,
-        errorText,
-        logText: buildRunLog({
-          job,
-          triggerSource,
-          errorText,
-          finishedAt,
-        }),
-      })
-
       try {
-        updateScheduleJobRunState(this.db, repoId, jobId, {
-          lastRunAt: finishedAt,
-          nextRunAt: triggerSource === 'manual' ? job.nextRunAt : computeNextRunAtForJob(job, finishedAt),
+        const finishedAt = Date.now()
+        const errorText = getErrorMessage(error)
+        logger.error(`Failed to run schedule ${jobId}:`, error)
+
+        const failedRun = updateScheduleRun(this.db, repoId, jobId, run.id, {
+          status: 'failed',
+          finishedAt,
+          errorText,
+          logText: buildRunLog({
+            job,
+            triggerSource,
+            errorText,
+            finishedAt,
+          }),
         })
-      } catch (updateError) {
-        logger.error(`Failed to update job state for job ${jobId}:`, updateError)
-      }
 
-      await this.teardownWorktree(repoId, jobId, run.id, job, repo)
+        try {
+          updateScheduleJobRunState(this.db, repoId, jobId, {
+            lastRunAt: finishedAt,
+            nextRunAt: triggerSource === 'manual' ? job.nextRunAt : computeNextRunAtForJob(job, finishedAt),
+          })
+        } catch (updateError) {
+          logger.error(`Failed to update job state for job ${jobId}:`, updateError)
+        }
 
-      if (!failedRun) {
+        await this.teardownWorktree(repoId, jobId, run.id, job, repo)
+
+        if (!failedRun) {
+          throw new ScheduleServiceError('Failed to load failed run', 500)
+        }
+
+        if (error instanceof ScheduleServiceError) {
+          throw error
+        }
+
+        throw new ScheduleServiceError(errorText, 500)
+      } finally {
+        // The in-flight flag is the only thing stopping a second run from
+        // starting while this one is still winding down, so it has to be
+        // released on every path out of here. The three `delete` calls this
+        // replaces sat *after* two unguarded database calls, so either of them
+        // throwing left the jobId in the set and every later attempt answered
+        // 409 for the rest of the process's life. Only a restart cleared it,
+        // and `recoverRunningRuns` re-adds rather than removes, so nothing else
+        // did either.
         ScheduleService.activeRuns.delete(jobId)
-        throw new ScheduleServiceError('Failed to load failed run', 500)
       }
-
-      if (error instanceof ScheduleServiceError) {
-        ScheduleService.activeRuns.delete(jobId)
-        throw error
-      }
-
-      ScheduleService.activeRuns.delete(jobId)
-      throw new ScheduleServiceError(errorText, 500)
     }
   }
 

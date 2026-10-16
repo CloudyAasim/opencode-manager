@@ -1819,4 +1819,49 @@ describe('ScheduleService run history cleanup', () => {
     expect(mocks.stubWorktreeManager.pruneRunArtifacts).not.toHaveBeenCalled()
     expect(mocks.deleteScheduleRunById).not.toHaveBeenCalled()
   })
+
+  /**
+   * The in-flight flag is the only thing stopping a second run from starting
+   * while the first is still winding down. It used to be released by three
+   * `delete` calls sitting *after* two unguarded database writes, so either of
+   * those throwing stranded the jobId in the set and every later attempt
+   * answered 409 for the rest of the process's life.
+   */
+  it('releases the in-flight flag when the failure-path database write throws', async () => {
+    const service = new ScheduleService({} as never, createOpenCodeClientStub(), mocks.stubWorktreeManager as never)
+
+    // This block's beforeEach uses `vi.clearAllMocks()`, not
+    // `resetServiceMocks()`, so the implementations the run path depends on
+    // are gone: `createScheduleRun` returns undefined and `run.id` throws
+    // before anything under test executes. Set the preconditions here rather
+    // than relying on whichever block this file happens to place the test in.
+    Reflect.get(ScheduleService, 'activeRuns').clear()
+    mocks.createScheduleRun.mockReturnValue(baseRun)
+    mocks.getRunningScheduleRunByJob.mockReturnValue(null)
+
+    // Enter the catch, then fail inside it *before* the flag was released.
+    // Two earlier attempts at this test were vacuous and it is worth saying why,
+    // because both of them pass on the unfixed code:
+    //   1. Rejecting `worktreeManager.finalize` - `teardownWorktree` catches it
+    //      internally, so the deletes still ran.
+    //   2. A `db` whose `prepare` always throws - every database function is
+    //      individually mocked in this file, so the code under test never
+    //      touched that object at all. It also threw before `activeRuns.add`
+    //      even happened, so the flag was never set in the first place.
+    // The injection has to be the exact call the fix protects.
+    mocks.resolveOpenCodeModel.mockRejectedValue(new Error('No configured models are available.'))
+    mocks.updateScheduleRun.mockImplementation(() => {
+      throw new Error('disk is gone')
+    })
+
+    await expect(service.runJob(42, 7, 'manual')).rejects.toThrow('disk is gone')
+
+    // Without this the test would pass even if the failure never reached the
+    // catch block at all - which is how attempts 1 and 2 passed.
+    expect(mocks.updateScheduleRun).toHaveBeenCalled()
+
+    // The proof that matters: a second attempt is not blocked by the first.
+    await expect(service.runJob(42, 7, 'manual')).rejects.not.toThrow(/already running/)
+  })
+
 })
