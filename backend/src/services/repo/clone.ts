@@ -200,7 +200,7 @@ export async function cloneRepo(
   const repo = createRepo(database, createRepoInput)
 
   try {
-    await gitAuthService.setupSSHForRepoUrl(effectiveUrl, database, skipSSHVerification)
+    await gitAuthService.setupSSHForRepoUrl(effectiveUrl, database, skipSSHVerification, userId)
 
     const env = {
       ...gitAuthService.getGitEnvironment(),

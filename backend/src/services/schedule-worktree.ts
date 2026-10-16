@@ -260,13 +260,16 @@ export class ScheduleWorktreeManager {
   private async buildGitEnv(repo: Repo, sshSetup: boolean, silent: boolean): Promise<Record<string, string>> {
     const baseEnv = this.gitAuthService.getGitEnvironment(silent)
     const sshEnv = sshSetup ? this.gitAuthService.getSSHEnvironment() : {}
-    const identityEnv = await this.buildIdentityEnv()
+    const identityEnv = await this.buildIdentityEnv(repo)
     return { ...baseEnv, ...buildRepoEnvForRepo(repo), ...sshEnv, ...identityEnv }
   }
 
-  private async buildIdentityEnv(): Promise<Record<string, string>> {
-    const settings = this.settingsService.getSettings()
-    const gitCredentials = this.credentialProvider.getGitCredentials()
+  private async buildIdentityEnv(repo: Repo): Promise<Record<string, string>> {
+    // A scheduled run has no session. The repository owner is the only honest
+    // attribution - the same reasoning the schedule service uses when it records
+    // who a cron-created session belongs to.
+    const settings = this.settingsService.getSettings(repo.userId ?? 'default')
+    const gitCredentials = this.credentialProvider.getGitCredentials({ repoId: repo.id })
     const identity = await resolveGitIdentity(settings.preferences.gitIdentity, gitCredentials)
     return identity ? createGitIdentityEnv(identity) : {}
   }

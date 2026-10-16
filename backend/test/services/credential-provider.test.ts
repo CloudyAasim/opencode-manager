@@ -17,6 +17,15 @@ function createPatCredential(name: string, host: string, token: string, username
   } as GitCredential
 }
 
+/** `basic <base64(user:token)>`, decoded back to the pair it stands for. */
+function basicAuthPrincipal(env: Record<string, string>): string | null {
+  for (const value of Object.values(env)) {
+    const match = /basic\s+([A-Za-z0-9+/=]+)/.exec(value)
+    if (match) return Buffer.from(match[1]!, 'base64').toString('utf8')
+  }
+  return null
+}
+
 function createSshCredential(name: string, host: string, sshPrivateKeyEncrypted?: string): GitCredential {
   return {
     name,
@@ -36,6 +45,71 @@ describe('CredentialProvider', () => {
     migrate(db, allMigrations)
     settingsService = new SettingsService(db)
     provider = new CredentialProvider(db)
+  })
+
+  /**
+   * The keys a person saves under their own account have to be the keys their
+   * own operations use. They were not: every read went to `'default'`, so a
+   * saved key never took effect - the operation silently fell back to whatever
+   * the host happened to have - and whatever sat in `'default'` was used by
+   * every account.
+   *
+   * The tests above cannot have caught that. They call `updateSettings` with
+   * no owner, which writes to `'default'`, which is the one namespace the old
+   * read path happened to use. Every one of them passed while the per-user path
+   * was broken - the same shape as the access guard that answered 500 because
+   * its mock was the wrong shape.
+   */
+  describe('per-owner credentials', () => {
+    const ownerPat = createPatCredential('owner-pat', 'github.com', 'ghp_owner', 'owner', 'cred-owner')
+    const otherPat = createPatCredential('other-pat', 'github.com', 'ghp_other', 'other', 'cred-other')
+
+    function seedRepo(userId: string, credentialId?: string): number {
+      const repo = createRepo(db, {
+        localPath: `/repos/${userId}/thing`,
+        isLocal: true,
+        defaultBranch: 'main',
+        cloneStatus: 'ready',
+        clonedAt: Date.now(),
+        userId,
+      })
+      if (credentialId) setRepoGitCredentialId(db, repo.id, credentialId)
+      return repo.id
+    }
+
+    it("uses the repository owner's keys, not the process-wide ones", () => {
+      settingsService.updateSettings({ gitCredentials: [ownerPat] }, 'user-a')
+      settingsService.updateSettings({ gitCredentials: [otherPat] }, 'default')
+      const repoId = seedRepo('user-a', 'cred-owner')
+
+      // Decoded rather than string-matched: the value is `basic <base64>`, so
+      // looking for the username in the raw env would pass or fail for a reason
+      // unrelated to which credential was chosen.
+      expect(basicAuthPrincipal(provider.getGitEnv({ repoId }))).toBe('owner:ghp_owner')
+    })
+
+    it("does not reach into another account's keys", () => {
+      settingsService.updateSettings({ gitCredentials: [otherPat] }, 'user-b')
+      const repoId = seedRepo('user-a', 'cred-owner')
+
+      expect(provider.getGitCredentials({ repoId })).toEqual([])
+    })
+
+    it('falls back to the process-wide namespace for the server env', () => {
+      settingsService.updateSettings({ gitCredentials: [otherPat] }, 'default')
+
+      expect(provider.getGitCredentials()).toHaveLength(1)
+    })
+
+    it('attributes a first clone to the person who started it', () => {
+      // No repository row exists yet at clone time, so the initiator is the
+      // only honest answer to whose keys may be used.
+      settingsService.updateSettings({ gitCredentials: [ownerPat] }, 'user-a')
+
+      expect(provider.getSshCredentialsForHost('github.com', { userId: 'user-a' })).toEqual([])
+      const [credential] = provider.getGitCredentials({ userId: 'user-a' })
+      expect(credential).toMatchObject({ id: 'cred-owner', token: 'ghp_owner' })
+    })
   })
 
   describe('with seeded credentials', () => {

@@ -18,6 +18,11 @@ import {
 interface CredentialResolutionOptions {
   cwd?: string
   repoId?: number
+  /**
+   * Who the operation is for, for the case where no repository row exists yet
+   * - a first clone is initiated by a person, before there is a repo to own.
+   */
+  userId?: string | null
 }
 
 interface CredentialResolutionContext {
@@ -35,13 +40,34 @@ export class CredentialProvider {
     this.settingsService = new SettingsService(database)
   }
 
-  getGitCredentials(): GitCredential[] {
-    return this.getCredentials(this.getPreferences())
+  /**
+   * Whose settings a git operation may read credentials out of.
+   *
+   * A repository's owner configured its credential, so they are the only
+   * honest answer to "whose keys may this operation use". Reading `'default'`
+   * instead meant the opposite of both things that matter at once: the keys a
+   * person saved under their own account were never the ones used for their
+   * own clones - the operation silently fell back to whatever credentials the
+   * host happened to have - and whatever did sit in `'default'` was used by
+   * every account for every repository.
+   *
+   * `'default'` is kept for exactly one caller: building the OpenCode server's
+   * own environment, which belongs to the process rather than to a tenant.
+   */
+  private settingsOwnerId(options: CredentialResolutionOptions, repo: Repo | null): string {
+    return options.userId ?? repo?.userId ?? 'default'
   }
 
-  getGitCredentialById(credentialId: string | undefined): GitCredential | null {
+  getGitCredentials(options: CredentialResolutionOptions = {}): GitCredential[] {
+    return this.getCredentials(this.getPreferences(options, this.resolveRepo(options)))
+  }
+
+  getGitCredentialById(
+    credentialId: string | undefined,
+    options: CredentialResolutionOptions = {},
+  ): GitCredential | null {
     if (!credentialId) return null
-    return this.getGitCredentials().find((credential) => credential.id === credentialId) ?? null
+    return this.getGitCredentials(options).find((credential) => credential.id === credentialId) ?? null
   }
 
   getPatCredentialForHost(hostname: string, options: CredentialResolutionOptions = {}): ResolvedGitCredential | null {
@@ -51,12 +77,12 @@ export class CredentialProvider {
     return selectedMatch ?? findPatCredentialForHost(context.credentials, hostname)
   }
 
-  getSshCredentialsForHost(host: string): GitCredential[] {
-    return getSSHCredentialsForHost(this.getGitCredentials(), host)
+  getSshCredentialsForHost(host: string, options: CredentialResolutionOptions = {}): GitCredential[] {
+    return getSSHCredentialsForHost(this.getGitCredentials(options), host)
   }
 
-  getSshCredentialsWithPrivateKey(): GitCredential[] {
-    return this.getGitCredentials().filter((cred) => cred.type === 'ssh' && cred.sshPrivateKeyEncrypted)
+  getSshCredentialsWithPrivateKey(options: CredentialResolutionOptions = {}): GitCredential[] {
+    return this.getGitCredentials(options).filter((cred) => cred.type === 'ssh' && cred.sshPrivateKeyEncrypted)
   }
 
   getGitEnv(options: CredentialResolutionOptions = {}): Record<string, string> {
@@ -68,7 +94,7 @@ export class CredentialProvider {
   }
 
   private resolveContext(options: CredentialResolutionOptions, repo = this.resolveRepo(options)): CredentialResolutionContext {
-    const preferences = this.getPreferences()
+    const preferences = this.getPreferences(options, repo)
     return {
       preferences,
       credentials: this.getCredentials(preferences),
@@ -76,8 +102,8 @@ export class CredentialProvider {
     }
   }
 
-  private getPreferences(): UserPreferences {
-    return this.settingsService.getSettings('default').preferences
+  private getPreferences(options: CredentialResolutionOptions, repo: Repo | null): UserPreferences {
+    return this.settingsService.getSettings(this.settingsOwnerId(options, repo)).preferences
   }
 
   private getCredentials(preferences: UserPreferences): GitCredential[] {

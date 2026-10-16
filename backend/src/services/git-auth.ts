@@ -85,7 +85,7 @@ export class GitAuthService {
     }
   }
 
-  async setupSSHForRepoUrl(repoUrl: string | undefined, database: Database, skipSSHVerification: boolean = false): Promise<boolean> {
+  async setupSSHForRepoUrl(repoUrl: string | undefined, database: Database, skipSSHVerification: boolean = false, userId?: string | null): Promise<boolean> {
     if (!repoUrl || !isSSHUrl(repoUrl)) {
       return false
     }
@@ -100,7 +100,7 @@ export class GitAuthService {
     const { port } = parseSSHHost(normalizedUrl)
     this.setSSHPort(port && port !== '22' ? port : null)
 
-    const sshCredentials = this.credentialProvider!.getSshCredentialsForHost(sshHost)
+    const sshCredentials = this.credentialProvider!.getSshCredentialsForHost(sshHost, { userId })
 
     if (sshCredentials.length > 0 && sshCredentials[0]) {
       try {

@@ -210,8 +210,8 @@ export class GitService {
       const repoPath = repo.fullPath
       const authEnv = this.getEnvironmentForRepo(repo)
 
-      const settings = this.settingsService.getSettings('default')
-      const gitCredentials = this.credentialProvider.getGitCredentials()
+      const settings = this.settingsService.getSettings(repo.userId ?? 'default')
+      const gitCredentials = this.credentialProvider.getGitCredentials({ repoId: repo.id })
       const identity = await resolveGitIdentity(settings.preferences.gitIdentity, gitCredentials)
       const identityEnv = identity ? createGitIdentityEnv(identity) : {}
 
