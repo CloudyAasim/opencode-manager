@@ -5,7 +5,7 @@ import type { Database } from 'bun:sqlite'
 import type { Repo } from '@opencode-manager/shared/types'
 import { DiscoverReposRequestSchema, AssistantModeInitRequestSchema, UpdateRepoRequestSchema } from '@opencode-manager/shared/schemas'
 import { listRepos, getRepoById, updateLastAccessed, getRepoGitCredentialId, setRepoGitCredentialId, updateRepoName } from '../db/queries'
-import { canAccessRepo, canAccessRepoOwner, getRepoOwnerId, principalFrom, type Principal } from '../auth/ownership'
+import { canAccessRepo, canAccessRepoOwner, principalFrom, type Principal } from '../auth/ownership'
 import type { Session } from '../auth'
 import * as repoService from '../services/repo'
 import * as archiveService from '../services/archive'
@@ -64,8 +64,12 @@ export function createRepoRoutes(
     }
     const principal = currentPrincipal(c)
     if (principal !== null && !canAccessRepo(database, id, principal)) {
-      const exists = id === ASSISTANT_REPO_ID || getRepoOwnerId(database, id) !== undefined
-      return c.json({ error: exists ? 'Forbidden' : 'Repository not found' }, exists ? 403 : 404)
+      // 404 for both cases, deliberately. Answering 403 when the row exists and
+      // 404 when it does not turns the status code into an oracle: a stranger
+      // could sweep ids and learn which repositories exist on this server, and
+      // the assistant id is a constant, so its existence needed no probing at
+      // all. "Not here, or not yours" is one answer to one question.
+      return c.json({ error: 'Repository not found' }, 404)
     }
     await next()
   }

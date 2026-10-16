@@ -1,12 +1,18 @@
+import { Hono } from 'hono'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { Database } from 'bun:sqlite'
 import { createStubOpenCodeClient } from '../helpers/stub-opencode-client'
 
 const mockDb = {
-  prepare: vi.fn(),
+  // auth/ownership.ts reads repo ownership through `db.prepare(...).get(...)`,
+  // not through db/queries. This used to be a bare `vi.fn()`, so the access
+  // guard threw a TypeError and answered 500 — the guard had no working
+  // coverage at all, which is how the 403/404 existence split survived every
+  // green run.
+  prepare: vi.fn(() => ({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() })),
   exec: vi.fn(),
   close: vi.fn(),
-  transaction: vi.fn()
+  transaction: vi.fn(),
 } as unknown as Database
 
 vi.mock('bun:sqlite', () => ({
@@ -772,10 +778,13 @@ describe('Repo Routes', () => {
   })
 
   describe('DELETE /:id', () => {
-    it('should return 403 for the assistant repo id', async () => {
+    it('should refuse deleting the assistant repo id outright', async () => {
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
       const res = await app.request('/0', { method: 'DELETE' })
 
+      // 403 here is correct and is not an oracle: the assistant id is a
+      // documented constant that already appears in every account's repo list.
+      // The 404/403 split that *was* an oracle lived in the access guard.
       expect(res.status).toBe(403)
     })
 
@@ -1292,6 +1301,35 @@ describe('Repo Routes', () => {
       expect(res.status).toBe(403)
       expect(client.getJson).not.toHaveBeenCalled()
       expect(repoService.deleteRepoFiles).not.toHaveBeenCalled()
+    })
+  })
+  describe('access guard 不泄露仓库是否存在', () => {
+    it('a repo that exists but is not yours answers exactly like one that does not', async () => {
+      // Same status for both, so sweeping ids reveals nothing about which
+      // repositories are on this server. The guard used to answer 403 when the
+      // row existed and 404 when it did not.
+      const stranger = { id: 'stranger-1', role: 'user', username: 'stranger' }
+      const mockOwnerRow = (row: { user_id: string } | undefined) => {
+        vi.mocked(mockDb.prepare).mockReturnValue({ get: () => row, all: () => [], run: () => undefined } as never)
+      }
+      mockOwnerRow({ user_id: 'someone-else' })
+      vi.mocked(db.getRepoById).mockReturnValue(createMockRepo({ id: 42, userId: 'someone-else' }))
+      mockOwnerRow({ user_id: 'someone-else' })
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+      const withSession = new Hono<{ Variables: { user: { id: string; role: string; username: string } } }>()
+        .use('*', async (c, next) => {
+          c.set('user', stranger as never)
+          await next()
+        })
+        .route('/', app)
+
+      const denied = await withSession.request('/42')
+      mockOwnerRow(undefined)
+      const absent = await withSession.request('/99')
+
+      expect(denied.status, '存在的仓库与不存在的仓库必须给出同一个状态码').toBe(absent.status)
+      expect(denied.status).toBe(404)
     })
   })
 })
