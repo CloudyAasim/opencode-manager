@@ -553,6 +553,44 @@ describe('SSEAggregator upstream connection lifecycle', () => {
     expect(eventSourceState.instances).toHaveLength(2)
   })
 
+  /**
+   * Every caller discards `connectUpstream`'s promise, so a rejection is an
+   * unhandled rejection and the default policy kills the process - not just the
+   * stream. The first `await` reads the server password through
+   * `db.prepare(...).get(...)`, which is unguarded, and reconnects fire
+   * routinely (every OpenCode restart), so this was reachable in normal
+   * operation rather than only in theory.
+   */
+  it('does not reject when the password resolver throws, and schedules a reconnect', async () => {
+    vi.useFakeTimers()
+    // `connectUpstreamOnce` returns early unless the aggregator is started, so
+    // the auth read - the thing under test - is only reached once it is.
+    sseAggregator.start()
+    await flushReplay()
+    expect(eventSourceState.instances).toHaveLength(1)
+
+    sseAggregator.setPasswordResolver(() => {
+      throw new Error('database is locked')
+    })
+
+    await expect((sseAggregator as any).connectUpstream()).resolves.toBeUndefined()
+
+    // The failed attempt closed the old stream and opened no new one, and the
+    // aggregator did not silently give up: it logs and takes the same three
+    // steps `es.onerror` takes, so the next attempt still happens.
+    expect(eventSourceState.instances).toHaveLength(1)
+    expect(logger.error).toHaveBeenCalledWith(
+      'SSE: failed to connect to the OpenCode upstream stream:',
+      expect.any(Error),
+    )
+
+    vi.advanceTimersByTime(60_000)
+    // The retry reaches the same failure and must survive it too - this is the
+    // loop that would otherwise repeat an unhandled rejection forever.
+    await flushReplay()
+    expect(logger.error).toHaveBeenCalledTimes(2)
+  })
+
   it('closes the previous stream and opens a new one on reconnect', () => {
     sseAggregator.start()
     sseAggregator.reconnect()

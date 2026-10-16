@@ -320,6 +320,26 @@ class SSEAggregator {
   }
 
   private async connectUpstream(): Promise<void> {
+    // Every caller discards this promise (`void this.connectUpstream()`), so a
+    // rejection is an unhandled rejection and takes the whole process down with
+    // it - not just the stream. It was reachable on the first `await` below:
+    // reading the server password runs `db.prepare(...).get(...)` unguarded, so
+    // a locked SQLite connection throws. Reconnects are routine - they fire
+    // every time OpenCode restarts - which made this a live way to take the
+    // backend down rather than a theoretical one.
+    //
+    // A connection that fails *after* the EventSource exists already reports
+    // through `es.onerror`, which does exactly these three things.
+    try {
+      await this.connectUpstreamOnce()
+    } catch (error) {
+      logger.error('SSE: failed to connect to the OpenCode upstream stream:', error)
+      this.upstreamConnected = false
+      this.scheduleReconnect()
+    }
+  }
+
+  private async connectUpstreamOnce(): Promise<void> {
     if (!this.started) return
     if (this.upstream) {
       this.upstream.close()
