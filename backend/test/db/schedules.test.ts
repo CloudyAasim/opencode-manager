@@ -564,6 +564,28 @@ describe('schedule database queries', () => {
     expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('sr.repo_id = ?'))
   })
 
+  it('narrows by the repo set the caller may see', () => {
+    const stmt = { all: vi.fn().mockReturnValue([]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    schedulesDb.listAllScheduleRuns(mockDb, { repoIds: [11, 33] })
+
+    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('sr.repo_id IN (?, ?)'))
+    expect(stmt.all).toHaveBeenCalledWith(11, 33, 50, 0)
+  })
+
+  it('answers nothing for a caller who may see no repos', () => {
+    // An empty set is a real answer. Treating it as "no filter" would hand a
+    // caller with no accessible repos every run in the database.
+    const stmt = { all: vi.fn().mockReturnValue([makeRunRow()]) }
+    mockDb.prepare.mockReturnValue(stmt)
+
+    const result = schedulesDb.listAllScheduleRuns(mockDb, { repoIds: [] })
+
+    expect(result).toEqual([])
+    expect(stmt.all, '空集合不该触达数据库').not.toHaveBeenCalled()
+  })
+
   it('applies jobId filter', () => {
     const stmt = { all: vi.fn().mockReturnValue([]) }
     mockDb.prepare.mockReturnValue(stmt)

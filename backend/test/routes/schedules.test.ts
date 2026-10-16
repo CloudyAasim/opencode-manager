@@ -513,15 +513,31 @@ describe('Schedule Routes - repository ownership', () => {
     // A run row carries the session id the agent ran in. Handing one tenant
     // every row would hand them the session ids the identity scheme is built
     // on - the value they would then present to be placed as that tenant.
-    scheduleService.listAllRuns.mockReturnValue([
-      { id: 1, repoId: 11, sessionId: 'ses_alice' },
-      { id: 2, repoId: 22, sessionId: 'ses_bob' },
-    ])
+    //
+    // The narrowing is a WHERE clause now, not a filter afterwards, so this
+    // asserts what the query was asked for. It used to assert the rows that came
+    // back, which only proved something while the route was doing the trimming
+    // - and that shape also paged over everyone's runs before trimming, so a
+    // non-admin's page was cut from the global set.
+    scheduleService.listAllRuns.mockReturnValue([{ id: 1, repoId: 11, sessionId: 'ses_alice' }])
 
     const response = await alice.request('/repos/11/schedules/all/runs')
     const body = await response.json() as { runs: { sessionId: string | null }[] }
 
+    // alice may see her own repo (11) and the shared one (33); bob's (22) must
+    // not be in the set the query is narrowed by.
+    const options = scheduleService.listAllRuns.mock.calls.at(-1)?.[0] as { repoIds?: number[] }
+    expect([...(options.repoIds ?? [])].sort((a, b) => a - b)).toEqual([11, 33])
     expect(body.runs.map((r) => r.sessionId)).toEqual(['ses_alice'])
+  })
+
+  it('passes no repo narrowing for an administrator', async () => {
+    scheduleService.listAllRuns.mockReturnValue([])
+
+    await admin.request('/repos/11/schedules/all/runs')
+
+    const options = scheduleService.listAllRuns.mock.calls.at(-1)?.[0] as { repoIds?: number[] }
+    expect(options.repoIds, '管理员不受仓库收窄，否则他看不到别人的运行记录').toBeUndefined()
   })
 
   it('leaves the cross-repository lists untouched for an administrator', async () => {

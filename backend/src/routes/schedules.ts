@@ -75,6 +75,9 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
 
   app.get('/all/runs', (c) => {
     try {
+      const principal = principalOf(c)
+      if (!principal) return c.json({ error: 'Unauthorized' }, 401)
+
       const limit = parseRunListLimit(c.req.query('limit'))
       const offsetStr = c.req.query('offset')
       const offset = offsetStr ? Math.max(parseInt(offsetStr, 10) || 0, 0) : 0
@@ -90,14 +93,17 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
         return Number.isNaN(parsed) ? undefined : parsed
       })() : undefined
       const triggerSource = c.req.query('triggerSource') || undefined
-      const runs = scheduleService.listAllRuns({ limit, offset, status, repoId, jobId, triggerSource })
-      const principal = principalOf(c)
-      if (!principal) return c.json({ error: 'Unauthorized' }, 401)
-      if (principal.role === 'admin') {
-        return c.json({ runs })
-      }
-      const allowed = new Set(accessibleRepoIds(database, principal))
-      return c.json({ runs: runs.filter((run) => allowed.has(run.repoId)) })
+
+      // Scope the query, then page it. The previous shape paged first and
+      // filtered after, so a non-admin's page was cut from everyone's runs:
+      // short pages, and past the global offset an empty answer while their own
+      // rows were still unread.
+      const repoIds = principal.role === 'admin'
+        ? undefined
+        : accessibleRepoIds(database, principal)
+
+      const runs = scheduleService.listAllRuns({ limit, offset, status, repoId, repoIds, jobId, triggerSource })
+      return c.json({ runs })
     } catch (error) {
       return handleServiceError(c, error, 'Failed to list all schedule runs', ScheduleServiceError)
     }

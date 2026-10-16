@@ -602,12 +602,21 @@ export interface ListAllRunsOptions {
   offset?: number
   status?: string
   repoId?: number
+  /**
+   * The repos the caller may see. Applied as a WHERE clause rather than a
+   * filter afterwards, so `limit`/`offset` count rows this caller can actually
+   * see. Filtering in the route instead meant the page was cut from everyone's
+   * runs and then trimmed, so a non-admin paging their own history got short
+   * pages - or, past the global offset, nothing at all while their own rows
+   * were still unread.
+   */
+  repoIds?: number[]
   jobId?: number
   triggerSource?: string
 }
 
 export function listAllScheduleRuns(db: Database, options: ListAllRunsOptions = {}): ScheduleRunWithContext[] {
-  const { limit = 50, offset = 0, status, repoId, jobId, triggerSource } = options
+  const { limit = 50, offset = 0, status, repoId, repoIds, jobId, triggerSource } = options
   const conditions: string[] = []
   const params: (string | number)[] = []
 
@@ -618,6 +627,12 @@ export function listAllScheduleRuns(db: Database, options: ListAllRunsOptions = 
   if (repoId !== undefined) {
     conditions.push('sr.repo_id = ?')
     params.push(repoId)
+  } else if (repoIds !== undefined) {
+    // An empty set is a real answer, not "no filter": the caller may see no
+    // repos, so the query must return nothing rather than everything.
+    if (repoIds.length === 0) return []
+    conditions.push(`sr.repo_id IN (${repoIds.map(() => '?').join(', ')})`)
+    params.push(...repoIds)
   }
   if (jobId !== undefined) {
     conditions.push('sr.job_id = ?')
