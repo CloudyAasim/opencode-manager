@@ -18,6 +18,22 @@ export interface RestartWithResumeResult {
 }
 
 export class OpenCodeRestartCoordinator {
+  // Restart-with-resume has to be atomic as a whole. `OpenCodeSupervisor`
+  // serialises the restart itself, but capture/abort happens *before* it and
+  // resume *after* it, so two overlapping calls used to interleave into
+  //
+  //   abort s1 -> abort s1 -> restart -> restart -> resume s1 -> resume s1
+  //
+  // (observed, not schematic). The second restart lands immediately after the
+  // first, killing whatever the first had just resumed, and s1 then receives
+  // *two* "continue" prompts - so the session does its work twice. Two requests
+  // overlap easily: a double-clicked restart, or `/opencode-upgrade` racing
+  // `/opencode-restart`; both funnel through here.
+  //
+  // Same chaining idiom as `OpenCodeSupervisor.runLifecycleOperation`. The tail
+  // swallows failures so one failed restart does not poison every later one.
+  private operationTail: Promise<unknown> = Promise.resolve()
+
   constructor(
     private readonly client: OpenCodeClient,
     private readonly activeSessions: ActiveSessionsProvider,
@@ -80,6 +96,15 @@ export class OpenCodeRestartCoordinator {
   }
 
   async runWithResume(restart: () => Promise<boolean>): Promise<RestartWithResumeResult> {
+    const run = this.operationTail.then(
+      () => this.runWithResumeNow(restart),
+      () => this.runWithResumeNow(restart),
+    )
+    this.operationTail = run.catch(() => undefined)
+    return run
+  }
+
+  private async runWithResumeNow(restart: () => Promise<boolean>): Promise<RestartWithResumeResult> {
     const sessions = this.captureResumableSessions()
     await this.abortSessions(sessions)
     const healthy = await restart()

@@ -257,6 +257,57 @@ describe('OpenCodeRestartCoordinator', () => {
     })
   })
 
+    it('serialises overlapping restart-with-resume runs so a session is not resumed into a restart', async () => {
+      // The whole capture/abort/restart/resume cycle must be atomic. It used to
+      // be only the restart that queued (inside the supervisor), so two
+      // overlapping calls interleaved and the second restart killed the session
+      // the first had just resumed - and each sent it a "continue".
+      const events: string[] = []
+      const forward = vi.mocked(client.forward)
+      forward.mockImplementation(async (opts) => {
+        events.push(`${opts.path}`)
+        await new Promise(r => setTimeout(r, 0))
+        return new Response(null, { status: 200 })
+      })
+
+      vi.mocked(activeSessions.getActiveSessions).mockReturnValue({ '/a': ['s1'] })
+
+      const restart = vi.fn(async () => {
+        events.push('restart')
+        await new Promise(r => setTimeout(r, 0))
+        return true
+      })
+
+      await Promise.all([
+        coordinator.runWithResume(restart),
+        coordinator.runWithResume(restart),
+      ])
+
+      // Each run completes end to end before the next one starts: abort,
+      // restart, resume, and only then the second run's abort.
+      expect(events).toEqual([
+        '/session/s1/abort',
+        'restart',
+        '/session/s1/prompt_async',
+        '/session/s1/abort',
+        'restart',
+        '/session/s1/prompt_async',
+      ])
+    })
+
+    it('does not let a failed restart block later runs', async () => {
+      vi.mocked(activeSessions.getActiveSessions).mockReturnValue({ '/a': ['s1'] })
+
+      const failing = vi.fn(async () => {
+        throw new Error('restart did not complete')
+      })
+      await expect(coordinator.runWithResume(failing)).rejects.toThrow('restart did not complete')
+
+      // A poisoned tail would make every later run hang instead of running.
+      const healthy = vi.fn(async () => true)
+      await expect(coordinator.runWithResume(healthy)).resolves.toEqual({ healthy: true, resumedSessionIDs: ['s1'] })
+    })
+
   describe('abortSessions', () => {
     it('does not throw when forward rejects and continues processing remaining sessions', async () => {
       const forward = vi.mocked(client.forward)
