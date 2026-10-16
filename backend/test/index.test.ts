@@ -22,7 +22,10 @@ vi.mock('../src/services/opencode-supervisor', () => ({
 }))
 
 const scheduleRunnerMock = vi.hoisted(() => ({
-  start: vi.fn(),
+  // `start` is `async` in the real class and the entrypoint chains a `.catch`
+  // onto it, so a bare `vi.fn()` that returns undefined makes the module throw
+  // at import time. Return a resolved promise, as the real thing does.
+  start: vi.fn().mockResolvedValue(undefined),
   stop: vi.fn(),
 }))
 

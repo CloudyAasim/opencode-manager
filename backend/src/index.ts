@@ -354,7 +354,14 @@ sseAggregator.setScheduledSessionsResolver(
 const openCodeRestartCoordinator = new OpenCodeRestartCoordinator(openCodeClient, sseAggregator)
 setOpenCodeRestartCoordinator(openCodeRestartCoordinator)
 
-void scheduleRunnerInstance.start()
+// Deliberately not `void`: `start()` registers every enabled cron job *after*
+// awaiting recovery, so a rejection here would both leave the process with no
+// schedules at all and - with no `unhandledRejection` handler installed - take
+// the server down with it. Recovery failures are already handled per run; this
+// only catches what escapes.
+scheduleRunnerInstance.start().catch((error) => {
+  logger.error('Failed to start the schedule runner:', error)
+})
 
 const settingsService = new SettingsService(db)
 

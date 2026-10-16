@@ -764,6 +764,94 @@ describe('ScheduleService', () => {
     )
   })
 
+  /**
+   * `ScheduleRunner.start()` awaits recovery and only then registers cron jobs,
+   * and its caller discards the promise. So one run that could not be recovered
+   * used to mean no schedule ran at all for the rest of the process - and, with
+   * no `unhandledRejection` handler installed, a dead process.
+   *
+   * A run whose repository was deleted is enough to trigger it: `assertRepo`
+   * throws on the way in, and the catch block calls `assertRepo` a second time,
+   * so the second throw has nothing left to catch it.
+   */
+  it('keeps recovering the remaining runs when one run cannot be recovered at all', async () => {
+    const service = new ScheduleService({} as never, createOpenCodeClientStub(), mocks.stubWorktreeManager as never)
+
+    Reflect.get(ScheduleService, 'activeRuns').clear()
+    mocks.createScheduleRun.mockReturnValue(baseRun)
+    mocks.getRunningScheduleRunByJob.mockReturnValue(null)
+    // Repo 42 is gone; repo 43 is fine.
+    mocks.getRepoById.mockImplementation((_db, repoId) => (repoId === 42 ? undefined : repo))
+    mocks.getScheduleJobById.mockImplementation((_db, repoId, jobId) => ({ ...job, id: jobId, repoId }))
+
+    mocks.listRunningScheduleRuns.mockReturnValue([
+      { ...baseRun, id: 5, jobId: 7, repoId: 42, sessionId: 'ses-gone', sessionTitle: 'gone' },
+      { ...baseRun, id: 6, jobId: 9, repoId: 43, sessionId: null, sessionTitle: null },
+    ])
+
+    // The whole point: this must not reject.
+    await expect(service.recoverRunningRuns()).resolves.toBeUndefined()
+
+    // The first run's failure must not have stranded the second one.
+    expect(mocks.updateScheduleRun).toHaveBeenCalledWith(
+      expect.anything(),
+      43,
+      9,
+      6,
+      expect.objectContaining({ status: 'failed' }),
+    )
+  })
+
+  /**
+   * `finalizeRecoveredRun` owns releasing the in-flight flag for the
+   * synchronous recovery branches, and the release used to sit *after* three
+   * unguarded calls. This is a startup path, so a stranded jobId answered 409
+   * for the rest of the process's life.
+   *
+   * Driven through the private method directly, because going via
+   * `recoverRunningRuns` cannot see it: that loop's own catch releases the
+   * flag too, so the assertion below passes with or without the `finally`.
+   */
+  it('releases the in-flight flag when finalizing a recovered run throws', async () => {
+    const service = new ScheduleService({} as never, createOpenCodeClientStub(), mocks.stubWorktreeManager as never)
+    const finalize = (service as unknown as {
+      finalizeRecoveredRun: (
+        job: ScheduleJob,
+        run: ScheduleRun,
+        input: { status: 'failed'; errorText?: string | null },
+        repo: unknown,
+      ) => Promise<void>
+    }).finalizeRecoveredRun.bind(service)
+
+    Reflect.get(ScheduleService, 'activeRuns').clear()
+    mocks.createScheduleRun.mockReturnValue(baseRun)
+    mocks.getRunningScheduleRunByJob.mockReturnValue(null)
+    Reflect.get(ScheduleService, 'activeRuns').add(job.id)
+
+    // Not `Once`: `recoverRunningRun`'s catch retries the finalize, so a
+    // single-shot failure would be absorbed by the retry. The override has to
+    // be undone by hand too - the block's `beforeEach` calls
+    // `vi.clearAllMocks()`, which resets recorded calls but leaves
+    // implementations in place.
+    mocks.updateScheduleRun.mockImplementation(() => {
+      throw new Error('disk is gone')
+    })
+
+    let finalizeCalls = 0
+    try {
+      await expect(
+        finalize(job, { ...baseRun, sessionId: null }, { status: 'failed', errorText: 'interrupted' }, repo),
+      ).rejects.toThrow('disk is gone')
+      finalizeCalls = mocks.updateScheduleRun.mock.calls.length
+    } finally {
+      // `mockReset` also clears recorded calls, so read them first.
+      mocks.updateScheduleRun.mockReset()
+    }
+
+    expect(finalizeCalls).toBeGreaterThan(0)
+    expect(Reflect.get(ScheduleService, 'activeRuns').has(job.id)).toBe(false)
+  })
+
   it('finalizes interrupted runs without a linked session during recovery', async () => {
     const service = new ScheduleService({} as never, createOpenCodeClientStub(), mocks.stubWorktreeManager as never)
 

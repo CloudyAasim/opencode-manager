@@ -94,7 +94,24 @@ export class ScheduleService {
       }
 
       ScheduleService.activeRuns.add(job.id)
-      await this.recoverRunningRun(job, run)
+      // One unrecoverable run must not strand the others. Without this the
+      // throw escaped `recoverRunningRun` to `ScheduleRunner.start()`, whose
+      // caller discards the promise - so a single bad row meant no cron job was
+      // ever registered, and on the default unhandled-rejection policy the
+      // process died. A run whose repo was deleted is enough: `assertRepo`
+      // throws on the way in, and the catch block called `assertRepo` again.
+      try {
+        await this.recoverRunningRun(job, run)
+      } catch (error) {
+        logger.error(`Failed to recover schedule ${job.id}:`, error)
+        // Safe to release here: the only path that legitimately keeps the flag
+        // is the one handing the run to a live `monitorRunCompletion`, and that
+        // branch returns immediately after scheduling it, so it cannot be the
+        // thing that threw. Every synchronous branch already released in
+        // `finalizeRecoveredRun`'s finally, so this is a no-op for those and
+        // the difference only for runs that died on the way.
+        ScheduleService.activeRuns.delete(job.id)
+      }
     }
   }
 
@@ -739,33 +756,41 @@ export class ScheduleService {
     },
     repo: Repo,
   ): Promise<void> {
-    const finishedAt = Date.now()
+    // Same rule as `runJob`: this path finishes the run synchronously, so it
+    // owns releasing the in-flight flag, and the release belongs in `finally`.
+    // It used to sit after three unguarded calls, so a failure in any of them
+    // stranded the jobId in `activeRuns` - and this is a startup path, so the
+    // job answered 409 for the rest of the process's life.
+    try {
+      const finishedAt = Date.now()
 
-    updateScheduleRun(this.db, run.repoId, run.jobId, run.id, {
-      status: input.status,
-      finishedAt,
-      sessionId: run.sessionId,
-      sessionTitle: run.sessionTitle,
-      responseText: input.responseText,
-      errorText: input.errorText,
-      logText: buildRunLog({
-        job,
-        triggerSource: run.triggerSource,
+      updateScheduleRun(this.db, run.repoId, run.jobId, run.id, {
+        status: input.status,
+        finishedAt,
         sessionId: run.sessionId,
         sessionTitle: run.sessionTitle,
         responseText: input.responseText,
         errorText: input.errorText,
-        finishedAt,
-      }),
-    })
+        logText: buildRunLog({
+          job,
+          triggerSource: run.triggerSource,
+          sessionId: run.sessionId,
+          sessionTitle: run.sessionTitle,
+          responseText: input.responseText,
+          errorText: input.errorText,
+          finishedAt,
+        }),
+      })
 
-    updateScheduleJobRunState(this.db, run.repoId, run.jobId, {
-      lastRunAt: finishedAt,
-      nextRunAt: run.triggerSource === 'manual' ? job.nextRunAt : computeNextRunAtForJob(job, finishedAt),
-    })
+      updateScheduleJobRunState(this.db, run.repoId, run.jobId, {
+        lastRunAt: finishedAt,
+        nextRunAt: run.triggerSource === 'manual' ? job.nextRunAt : computeNextRunAtForJob(job, finishedAt),
+      })
 
-    await this.teardownWorktree(run.repoId, run.jobId, run.id, job, repo)
-    ScheduleService.activeRuns.delete(job.id)
+      await this.teardownWorktree(run.repoId, run.jobId, run.id, job, repo)
+    } finally {
+      ScheduleService.activeRuns.delete(job.id)
+    }
   }
 
   private async teardownWorktree(repoId: number, jobId: number, runId: number, job: ScheduleJob, repo: Repo): Promise<void> {
