@@ -109,6 +109,18 @@ Each of these was a live bug at some point; all of them are now gated.
 - **Dependencies point one way: feature → framework.** Cross-feature dialogs are
   registered in `knownLayers.ts` and must be opened from there.
 
+### Electron
+
+- **`openExternal` needs its own check, not the navigation one.** "May this
+  open in our window" and "is this safe to hand the OS" are different
+  questions. The first says no to every other origin, and that set is exactly
+  `file://`, `javascript:` and every scheme with a registered handler - which
+  the OS launches as a program with the URL as its arguments. A link in
+  rendered content is enough to reach it. Only http and https go out.
+- **Assert both halves.** A test that checks the navigation was blocked but not
+  that the OS never received it stays green while the dangerous half runs. That
+  is not a missing test; it is a test protecting a guarantee that did not exist.
+
 ### General
 
 - DRY principles, follow existing patterns
