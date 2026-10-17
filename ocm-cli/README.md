@@ -8,13 +8,37 @@ to the local working tree.
 
 ## Install
 
+From a checkout of this repository:
+
 ```bash
-pnpm add -g @opencode-manager/ocm-cli
+pnpm install
+pnpm --filter @opencode-manager/ocm-cli build
+node ocm-cli/dist/ocm.js --help
 ```
 
-The package exposes the `ocm` binary and an OpenCode plugin entrypoint. Global
-installs link the binary through the package manager. Local workspace installs
-also create a best-effort `~/.local/bin/ocm` symlink.
+The build writes `ocm-cli/dist/ocm.js` (the `ocm` binary) and
+`ocm-cli/dist/tui.js` (the OpenCode plugin entrypoint). To get `ocm` on your
+PATH, symlink it:
+
+```bash
+mkdir -p ~/.local/bin
+ln -sf "$PWD/ocm-cli/dist/ocm.js" ~/.local/bin/ocm
+```
+
+To load the plugin inside a local OpenCode session, point OpenCode at the built
+file rather than a package name:
+
+```jsonc
+// ~/.config/opencode/tui.json
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": ["/absolute/path/to/opencode-manager/ocm-cli/dist/tui.js"]
+}
+```
+
+A copy of `@opencode-manager/ocm-cli` at version 0.4.0 exists on the public
+npm registry, so installing that package by name still runs. It is **not**
+updated from this repository and will stay at 0.4.0; see `docs/ocm-cli.md`.
 
 ## Login
 
@@ -109,17 +133,17 @@ on the Manager immediately. Use it from inside an OpenCode session after
 `ocm login` and after the repo already exists on the Manager
 (`ocm push --create` if needed).
 
-Enable it in `tui.json`:
+Enable it in `tui.json`, pointing at the built file (see [Install](#install)):
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["@opencode-manager/ocm-cli"]
+  "plugin": ["/absolute/path/to/opencode-manager/ocm-cli/dist/tui.js"]
 }
 ```
 
-The `ocm` binary is installed via the package `postinstall` (or `bin` field on
-global installs); the plugin surface is TUI-only.
+The plugin surface is TUI-only; the `ocm` binary is the separate
+`ocm-cli/dist/ocm.js`.
 
 ## Requirements
 

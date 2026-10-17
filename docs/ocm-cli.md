@@ -6,7 +6,7 @@
 
 1. **Get your Manager URL** — the web UI address where your OpenCode Manager is running (e.g., `https://manager.example.com`)
 2. **Generate an internal token** — go to **Settings → Manager Token** in the web UI and click **Generate**
-3. **Install the CLI** — `pnpm add -g @opencode-manager/ocm-cli`
+3. **Build the CLI** — see [Install](#1-install) below
 4. **Log in** — `ocm login https://your-manager-url` (paste the token when prompted)
 5. **List repos** — `ocm list` to see repos configured on the Manager
 6. **Attach** — `ocm use <repo-id>` to start an OpenCode session attached to that repo
@@ -25,47 +25,56 @@ There is no per-repo OpenCode process. All sessions share one OpenCode server on
 
 ## 1. Install
 
-The CLI is published as `@opencode-manager/ocm-cli`. There are two install paths.
+Build it from a checkout of this repository. This is the supported path.
 
-### Option A — install via OpenCode's plugin loader (recommended)
-
-Add the package to your OpenCode TUI config and OpenCode will fetch it on next start. The package exposes a `./tui` entrypoint, and OpenCode resolves that entrypoint automatically from the package name. The package `postinstall` script self-installs a `~/.local/bin/ocm` symlink for local plugin installs, so the `ocm` binary becomes available on your PATH automatically.
-
-```jsonc
-// ~/.config/opencode/tui.json
-{
-  "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["@opencode-manager/ocm-cli"]
-}
+```bash
+pnpm install
+pnpm --filter @opencode-manager/ocm-cli build
 ```
 
-The next time OpenCode starts it will run `bun install` for the plugin. The installer stays quiet so it does not break the TUI layout; after the plugin loads, OpenCode shows a one-time toast confirming where `ocm` was linked.
+That writes two files:
 
-If `~/.local/bin` is not on your PATH, add this to your shell rc:
+| File | What it is |
+|---|---|
+| `ocm-cli/dist/ocm.js` | the `ocm` binary |
+| `ocm-cli/dist/tui.js` | the OpenCode plugin entrypoint |
+
+Put `ocm` on your PATH:
+
+```bash
+mkdir -p ~/.local/bin
+ln -sf "$PWD/ocm-cli/dist/ocm.js" ~/.local/bin/ocm
+```
+
+If `~/.local/bin` is not on your PATH, add it to your shell rc:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-The `@opencode-manager/ocm-cli` package entry registers `/ocm-move`, a TUI command that keeps the local session and copies the active session to the Manager after pushing the current repo state. Run it from inside a local OpenCode session after `ocm login` and after the repo exists on the Manager (`ocm push --create` if needed).
+### Loading the plugin in a local OpenCode session
 
-### Option B — global package manager install
+Point OpenCode at the built file rather than a package name:
 
-If you don't use the OpenCode plugin loader, install globally:
-
-```bash
-pnpm add -g @opencode-manager/ocm-cli
+```jsonc
+// ~/.config/opencode/tui.json
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": ["/absolute/path/to/opencode-manager/ocm-cli/dist/tui.js"]
+}
 ```
 
-This puts `ocm` on your PATH via the package manager's own bin shim. The `~/.local/bin` symlink is skipped for global installs.
+The plugin registers `/ocm-move`, a TUI command that keeps the local session and
+copies the active session to the Manager after pushing the current repo state.
+Run it from inside a local OpenCode session after `ocm login` and after the repo
+exists on the Manager (`ocm push --create` if needed).
 
-### Option C — from this repository (dev)
+### About the copy on the public npm registry
 
-```bash
-pnpm install
-pnpm --filter @opencode-manager/ocm-cli build
-# postinstall creates ~/.local/bin/ocm symlink
-```
+`@opencode-manager/ocm-cli` exists on npm at version **0.4.0**, so installing it
+by name still works and you will get 0.4.0. It is **not** updated from this
+repository and will not be: nothing publishes it. Build from a checkout if you
+need anything after 0.4.0.
 
 ## 2. Log in
 
