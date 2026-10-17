@@ -35,6 +35,48 @@ export function redactRepoUrlCredentials(url: string): string {
   return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]*@/i, '$1')
 }
 
+/**
+ * Removes credentials from a freshly cloned repository's `origin`.
+ *
+ * `git clone` records the URL it was given verbatim, so a clone made with
+ * `https://user:token@host/...` leaves the token in `.git/config` on disk -
+ * outside the database and outside anything the redaction above covers.
+ *
+ * Only done when the account has a stored credential for the host: the askpass
+ * handler resolves those by host, so fetch and push keep working against the
+ * clean URL. Without one the embedded credential is the only credential there
+ * is, and rewriting it would silently break every later operation on the
+ * repository. In that case the URL is left alone and the fact is logged.
+ */
+async function scrubCredentialsFromRemote(
+  gitAuthService: GitAuthService,
+  repoPath: string,
+  clonedUrl: string,
+  cleanUrl: string,
+  userId: string | null,
+  env: Record<string, string>,
+): Promise<void> {
+  if (clonedUrl === cleanUrl) return
+
+  let host: string
+  try {
+    host = new URL(clonedUrl).host
+  } catch {
+    return
+  }
+
+  if (!gitAuthService.hasStoredPatForHost(host, userId)) {
+    logger.warn(
+      `Left the embedded credential in ${cleanUrl}'s git remote: this account has no stored credential for ${host}. ` +
+      'Removing it would break fetch and push.',
+    )
+    return
+  }
+
+  await executeCommand(['git', '-C', repoPath, 'remote', 'set-url', 'origin', cleanUrl], { cwd: repoPath, env })
+  logger.info(`Rewrote the git remote for ${cleanUrl} to its credential-free form`)
+}
+
 function enhanceCloneError(error: unknown, repoUrl: string, originalMessage: string): Error {
   // Redact here rather than at each call site: every branch below interpolates
   // the URL into a message that is both logged and returned to the client.
@@ -425,7 +467,20 @@ export async function cloneRepo(
         }
       }
     }
-    
+
+    // Only the clone branches put a URL into a `.git/config`; the worktree
+    // branch creates a worktree from a repository that was cloned earlier.
+    if (!shouldUseWorktree) {
+      await scrubCredentialsFromRemote(
+        gitAuthService,
+        path.resolve(reposBase(), worktreeDirName),
+        normalizedRepoUrl,
+        storedRepoUrl,
+        userId,
+        env,
+      )
+    }
+
     updateRepoStatus(database, repo.id, 'ready')
     logger.info(`Repo ready: ${storedRepoUrl}${branch ? `#${branch}` : ''}${shouldUseWorktree ? ' (worktree)' : ''}`)
     return { ...repo, cloneStatus: 'ready' }

@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getGitEnvironment: vi.fn().mockReturnValue({}),
   getSSHEnvironment: vi.fn().mockReturnValue({}),
   cleanupSSHKey: vi.fn().mockResolvedValue(undefined),
+  hasStoredPatForHost: vi.fn().mockReturnValue(false),
   loggerInfo: vi.fn(),
   loggerError: vi.fn(),
   loggerWarn: vi.fn(),
@@ -26,12 +27,13 @@ vi.mock('../../src/utils/logger', () => ({
 import { cloneRepo } from '../../src/services/repo/clone'
 import type { GitAuthService } from '../../src/services/git-auth'
 
-function gitAuthStub(): GitAuthService {
+function gitAuthStub(hasStoredPat: boolean = false): GitAuthService {
   return {
     setupSSHForRepoUrl: mocks.setupSSHForRepoUrl,
     getGitEnvironment: mocks.getGitEnvironment,
     getSSHEnvironment: mocks.getSSHEnvironment,
     cleanupSSHKey: mocks.cleanupSSHKey,
+    hasStoredPatForHost: mocks.hasStoredPatForHost.mockReturnValue(hasStoredPat),
   } as unknown as GitAuthService
 }
 
@@ -95,5 +97,61 @@ describe('cloneRepo credential handling', () => {
     const repo = await cloneRepo(db, gitAuthStub(), CREDENTIALED_URL, { userId: 'u1' })
 
     expect(repo.repoUrl).not.toContain('ghp_SECRET123')
+  })
+})
+
+/**
+ * `git clone` records the URL it was given verbatim, so a credential-bearing
+ * clone leaves the token in `.git/config` - outside the database and outside
+ * everything the redaction covers.
+ *
+ * Rewriting it is only safe when the account has a stored credential for the
+ * host, because the askpass handler resolves those by host. Without one the
+ * URL is the only credential there is, and stripping it would silently break
+ * fetch and push - so both branches are pinned here.
+ */
+describe('cloneRepo git remote credentials', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+    migrate(db, allMigrations)
+    mocks.executeCommand.mockResolvedValue('')
+    mocks.reposBase.mockReturnValue('/tmp/ocm-clone-store/repos')
+    mocks.hasStoredPatForHost.mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  function setUrlCalls() {
+    return mocks.executeCommand.mock.calls.filter(call => {
+      const args = call[0] as string[]
+      return args[0] === 'git' && args.includes('remote') && args.includes('set-url')
+    })
+  }
+
+  it('rewrites the remote to the clean URL when a stored credential exists', async () => {
+    await cloneRepo(db, gitAuthStub(true), CREDENTIALED_URL, { userId: 'u1' })
+
+    expect(setUrlCalls()).toHaveLength(1)
+    const args = setUrlCalls()[0]![0] as string[]
+    expect(args).toContain('set-url')
+    expect(args[args.length - 1]).toBe('https://github.com/org/private-repo')
+    expect(args.join(' ')).not.toContain('ghp_SECRET123')
+  })
+
+  it('leaves the remote alone when there is no stored credential', async () => {
+    await cloneRepo(db, gitAuthStub(false), CREDENTIALED_URL, { userId: 'u1' })
+
+    // Rewriting here would break every later fetch and push for this account.
+    expect(setUrlCalls()).toHaveLength(0)
+  })
+
+  it('does not touch the remote when the URL had no credentials', async () => {
+    await cloneRepo(db, gitAuthStub(true), 'https://github.com/org/public-repo.git', { userId: 'u1' })
+
+    expect(setUrlCalls()).toHaveLength(0)
   })
 })

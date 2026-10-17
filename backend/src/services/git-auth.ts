@@ -155,6 +155,19 @@ export class GitAuthService {
     }
   }
 
+  /**
+   * Whether this account has a stored HTTPS credential for the host.
+   *
+   * Used to decide whether a cloned repository's `origin` can be rewritten to
+   * its credential-free form: the askpass handler resolves stored credentials
+   * by host, so with one present a clean URL keeps working for fetch and push,
+   * and without one the URL is the *only* credential there is and stripping it
+   * would break the repository.
+   */
+  hasStoredPatForHost(host: string, userId: string | null): boolean {
+    return this.credentialProvider?.getPatCredentialForHost(host, { userId }) != null
+  }
+
   getGitEnvironment(silent: boolean = false): Record<string, string> {
     const env: Record<string, string> = {
       GIT_TERMINAL_PROMPT: '0',
