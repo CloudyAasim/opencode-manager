@@ -14,6 +14,14 @@ vi.mock('@/api/logs', () => ({
   },
 }))
 
+// The Logs panel is admin-only - it is the process-wide buffer, which holds
+// every tenant's sign-in results and absolute workspace paths. These tests are
+// about the polling behaviour, so they state the role they need.
+vi.mock('@/hooks/useAuth', () => ({
+  useOptionalAuth: vi.fn(() => ({ user: { role: 'admin' } })),
+  useAuth: vi.fn(() => ({ user: { role: 'admin' } })),
+}))
+
 vi.mock('@/hooks/useMobile', () => ({
   useSwipeBack: vi.fn(() => ({
     bind: vi.fn(),

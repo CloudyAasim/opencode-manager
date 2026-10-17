@@ -157,12 +157,16 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
     { id: 'shortcuts', icon: Keyboard, label: t('settings.menu.shortcuts.label'), description: t('settings.menu.shortcuts.description'), contentClassName: 'max-w-7xl', render: () => <KeyboardShortcuts /> },
     { id: 'opencode', icon: Code, label: t('settings.menu.opencode.label'), description: t('settings.menu.opencode.description'), render: () => <OpenCodeSettings onOpenVersionDialog={() => setIsVersionDialogOpen(true)} /> },
     { id: 'assistant', icon: Bot, label: t('settings.menu.assistant.label'), description: t('settings.menu.assistant.description'), contentClassName: 'max-w-4xl', render: () => <AssistantWorkspaceSettings /> },
-    { id: 'logs', icon: ScrollText, label: t('settings.menu.logs.label'), description: t('settings.menu.logs.description'), contentClassName: 'h-full min-h-0', render: (surface) => ((surface === 'desktop') === isDesktop ? <LogsViewer /> : null) },
     { id: 'providers', icon: Key, label: t('settings.menu.providers.label'), description: t('settings.menu.providers.description'), contentClassName: 'max-w-7xl', render: () => <ProviderSettings /> },
     ...(user?.role === 'admin'
       ? [
           { id: 'users' as const, icon: Users, label: t('settings.menu.users.label'), description: t('settings.menu.users.description'), contentClassName: 'max-w-7xl', render: () => <UsersSettings /> },
           { id: 'audit' as const, icon: History, label: t('settings.menu.audit.label'), description: t('settings.menu.audit.description'), contentClassName: 'max-w-7xl', render: () => <AuditSettings /> },
+          // Server-wide diagnostics: the same buffer every account shares,
+          // containing each tenant's sign-in results and absolute workspace
+          // paths. The route is admin-only; showing it to everyone else only
+          // means they discover the 403 by clicking.
+          { id: 'logs' as const, icon: ScrollText, label: t('settings.menu.logs.label'), description: t('settings.menu.logs.description'), contentClassName: 'h-full min-h-0', render: (surface: 'desktop' | 'mobile') => ((surface === 'desktop') === isDesktop ? <LogsViewer /> : null) },
         ]
       : []),
   ]

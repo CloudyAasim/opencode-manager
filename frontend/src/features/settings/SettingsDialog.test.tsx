@@ -245,6 +245,7 @@ describe('SettingsDialog', () => {
   })
 
   it('navigates to the Logs section and reflects settingsTab=logs in the URL', () => {
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
     function TestWrapper() {
       const location = useLocation()
       const navigate = useNavigate()
@@ -280,6 +281,7 @@ describe('SettingsDialog', () => {
   })
 
   it('starts at the menu on mobile even with a deep-linked settingsTab and navigates from there', () => {
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
     stubMatchMedia(false)
     function TestWrapper() {
       const location = useLocation()
@@ -334,6 +336,7 @@ describe('SettingsDialog', () => {
   })
 
   it('mounts exactly one LogsViewer on desktop when the Logs tab is selected', () => {
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
     stubMatchMedia(true)
     function TestWrapper() {
       const location = useLocation()
@@ -366,6 +369,7 @@ describe('SettingsDialog', () => {
   })
 
   it('falls back to the menu and account tab for an unknown settingsTab value', () => {
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
     function TestWrapper() {
       const location = useLocation()
       const isOpen = new URLSearchParams(location.search).get('settings') === 'open'
@@ -396,7 +400,26 @@ describe('SettingsDialog', () => {
     expect(desktopTrigger).toHaveAttribute('data-state', 'active')
   })
 
+  it('keeps the server log viewer out of the menu for a non-admin', () => {
+    // `/api/logs` is the process-wide buffer - every tenant's sign-in results,
+    // every account creation with its email and role, absolute workspace paths.
+    // The route is admin-only; the panel has to be too, or a non-admin only
+    // discovers the 403 by clicking.
+    stubMatchMedia(true)
+
+    render(
+      <MemoryRouter initialEntries={['/?settings=open&settingsTab=logs']}>
+        <SettingsDialog />
+      </MemoryRouter>
+    )
+
+    expect(screen.queryByRole('tab', { name: 'Logs' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('logs-settings')).not.toBeInTheDocument()
+  })
+
   it('renders a vertical desktop sidebar driven by menu items with URL and keyboard navigation', async () => {
+    // The sidebar list below includes Logs, which is admin-only.
+    vi.mocked(useOptionalAuth).mockReturnValue({ user: { role: 'admin' } } as never)
     stubMatchMedia(true)
     function TestWrapper() {
       const location = useLocation()
@@ -418,8 +441,9 @@ describe('SettingsDialog', () => {
     expect(tablist).toHaveAttribute('aria-orientation', 'vertical')
 
     const triggers = screen.getAllByRole('tab')
-    expect(triggers).toHaveLength(11)
-    const expected = ['Account', 'General Settings', 'Server Address', 'Notifications', 'Voice', 'Git', 'Keyboard Shortcuts', 'OpenCode Config', 'Assistant Workspace', 'Logs', 'Providers']
+    expect(triggers).toHaveLength(13)
+    // Admin-only tabs come last, in the order the dialog declares them.
+    const expected = ['Account', 'General Settings', 'Server Address', 'Notifications', 'Voice', 'Git', 'Keyboard Shortcuts', 'OpenCode Config', 'Assistant Workspace', 'Providers', 'Users', 'Audit Log', 'Logs']
     expect(triggers.map((trigger) => trigger.textContent)).toEqual(expected)
 
     const logsTrigger = screen.getByRole('tab', { name: 'Logs' })
