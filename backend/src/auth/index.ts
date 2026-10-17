@@ -4,6 +4,7 @@ import { Database } from 'bun:sqlite'
 import { ENV } from '@opencode-manager/shared/config/env'
 import { logger } from '../utils/logger'
 import { isInternalSignupAllowed } from './internal-signup'
+import { applyUsernameToNewUser } from './username'
 import { canCreateAccount } from './access-policy'
 
 export type AuthInstance = ReturnType<typeof createAuth>
@@ -50,8 +51,24 @@ export function createAuth(db: Database) {
       user: {
         create: {
           before: async (user) => {
-            if (isInternalSignupAllowed()) return true
             const email = typeof user.email === 'string' ? user.email : undefined
+
+            // Assign the username before the row is written. `username` is
+            // declared `input: false` below, so a client cannot supply one, and
+            // the only place it used to be set was the one-off backfill in
+            // migration 023 - which meant every account created since landed
+            // with `NULL`. Everything keyed on it is per-user storage: the
+            // workspace, the settings directory, the assistant workspace, the
+            // model provider credentials. With a null username the first three
+            // resolved to a server-global directory shared by every such user,
+            // and the last one refused with a 401.
+            //
+            // Deriving it here rather than after the insert means the row is
+            // never observable without one, and the unique index is satisfied
+            // at write time.
+            applyUsernameToNewUser(db, user as { email?: unknown; id?: unknown; username?: unknown })
+
+            if (isInternalSignupAllowed()) return true
             if (canCreateAccount(email)) return true
             logger.warn('Blocked account creation: self-signup disabled', { email: email ?? 'unknown' })
             return false

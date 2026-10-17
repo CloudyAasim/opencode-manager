@@ -75,7 +75,7 @@ describe('cloneRepo credential handling', () => {
     // Not the raw input: `normalizeRepoUrl` has already rewritten the scheme and
     // dropped `.git` by this point. What matters is that the credential is
     // still there.
-    const clonedUrl = (cloneCall?.[0] ?? []).find(arg => typeof arg === 'string' && arg.includes('github.com')) as string
+    const clonedUrl = (cloneCall?.[0] ?? []).find((arg: unknown) => typeof arg === 'string' && (arg as string).includes('github.com')) as string
     expect(clonedUrl).toContain('ghp_SECRET123')
   })
 

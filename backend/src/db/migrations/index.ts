@@ -29,6 +29,7 @@ import migration027 from './027-internal-user-token'
 import migration028 from './028-repos-uniqueness-per-user'
 import migration029 from './029-opencode-config-audit'
 import migration031 from './031-drop-provider-conflict-ack'
+import migration032 from './032-backfill-null-usernames'
 
 export const allMigrations: Migration[] = [
   migration001,
@@ -61,4 +62,5 @@ export const allMigrations: Migration[] = [
   migration028,
   migration029,
   migration031,
+  migration032,
 ]
