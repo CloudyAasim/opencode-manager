@@ -13,7 +13,7 @@ export type WarpSpawn = (
   command: string,
   args: string[],
   options: { stdio: 'inherit'; env: NodeJS.ProcessEnv },
-) => unknown
+) => { error?: Error; status?: number | null } | unknown
 
 let pending: WarpTarget | undefined
 
@@ -38,15 +38,40 @@ export function buildAttachArgs(target: WarpTarget): string[] {
   ]
 }
 
-export function runPendingWarp(spawn: WarpSpawn = spawnSync): void {
+/**
+ * Attaches to the session the TUI was just asked to hand over to.
+ *
+ * Runs from `onDispose`, which means the TUI has already gone by the time this
+ * executes - so a failure here used to be completely invisible: the terminal
+ * simply came back. `spawnSync` does not throw when the child exits badly
+ * either; it hands back `{ status, error }`, and that was being discarded
+ * along with a bare `catch`.
+ *
+ * Only the case where `opencode` could not be started at all is reported here.
+ * A non-zero exit is not treated as a failure, because what a successful attach
+ * exits with is not knowable from here.
+ */
+export function runPendingWarp(spawn: WarpSpawn = spawnSync): boolean {
   const target = takePendingWarp()
-  if (!target) return
+  if (!target) return false
+
+  let failure: string | undefined
   try {
-    spawn('opencode', buildAttachArgs(target), {
+    const result = spawn('opencode', buildAttachArgs(target), {
       stdio: 'inherit',
       env: { ...process.env, ...buildRemoteAttachEnv(target.managerUrl, target.repoName) },
-    })
-  } catch {
-    void 0
+    }) as { error?: Error } | undefined
+
+    if (result?.error) {
+      failure = result.error.message
+    }
+  } catch (error) {
+    failure = error instanceof Error ? error.message : String(error)
   }
+
+  if (failure) {
+    process.stderr.write(`ocm: could not start opencode to attach: ${failure}\n`)
+    return false
+  }
+  return true
 }

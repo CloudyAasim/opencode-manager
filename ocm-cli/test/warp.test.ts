@@ -93,3 +93,63 @@ describe('runPendingWarp', () => {
     expect(spawn).toHaveBeenCalledOnce()
   })
 })
+describe('runPendingWarp failure reporting', () => {
+  beforeEach(() => {
+    takePendingWarp()
+  })
+
+  function captureStderr(run: () => void): string {
+    const original = process.stderr.write
+    let captured = ''
+    process.stderr.write = ((chunk: string) => {
+      captured += chunk
+      return true
+    }) as typeof process.stderr.write
+    try {
+      run()
+    } finally {
+      process.stderr.write = original
+    }
+    return captured
+  }
+
+  it('reports a spawn error that spawnSync returns instead of throwing', () => {
+    const spawn = vi.fn().mockReturnValue({ error: new Error('ENOENT: no such file or directory') })
+    setPendingWarp(sampleTarget)
+
+    let result: boolean | undefined
+    const stderr = captureStderr(() => {
+      result = runPendingWarp(spawn)
+    })
+
+    expect(result).toBe(false)
+    expect(stderr).toContain('could not start opencode')
+    expect(stderr).toContain('ENOENT')
+  })
+
+  it('reports a thrown spawn error', () => {
+    const spawn = vi.fn(() => {
+      throw new Error('EACCES')
+    })
+    setPendingWarp(sampleTarget)
+
+    const stderr = captureStderr(() => {
+      expect(runPendingWarp(spawn)).toBe(false)
+    })
+
+    expect(stderr).toContain('EACCES')
+  })
+
+  it('says nothing when the spawn succeeds', () => {
+    const spawn = vi.fn().mockReturnValue({ status: 0 })
+    setPendingWarp(sampleTarget)
+
+    let result: boolean | undefined
+    const stderr = captureStderr(() => {
+      result = runPendingWarp(spawn)
+    })
+
+    expect(result).toBe(true)
+    expect(stderr).toBe('')
+  })
+})

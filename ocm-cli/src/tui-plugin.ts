@@ -33,7 +33,11 @@ export async function setupOcm(api: TuiPluginApi, setMoveProgress: MoveProgressS
       },
     ],
   })
-  api.lifecycle.onDispose(() => runPendingWarp())
+  // Block body, not an arrow expression: `onDispose` takes a void callback and
+  // `runPendingWarp` reports whether the attach started.
+  api.lifecycle.onDispose(() => {
+    runPendingWarp()
+  })
 }
 
 function showInstallNotice(api: TuiPluginApi): void {
