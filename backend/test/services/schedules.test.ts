@@ -94,6 +94,18 @@ vi.mock('../../src/utils/logger', () => ({
 const mockCronStop = vi.fn()
 const mockCronInstances: Array<{ callback: () => void; options: Record<string, unknown>; pattern: string; stop: typeof mockCronStop }> = []
 
+function installCronMock(): void {
+  vi.mocked(Cron).mockImplementation(((
+    pattern: string,
+    options: Record<string, unknown>,
+    callback: () => void,
+  ) => {
+    const instance = { pattern, options, callback, stop: mockCronStop }
+    mockCronInstances.push(instance)
+    return instance
+  }) as never)
+}
+
 vi.mock('croner', () => ({
   Cron: vi.fn().mockImplementation((pattern: string, options: Record<string, unknown>, callback: () => void) => {
     const instance = { pattern, options, callback, stop: mockCronStop }
@@ -103,6 +115,7 @@ vi.mock('croner', () => ({
 }))
 
 import { ScheduleRunner, ScheduleService } from '../../src/services/schedules'
+import { Cron } from 'croner'
 import type { ForwardRequest, OpenCodeClient } from '../../src/services/opencode/client'
 
 function jsonResponse(body: unknown, status: number = 200): Response {
@@ -191,7 +204,14 @@ const baseRun: ScheduleRun = {
  * not a passing test - so both blocks now state their own preconditions.
  */
 function resetServiceMocks() {
-  vi.clearAllMocks()
+  // `resetAllMocks`, not `clearAllMocks`: the latter only forgets recorded
+  // calls, so a `mockReturnValue` or a `routeForward` implementation from the
+  // previous test survived into this one. That made the file order-dependent -
+  // `pnpm test` runs with `--sequence.shuffle=true`, and under shuffling these
+  // tests failed on whichever one inherited a neighbour's session id. Every
+  // default below is re-established straight after, and the rest fall back to
+  // returning undefined, which is the correct neutral state.
+  vi.resetAllMocks()
   Reflect.get(ScheduleService, 'activeRuns').clear()
   Reflect.get(ScheduleService, 'activeTeardowns')?.clear()
 
@@ -212,6 +232,7 @@ function resetServiceMocks() {
   mocks.createScheduleRun.mockReturnValue(baseRun)
   mocks.resolveOpenCodeModel.mockResolvedValue({ providerID: 'openai', modelID: 'gpt-5-mini' })
   mocks.onEvent.mockReturnValue(vi.fn())
+  installCronMock()
   mocks.getScheduleRunById.mockReturnValue({
     ...baseRun,
     sessionId: 'ses-run-1',
@@ -777,9 +798,6 @@ describe('ScheduleService', () => {
   it('keeps recovering the remaining runs when one run cannot be recovered at all', async () => {
     const service = new ScheduleService({} as never, createOpenCodeClientStub(), mocks.stubWorktreeManager as never)
 
-    Reflect.get(ScheduleService, 'activeRuns').clear()
-    mocks.createScheduleRun.mockReturnValue(baseRun)
-    mocks.getRunningScheduleRunByJob.mockReturnValue(null)
     // Repo 42 is gone; repo 43 is fine.
     mocks.getRepoById.mockImplementation((_db, repoId) => (repoId === 42 ? undefined : repo))
     mocks.getScheduleJobById.mockImplementation((_db, repoId, jobId) => ({ ...job, id: jobId, repoId }))
@@ -823,32 +841,22 @@ describe('ScheduleService', () => {
       ) => Promise<void>
     }).finalizeRecoveredRun.bind(service)
 
-    Reflect.get(ScheduleService, 'activeRuns').clear()
-    mocks.createScheduleRun.mockReturnValue(baseRun)
-    mocks.getRunningScheduleRunByJob.mockReturnValue(null)
     Reflect.get(ScheduleService, 'activeRuns').add(job.id)
 
     // Not `Once`: `recoverRunningRun`'s catch retries the finalize, so a
-    // single-shot failure would be absorbed by the retry. The override has to
-    // be undone by hand too - the block's `beforeEach` calls
-    // `vi.clearAllMocks()`, which resets recorded calls but leaves
-    // implementations in place.
+    // single-shot failure would be absorbed by the retry. No manual teardown
+    // needed - the block's beforeEach resets implementations now.
     mocks.updateScheduleRun.mockImplementation(() => {
       throw new Error('disk is gone')
     })
 
-    let finalizeCalls = 0
-    try {
-      await expect(
-        finalize(job, { ...baseRun, sessionId: null }, { status: 'failed', errorText: 'interrupted' }, repo),
-      ).rejects.toThrow('disk is gone')
-      finalizeCalls = mocks.updateScheduleRun.mock.calls.length
-    } finally {
-      // `mockReset` also clears recorded calls, so read them first.
-      mocks.updateScheduleRun.mockReset()
-    }
+    await expect(
+      finalize(job, { ...baseRun, sessionId: null }, { status: 'failed', errorText: 'interrupted' }, repo),
+    ).rejects.toThrow('disk is gone')
 
-    expect(finalizeCalls).toBeGreaterThan(0)
+    // Without this the assertion below would pass even if the failure never
+    // reached the call under test.
+    expect(mocks.updateScheduleRun).toHaveBeenCalled()
     expect(Reflect.get(ScheduleService, 'activeRuns').has(job.id)).toBe(false)
   })
 
@@ -1848,7 +1856,10 @@ describe('ScheduleRunner', () => {
 
 describe('ScheduleService run history cleanup', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    // The shared reset, for the same reason: this block used to clear only the
+    // recorded calls and inherited implementations from whichever block ran
+    // before it under `--sequence.shuffle=true`.
+    resetServiceMocks()
     mocks.getRepoById.mockReturnValue(repo)
     mocks.getScheduleJobById.mockReturnValue(job)
     mocks.stubWorktreeManager.pruneRunArtifacts.mockResolvedValue(undefined)

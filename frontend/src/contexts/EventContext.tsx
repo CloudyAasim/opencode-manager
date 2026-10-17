@@ -4,12 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { OpenCodeClient } from '@/api/opencode'
 import { listRepos } from '@/api/repos'
-import type { PermissionRequest, PermissionResponse, QuestionRequest, SSEEvent, SSHHostKeyRequest, MessageWithParts, Part, Repo } from '@/api/types'
+import type { PermissionRequest, PermissionResponse, QuestionRequest, SSEEvent, SSHHostKeyRequest, Repo } from '@/api/types'
 import { showToast } from '@/lib/toast'
 import { openCodeEventStream, type EventStreamHealthState } from '@/lib/opencode-event-stream'
 import { OPENCODE_API_ENDPOINT } from '@/config'
 import { addToSessionKeyedState, removeFromSessionKeyedState } from '@/lib/sessionKeyedState'
 import { invalidateRepoGitCachesDebounced } from '@/lib/queryInvalidation'
+import { optimisticallyErrorToolPart } from '@/lib/optimisticToolError'
 import { useI18n } from '@/lib/i18n'
 
 type PermissionsBySession = Record<string, PermissionRequest[]>
@@ -65,78 +66,6 @@ function reconcileBySessionForDirectory<T extends SessionScopedItem>(
   }
 
   return next
-}
-
-function optimisticallyErrorToolPart(
-  queryClient: ReturnType<typeof useQueryClient>,
-  sessionID: string,
-  messageID: string,
-  callID: string,
-  errorMessage: string
-) {
-  const cache = queryClient.getQueryCache()
-  const queries = cache.getAll()
-  
-  for (const query of queries) {
-    const key = query.queryKey
-    if (key[0] === 'opencode' && key[1] === 'messages' && key.length >= 5) {
-      const querySessionID = key[3] as string
-      if (querySessionID !== sessionID) continue
-      
-      const currentData = queryClient.getQueryData<MessageWithParts[]>(key)
-      if (!currentData) continue
-      
-      const updatedData = currentData.map(msgWithParts => {
-        if (msgWithParts.info.id !== messageID) return msgWithParts
-
-        const targetPart = msgWithParts.parts.find((p): p is Extract<Part, { type: 'tool' }> & {
-          callID: string
-          state: Extract<Part, { type: 'tool' }>['state'] & {
-            status: 'running'
-            input: Record<string, unknown>
-            time: { start: number }
-          }
-        } =>
-          p.type === 'tool' &&
-          'callID' in p &&
-          p.callID === callID &&
-          'state' in p &&
-          p.state?.status === 'running'
-        )
-        if (!targetPart) {
-          return msgWithParts
-        }
-
-        const targetState = targetPart.state
-        const targetId = targetPart.id
-
-        const updatedParts = msgWithParts.parts.map(p => {
-          if (p.id !== targetId) return p
-          if (p.type !== 'tool') return p
-          return {
-            ...p,
-            state: {
-              status: 'error' as const,
-              input: targetState.input,
-              error: errorMessage,
-              time: {
-                start: targetState.time.start,
-                end: Date.now(),
-              },
-            },
-          }
-        })
-
-        return {
-          ...msgWithParts,
-          parts: updatedParts,
-        }
-      })
-      
-      queryClient.setQueryData(key, updatedData)
-      break
-    }
-  }
 }
 
 interface SSHHostKeyState {
