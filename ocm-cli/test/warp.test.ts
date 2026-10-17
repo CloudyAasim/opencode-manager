@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { WarpTarget } from '../src/warp.js'
-import { setPendingWarp, takePendingWarp, buildAttachArgs, runPendingWarp } from '../src/warp.js'
+import { setPendingWarp, takePendingWarp, buildAttachArgs, buildAttachEnv, runPendingWarp } from '../src/warp.js'
 import { REMOTE_MANAGER_URL_ENV, REMOTE_REPO_NAME_ENV } from '../src/remote-context.js'
 
 const sampleTarget: WarpTarget = {
@@ -20,9 +20,29 @@ describe('buildAttachArgs', () => {
       'https://manager.example.com/api/opencode-proxy',
       '--dir', '/workspace/my-repo',
       '--session', 'sess_42',
-      '--password', 'tok_abc123',
-      '--username', 'opencode',
     ])
+  })
+
+  /**
+   * `/proc/<pid>/cmdline` is mode 0444, so a token on the command line is
+   * readable by every user on the machine for as long as the attach runs.
+   * `attach --password` documents `OPENCODE_SERVER_PASSWORD` as its default,
+   * so the same credential goes in the environment, where
+   * `/proc/<pid>/environ` is 0400.
+   */
+  it('keeps the token out of argv', () => {
+    expect(buildAttachArgs(sampleTarget).join(' ')).not.toContain(sampleTarget.token)
+  })
+
+  it('supplies the token through the environment opencode reads by default', () => {
+    const env = buildAttachEnv(sampleTarget)
+
+    expect(env.OPENCODE_SERVER_PASSWORD).toBe(sampleTarget.token)
+    // Its documented default is OPENCODE_SERVER_USERNAME or `opencode`, which is
+    // the value the argument carried before.
+    expect(env.OPENCODE_SERVER_USERNAME).toBe('opencode')
+    expect(env[REMOTE_MANAGER_URL_ENV]).toBe(sampleTarget.managerUrl)
+    expect(env[REMOTE_REPO_NAME_ENV]).toBe(sampleTarget.repoName)
   })
 })
 
@@ -66,11 +86,7 @@ describe('runPendingWarp', () => {
       buildAttachArgs(sampleTarget),
       {
         stdio: 'inherit',
-        env: {
-          ...process.env,
-          [REMOTE_MANAGER_URL_ENV]: sampleTarget.managerUrl,
-          [REMOTE_REPO_NAME_ENV]: sampleTarget.repoName,
-        },
+        env: buildAttachEnv(sampleTarget),
       },
     )
   })
