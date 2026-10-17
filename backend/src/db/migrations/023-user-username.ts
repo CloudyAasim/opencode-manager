@@ -1,5 +1,5 @@
 import type { Migration } from '../migration-runner'
-import { assignUsername } from '../../auth/username'
+import { deriveUsernameFromEmail, uniquifyUsername } from '@opencode-manager/shared/utils'
 
 const migration: Migration = {
   version: 23,
@@ -26,7 +26,8 @@ const migration: Migration = {
     for (const row of rows) {
       const existing = row.username?.trim().toLowerCase()
       if (existing) continue
-      const username = assignUsername(row.email || row.id, taken)
+      const username = uniquifyUsername(deriveUsernameFromEmail(row.email || row.id), (c) => taken.has(c))
+      taken.add(username)
       db.prepare('UPDATE "user" SET username = ? WHERE id = ?').run(username, row.id)
     }
 

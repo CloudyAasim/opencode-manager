@@ -129,10 +129,10 @@ Each of these was a live bug at some point; all of them are now gated.
 ## Before you call it done
 
 ```bash
+pnpm test                                       # shuffles both suites - see below
 pnpm typecheck                                  # tsc -b
 pnpm lint
 pnpm --filter frontend exec vitest run src/test/architecture
-pnpm --filter frontend exec vitest run
 pnpm build
 pnpm --filter frontend test:e2e
 ```
@@ -141,16 +141,21 @@ pnpm --filter frontend test:e2e
 
 - **A green gate run is not evidence the gate works.** If you touched a gate,
   mutate its subject and confirm it goes red for the right reason.
-- **Verify with the project's own script, not an equivalent one.** The backend
-  suite runs as `vitest run --sequence.shuffle=true`, and that flag is the only
-  thing that makes order-dependence visible: `vi.clearAllMocks()` forgets
-  recorded calls but keeps `mockReturnValue` and `mockImplementation`, so a
-  stub installed for one test survives into the next. That happened here - a
-  file passed in declaration order and failed under shuffling, each run landing
-  on a different test, and three local verification passes in a row were run
-  against a bare `npx vitest run`, which shuffles nothing. `pnpm test` is the
-  command; `backend/test/architecture/shuffled-tests.test.ts` keeps the flag
-  from being dropped.
+- **Verify with the project's own script, not an equivalent one.** Both suites
+  run as `vitest run --sequence.shuffle=true`, and that flag is the only thing
+  that makes order-dependence visible: `vi.clearAllMocks()` forgets recorded
+  calls but keeps `mockReturnValue` and `mockImplementation`, so a stub
+  installed for one test survives into the next. That happened here - a file
+  passed in declaration order and failed under shuffling, each run landing on
+  a different test, and three local verification passes in a row were run
+  against a bare `npx vitest run`, which shuffles nothing.
+
+  The same mistake then happened a second time in the other direction: the
+  frontend leg was reported as unshuffled after reading `frontend/package.json`,
+  when the *root* `test:frontend` is what CI runs and it already shuffled. So
+  check the script CI invokes, and not only the one in the package you happen
+  to be editing. `backend/test/architecture/shuffled-tests.test.ts` keeps the
+  flag on all three legs.
 - **After deploying, confirm the artefact, not the status code.** HTTP 200 on
   the site only means *something* is being served. Build locally and compare
   the hashed chunk name against the one the live `index.html` references; equal

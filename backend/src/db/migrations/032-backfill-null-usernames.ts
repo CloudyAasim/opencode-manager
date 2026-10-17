@@ -1,5 +1,5 @@
 import type { Migration } from '../migration-runner'
-import { assignUsername } from '../../auth/username'
+import { deriveUsernameFromEmail, uniquifyUsername } from '@opencode-manager/shared/utils'
 
 /**
  * Migration 023 backfilled `username` for the accounts that existed when it
@@ -10,6 +10,10 @@ import { assignUsername } from '../../auth/username'
  *
  * Sign-up now derives one (see the `create.before` hook in `src/auth/index.ts`).
  * This covers the rows that already exist.
+ *
+ * The derivation is the shared one, the same the admin user service uses, so
+ * that the same email cannot come out with different usernames depending on
+ * which of the three paths wrote the row.
  */
 const migration: Migration = {
   version: 32,
@@ -28,7 +32,8 @@ const migration: Migration = {
 
     for (const row of rows) {
       if (row.username?.trim()) continue
-      const username = assignUsername(row.email || row.id, taken)
+      const username = uniquifyUsername(deriveUsernameFromEmail(row.email || row.id), (c) => taken.has(c))
+      taken.add(username)
       db.prepare('UPDATE "user" SET username = ? WHERE id = ?').run(username, row.id)
     }
   },

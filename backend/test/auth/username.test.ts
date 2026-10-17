@@ -2,13 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { Database } from 'bun:sqlite'
 import { migrate } from '../../src/db/migration-runner'
 import { allMigrations } from '../../src/db/migrations'
+import { applyUsernameToNewUser } from '../../src/auth/username'
 import {
-  applyUsernameToNewUser,
-  assignUsername,
-  sanitizeUsername,
-  uniqueUsername,
-  usernameFromEmail,
-} from '../../src/auth/username'
+  deriveUsernameFromEmail,
+  uniquifyUsername,
+  isValidUsername,
+} from '@opencode-manager/shared/utils'
 import migration032 from '../../src/db/migrations/032-backfill-null-usernames'
 
 /**
@@ -25,34 +24,34 @@ import migration032 from '../../src/db/migrations/032-backfill-null-usernames'
  * that already exist.
  */
 describe('username derivation', () => {
+  // These come from `@opencode-manager/shared/utils/username`, which the admin
+  // user service uses too. They are asserted here so a change to them shows up
+  // as a failure in the sign-up path rather than as two paths quietly
+  // disagreeing about what a given email derives.
   it('sanitises to a usable identifier', () => {
-    expect(sanitizeUsername('  Alice  ')).toBe('alice')
-    expect(sanitizeUsername('a.b-c_d')).toBe('abcd')
-    expect(sanitizeUsername('1alice')).toBe('u1alice')
-    expect(sanitizeUsername('ab').length).toBeGreaterThanOrEqual(3)
+    expect(deriveUsernameFromEmail('  Alice  ')).toBe('alice')
+    expect(deriveUsernameFromEmail('a.b-c_d@example.com')).toBe('abcd')
+    expect(deriveUsernameFromEmail('1alice@example.com')).toBe('u1alice')
+    expect(deriveUsernameFromEmail('ab@example.com').length).toBeGreaterThanOrEqual(3)
   })
 
   it('derives from the email local part', () => {
-    expect(usernameFromEmail('Alice.Smith@example.com')).toBe('alicesmith')
+    expect(deriveUsernameFromEmail('Alice.Smith@example.com')).toBe('alicesmith')
   })
 
   it('avoids names that would collide with a real directory', () => {
     // `repos` is a real directory under the workspace, so a user named after it
     // would be written into the wrong place.
-    expect(uniqueUsername('repos', new Set())).toBe('repos2')
-    expect(uniqueUsername('admin', new Set())).toBe('admin2')
+    expect(uniquifyUsername('repos', () => false)).toBe('repos2')
+    expect(uniquifyUsername('admin', () => false)).toBe('admin2')
+    expect(isValidUsername('repos')).toBe(false)
   })
 
   it('suffixes a name that is already taken', () => {
-    expect(uniqueUsername('alice', new Set(['alice']))).toBe('alice2')
-    expect(uniqueUsername('alice', new Set(['alice', 'alice2']))).toBe('alice3')
-  })
-
-  it('records the name it hands out as taken', () => {
-    const taken = new Set<string>()
-    expect(assignUsername('alice@example.com', taken)).toBe('alice')
-    expect(assignUsername('alice@example.org', taken)).toBe('alice2')
-    expect(taken.has('alice2')).toBe(true)
+    const taken = new Set(['alice'])
+    expect(uniquifyUsername('alice', (c) => taken.has(c))).toBe('alice2')
+    taken.add('alice2')
+    expect(uniquifyUsername('alice', (c) => taken.has(c))).toBe('alice3')
   })
 })
 

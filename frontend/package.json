@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "vitest run --sequence.shuffle=true",
     "smoke:render": "node scripts/smoke-render.mjs",
     "test:e2e": "playwright test",
     "test:e2e:desktop": "playwright test --project=desktop",
