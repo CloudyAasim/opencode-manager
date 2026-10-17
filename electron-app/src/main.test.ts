@@ -149,9 +149,30 @@ describe('导航限制接上了没有', () => {
     expect(shell.opened()).toContain('https://github.com/CloudyAasim/opencode-manager/issues')
   })
 
-  it('本地文件拦下', () => {
+  it('本地文件拦下，也不交给操作系统', () => {
     const contents = BrowserWindow.instances[0]!.webContents
     expect(contents.tryNavigate('file:///etc/passwd')).toBe(false)
+    // The half that matters. "Blocked as a navigation" and "handed to the OS"
+    // were separate fates, and the second one ran a program with the URL as its
+    // arguments. This asserted only the first, so it stayed green throughout.
+    expect(shell.opened()).not.toContain('file:///etc/passwd')
+  })
+
+  it('已注册的协议处理器拦下，也不交给操作系统', () => {
+    const contents = BrowserWindow.instances[0]!.webContents
+    for (const url of ['smb://host/share', 'steam://run/440', 'ms-msdt://id']) {
+      expect(contents.tryNavigate(url), `${url} 应该被拦下`).toBe(false)
+      expect(shell.opened(), `${url} 不应该被交给操作系统`).not.toContain(url)
+    }
+  })
+
+  it('新窗口里的外部链接同样不交给操作系统', () => {
+    // `setWindowOpenHandler` is the other way out, and it had the same gap.
+    const contents = BrowserWindow.instances[0]!.webContents
+    expect(contents.open('https://example.com/').action).toBe('deny')
+    expect(contents.open('file:///etc/shadow').action).toBe('deny')
+    expect(shell.opened()).toContain('https://example.com/')
+    expect(shell.opened()).not.toContain('file:///etc/shadow')
   })
 
   it('新窗口一律拒绝（同源也不例外，交给 setWindowOpenHandler 判断）', () => {

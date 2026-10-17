@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appWindowOptions, isAllowedNavigation, loadUrlFor } from './window.ts'
+import { appWindowOptions, isAllowedNavigation, isExternallyOpenable, loadUrlFor } from './window.ts'
 
 const ORIGIN = 'http://127.0.0.1:53124'
 
@@ -80,5 +80,51 @@ describe('窗口的渲染进程设置', () => {
     // Showing immediately means a white flash on every launch while the
     // stylesheet loads.
     expect(appWindowOptions().show).toBe(false)
+  })
+})
+
+/**
+ * `shell.openExternal` hands the URL to the operating system, which launches it
+ * with whatever handler is registered. That is a different question from "may
+ * this open in our window", and the answer to it is much narrower.
+ *
+ * These URLs reached the call because they are not ours - the very reason the
+ * external open exists - and before the guard, `file://` and every registered
+ * scheme handler went straight through.
+ */
+describe('什么可以交给操作系统打开', () => {
+  it('http 与 https 交给浏览器处理', () => {
+    for (const url of ['https://example.com/docs', 'http://example.com', 'https://example.com:8443/a?b=c']) {
+      expect(isExternallyOpenable(url), `${url} 应该放行`).toBe(true)
+    }
+  })
+
+  it('本地文件一律不交给操作系统', () => {
+    // The OS will open these with whatever the user has registered, and on
+    // some systems that is a program rather than a document viewer.
+    for (const url of ['file:///etc/passwd', 'file:///C:/Users/x/.ssh/id_rsa', 'file://server/share']) {
+      expect(isExternallyOpenable(url), `${url} 应该被拦下`).toBe(false)
+    }
+  })
+
+  it('已注册的协议处理器一律不交给操作系统', () => {
+    for (const url of ['javascript:alert(1)', 'data:text/html,<script>1</script>', 'smb://host/share',
+                       'steam://run/440', 'ms-msdt://id', 'intent://scan#Intent;scheme=zxing;end']) {
+      expect(isExternallyOpenable(url), `${url} 应该被拦下`).toBe(false)
+    }
+  })
+
+  it('大小写与空白骗不过去', () => {
+    // URL parsing lowercases the scheme, so 'FiLe:' cannot slip past a
+    // comparison written against the lowercase literal.
+    for (const url of ['FiLe:///etc/passwd', '  file:///etc/passwd', 'FILE:///etc/passwd']) {
+      expect(isExternallyOpenable(url), `${url} 应该被拦下`).toBe(false)
+    }
+  })
+
+  it('解析不了的地址一律不交给操作系统', () => {
+    for (const junk of ['', 'not a url', '//', '%%%', 'example.com']) {
+      expect(isExternallyOpenable(junk), `${JSON.stringify(junk)} 应该被拦下`).toBe(false)
+    }
   })
 })

@@ -49,6 +49,27 @@ export function isAllowedNavigation(url: string, allowedOrigin: string): boolean
   return parsed.origin === allowedOrigin
 }
 
+/**
+ * Whether a URL that is *not* ours is safe to hand to the operating system.
+ *
+ * Separate from `isAllowedNavigation` on purpose. That answer says "may this
+ * open in our window", and the answer is no for everything on another origin -
+ * including exactly the URLs that must never reach `shell.openExternal`:
+ * `file://` opens the local filesystem, and any scheme with a registered
+ * handler is launched by the OS as a program, with the URL as its arguments.
+ * A link in a rendered message is enough to reach this, so the scheme is
+ * checked before the call rather than after it.
+ */
+export function isExternallyOpenable(url: string): boolean {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return false
+  }
+  return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+}
+
 export type WindowOptions = {
   width: number
   height: number

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { createProxy, InvalidTargetError, type Proxy } from '../../desktop/src/proxy.ts'
 import { candidateTargets, detectServer } from '../../desktop/src/detect.ts'
-import { appWindowOptions, isAllowedNavigation, loadUrlFor } from './window.ts'
+import { appWindowOptions, isAllowedNavigation, isExternallyOpenable, loadUrlFor } from './window.ts'
 
 // `__dirname`, not `import.meta.url`: the bundle is CommonJS so that the
 // sandboxed preload can be CommonJS too, and esbuild has no honest way to
@@ -69,12 +69,24 @@ function wireSecurity(contents: Electron.WebContents) {
     // A real browser opens these externally; doing the same here keeps a link
     // in a rendered message from becoming a navigation in a window that holds
     // the session cookie.
+    //
+    // Not ours does not mean safe to launch: `file://` reaches the local
+    // filesystem and a registered scheme handler runs a program with our URL
+    // as its arguments. Only http(s) leaves the machine through the browser.
+    if (!isExternallyOpenable(url)) {
+      log(`refused to hand ${url} to the operating system`)
+      return
+    }
     void shell.openExternal(url).catch(() => {})
   })
 
   contents.setWindowOpenHandler(({ url }) => {
     if (isAllowedNavigation(url, allowedOrigin)) return { action: 'allow' }
-    void shell.openExternal(url).catch(() => {})
+    if (isExternallyOpenable(url)) {
+      void shell.openExternal(url).catch(() => {})
+    } else {
+      log(`refused to hand ${url} to the operating system`)
+    }
     return { action: 'deny' }
   })
 
