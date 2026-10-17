@@ -5,6 +5,21 @@ on:
     branches:
       - main
 
+# The action pushes the running commit to Dokku's `server` branch, so two
+# deploys at once race on that ref and the loser is rejected as a
+# non-fast-forward. That is not hypothetical: two pushes a minute apart on
+# 2026-10-17 left one deploy permanently red for a reason that had nothing to
+# do with either commit.
+#
+# `cancel-in-progress: false` queues rather than cancels - cancelling a deploy
+# part-way through leaves the server branch in a worse state than letting the
+# earlier one finish. Queued runs run in the order they were triggered, which
+# is the order they were pushed, so the later commit fast-forwards onto the
+# earlier one.
+concurrency:
+  group: deploy-to-dokku
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
