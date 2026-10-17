@@ -46,15 +46,45 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "name=${NAME}" >> $GITHUB_OUTPUT
 
+      - name: Check publish prerequisites
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::NPM_TOKEN is not set on this repository."
+            echo "::error::Create an npm automation token at https://www.npmjs.com/settings/your-account/access-tokens"
+            echo "::error::and add it under Settings -> Secrets and variables -> Actions -> New repository secret."
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Check if version already published
         id: check
         run: |
-          if npm view "${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }}" version >/dev/null 2>&1; then
+          NAME="${{ steps.pkg.outputs.name }}"
+          VERSION="${{ steps.pkg.outputs.version }}"
+
+          LATEST=$(npm view "$NAME" dist-tags.latest 2>/dev/null || echo "")
+          if [ -n "$LATEST" ]; then
+            NEWER=$(node -e "
+              const [a, b] = process.argv.slice(1).map(v => v.split('.').map(Number))
+              console.log(a[0] > b[0] || (a[0] === b[0] && (a[1] > b[1] || (a[1] === b[1] && a[2] > b[2]))) ? 'yes' : 'no')
+            " "$VERSION" "$LATEST")
+            if [ "$NEWER" != "yes" ]; then
+              echo "::error::$NAME in the repository is $VERSION but npm's latest is $LATEST."
+              echo "::error::Publishing $VERSION would succeed and change nothing: npm's 'latest' tag"
+              echo "::error::resolves to the highest version, so users would keep receiving $LATEST."
+              echo "::error::Raise the version in ocm-cli/package.json above $LATEST before publishing."
+              exit 1
+            fi
+            echo "Repository $VERSION is ahead of the published $LATEST."
+          fi
+
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
             echo "already_published=true" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.pkg.outputs.version }} already on npm; skipping publish."
+            echo "Version $VERSION already on npm; skipping publish."
           else
             echo "already_published=false" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.pkg.outputs.version }} not yet on npm; will publish."
+            echo "Version $VERSION not yet on npm; will publish."
           fi
 
       - name: Build
