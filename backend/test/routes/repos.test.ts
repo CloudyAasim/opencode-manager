@@ -115,6 +115,21 @@ function createMockRepo(overrides: Partial<Repo> = {}): Repo {
   }
 }
 
+/**
+ * A request the server can place on a person. `GET /` and `POST /discover`
+ * refuse one they cannot - which they should, having read "no principal" as
+ * "no narrowing" until now - so the tests about their behaviour have to
+ * arrive as a real session.
+ */
+function asSession(app: Hono, user = { id: 'u-1', role: 'user', username: 'alice' }) {
+  return new Hono<{ Variables: { user: { id: string; role: string; username: string } } }>()
+    .use('*', async (c, next) => {
+      c.set('user', user as never)
+      await next()
+    })
+    .route('/', app)
+}
+
 describe('Repo Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -472,6 +487,47 @@ describe('Repo Routes', () => {
     })
   })
 
+  describe('a request that cannot be placed on a person', () => {
+    // Both list endpoints used to read "no principal" as "no narrowing" and
+    // answer about every account's repositories. These are the cases that say
+    // so: mounted bare, with no session to place the request on a person.
+    it('refuses the repository list rather than serving every repository', async () => {
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+
+      const res = await app.request('/')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('refuses discovery rather than registering ownerless repositories', async () => {
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+
+      const res = await app.request('/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rootPath: '/tmp/repos', maxDepth: 2 }),
+      })
+
+      expect(res.status).toBe(401)
+      expect(repoService.discoverLocalRepos).not.toHaveBeenCalled()
+    })
+
+    it('refuses reordering rather than writing into the shared namespace', async () => {
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+
+      const res = await app.request('/order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: [2, 1] }),
+      })
+
+      expect(res.status).toBe(200)
+      // A settings write falls back to `'default'` by design, so this one is
+      // not a refusal - but the owner it lands under is asserted above.
+      expect(mockUpdateSettings).toHaveBeenCalledWith({ repoOrder: [2, 1] }, undefined)
+    })
+  })
+
   describe('POST /discover', () => {
     it('should return 400 for an invalid body', async () => {
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
@@ -490,7 +546,7 @@ describe('Repo Routes', () => {
       vi.mocked(repoService.discoverLocalRepos).mockResolvedValue(discovery)
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/discover', {
+      const res = await asSession(app).request('/discover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rootPath: '/tmp/repos', maxDepth: 2 }),
@@ -499,14 +555,19 @@ describe('Repo Routes', () => {
       expect(res.status).toBe(200)
       const body = await res.json() as typeof discovery
       expect(body.discoveredCount).toBe(1)
-      expect(repoService.discoverLocalRepos).toHaveBeenCalledWith(mockDb, mockGitAuthService, '/tmp/repos', 2, null)
+      // The fifth argument is the owner every row discovery creates is
+      // attributed to. It used to be asserted as `null` - and a `NULL` owner is
+      // not a neutral "shared" state: `canAccessRepoOwner` returns true for it
+      // for every non-admin, so the repositories discovery had just registered
+      // would be readable, listable and deletable by any other tenant.
+      expect(repoService.discoverLocalRepos).toHaveBeenCalledWith(mockDb, mockGitAuthService, '/tmp/repos', 2, 'u-1')
     })
 
     it('should return 500 when discovery throws', async () => {
       vi.mocked(repoService.discoverLocalRepos).mockRejectedValue(new Error('discover failed'))
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/discover', {
+      const res = await asSession(app).request('/discover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rootPath: '/tmp/repos' }),
@@ -527,7 +588,7 @@ describe('Repo Routes', () => {
       vi.mocked(db.getRepoGitCredentialId).mockReturnValue('cred-1')
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/', { method: 'GET' })
+      const res = await asSession(app).request('/', { method: 'GET' })
 
       expect(res.status).toBe(200)
       const body = await res.json() as Array<Repo & { currentBranch?: string }>
@@ -548,7 +609,7 @@ describe('Repo Routes', () => {
       vi.mocked(repoService.reconcileUserRepos).mockClear()
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/', { method: 'GET' })
+      const res = await asSession(app).request('/', { method: 'GET' })
 
       expect(res.status).toBe(200)
       expect(repoService.reconcileUserRepos).toHaveBeenCalledTimes(1)
@@ -573,7 +634,7 @@ describe('Repo Routes', () => {
       vi.mocked(repoService.reconcileUserRepos).mockRejectedValue(new Error('EACCES'))
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/', { method: 'GET' })
+      const res = await asSession(app).request('/', { method: 'GET' })
 
       expect(res.status).toBe(200)
       expect(await res.json()).toHaveLength(1)
@@ -608,7 +669,13 @@ describe('Repo Routes', () => {
 
     it('should update the repo order', async () => {
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/order', {
+      const withSession = new Hono<{ Variables: { user: { id: string; role: string; username: string } } }>()
+        .use('*', async (c, next) => {
+          c.set('user', { id: 'u-1', role: 'user', username: 'alice' } as never)
+          await next()
+        })
+        .route('/', app)
+      const res = await withSession.request('/order', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order: [2, 1] }),
@@ -617,7 +684,11 @@ describe('Repo Routes', () => {
       expect(res.status).toBe(200)
       const body = await res.json() as { success: boolean }
       expect(body.success).toBe(true)
-      expect(mockUpdateSettings).toHaveBeenCalledWith({ repoOrder: [2, 1] })
+      // The owner matters: `updateSettings` defaults it to `'default'`, and
+      // `GET /` reads the caller's own namespace, so a write without it made
+      // the setting do nothing. The assertion used to pin the one-argument
+      // call, which is the defect.
+      expect(mockUpdateSettings).toHaveBeenCalledWith({ repoOrder: [2, 1] }, 'u-1')
     })
 
     it('should return 500 when the body is not valid JSON', async () => {
@@ -629,6 +700,38 @@ describe('Repo Routes', () => {
       })
 
       expect(res.status).toBe(500)
+    })
+
+    it('writes under the caller, which is who reads it back', async () => {
+      // The whole defect in one assertion: the write went to `'default'`
+      // because `updateSettings` defaults its owner, while `GET /` reads
+      // `principal?.id`. So the order never came back - the setting did
+      // nothing - and every account's order landed in one shared row.
+      //
+      // `getSettings` is called on both paths, so comparing the two owners is
+      // the round trip.
+      const owners: (string | undefined)[] = []
+      mockUpdateSettings.mockImplementation((_u: unknown, userId?: string) => {
+        owners.push(userId)
+        return {} as never
+      })
+
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+      const withSession = new Hono<{ Variables: { user: { id: string; role: string; username: string } } }>()
+        .use('*', async (c, next) => {
+          c.set('user', { id: 'u-1', role: 'user', username: 'alice' } as never)
+          await next()
+        })
+        .route('/', app)
+
+      await withSession.request('/order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: [2, 1] }),
+      })
+
+      expect(owners).toEqual(['u-1'])
+      expect(owners[0]).not.toBe('default')
     })
   })
 

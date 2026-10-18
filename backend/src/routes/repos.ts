@@ -132,20 +132,31 @@ export function createRepoRoutes(
         return c.json({ error: result.error.issues[0]?.message || 'Invalid request' }, 400)
       }
 
+      // Before the scan, not after it. `discoverLocalRepos` *registers* what
+      // it finds, attributing each row to the userId it is handed - and a
+      // `NULL` owner is not a neutral "shared" state, it is one
+      // `canAccessRepoOwner` answers true for every non-admin. So an
+      // unattributable request has to be refused before anything is written.
+      //
+      // The same default as `/git-status-batch` and `/api/logs`, which all
+      // used to read "no principal" as "no narrowing" - a filter that does not
+      // filter.
+      const principal = currentPrincipal(c)
+      if (principal === null) {
+        return c.json({ error: 'Unauthorized' }, 401)
+      }
+
       const discovery = await repoService.discoverLocalRepos(
         database,
         gitAuthService,
         result.data.rootPath,
         result.data.maxDepth,
-        currentPrincipal(c)?.id ?? null
+        principal.id
       )
 
-      const principal = currentPrincipal(c)
       return c.json({
         ...discovery,
-        repos: principal === null
-          ? discovery.repos
-          : discovery.repos.filter((repo) => canAccessRepoOwner(repo.userId ?? null, principal)),
+        repos: discovery.repos.filter((repo) => canAccessRepoOwner(repo.userId ?? null, principal)),
       })
     } catch (error: unknown) {
       logger.error('Failed to discover repos:', error)
@@ -168,9 +179,10 @@ app.get('/', async (c) => {
 
       const settings = settingsService.getSettings(principal?.id)
       const allRepos = listRepos(database, settings.preferences.repoOrder)
-      const repos = principal === null
-        ? allRepos
-        : allRepos.filter((repo) => canAccessRepoOwner(repo.userId ?? null, principal))
+      if (principal === null) {
+        return c.json({ error: 'Unauthorized' }, 401)
+      }
+      const repos = allRepos.filter((repo) => canAccessRepoOwner(repo.userId ?? null, principal))
 
       const reposWithCurrentBranch = await Promise.all(
         repos.map(async (repo) => {
@@ -195,9 +207,15 @@ app.get('/', async (c) => {
       }
 
       const settingsService = new SettingsService(database)
+      // `updateSettings` defaults its owner to `'default'`, so omitting it here
+      // wrote every account's order into one shared row while `GET /` read the
+      // caller's own - which made the setting do nothing at all, and left the
+      // last writer's order in a namespace nobody reads per-user. Same shape as
+      // the git-credential namespace bug: one identity, written under one
+      // spelling and read under another.
       settingsService.updateSettings({
         repoOrder: body.order,
-      })
+      }, currentPrincipal(c)?.id)
 
       return c.json({ success: true })
     } catch (error: unknown) {
