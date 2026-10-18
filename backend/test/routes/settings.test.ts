@@ -249,6 +249,12 @@ vi.mock('../../src/services/repo', () => ({
 vi.mock('@opencode-manager/shared/config/env', () => ({
   getWorkspacePath: vi.fn(() => '/tmp/test-workspace'),
   getReposPath: vi.fn(() => '/tmp/test-repos'),
+  // Needed by `resolveAccessRoots` for a non-admin, which is the only shape
+  // that has roots narrower than the whole workspace. Without them any test
+  // exercising a directory check as an ordinary user dies on the missing
+  // export instead of reaching the check.
+  getUserWorkspacePath: vi.fn((username: string) => `/tmp/test-workspace/${username}`),
+  getUserSettingPath: vi.fn((username: string) => `/tmp/test-workspace/users/${username}/setting`),
   getOpenCodeConfigFilePath: vi.fn(() => '/tmp/test-workspace/.config/opencode.json'),
   getOpenCodeHealthWatchPath: vi.fn(() => '/tmp/test-workspace/health-watch'),
   getAgentsMdPath: vi.fn(() => '/tmp/test-workspace/AGENTS.md'),
@@ -2123,14 +2129,96 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
   })
 
   describe('MCP directory routes', () => {
-    function createMcpApp(forward: ReturnType<typeof vi.fn>) {
-      return createSettingsRoutes(
+    // Mounted with an admin session, and the directories below it are under the
+    // mocked workspace root. These endpoints take `directory` from the body and
+    // hand it to OpenCode unscoped, so they now check it against the caller's
+    // own roots - and a request with no identity at all is refused rather than
+    // served as somebody, which is what a bare mount was.
+    function createMcpApp(forward: ReturnType<typeof vi.fn>, role: 'admin' | 'user' = 'admin') {
+      const routes = createSettingsRoutes(
         db,
         { getGitEnvironment: vi.fn().mockReturnValue({}) } as any,
         createStubOpenCodeClient({ forward: forward as any }),
         supervisor as any,
       )
+      const wrapper = new Hono()
+      wrapper.use('*', async (c, next) => {
+        setUser(c, { id: 'me', role, username: 'me' })
+        await next()
+      })
+      wrapper.route('/', routes)
+      return wrapper
     }
+    const IN_SCOPE_DIRECTORY = '/tmp/test-workspace/project'
+
+    /**
+     * `directory` reaches `openCodeClient.forward` as a query parameter with no
+     * validation of its own. MCP server lists, connections and OAuth state are
+     * all read per directory, so naming someone else's repository answered
+     * questions about their project - and the delete could remove MCP auth
+     * belonging to a directory the caller does not own.
+     *
+     * The check is the one `/skills` already used.
+     */
+    it('refuses a directory outside the caller\'s own roots', async () => {
+      const forward = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
+      // Not an admin: an admin's roots are the whole workspace, so the refusal
+      // below would be an administrator's legitimate access.
+      const mcpApp = createMcpApp(forward, 'user')
+
+      const res = await mcpApp.request(new Request('http://localhost/mcp/context7/connectdirectory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directory: '/tmp/test-workspace/other-tenant/private' }),
+      }))
+
+      expect(res.status).toBe(403)
+      expect(forward).not.toHaveBeenCalled()
+    })
+
+    it('refuses to delete MCP auth for a directory the caller does not own', async () => {
+      const forward = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
+      const mcpApp = createMcpApp(forward, 'user')
+
+      const res = await mcpApp.request(new Request('http://localhost/mcp/context7/authdir', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directory: '/tmp/test-workspace/someone-else' }),
+      }))
+
+      expect(res.status).toBe(403)
+      expect(forward).not.toHaveBeenCalled()
+    })
+
+    /**
+     * The token that reaches the context is what places the request, and a
+     * settings request can also arrive from elsewhere. Mounted bare, there is
+     * nobody to measure the directory against - and there is no `'default'`
+     * tenant whose roots a stranger's directory could be compared to, which is
+     * what `context.ts` records about `currentPrincipal`.
+     *
+     * Without this, flipping that branch to fail *open* keeps every other test
+     * here green, because every other test supplies a principal.
+     */
+    it('refuses when the request cannot be placed on a person', async () => {
+      const forward = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
+      const bare = new Hono()
+      bare.route('/', createSettingsRoutes(
+        db,
+        { getGitEnvironment: vi.fn().mockReturnValue({}) } as any,
+        createStubOpenCodeClient({ forward: forward as any }),
+        supervisor as any,
+      ))
+
+      const res = await bare.request(new Request('http://localhost/mcp/context7/connectdirectory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directory: IN_SCOPE_DIRECTORY }),
+      }))
+
+      expect(res.status).toBe(403)
+      expect(forward).not.toHaveBeenCalled()
+    })
 
     it('connects an MCP server for a directory', async () => {
       const forward = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
@@ -2139,7 +2227,7 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
       const res = await mcpApp.request(new Request('http://localhost/mcp/context7/connectdirectory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directory: '/tmp/project' }),
+        body: JSON.stringify({ directory: IN_SCOPE_DIRECTORY }),
       }))
 
       expect(res.status).toBe(200)
@@ -2147,7 +2235,7 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
       expect(forward).toHaveBeenCalledWith({
         method: 'POST',
         path: '/mcp/context7/connect',
-        directory: '/tmp/project',
+        directory: IN_SCOPE_DIRECTORY,
       })
     })
 
@@ -2158,7 +2246,7 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
       const res = await mcpApp.request(new Request('http://localhost/mcp/context7/connectdirectory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directory: '/tmp/project' }),
+        body: JSON.stringify({ directory: IN_SCOPE_DIRECTORY }),
       }))
 
       expect(res.status).toBe(400)
@@ -2172,14 +2260,14 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
       const disconnectRes = await mcpApp.request(new Request('http://localhost/mcp/context7/disconnectdirectory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directory: '/tmp/project' }),
+        body: JSON.stringify({ directory: IN_SCOPE_DIRECTORY }),
       }))
       expect(disconnectRes.status).toBe(200)
 
       const authRes = await mcpApp.request(new Request('http://localhost/mcp/context7/authdirectedir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directory: '/tmp/project' }),
+        body: JSON.stringify({ directory: IN_SCOPE_DIRECTORY }),
       }))
       expect(authRes.status).toBe(200)
       expect(await authRes.json()).toEqual({})
@@ -2187,7 +2275,7 @@ describe('Settings Routes - versions, directory files, skills, MCP and maintenan
       const deleteRes = await mcpApp.request(new Request('http://localhost/mcp/context7/authdir', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directory: '/tmp/project' }),
+        body: JSON.stringify({ directory: IN_SCOPE_DIRECTORY }),
       }))
       expect(deleteRes.status).toBe(200)
       expect(await deleteRes.json()).toEqual({ success: true })
