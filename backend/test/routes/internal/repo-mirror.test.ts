@@ -19,6 +19,19 @@ const { mockGetActiveDirectories, mockGitOut, mockSafeGitOut, getTmpRoot, setTmp
   }
 })
 
+// These tests are about route behaviour - tarballs, gzip, the 410 for old
+// CLIs - not about tenancy, so they stand in an attributed caller and let every
+// repository through. `repo-mirror-access.test.ts` covers who is refused, and
+// it runs the real middleware against a real database.
+vi.mock('../../../src/auth/internal-token-middleware', () => ({
+  internalUserOf: () => ({ id: 'u-test', role: 'user', username: 'test' }),
+  SESSION_HEADER: 'x-ocm-session',
+}))
+
+vi.mock('../../../src/auth/ownership', () => ({
+  canAccessRepo: () => true,
+}))
+
 vi.mock('../../../src/services/sse-aggregator', () => ({
   sseAggregator: {
     getActiveDirectories: mockGetActiveDirectories,

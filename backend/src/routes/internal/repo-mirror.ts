@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { MiddlewareHandler } from 'hono'
 import type { Database } from 'bun:sqlite'
 import { createReadStream, createWriteStream, mkdtempSync } from 'fs'
 import { Readable } from 'stream'
@@ -10,8 +11,10 @@ import {
   type MirrorTargetEnsureResponse,
   type MirrorTargetPlanResponse,
 } from '@opencode-manager/shared/schemas'
+import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
 import { getRepoById, updateLastPulled, updateRepoBranch, deleteRepo } from '../../db/queries'
 import { internalUserOf } from '../../auth/internal-token-middleware'
+import { canAccessRepo } from '../../auth/ownership'
 import { ensureMirrorTargetPath, createRepoRow, isRepoInUse, planMirrorTarget, ensureMirrorTarget } from '../../services/repo'
 import { logger } from '../../utils/logger'
 import { getErrorMessage } from '../../utils/error-utils'
@@ -65,6 +68,47 @@ const LEGACY_UPGRADE_MESSAGE = 'this ocm CLI is too old for this server; upgrade
 
 export function createInternalRepoMirrorRoutes(db: Database) {
   const app = new Hono()
+
+  /**
+   * The row's owner is recorded correctly - `/mirror/begin?create=true` writes
+   * `userId` from the token - but every endpoint that takes an *existing*
+   * `repoId` looked it up with `getRepoById`, which does not filter by owner.
+   * So a repository was attributed and then reachable by any other tenant
+   * holding any internal token: `GET /:repoId/mirror/bundle` streams the
+   * repository's source as a git bundle, and the write endpoints overwrite it.
+   * Repository ids are small sequential integers, so they are enumerable.
+   *
+   * One guard for the whole sub-tree rather than a check per endpoint, for the
+   * same reason the web API has one: a new endpoint that forgets to call a
+   * function is invisible, and a new endpoint mounted under `/:repoId/*`
+   * inherits the guard without anyone remembering.
+   */
+  const repoOwnershipGuard: MiddlewareHandler = async (c, next) => {
+    const raw = c.req.param('repoId')
+    const id = Number(raw)
+    // Not a number is the route's 400 to answer. `0` is the assistant
+    // repository, which is also the "no repository yet" sentinel that
+    // `/mirror/begin?create=true` is called with - and it is a constant that
+    // already appears in every account's repo list, so refusing it would be an
+    // existence oracle for something that is not secret.
+    if (!raw || !Number.isFinite(id) || id === ASSISTANT_REPO_ID) {
+      await next()
+      return
+    }
+    const principal = internalUserOf(c)
+    // Failing closed on a null principal, unlike the web API's guard: the token
+    // middleware is meant to have refused a request it could not attribute, and
+    // if that ever stops holding, allowing is the wrong direction to fail.
+    if (principal && canAccessRepo(db, id, principal)) {
+      await next()
+      return
+    }
+    // 404 for both "absent" and "not yours", so the status code is not an
+    // oracle for which repositories exist on this server.
+    return c.json({ error: 'Repository not found' }, 404)
+  }
+
+  app.use('/:repoId/*', repoOwnershipGuard)
 
   app.post('/:repoId/mirror', (c) => {
     return c.json({ error: 'cli_too_old', message: LEGACY_UPGRADE_MESSAGE }, 410)
