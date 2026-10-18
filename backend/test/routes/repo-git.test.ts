@@ -17,6 +17,14 @@ vi.mock('../../src/utils/logger', () => ({
   },
 }))
 
+// The batch endpoint narrows by hand rather than through the parent
+// `/:id/*` guard, so these route-behaviour tests stand in an owner who can see
+// everything. `repo-git-access.test.ts` covers who is actually refused.
+vi.mock('../../src/auth/ownership', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/auth/ownership')>()
+  return { ...actual, canAccessRepo: vi.fn().mockReturnValue(true) }
+})
+
 vi.mock('../../src/db/queries', () => ({
   getRepoById: vi.fn(),
 }))
@@ -53,6 +61,7 @@ const getRepoByIdMock = db.getRepoById as MockedFunction<typeof db.getRepoById>
 
 describe('Repo Git Routes', () => {
   let app: Hono
+  let bareApp: Hono
   let mockDatabase: Database
   let mockGitAuthService: GitAuthService
 
@@ -75,7 +84,15 @@ describe('Repo Git Routes', () => {
     mockGitAuthService = {
       getGitEnvironment: vi.fn().mockReturnValue({}),
     } as unknown as GitAuthService
-    app = createRepoGitRoutes(mockDatabase, mockGitAuthService)
+    // The batch endpoint refuses a request it cannot place on a person, so the
+    // mount has to supply one. `bareApp` below is the other half.
+    bareApp = createRepoGitRoutes(mockDatabase, mockGitAuthService)
+    app = new Hono()
+    app.use('*', async (c, next) => {
+      ;(c as unknown as { set: (k: string, v: unknown) => void }).set('user', { id: 'me', role: 'admin', username: 'me' })
+      await next()
+    })
+    app.route('/', bareApp)
   })
 
   describe('POST /git-status-batch', () => {

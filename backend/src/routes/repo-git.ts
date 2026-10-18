@@ -53,9 +53,16 @@ export function createRepoGitRoutes(database: Database, gitAuthService: GitAuthS
       const principal = principalFrom(
         (c as unknown as { get: (key: string) => Session['user'] | undefined }).get('user'),
       )
-      const allowedRepoIds = principal === null
-        ? repoIds
-        : repoIds.filter((id: number) => canAccessRepo(database, id, principal))
+      // This batch endpoint sits at `/git-status-batch`, so it does not match
+      // the `/:id/*` shape the parent `repoAccessGuard` covers, and it narrows
+      // by hand. It used to read `principal === null` as "no narrowing" and
+      // serve every id asked for - the same fail-open as `session-pins` and
+      // `prompt-templates`, where a null identity meant "all of them". A batch
+      // is precisely the shape that sweeps ids, so that is the wrong default.
+      if (principal === null) {
+        return c.json({ error: 'Unauthorized' }, 401)
+      }
+      const allowedRepoIds = repoIds.filter((id: number) => canAccessRepo(database, id, principal))
 
       const BATCH_CONCURRENCY = 3
       const results: Array<[number, GitStatusResponse] | null> = []

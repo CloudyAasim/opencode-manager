@@ -97,6 +97,12 @@ Each of these was a live bug at some point; all of them are now gated.
   the panel blank, a save that fails silently while its sibling path toasts.
   Say which one it is.
 - **An in-flight flag belongs in `finally`,** not on the success path.
+- **Every fail-closed branch needs a test that reaches it.** Mount the routes
+  *without* the middleware that guarantees its precondition, so the refusal is
+  observable. Four times in a row a guard written as
+  `if (!principal) return 403` was green to mutate - flipping it to fail
+  *open* left every other test passing, because every other test supplies a
+  principal. A branch no test walks is a branch that does not exist.
 - **An optimistic write needs a decision and a rollback.** The one that carries
   the meaning: a `setX` whose value is *also* the request payload is mirroring
   the server, so a failure has to put it back. `setSelectedCommit(hash)` is not
