@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'bun:test'
 import { Hono } from 'hono'
 import { Database } from 'bun:sqlite'
 import { createInternalRoutes } from '../../src/routes/internal'
+import { createInternalNotificationRoutes } from '../../src/routes/internal/notifications'
 import { ScheduleService } from '../../src/services/schedules'
 import { NotificationService } from '../../src/services/notification'
 import { SettingsService } from '../../src/services/settings'
@@ -83,6 +84,56 @@ describe('internal/notifications routes', () => {
     expect(body.expired).toBe(0)
     expect(body.failed).toBe(0)
     expect(body.noSubscriptions).toBe(true)
+  })
+
+  /**
+   * `?userId=` was not a filter, it was a selector. The web route was fixed for
+   * this and the internal one kept the copy - which is the more reachable of
+   * the two, being the one the assistant plugin calls.
+   *
+   * With the query string honoured, this request reaches
+   * `sendToUser('someone-else')` and the server's VAPID key pushes a real
+   * notification to that account's devices.
+   */
+  it('ignores ?userId= and delivers to the calling account instead', async () => {
+    vi.spyOn(notificationService, 'isConfigured').mockReturnValue(true)
+    const sendToUser = vi.spyOn(notificationService, 'sendToUser')
+      .mockResolvedValue({ delivered: 0, expired: 0, failed: 0, total: 0 })
+
+    const res = await app.request('/api/internal/notifications/send?userId=someone-else', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'Test', body: 'Body' }),
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+    })
+
+    expect(res.status).toBe(200)
+    expect(sendToUser).toHaveBeenCalledTimes(1)
+    expect(sendToUser.mock.calls[0]![0]).not.toBe('someone-else')
+    expect(sendToUser.mock.calls[0]![0]).not.toBe('default')
+  })
+
+  it('refuses when no caller is attributed rather than falling back to a namespace', async () => {
+    vi.spyOn(notificationService, 'isConfigured').mockReturnValue(true)
+    const sendToUser = vi.spyOn(notificationService, 'sendToUser')
+      .mockResolvedValue({ delivered: 0, expired: 0, failed: 0, total: 0 })
+
+    // Mounted without the token middleware, so nothing places the request on a
+    // person. The old `?? 'default'` answered here, which is the selector again
+    // under another spelling.
+    const bare = new Hono()
+    bare.route('/api/internal/notifications', createInternalNotificationRoutes(notificationService))
+
+    const res = await bare.request('/api/internal/notifications/send', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'Test', body: 'Body' }),
+      headers: { 'content-type': 'application/json' },
+    })
+
+    expect(res.status).toBe(401)
+    expect(sendToUser).not.toHaveBeenCalled()
   })
 
   it('POST /api/internal/notifications/send returns 400 on invalid body (missing title)', async () => {

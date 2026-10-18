@@ -41,7 +41,24 @@ describe('internal/assistant routes', () => {
     settingsService = new SettingsService(db)
     app = new Hono()
     app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
-    token = createInternalCaller(db).token
+    // Disposing the shared OpenCode instance interrupts every account's
+    // assistant sessions, so the route is admin-only - the same reasoning
+    // opencode-config records. These tests are about the request and its rate
+    // limit, so they state the role they need.
+    token = createInternalCaller(db, { role: 'admin' }).token
+  })
+
+  it('refuses a non-admin, because disposing the instance is a whole-server action', async () => {
+    // Every account's assistant sessions run on the one shared OpenCode server,
+    // so this interrupts all of them rather than the caller's.
+    const nonAdmin = createInternalCaller(db, { id: 'u-member', username: 'member', role: 'user' })
+
+    const res = await app.request('/api/internal/assistant/reload', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${nonAdmin.token}` },
+    })
+
+    expect(res.status).toBe(403)
   })
 
   it('POST /api/internal/assistant/reload returns 401 without bearer token', async () => {

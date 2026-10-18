@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { AssistantNotificationRequestSchema } from '@opencode-manager/shared/schemas'
 import type { NotificationService } from '../../services/notification'
 import { TokenBucketRateLimiter } from '../../utils/rate-limit'
+import { internalUserOf } from '../../auth/internal-token-middleware'
 
 export function createInternalNotificationRoutes(notificationService: NotificationService) {
   const app = new Hono()
@@ -31,7 +32,18 @@ export function createInternalNotificationRoutes(notificationService: Notificati
       return c.json({ error: 'Invalid request body', details: parsed.error.issues }, 400)
     }
 
-    const userId = c.req.query('userId') ?? 'default'
+    const userId = internalUserOf(c)?.id
+    if (!userId) {
+      // `?userId=` was not a filter, it was a selector: any agent holding a
+      // token could name another tenant and have the server's VAPID key push a
+      // real notification to all of that account's devices. The web route was
+      // fixed for this; the internal one kept the copy, and it is the more
+      // reachable of the two because it is the one the assistant plugin calls.
+      //
+      // No `?? 'default'` fallback either - a fallback here is the same
+      // selector with a different spelling.
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
 
     const payload = {
       title: parsed.data.title,
