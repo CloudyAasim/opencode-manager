@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Hono } from 'hono'
+import { getUserWorkspacePath } from '@opencode-manager/shared/config/env'
 
 const sseMocks = vi.hoisted(() => ({
   addClient: vi.fn(),
@@ -35,6 +37,32 @@ async function readChunk(reader: { read(): Promise<{ value?: Uint8Array }> }): P
   return decoder.decode(value)
 }
 
+/**
+ * An admin sees every directory unfiltered, so the tests about the stream
+ * plumbing - registration, subscribe, unsubscribe, visibility - keep using
+ * arbitrary paths. Who is *allowed* to ask for which directory is the tenancy
+ * question, and it has its own cases below.
+ */
+function asAdmin(app: ReturnType<typeof createSSERoutes>) {
+  const wrapped = new Hono()
+  wrapped.use('*', async (c, next) => {
+    ;(c as unknown as { set: (k: string, v: unknown) => void }).set('user', { id: 'admin-1', role: 'admin', username: 'root' })
+    await next()
+  })
+  wrapped.route('/', app)
+  return wrapped
+}
+
+function asUser(app: ReturnType<typeof createSSERoutes>, id: string) {
+  const wrapped = new Hono()
+  wrapped.use('*', async (c, next) => {
+    ;(c as unknown as { set: (k: string, v: unknown) => void }).set('user', { id, role: 'user', username: id })
+    await next()
+  })
+  wrapped.route('/', app)
+  return wrapped
+}
+
 describe('SSE Routes', () => {
   let app: ReturnType<typeof createSSERoutes>
 
@@ -58,7 +86,7 @@ describe('SSE Routes', () => {
       sseMocks.addClient.mockReturnValue(cleanup)
       sseMocks.getConnectionStatus.mockReturnValue({ connected: 1, total: 2 })
 
-      const res = await app.fetch(new Request('http://localhost/stream?directories=/one,/two,,/three'))
+      const res = await asAdmin(app).fetch(new Request('http://localhost/stream?directories=/one,/two,,/three'))
 
       expect(res.status).toBe(200)
       expect(res.headers.get('content-type')).toBe('text/event-stream')
@@ -129,7 +157,7 @@ describe('SSE Routes', () => {
     it('subscribes directories for an existing client', async () => {
       sseMocks.addDirectories.mockReturnValue(true)
 
-      const res = await app.fetch(new Request('http://localhost/subscribe', {
+      const res = await asAdmin(app).fetch(new Request('http://localhost/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId: 'client-1', directories: ['/a', '/b'] }),
@@ -285,6 +313,58 @@ describe('SSE Routes', () => {
         directories: ['/a', '/b'],
         activeSessions: { '/a': ['session-1'] },
       })
+    })
+  })
+
+  describe('which directories a stream may cover', () => {
+    /**
+     * This is not metadata about a directory. It is a live stream of everything
+     * happening in it - messages, tool calls, permission requests - so a
+     * directory outside the caller's roots is a feed of someone else's work,
+     * not a row they could have read.
+     *
+     * The paths below are derived from the same helpers the route uses, so the
+     * test states the invariant rather than a hard-coded prefix.
+     */
+    const myWorkspace = getUserWorkspacePath('alice')
+    const theirWorkspace = getUserWorkspacePath('bob')
+
+    /**
+     * The stream never ends, so this reads the one frame it opens with and
+     * cancels - the same shape the test above uses. Reading `res.text()` waits
+     * for a stream that is designed not to close.
+     */
+    async function streamDirectories(url: string, wrapped = asUser(app, 'alice')): Promise<string[]> {
+      const res = await wrapped.fetch(new Request(`http://localhost/stream?directories=${encodeURIComponent(url)}`))
+      const reader = res.body!.getReader()
+      try {
+        const frame = new TextDecoder().decode((await reader.read()).value)
+        const match = frame.match(/"directories":(\[[^\]]*\])/)
+        return match ? JSON.parse(match[1]!) as string[] : []
+      } finally {
+        await reader.cancel()
+      }
+    }
+
+    it('covers a directory inside the caller\'s own roots', async () => {
+      expect(await streamDirectories(myWorkspace)).toEqual([myWorkspace])
+    })
+
+    it('does not cover another tenant\'s directory', async () => {
+      expect(await streamDirectories(theirWorkspace)).toEqual([])
+    })
+
+    it('keeps only the caller\'s own when a batch mixes both', async () => {
+      const both = `${myWorkspace},${theirWorkspace}`
+      expect(await streamDirectories(both)).toEqual([myWorkspace])
+    })
+
+    it('covers nothing when the request cannot be placed on a person', async () => {
+      // The default this route used to have: `!principal` meant "no narrowing".
+      // Mounted bare, there is nobody whose roots to measure against - so it is
+      // not every directory, it is none.
+      expect(await streamDirectories(theirWorkspace, app)).toEqual([])
+      expect(await streamDirectories(myWorkspace, app)).toEqual([])
     })
   })
 })

@@ -17,7 +17,15 @@ function scopedDirectories(
   directories: string[],
   principal: ReturnType<typeof principalFrom>,
 ) : string[] {
-  if (!principal || principalIsAdmin(principal)) return directories
+  // A request that cannot be placed on a person gets nothing rather than
+  // everything. This is the same "null means no narrowing" default that sat in
+  // `/api/logs`, `git-status-batch`, `GET /api/repos` and
+  // `POST /api/repos/discover` - and here it is worth more than in any of them,
+  // because this is not metadata about a directory but a live stream of
+  // everything happening in it: messages, tool calls, permission requests.
+  // An admin is the exception that has always applied.
+  if (principalIsAdmin(principal)) return directories
+  if (!principal) return []
   const roots = resolveAccessRoots(database, principal)
   return directories.filter((directory) => isWithinRoots(directory, roots))
 }
