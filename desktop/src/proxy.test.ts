@@ -546,3 +546,58 @@ describe('首部改写的纯函数', () => {
     expect(out['set-cookie']).toEqual(['a=b'])
   })
 })
+/**
+ * The Kotlin twin of this file - `android/proxy/.../Headers.kt` - drops
+ * `content-length` on the way upstream, saying that forwarding it alongside a
+ * body the proxy is already framing puts the header on the wire twice.
+ *
+ * That is a real hazard there and not here, and the difference is worth
+ * recording rather than "fixing": the Kotlin proxy writes raw sockets and does
+ * its own framing, so a preserved length really can end up declared twice. This
+ * one hands the headers to `http.request`, which treats a supplied
+ * `content-length` as authoritative instead of computing a second one.
+ *
+ * So this pins what the upstream actually receives: exactly one length
+ * declaration, matching the bytes that arrived.
+ *
+ * There was a second assertion here, that the upstream would not see a
+ * duplicate declaration. It could not be shown to go red for its own reason -
+ * Node folds `content-length` and `Content-Length` together because header
+ * names are case-insensitive, so no mutation of this module produced a
+ * duplicate for it to catch. A gate that cannot be made to fail is not
+ * pinning anything, so it is not here.
+ *
+ * The first run of this block also tried to pin the *disagreement* - a client declaring
+ * a length it does not send - and hung. That hang was `fetch`, not the proxy:
+ * straight to the upstream, with no proxy in the path, undici never delivered
+ * the request and timed out. A test that fails for a reason unrelated to its
+ * subject is worse than no test, so it is not here.
+ */
+describe('POST 的 content-length', () => {
+  it('upstream 收到一个与实际长度一致的长度声明', async () => {
+    const seen: { headers: http.IncomingHttpHeaders; bodyLength: number }[] = []
+    const upstream = await serve((req, res) => {
+      const chunks: Buffer[] = []
+      req.on('data', (c: Buffer) => chunks.push(c))
+      req.on('end', () => {
+        seen.push({ headers: req.headers, bodyLength: Buffer.concat(chunks).length })
+        res.writeHead(200, { 'content-type': 'application/json' })
+        res.end('{}')
+      })
+    })
+    const { base } = await makeProxy(upstream)
+
+    const body = JSON.stringify({ title: 'hello', body: 'world' })
+    await fetch(`${base}/api/anything`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(body)) },
+      body,
+    })
+
+    expect(seen).toHaveLength(1)
+    const declared = Number(seen[0]!.headers['content-length'])
+    expect(Number.isFinite(declared)).toBe(true)
+    expect(declared).toBe(seen[0]!.bodyLength)
+  })
+
+})
