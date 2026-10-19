@@ -1,5 +1,5 @@
+import { Hono } from 'hono'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { Hono } from 'hono'
 import type { GitAuthService } from '../../src/services/git-auth'
 
 vi.mock('bun:sqlite', () => ({
@@ -55,6 +55,20 @@ interface MockGitAuthService {
   sshHostKeyHandler: MockSSHHostKeyHandler | null
 }
 
+/**
+ * Answering a host-key prompt trusts a key for the whole server, so the route
+ * is admin-only. These tests are about the handler wiring - accept, reject,
+ * validation, missing handler - so they arrive as an admin.
+ */
+function asAdmin(app: Hono) {
+  return new Hono()
+    .use('*', async (c, next) => {
+      ;(c as unknown as { set: (k: string, v: unknown) => void }).set('user', { id: 'admin-1', role: 'admin', username: 'root' })
+      await next()
+    })
+    .route('/', app)
+}
+
 describe('SSH Routes', () => {
   let app: Hono
   let mockGitAuthService: MockGitAuthService
@@ -72,7 +86,7 @@ describe('SSH Routes', () => {
 
   describe('POST /host-key/respond', () => {
     it('should accept valid response with accept', async () => {
-      const response = await app.request('/host-key/respond', {
+      const response = await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: 'test-123', response: 'accept' })
@@ -88,7 +102,7 @@ describe('SSH Routes', () => {
     })
 
     it('should accept valid response with reject', async () => {
-      const response = await app.request('/host-key/respond', {
+      const response = await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: 'test-456', response: 'reject' })
@@ -104,7 +118,7 @@ describe('SSH Routes', () => {
     })
 
     it('should return 400 for invalid request body missing requestId', async () => {
-      const response = await app.request('/host-key/respond', {
+      const response = await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ response: 'accept' })
@@ -117,7 +131,7 @@ describe('SSH Routes', () => {
     })
 
     it('should return 400 for invalid request body missing response', async () => {
-      const response = await app.request('/host-key/respond', {
+      const response = await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: 'test-123' })
@@ -130,7 +144,7 @@ describe('SSH Routes', () => {
     })
 
     it('should return 400 for invalid response value', async () => {
-      const response = await app.request('/host-key/respond', {
+      const response = await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: 'test-123', response: 'invalid' })
@@ -146,7 +160,7 @@ describe('SSH Routes', () => {
       mockGitAuthService.sshHostKeyHandler = null
       app = createSSHRoutes(mockGitAuthService as unknown as GitAuthService)
 
-      const response = await app.request('/host-key/respond', {
+      const response = await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: 'test-123', response: 'accept' })
@@ -161,7 +175,7 @@ describe('SSH Routes', () => {
     it('should handle request ID matching correctly', async () => {
       const requestId = 'unique-request-id-12345'
       
-      await app.request('/host-key/respond', {
+      await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId, response: 'accept' })
@@ -180,7 +194,7 @@ describe('SSH Routes', () => {
       }
       app = createSSHRoutes(mockGitAuthService as unknown as GitAuthService)
 
-      const response = await app.request('/host-key/respond', {
+      const response = await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: 'test-123', response: 'accept' })
@@ -197,7 +211,7 @@ describe('SSH Routes', () => {
       }
       app = createSSHRoutes(mockGitAuthService as unknown as GitAuthService)
 
-      const response = await app.request('/host-key/respond', {
+      const response = await asAdmin(app).request('/host-key/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: 'expired-123', response: 'accept' })
@@ -216,7 +230,7 @@ describe('SSH Routes', () => {
       }
       app = createSSHRoutes(mockGitAuthService as unknown as GitAuthService)
 
-      const response = await app.request('/host-key/status')
+      const response = await asAdmin(app).request('/host-key/status')
       const body = await response.json()
 
       expect(response.status).toBe(200)
@@ -231,7 +245,7 @@ describe('SSH Routes', () => {
       }
       app = createSSHRoutes(mockGitAuthService as unknown as GitAuthService)
 
-      const response = await app.request('/host-key/status')
+      const response = await asAdmin(app).request('/host-key/status')
       const body = await response.json()
 
       expect(response.status).toBe(200)
@@ -243,7 +257,7 @@ describe('SSH Routes', () => {
       mockGitAuthService.sshHostKeyHandler = null
       app = createSSHRoutes(mockGitAuthService as unknown as GitAuthService)
 
-      const response = await app.request('/host-key/status')
+      const response = await asAdmin(app).request('/host-key/status')
       const body = await response.json()
 
       expect(response.status).toBe(404)
@@ -258,11 +272,61 @@ describe('SSH Routes', () => {
       }
       app = createSSHRoutes(mockGitAuthService as unknown as GitAuthService)
 
-      const response = await app.request('/host-key/status')
+      const response = await asAdmin(app).request('/host-key/status')
       const body = await response.json()
 
       expect(response.status).toBe(500)
       expect(body).toHaveProperty('success', false)
+    })
+  })
+
+  describe('answering a host key is a server-wide trust decision', () => {
+    /**
+     * `known_hosts` lives in the config directory, so accepting a key trusts
+     * it for every git operation on this host - including the ones belonging
+     * to tenants who were never asked. The prompt is broadcast to every
+     * connected client, so the `requestId` is not a secret to any signed-in
+     * account.
+     */
+    it('refuses a signed-in non-admin', async () => {
+      const res = await new Hono()
+        .use('*', async (c, next) => {
+          ;(c as unknown as { set: (k: string, v: unknown) => void }).set('user', { id: 'u-2', role: 'user', username: 'bob' })
+          await next()
+        })
+        .route('/', app)
+        .request('/host-key/respond', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId: 'abc', response: 'accept' }),
+        })
+
+      expect(res.status).toBe(403)
+      // The point is that the handler was never reached, so nothing was
+      // written to known_hosts.
+      expect(mockGitAuthService.sshHostKeyHandler?.respond).not.toHaveBeenCalled()
+    })
+
+    it('refuses the pending-count endpoint too', async () => {
+      const res = await new Hono()
+        .use('*', async (c, next) => {
+          ;(c as unknown as { set: (k: string, v: unknown) => void }).set('user', { id: 'u-2', role: 'user', username: 'bob' })
+          await next()
+        })
+        .route('/', app)
+        .request('/host-key/status')
+
+      expect(res.status).toBe(403)
+    })
+
+    it('still answers an admin', async () => {
+      const res = await asAdmin(app).request('/host-key/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: 'abc', response: 'accept' }),
+      })
+
+      expect(res.status).toBe(200)
     })
   })
 })

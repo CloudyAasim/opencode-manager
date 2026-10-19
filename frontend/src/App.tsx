@@ -23,6 +23,7 @@ import { EventProvider, usePermissions, useEventContext } from '@/contexts/Event
 import { SwipeNavigationProvider, useSwipeNavigation } from '@/contexts/SwipeNavigationContext'
 import { PermissionRequestDialog } from './features/session/PermissionRequestDialog'
 import { SSHHostKeyDialog } from '@/features/ssh/SSHHostKeyDialog'
+import { canAnswerHostKeyPrompt } from '@/features/ssh/canAnswerHostKeyPrompt'
 import { getSwipeBackTarget } from '@/lib/navigation'
 import { onNotificationClick } from '@/lib/serviceWorker'
 import { useAuth } from '@/hooks/useAuth'
@@ -47,6 +48,15 @@ const queryClient = new QueryClient({
 
 function SSHHostKeyDialogWrapper() {
   const { sshHostKey } = useEventContext()
+  const { user } = useAuth()
+
+  // Answering a host key trusts it for the whole server - it is written into
+  // `known_hosts`, which every git operation on this host then uses - so the
+  // route is admin-only. The prompt is broadcast to every client, so without
+  // this an ordinary account would be shown a dialog whose only two buttons
+  // both answer 403.
+  if (!canAnswerHostKeyPrompt(user)) return null
+
   return (
     <SSHHostKeyDialog
       request={sshHostKey.request}

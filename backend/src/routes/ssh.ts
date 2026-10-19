@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { logger } from '../utils/logger'
 import { GitAuthService } from '../services/git-auth'
 import { SSHHostKeyResponseSchema } from '@opencode-manager/shared'
+import { requireAdmin } from '../auth/middleware'
 
 interface SSHHostKeyResponse {
   success: boolean
@@ -11,6 +12,24 @@ interface SSHHostKeyResponse {
 
 export function createSSHRoutes(gitAuthService: GitAuthService) {
   const app = new Hono()
+
+  /**
+   * Answering the prompt is a trust decision for the whole server, not for one
+   * account: accepting writes the key into `known_hosts` under the config
+   * directory, and every git operation on this host then trusts it - including
+   * the ones belonging to tenants who were never asked.
+   *
+   * The prompt is broadcast to every connected client, so the `requestId`
+   * reaches every signed-in account, and neither endpoint checked who was
+   * asking. Any of them could answer while someone else's clone was waiting
+   * on the answer.
+   *
+   * So it is admin-only, the same reasoning as `opencode-config`, `/api/logs`
+   * and `/assistant/reload`. The alternative - recording who initiated each
+   * pending request - scopes it more precisely but threads a userId through the
+   * IPC chain that git itself drives.
+   */
+  app.use('/*', requireAdmin)
 
   app.post('/host-key/respond', async (c) => {
     try {
