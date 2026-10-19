@@ -17,6 +17,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import dev.opencodemanager.proxy.InvalidTargetError
+import dev.opencodemanager.proxy.isExternallyOpenableScheme
 import dev.opencodemanager.proxy.ProxyServer
 import dev.opencodemanager.proxy.normalizeServerUrl
 import dev.opencodemanager.proxy.toUpstreamUrl
@@ -188,6 +189,16 @@ class MainActivity : Activity() {
                 // back into the cross-origin case the proxy exists to avoid,
                 // silently - the UI would keep working and every request would
                 // start failing with 401.
+                //
+                // The page chooses this URL, so what reaches `ACTION_VIEW` has
+                // to be filtered first. See `isExternallyOpenableScheme` for
+                // what that costs without the check - `intent://` above all,
+                // which is a request to start a component rather than to open a
+                // document.
+                if (!isExternallyOpenableScheme(url.scheme)) {
+                    Log.w(TAG, "refused to hand ${url.scheme}: to the system: $url")
+                    return true
+                }
                 openExternally(url)
                 return true
             }

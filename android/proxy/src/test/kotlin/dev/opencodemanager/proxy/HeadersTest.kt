@@ -214,4 +214,60 @@ class HeadersTest {
         assertFalse(out.containsKey("transfer-encoding"))
         assertEquals(listOf("kept"), out["x-thing"])
     }
+
+    /**
+     * The `content-length` decision is the one this implementation makes that
+     * the TypeScript twin deliberately does not: `desktop/src/proxy-headers.ts`
+     * preserves the length and hands it to `http.request`, which treats a
+     * supplied value as authoritative. Here the proxy frames the request
+     * itself, so a preserved length ends up declared alongside the framing -
+     * a request that declares its length twice is a smuggling primitive that
+     * nginx and Bun both refuse with a 400.
+     *
+     * That reasoning is a twelve-line comment in the implementation. Nothing
+     * here asserted it, and the branch reads as a no-op to anyone skimming
+     * the `when`. So it is pinned here, from the upstream direction, where the
+     * header is actually dropped.
+     */
+    @Test
+    fun `content-length is not forwarded upstream, because the framing supplies it`() {
+        val out = buildUpstreamHeaders(
+            headers(
+                "content-type" to "application/json",
+                "content-length" to "42",
+                "x-real-header" to "kept",
+            ),
+            target,
+        )
+
+        assertFalse(
+            "上游会看到重复的长度声明，nginx 与 Bun 都会因此 400",
+            out.containsKey("content-length"),
+        )
+        // The neighbours are unaffected: dropping one header is not dropping
+        // the request.
+        assertEquals(listOf("application/json"), out["content-type"])
+        assertEquals(listOf("kept"), out["x-real-header"])
+    }
+
+    /**
+     * Downstream it is the other way round, and the reason is different: the
+     * caller consumes this one for its own framing, so it must not also appear
+     * on the wire.
+     */
+    @Test
+    fun `content-length downstream is left to the caller to remove`() {
+        // `buildDownstreamHeaders` returns a mutable map precisely so the caller
+        // can drop this one; if it ever stopped doing so, the header would go
+        // out twice and the client would see a truncated response.
+        val out = buildDownstreamHeaders(
+            headers("content-length" to "7", "content-type" to "application/json"),
+            target,
+            secureTransport = false,
+        )
+        assertEquals(listOf("7"), out["content-length"])
+
+        out.remove("content-length")
+        assertEquals(listOf("application/json"), out["content-type"])
+    }
 }
