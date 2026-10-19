@@ -45,6 +45,42 @@ Kotlin does. If the two implementations ever disagree, that file is what notices
 node --experimental-strip-types android/tools/gen-server-url-cases.mjs
 ```
 
+## Building and testing locally
+
+Two JDKs are involved, which is not obvious and fails in ways that do not say so.
+
+```sh
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # any JDK 21
+export ANDROID_HOME="$HOME/Android/Sdk"
+cd android
+```
+
+- **The JDK that launches Gradle** cannot be newer than 21. Kotlin 2.0.21 parses
+  the running JVM's version and gives up on anything past it, with
+  `IllegalArgumentException: 17` or `27` as the entire error message.
+- **A JDK 17 toolchain must be discoverable**, because `proxy/build.gradle.kts`
+  pins `jvmToolchain(17)` and `:app` depends on `:proxy`. Gradle finds installed
+  JDKs on its own, so an installed 17 is enough; otherwise point it at one:
+
+  ```properties
+  # ~/.gradle/gradle.properties
+  org.gradle.java.installations.paths=/path/to/jdk-17,/usr/lib/jvm/java-21-openjdk
+  ```
+
+  That is a *Gradle* property. `-Dorg.gradle.java.installations.paths=...` on the
+  command line is silently ignored.
+
+| Command | Needs |
+|---|---|
+| `./gradlew :proxy:test` | a JDK 17 toolchain only - no SDK |
+| `./gradlew :app:assembleDebug` | the above, plus `ANDROID_HOME` |
+| `./gradlew :app:connectedDebugAndroidTest` | the above, plus a running device or emulator |
+
+`connectedDebugAndroidTest` is not in CI: the Android job there deliberately
+runs `--settings-file settings-proxy-only.gradle.kts`, which excludes `:app` so
+that no push has to download an SDK. Instrumented tests run locally, or on
+whatever device CI is given later.
+
 ## CI
 
 `.github/workflows/ci.yml` runs the proxy tests with

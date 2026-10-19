@@ -15,6 +15,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+        // Test-only; see the note on the dependencies block. Nothing here is on
+        // the runtime classpath, so it cannot move the measured APK size.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -51,4 +54,16 @@ dependencies {
     // 3,246,107 bytes, and the dex from 7.0 MB to 2.4 MB uncompressed. The
     // on-disk figure is small because that dex compresses well, which is exactly
     // why the number in this comment is the one that was measured.
+    //
+    // Which is why the test dependencies below are `androidTest` only: they are
+    // compiled into the test APK and are not on the runtime classpath, so the
+    // app keeps shipping with no AndroidX at all.
+    //
+    // Only two artifacts, and not Espresso. The question is whether
+    // `startActivity` was reached at all, which
+    // `Instrumentation.ActivityMonitor` answers on its own; the return value of
+    // `shouldOverrideUrlLoading` is `true` both when a URL is refused and when
+    // it is handed to a handler, so that value cannot tell the two apart.
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }
