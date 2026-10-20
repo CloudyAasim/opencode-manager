@@ -357,7 +357,7 @@ describe('DELETE /api/repos/:id/workspaces/:workspaceId', () => {
 
     expect(res.status).toBe(200)
     expect(captured?.path).toBe('/experimental/workspace/wrk_test')
-    expect(captured?.directory?.endsWith('/repos/repo-a')).toBe(true)
+    expect(captured?.directory?.endsWith(path.join('repos', 'repo-a'))).toBe(true)
   })
 
   it('returns 400 for a non-numeric repo id', async () => {
@@ -432,7 +432,7 @@ describe('POST /api/repos/:id/workspaces', () => {
 
     expect(res.status).toBe(200)
     expect(captured?.path).toBe('/experimental/workspace')
-    expect(captured?.directory?.endsWith('/repos/repo-a')).toBe(true)
+    expect(captured?.directory?.endsWith(path.join('repos', 'repo-a'))).toBe(true)
     expect(JSON.parse(captured?.body ?? '{}')).toEqual({ type: 'worktree', branch: null })
     expect(await res.json()).toMatchObject({ id: 'wrk_test', type: 'worktree' })
   })

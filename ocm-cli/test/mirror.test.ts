@@ -6,6 +6,7 @@ import { randomBytes } from 'crypto'
 import { spawnSync, execSync } from 'child_process'
 import { prepareMirror, MirrorAbort, mirrorDown, mirrorDownFast, mirrorUp, mirrorUpPatch, mirrorUpFast, checkPushDivergence, checkPullDivergence, describePushDivergence, pickMatchedRepo, type MirrorUpFastPhase } from '../src/mirror'
 import { getBranchName } from '../src/local-repo'
+import { tarLocalArgs, tarPath } from '@opencode-manager/shared/utils/tar-local'
 import { ManagerApi } from '../src/manager-api'
 import { gitRemoteProjectId } from '@opencode-manager/shared/project-id'
 import { mockStateModule, mockTokenStoreModule } from './helpers/token-store-mocks.js'
@@ -155,7 +156,10 @@ describe('mirrorDown', () => {
 
   function createGzipTarball(dir: string): Buffer {
     const tarFile = join(tmpDir, 'test.tar.gz')
-    execSync(`tar -czf "${tarFile}" -C "${dir}" .`)
+    // The same spelling and the same flag the product uses: GNU tar reads a
+    // Windows path with its drive letter as a remote host, and it opens a
+    // name with backslashes in it as if the backslashes were part of it.
+    execSync(`tar ${tarLocalArgs().join(' ')} -czf "${tarPath(tarFile)}" -C "${tarPath(dir)}" .`)
     return readFileSync(tarFile)
   }
 
