@@ -1,7 +1,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, Suspense } from 'react'
 import { Toaster } from 'sonner'
 import { PwaUpdatePrompt } from '@/components/PwaUpdatePrompt'
 import { MobileSheetHost } from '@/features/navigation/MobileSheetHost'
@@ -10,6 +10,7 @@ import { LayerProvider } from './framework/layer/LayerProvider'
 import { ShellFrame } from './framework/shell/ShellFrame'
 import { StatusBar } from './framework/shell/StatusBar'
 import { TopBar } from './framework/shell/TopBar'
+import { RouteLoading } from './framework/shell/RouteLoading'
 import { CommandProvider } from './framework/commands/CommandProvider'
 import { CommandPalette } from './framework/commands/CommandPalette'
 import { BuiltinCommands } from './framework/commands/BuiltinCommands'
@@ -182,7 +183,14 @@ function AppShell() {
             rootRef={rootRef}
             chrome={isAuthenticated}
             header={<TopBar />}
-            main={<Outlet />}
+            main={
+              // A page whose code is still on its way must not leave the
+              // previous page on screen - the switch is visible at once,
+              // with a loading state where the content will be.
+              <Suspense fallback={<RouteLoading />}>
+                <Outlet />
+              </Suspense>
+            }
             status={<StatusBar />}
           />
           <MobileSheetHost />

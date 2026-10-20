@@ -1,9 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useEffect, useMemo, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useEffect, useMemo, useState, useCallback, useRef, type ReactNode } from 'react'
 import { useSession, signIn, signUp, signOut, authClient, type AuthUser } from '@/lib/auth-client'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { joinServerUrl } from '@opencode-manager/shared/utils'
 import { API_BASE_URL } from '@/config'
+import { rememberUser, forgetUser } from '@/lib/session-store'
 
 interface AuthConfig {
   enabledProviders: string[]
@@ -32,11 +33,64 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
+/**
+ * How often the session is checked against the server while the app is
+ * open.
+ *
+ * The route loaders used to do this on every navigation. Now they read the
+ * answer from one place, so something has to keep that place honest - and
+ * this is it: a session that has been revoked on the server is noticed
+ * here rather than on whichever navigation happened to come next.
+ *
+ * Five minutes is a compromise: a check on every navigation is a request
+ * per navigation, and a check every five minutes is one request per five
+ * minutes, with the tab getting one the moment it comes back to the
+ * front.
+ */
+const REVALIDATE_INTERVAL_MS = 5 * 60 * 1000
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const { data: session, isPending, refetch } = useSession()
   const [config, setConfig] = useState<AuthConfig | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
+  const wasAuthenticated = useRef(false)
+
+  const user = (session?.user as AuthUser | undefined) ?? null
+
+  // Keep the shared session in step with what this provider knows.
+  useEffect(() => {
+    if (isPending) return
+    rememberUser(user)
+  }, [user, isPending])
+
+  // A session that goes away is noticed here. The loaders cannot notice
+  // it any more - they read the cached answer, which is the whole point -
+  // so this is where the "you have been signed out" transition lives.
+  useEffect(() => {
+    if (isPending) return
+    if (wasAuthenticated.current && !user) {
+      forgetUser()
+      navigate('/login', { replace: true })
+    }
+    wasAuthenticated.current = !!user
+  }, [user, isPending, navigate])
+
+  // Revalidate in the background, so the cached session does not go stale
+  // while the app sits open.
+  useEffect(() => {
+    if (!user) return
+    const revalidate = () => {
+      void refetch()
+    }
+    const onFocus = () => revalidate()
+    window.addEventListener('focus', onFocus)
+    const timer = window.setInterval(revalidate, REVALIDATE_INTERVAL_MS)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      window.clearInterval(timer)
+    }
+  }, [user, refetch])
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -112,6 +166,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const logout = useCallback(async () => {
+    forgetUser()
     await signOut({
       fetchOptions: {
         onSuccess: () => {
@@ -126,8 +181,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [refetch])
 
   const value = useMemo<AuthContextValue>(() => ({
-    user: session?.user ?? null,
-    isAuthenticated: !!session?.user,
+    user,
+    isAuthenticated: !!user,
     isLoading: isPending,
     config,
     signInWithEmail,
@@ -138,7 +193,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     refreshSession,
   }), [
-    session,
+    user,
     isPending,
     config,
     signInWithEmail,

@@ -1,7 +1,7 @@
 import { redirect } from 'react-router-dom'
-import { getSession } from './auth-client'
 import { joinServerUrl } from '@opencode-manager/shared/utils'
 import { API_BASE_URL } from '@/config'
+import { sharedUser } from './session-store'
 
 export interface AuthConfig {
   enabledProviders: string[]
@@ -28,13 +28,25 @@ async function fetchAuthConfig(): Promise<AuthConfig> {
   }
 }
 
+/**
+ * The session, without asking the server for it again.
+ *
+ * The loaders used to call `getSession()` themselves, which meant every
+ * page switch waited for a round trip before the new page was allowed to
+ * render. The session is now kept in one place and revalidated in the
+ * background, so these read the answer that is already known.
+ */
+async function currentUser() {
+  return sharedUser()
+}
+
 export async function loginLoader() {
-  const [config, session] = await Promise.all([
+  const [config, user] = await Promise.all([
     fetchAuthConfig(),
-    getSession(),
+    currentUser(),
   ])
 
-  if (session.data?.user) {
+  if (user) {
     return redirect('/')
   }
 
@@ -46,12 +58,12 @@ export async function loginLoader() {
 }
 
 export async function setupLoader() {
-  const [config, session] = await Promise.all([
+  const [config, user] = await Promise.all([
     fetchAuthConfig(),
-    getSession(),
+    currentUser(),
   ])
 
-  if (session.data?.user) {
+  if (user) {
     return redirect('/')
   }
 
@@ -63,12 +75,12 @@ export async function setupLoader() {
 }
 
 export async function registerLoader() {
-  const [config, session] = await Promise.all([
+  const [config, user] = await Promise.all([
     fetchAuthConfig(),
-    getSession(),
+    currentUser(),
   ])
 
-  if (session.data?.user) {
+  if (user) {
     return redirect('/')
   }
 
@@ -84,9 +96,9 @@ export async function registerLoader() {
 }
 
 export async function protectedLoader() {
-  const session = await getSession()
+  const user = await currentUser()
 
-  if (!session.data?.user) {
+  if (!user) {
     return redirect('/login')
   }
 
@@ -94,8 +106,7 @@ export async function protectedLoader() {
 }
 
 export async function terminalLoader() {
-  const session = await getSession()
-  const user = session.data?.user as { role?: string } | undefined
+  const user = await currentUser()
 
   if (!user) {
     return redirect('/login')
@@ -128,8 +139,7 @@ export async function terminalLoader() {
  * history and sends them somewhere they can actually do something.
  */
 export async function openCodeSettingsLoader() {
-  const session = await getSession()
-  const user = session.data?.user as { role?: string } | undefined
+  const user = await currentUser()
 
   if (!user) {
     return redirect('/login')
