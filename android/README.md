@@ -76,10 +76,10 @@ cd android
 | `./gradlew :app:assembleDebug` | the above, plus `ANDROID_HOME` |
 | `./gradlew :app:connectedDebugAndroidTest` | the above, plus a running device or emulator |
 
-`connectedDebugAndroidTest` is not in CI: the Android job there deliberately
-runs `--settings-file settings-proxy-only.gradle.kts`, which excludes `:app` so
-that no push has to download an SDK. Instrumented tests run locally, or on
-whatever device CI is given later.
+`connectedDebugAndroidTest` is not in the *push* pipeline: the Android job
+there deliberately runs `--settings-file settings-proxy-only.gradle.kts`,
+which excludes `:app` so that no push has to download an SDK. It runs in
+its own workflow instead - see below.
 
 ## CI
 
@@ -89,6 +89,22 @@ proxy is a plain JVM module and its 58 tests need no Android SDK; making every
 push download one to run them would mean either skipping them or not running
 them often.
 
-Building the APK in CI is a separate job that is not wired up yet: it needs the
-SDK, and until it exists the APK is built locally and its contents verified by
-hand rather than by a machine.
+`.github/workflows/android-app.yml` builds the APK and runs the instrumented
+tests, on a schedule and on demand rather than on every push - for the same
+reason: an SDK and an emulator are a multi-gigabyte download, and paying it on
+every push would mean running these rarely or not at all.
+
+It runs the two commands above, with two things it checks that a green run
+otherwise would not tell you:
+
+- the APK **file** exists, because a build that says `BUILD SUCCESSFUL` and
+  produces no file is a failure worth catching;
+- the instrumented **test count** is read out of the XML reports, because a
+  green run that executed zero tests is the failure mode this repository has
+  already been bitten by once, on the Electron job.
+
+The APK is uploaded as a build artefact.
+
+> The Gradle commands are the same ones that run locally. The CI wiring around
+> them - the emulator, the licences, KVM - is not something a local run can
+> prove, so the first scheduled run is the first time that part is exercised.
