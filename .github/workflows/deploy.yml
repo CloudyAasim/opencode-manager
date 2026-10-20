@@ -36,6 +36,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Build the frontend *before* the deploy, for two reasons.
+      #
+      # First, the build is what says what the site is supposed to be serving
+      # once the deploy lands - the check below compares the live site
+      # against these exact artefacts. Building it here rather than after
+      # the deploy also means a commit whose frontend does not build never
+      # reaches production at all, instead of reaching it and only then
+      # being found broken.
+      #
+      # Second, this workflow runs on every push to `main` independently of
+      # CI's conclusion, so it cannot lean on CI having built anything.
+      - name: Build the frontend
+        run: pnpm --filter frontend build
+
       - name: Deploy to Dokku
         # Pinned to the exact commit this workflow has been running, not to a
         # moving branch. This is the one step that receives the production
@@ -51,3 +79,29 @@ jobs:
           git_remote_url: ${{ secrets.GIT_REMOTE_URL }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           branch: server
+
+      # The deploy step says "the push to Dokku worked". It does not say
+      # "the public site is serving this build", and the two come apart:
+      # a deploy can fail on the host while the old container keeps
+      # answering, so the site is healthy and out of date at the same time.
+      # On 2026-10-20 that is exactly what happened - a failed deploy, a
+      # healthy site, and the old code still in front of users.
+      #
+      # So this compares the assets the site serves against the ones this
+      # commit's build produced. The asset name is a content hash, so
+      # matching names mean matching bytes.
+      #
+      # It also settles the backend, even though the backend has no
+      # artefact of its own to compare: the Dockerfile copies the frontend
+      # bundle and the backend sources out of the same build stage into the
+      # same image, so a new bundle on the site means a new image, and the
+      # new image carries the new backend with it.
+      #
+      # The address is a repository variable so a fork can point this at its
+      # own deployment, and the default keeps the check working without any
+      # setup at all - a check that needs a secret to switch itself on is a
+      # check that silently does nothing.
+      - name: Confirm the site is serving this build
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://code.aasim.l.cd' }}
+        run: node scripts/verify-production-deploy.mjs --site "$PRODUCTION_URL" --dist frontend/dist --timeout 180 --interval 10

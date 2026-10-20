@@ -11,23 +11,31 @@ in the repository.
 
 ## What a release actually does
 
-`.github/workflows/deploy.yml` is now five meaningful lines: it checks out the
-full history and asks `dokku/github-action` to push to the **`server`** branch on
-the host. Dokku builds the image, runs the health checks and swaps the container.
+`.github/workflows/deploy.yml` builds the frontend, asks `dokku/github-action` to
+push to the **`server`** branch on the host, and then checks that the public site
+is serving what it just deployed. Dokku builds the image, runs the health checks
+and swaps the container.
 
 ```yaml
 - uses: actions/checkout@v4
   with:
     fetch-depth: 0          # Dokku builds from the full history
+- run: pnpm --filter frontend build
+                           # what the site is supposed to end up serving
 - uses: dokku/github-action@<pinned sha>
   with:
     git_remote_url: ${{ secrets.GIT_REMOTE_URL }}
     ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
     branch: server
+- run: node scripts/verify-production-deploy.mjs ...
+                           # that the site is serving it
 ```
 
-Pushing to `main` triggers this. There are no other configuration steps left in
-the workflow.
+Pushing to `main` triggers this, and `gh workflow run deploy.yml` runs it again
+without a commit. The last step is the one that makes the run mean something:
+the push can succeed while the site still serves the previous build, and the
+health check cannot tell the two apart. See **What "deployed successfully" means**
+below.
 
 The action is pinned to a commit rather than `@master`, because this is the one
 step that receives the production deploy key on every push. See the comment in
@@ -115,9 +123,37 @@ gh workflow run deploy.yml
 # Follow the run
 gh run watch $(gh run list --workflow=deploy.yml --limit 1 --json databaseId --jq '.[0].databaseId')
 
-# Application health (this is what "deployed successfully" means)
+# Application health - is it up?
 curl -s https://APP_DOMAIN/api/health
 ```
+
+### What "deployed successfully" means
+
+**Not the health check.** `/api/health` says the service is up; it does not
+say *which* version is up. `opencodeManagerVersion` in that payload is the
+version in `package.json`, and it is the same before and after a release, so
+it cannot tell you whether the site is serving the commit you just pushed.
+
+This is not theoretical. On 2026-10-20 a deploy failed on the host while the
+old container went on serving traffic: the site was healthy, the deploy was
+red, and users were on the old code until someone noticed.
+
+So the deploy workflow ends with a check that compares the assets the site
+serves against the ones this commit's build produced:
+
+```shell
+# The site's own entry point names the bundle it serves
+curl -s https://APP_DOMAIN/ | grep -o 'main-[A-Za-z0-9_-]*\.js'
+```
+
+The bundle's name is a content hash, so that name identifies the build
+exactly. The workflow does this comparison itself, in the
+**Confirm the site is serving this build** step, and fails the run if the
+site is not serving the build that was just deployed.
+
+The address is read from the `PRODUCTION_URL` repository variable, and
+defaults to this fork's own domain when that variable is not set — a check
+that has to be switched on by hand is a check that silently does nothing.
 
 There is no diagnostics workflow. To inspect the host, use the `docker inspect`
 and `dokku config:show` commands in the table above.
