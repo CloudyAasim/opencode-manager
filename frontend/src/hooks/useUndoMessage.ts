@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createOpenCodeClient } from '@/api/opencode'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
-import { messagesQueryKey, stopQueries } from '@/lib/queryInvalidation'
+import { messagesQueryKey, sessionQueryKey, stopQueries } from '@/lib/queryInvalidation'
 import type { MessageWithParts } from '@/api/types'
 
 interface UseUndoMessageOptions {
@@ -65,7 +65,7 @@ export function useUndoMessage({
         queryKey: messagesQueryKey(opcodeUrl, sessionId, directory)
       })
       queryClient.invalidateQueries({
-        queryKey: ['opencode', 'session', opcodeUrl, sessionId, directory]
+        queryKey: sessionQueryKey(opcodeUrl, sessionId, directory)
       })
       onSuccess?.(restoredPrompt)
     }

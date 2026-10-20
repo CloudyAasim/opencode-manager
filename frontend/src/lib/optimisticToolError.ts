@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { MessageWithParts, Part } from '@/api/types'
+import { messagesQuerySession } from './queryInvalidation'
 
 /**
  * Marks a running tool part as errored the moment the user rejects it.
@@ -25,64 +26,63 @@ export function optimisticallyErrorToolPart(
 
   for (const query of queries) {
     const key = query.queryKey
-    // `['opencode', 'messages', <baseUrl>, <sessionID>, <directory>]`. Positional,
-    // which is the fragile part - see the note above.
-    if (key[0] === 'opencode' && key[1] === 'messages' && key.length >= 5) {
-      const querySessionID = key[3] as string
-      if (querySessionID !== sessionID) continue
+    // The key's shape is read off `messagesQueryKey` rather than written out
+    // here, so this cannot drift away from the queries it is meant to find.
+    // See the note above - a mismatch here is silent.
+    const querySessionID = messagesQuerySession(key)
+    if (querySessionID === null || querySessionID !== sessionID) continue
 
-      const currentData = queryClient.getQueryData<MessageWithParts[]>(key)
-      if (!currentData) continue
+    const currentData = queryClient.getQueryData<MessageWithParts[]>(key)
+    if (!currentData) continue
 
-      const updatedData = currentData.map(msgWithParts => {
-        if (msgWithParts.info.id !== messageID) return msgWithParts
+    const updatedData = currentData.map(msgWithParts => {
+      if (msgWithParts.info.id !== messageID) return msgWithParts
 
-        const targetPart = msgWithParts.parts.find((p): p is Extract<Part, { type: 'tool' }> & {
-          callID: string
-          state: Extract<Part, { type: 'tool' }>['state'] & {
-            status: 'running'
-            input: Record<string, unknown>
-            time: { start: number }
-          }
-        } =>
-          p.type === 'tool' &&
-          'callID' in p &&
-          p.callID === callID &&
-          'state' in p &&
-          p.state?.status === 'running'
-        )
-        if (!targetPart) {
-          return msgWithParts
+      const targetPart = msgWithParts.parts.find((p): p is Extract<Part, { type: 'tool' }> & {
+        callID: string
+        state: Extract<Part, { type: 'tool' }>['state'] & {
+          status: 'running'
+          input: Record<string, unknown>
+          time: { start: number }
         }
+      } =>
+        p.type === 'tool' &&
+        'callID' in p &&
+        p.callID === callID &&
+        'state' in p &&
+        p.state?.status === 'running'
+      )
+      if (!targetPart) {
+        return msgWithParts
+      }
 
-        const targetState = targetPart.state
-        const targetId = targetPart.id
+      const targetState = targetPart.state
+      const targetId = targetPart.id
 
-        const updatedParts = msgWithParts.parts.map(p => {
-          if (p.id !== targetId) return p
-          if (p.type !== 'tool') return p
-          return {
-            ...p,
-            state: {
-              status: 'error' as const,
-              input: targetState.input,
-              error: errorMessage,
-              time: {
-                start: targetState.time.start,
-                end: Date.now(),
-              },
-            },
-          }
-        })
-
+      const updatedParts = msgWithParts.parts.map(p => {
+        if (p.id !== targetId) return p
+        if (p.type !== 'tool') return p
         return {
-          ...msgWithParts,
-          parts: updatedParts,
+          ...p,
+          state: {
+            status: 'error' as const,
+            input: targetState.input,
+            error: errorMessage,
+            time: {
+              start: targetState.time.start,
+              end: Date.now(),
+            },
+          },
         }
       })
 
-      queryClient.setQueryData(key, updatedData)
-      break
-    }
+      return {
+        ...msgWithParts,
+        parts: updatedParts,
+      }
+    })
+
+    queryClient.setQueryData(key, updatedData)
+    break
   }
 }

@@ -1,9 +1,14 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, it, expect } from 'vitest'
 import { optimisticallyErrorToolPart } from './optimisticToolError'
+import { messagesQueryKey, sessionQueryKey } from './queryInvalidation'
 import type { MessageWithParts } from '@/api/types'
 
-const KEY = ['opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo']
+// Built by the same function that builds the real keys. A literal copy here
+// would let the key's shape change underneath the helper without this file
+// noticing - and the helper's failure mode when it cannot find the query is
+// silent: no error, no toast, a tool that spins forever.
+const KEY = messagesQueryKey('http://localhost:5551', 'session-1', '/repo')
 
 function runningToolMessage(messageID: string, callID: string): MessageWithParts {
   return {
@@ -102,12 +107,14 @@ describe('optimisticallyErrorToolPart', () => {
   })
 
   /**
-   * The function finds its target by key *position*, which is the fragile part:
-   * if the messages query key is reordered or shortened, this loop finds
-   * nothing and returns silently. The user then watches a tool spin forever
-   * after having rejected it, with no error anywhere.
+   * The function finds its target by the shape of the messages key. If that
+   * shape is reordered or shortened, this loop finds nothing and returns
+   * silently. The user then watches a tool spin forever after having
+   * rejected it, with no error anywhere.
    *
-   * So the key shape is pinned here, not just the behaviour.
+   * So the key shape is pinned here, not just the behaviour - and it is
+   * pinned by asking the same function that builds the real keys, so the two
+   * cannot drift apart.
    */
   it('still finds the query when an extra key segment is appended', () => {
     const queryClient = new QueryClient()
@@ -119,6 +126,24 @@ describe('optimisticallyErrorToolPart', () => {
     const data = queryClient.getQueryData<MessageWithParts[]>(extended) as MessageWithParts[]
     const part = data[0]!.parts.find(p => p.id === 'msg-1-tool') as { state: { status: string } }
     expect(part.state.status).toBe('error')
+  })
+
+  /**
+   * A session query carries the same session id, so a helper that only
+   * looked for "a key with this session in it" would edit the wrong cache
+   * entry. The kinds are told apart by the shared shape, so this pins that
+   * too.
+   */
+  it('does not touch a session query that happens to carry the same session id', () => {
+    const queryClient = new QueryClient()
+    const sessionKey = sessionQueryKey('http://localhost:5551', 'session-1', '/repo')
+    queryClient.setQueryData(sessionKey, [runningToolMessage('msg-1', 'call-1')])
+
+    optimisticallyErrorToolPart(queryClient, 'session-1', 'msg-1', 'call-1', 'Permission denied')
+
+    const data = queryClient.getQueryData<MessageWithParts[]>(sessionKey) as MessageWithParts[]
+    const part = data[0]!.parts.find(p => p.id === 'msg-1-tool') as { state: { status: string } }
+    expect(part.state.status).toBe('running')
   })
 
   it('does nothing when there is no cached messages query', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOpenCodeClient } from './useOpenCode'
-import { invalidateSessionListCaches, invalidateSessionListCachesDebounced, messagesQueryKey } from '@/lib/queryInvalidation'
+import { invalidateSessionListCaches, invalidateSessionListCachesDebounced, messagesQueryKey, pendingActionsQueryKey, sessionQueryKey } from '@/lib/queryInvalidation'
 import type { SSEEvent, MessageWithParts } from '@/api/types'
 import { showToast } from '@/lib/toast'
 import { settingsApi } from '@/api/settings'
@@ -111,9 +111,9 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
       case 'session.updated':
         if ('info' in event.properties) {
           const session = event.properties.info
-          const sessionQueryKey = ['opencode', 'session', opcodeUrl, session.id, cacheDirectory]
+          const sessionKey = sessionQueryKey(opcodeUrl, session.id, cacheDirectory)
 
-          queryClient.setQueryData(sessionQueryKey, session)
+          queryClient.setQueryData(sessionKey, session)
           invalidateSessionListCachesDebounced(queryClient)
           break
         }
@@ -123,8 +123,8 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
       case 'session.deleted':
         invalidateSessionListCaches(queryClient, opcodeUrl)
         if ('sessionID' in event.properties) {
-          queryClient.invalidateQueries({ 
-            queryKey: ['opencode', 'session', opcodeUrl, event.properties.sessionID, cacheDirectory] 
+          queryClient.invalidateQueries({
+            queryKey: sessionQueryKey(opcodeUrl, event.properties.sessionID, cacheDirectory)
           })
         }
         break
@@ -389,13 +389,13 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
     if (!sessionId || !opcodeUrl || !primaryDirectory) return
 
     queryClient.invalidateQueries({
-      queryKey: ['opencode', 'session', opcodeUrl, sessionId, primaryDirectory],
+      queryKey: sessionQueryKey(opcodeUrl, sessionId, primaryDirectory),
     })
     queryClient.invalidateQueries({
       queryKey: messagesQueryKey(opcodeUrl, sessionId, primaryDirectory),
     })
     queryClient.invalidateQueries({
-      queryKey: ['opencode', 'pending-actions', opcodeUrl, sessionId, primaryDirectory],
+      queryKey: pendingActionsQueryKey(opcodeUrl, sessionId, primaryDirectory),
     })
   }, [queryClient, opcodeUrl, primaryDirectory])
 

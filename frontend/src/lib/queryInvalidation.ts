@@ -27,6 +27,52 @@ export function messagesQueryKey(
   return ['opencode', 'messages', opcodeUrl, sessionID, directory]
 }
 
+/**
+ * The session a messages query belongs to, or null when the key is not one.
+ *
+ * Read off the key that `messagesQueryKey` builds rather than written out
+ * here. The helper that updates a messages query by position used to spell
+ * the positions out itself, and the test of that helper spelled out a literal
+ * key of its own - so the two could drift apart, and the test would still
+ * have been green while the helper silently stopped finding anything.
+ */
+export function messagesQuerySession(key: readonly unknown[]): string | null {
+  // The key is the probe with its three values swapped out, so how many
+  // segments it has, and which of them are fixed, is read off the probe
+  // instead of assumed.
+  const probe = messagesQueryKey(PROBE, PROBE, PROBE)
+  const fixedSegments = probe.length - 3
+  if (key.length < probe.length) return null
+  for (let i = 0; i < fixedSegments; i++) {
+    if (key[i] !== probe[i]) return null
+  }
+  const sessionID = key[fixedSegments + 1]
+  return typeof sessionID === 'string' ? sessionID : null
+}
+
+/** A value that cannot be a real one, used to read a key's shape. */
+const PROBE = '__probe__'
+
+/**
+ * The other two query keys of the same family, which were spelled out at
+ * their call sites - three files' worth of a shape that had no owner.
+ */
+export function sessionQueryKey(
+  opcodeUrl: string | null | undefined,
+  sessionID: string | null | undefined,
+  directory: string | null | undefined,
+) {
+  return ['opencode', 'session', opcodeUrl, sessionID, directory]
+}
+
+export function pendingActionsQueryKey(
+  opcodeUrl: string | null | undefined,
+  sessionID: string | null | undefined,
+  directory: string | null | undefined,
+) {
+  return ['opencode', 'pending-actions', opcodeUrl, sessionID, directory]
+}
+
 export function invalidateProviderCaches(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['provider-credentials'] })
   queryClient.invalidateQueries({ queryKey: ['provider-auth-methods'] })

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createOpenCodeClient } from '@/api/opencode'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
-import { messagesQueryKey, stopQueries } from '@/lib/queryInvalidation'
+import { messagesQueryKey, sessionQueryKey, stopQueries } from '@/lib/queryInvalidation'
 import type { Message, Part, MessageWithParts } from '@/api/types'
 
 interface UseRemoveMessageOptions {
@@ -58,7 +58,7 @@ export function useRemoveMessage({ opcodeUrl, sessionId, directory }: UseRemoveM
         queryKey: messagesQueryKey(opcodeUrl, sessionId, directory)
       })
       queryClient.invalidateQueries({
-        queryKey: ['opencode', 'session', opcodeUrl, sessionId, directory]
+        queryKey: sessionQueryKey(opcodeUrl, sessionId, directory)
       })
     }
   })
@@ -149,7 +149,7 @@ export function useRefreshMessage({ opcodeUrl, sessionId, directory }: UseRefres
         queryKey: messagesQueryKey(opcodeUrl, sessionId, directory)
       })
       queryClient.invalidateQueries({
-        queryKey: ['opencode', 'session', opcodeUrl, sessionId, directory]
+        queryKey: sessionQueryKey(opcodeUrl, sessionId, directory)
       })
     },
     onError: (_, variables) => {

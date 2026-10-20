@@ -9,6 +9,7 @@ import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, C
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/features/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
+import { pendingActionsQueryKey } from '@/lib/queryInvalidation'
 import { FetchError } from '@/api/fetchWrapper'
 
 import { FileTreeExplorer } from "@/features/file-browser/FileTreeExplorer";
@@ -552,7 +553,7 @@ export function SessionDetail() {
   }, [sessionDirectory, sessionId, syncPermissionsForSession, syncQuestionsForSession])
 
   useQuery({
-    queryKey: ['opencode', 'pending-actions', opcodeUrl, sessionId, sessionDirectory],
+    queryKey: pendingActionsQueryKey(opcodeUrl, sessionId, sessionDirectory),
     queryFn: async () => {
       await syncPendingActionsForSession()
       return null

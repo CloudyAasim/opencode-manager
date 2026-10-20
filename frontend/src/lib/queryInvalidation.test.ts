@@ -1,6 +1,39 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
-import { invalidateConfigCaches, refreshOpenCodeServerCaches } from './queryInvalidation'
+import {
+  invalidateConfigCaches,
+  messagesQueryKey,
+  messagesQuerySession,
+  pendingActionsQueryKey,
+  refreshOpenCodeServerCaches,
+  sessionQueryKey,
+} from './queryInvalidation'
+
+describe('messagesQuerySession', () => {
+  it('reads the session out of a key built by messagesQueryKey', () => {
+    expect(messagesQuerySession(messagesQueryKey('http://localhost:5551', 'ses-1', '/repo')))
+      .toBe('ses-1')
+  })
+
+  it('says no for a key of another family', () => {
+    // The session query carries the same session id, so a reader that only
+    // looked for "a key with this session in it" would edit the wrong entry.
+    expect(messagesQuerySession(sessionQueryKey('http://localhost:5551', 'ses-1', '/repo')))
+      .toBeNull()
+    expect(messagesQuerySession(pendingActionsQueryKey('http://localhost:5551', 'ses-1', '/repo')))
+      .toBeNull()
+  })
+
+  it('says no for a key that is too short', () => {
+    expect(messagesQuerySession(['opencode', 'messages'])).toBeNull()
+  })
+
+  it('says no for a key whose session slot is not a string', () => {
+    const key = messagesQueryKey('http://localhost:5551', 'ses-1', '/repo')
+    key[3] = 42
+    expect(messagesQuerySession(key)).toBeNull()
+  })
+})
 
 describe('refreshOpenCodeServerCaches', () => {
   it('invalidates every cache that displays the installed OpenCode version', () => {
