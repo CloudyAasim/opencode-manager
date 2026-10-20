@@ -142,6 +142,21 @@ describe('Repo Routes', () => {
       updatedAt: Date.now(),
     })
     vi.mocked(db.getRepoGitCredentialId).mockReturnValue(null)
+    // The two mocks the list route leans on, restored here for the same
+    // reason the ones above are: `vi.clearAllMocks()` forgets recorded calls
+    // but keeps implementations, so a test that makes one of these throw -
+    // or reject - leaves it that way for every test that runs after it.
+    // The 401 case then read a list that threw and answered 500 instead,
+    // and it only did so when the shuffled order put the throwing test
+    // first. `vi.mocked(db.updateLastAccessed).mockReset()` below is the
+    // same lesson, already learned once in this file.
+    vi.mocked(db.listRepos).mockReturnValue([])
+    vi.mocked(repoService.reconcileUserRepos).mockResolvedValue({
+      registeredCount: 0,
+      existingCount: 0,
+      skipped: true,
+      errors: [],
+    })
   })
 
   describe('POST /:id/access', () => {

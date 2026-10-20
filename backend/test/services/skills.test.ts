@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { tmpdir } from 'os'
 import { mkdir, mkdtemp, rm, readFile, writeFile } from 'fs/promises'
 import type { OpenCodeClient } from '../../src/services/opencode/client'
@@ -50,6 +50,13 @@ describe('SkillService', () => {
   beforeEach(async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'skills-test-'))
     vi.spyOn(await import('@opencode-manager/shared/config/env'), 'getWorkspacePath').mockReturnValue(tempDir)
+    // The global skills directory has to be inside the temporary one too.
+    // It is derived from the workspace path, but through a different
+    // function, and it is the one every "global" scope test writes to - so
+    // without this the skills outlive the test that made them, and the next
+    // run finds them already installed.
+    vi.spyOn(await import('@opencode-manager/shared/config/env'), 'getOpenCodeGlobalSkillsPath')
+      .mockReturnValue(join(tempDir, 'global-skills'))
   })
 
   afterEach(async () => {
@@ -161,7 +168,7 @@ describe('SkillService', () => {
 
       expect(result.name).toBe(name)
       expect(result.scope).toBe('global')
-      expect(result.location).toContain(`${name}/SKILL.md`)
+      expect(result.location).toContain(join(name, 'SKILL.md'))
     } finally {
       await deleteSkill(mockDb, name, 'global').catch(() => {})
     }
@@ -443,7 +450,7 @@ Another section.`
         expect(result.filesInstalled).toContain('SKILL.md')
         expect(result.filesInstalled).toContain('GLOSSARY-FORMAT.md')
 
-        const bundledFile = join(result.skill.location.replace('/SKILL.md', ''), 'GLOSSARY-FORMAT.md')
+        const bundledFile = join(dirname(result.skill.location), 'GLOSSARY-FORMAT.md')
         const bundledContent = await readFile(bundledFile, 'utf-8')
         expect(bundledContent).toBe(glossaryMd)
       } finally {
@@ -512,7 +519,7 @@ Another section.`
         { relativePath: 'teach/GLOSSARY-FORMAT.md', content: Buffer.from('# Glossary') },
       ])
 
-      const skillDir = result.skill.location.replace('/SKILL.md', '')
+      const skillDir = dirname(result.skill.location)
       const bundledFile = join(skillDir, 'GLOSSARY-FORMAT.md')
 
       await expect(readFile(bundledFile, 'utf-8')).resolves.toBe('# Glossary')

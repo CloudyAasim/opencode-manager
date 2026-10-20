@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { Hono } from 'hono'
-import { spawnSync } from 'child_process'
+import { spawnSync, type SpawnSyncReturns } from 'child_process'
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -47,6 +47,51 @@ vi.mock('../../../src/services/git/git-commands', () => ({
   gitOut: (...args: unknown[]) => mockGitOut(...args),
   safeGitOut: (...args: unknown[]) => mockSafeGitOut(...args),
 }))
+
+/**
+ * A git command whose failure is visible.
+ *
+ * `stdio: 'ignore'` throws the failure away. When one of these eighty-odd
+ * commands fails - and under the load of a full suite one of them
+ * occasionally does - the test fails later, somewhere else, with a message
+ * that names nothing but the thing that broke. Here the failing command
+ * names itself.
+ */
+function runGit(cwd: string, args: string[]): void {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf-8' })
+  if (result.status !== 0) {
+    throw new Error(
+      `git ${args.join(' ')} failed in ${cwd}: ` +
+      (result.stderr || result.stdout || result.error?.message || 'no output'),
+    )
+  }
+}
+
+/** The same, for the calls that want what git said. */
+function gitOutput(cwd: string, args: string[]): string {
+  return gitResult(cwd, args).stdout ?? ''
+}
+
+/** For the calls that want the exit code as well. */
+function gitResult(cwd: string, args: string[]): SpawnSyncReturns<string> {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf-8' })
+  if (result.status !== 0) {
+    throw new Error(
+      `git ${args.join(' ')} failed in ${cwd}: ` +
+      (result.stderr || result.stdout || result.error?.message || 'no output'),
+    )
+  }
+  return result
+}
+
+/**
+ * For the one call that is *supposed* to fail: the test asserts that git
+ * rejects the refname. A helper that throws on failure would turn that
+ * assertion into an error of its own.
+ */
+function gitResultAllowingFailure(cwd: string, args: string[]): SpawnSyncReturns<string> {
+  return spawnSync('git', args, { cwd, encoding: 'utf-8' })
+}
 
 const mockGetRepoById = vi.fn()
 const mockUpdateLastPulled = vi.fn()
@@ -322,28 +367,28 @@ describe('internal-repo-mirror routes', () => {
     it('imports a git bundle into an existing manager repo', async () => {
       const sourceDir = join(getTmpRoot(), 'bundle-source')
       mkdirSync(sourceDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['init', '-b', 'main'])
+      runGit(sourceDir, ['config', 'user.email', 'test@test.com'])
+      runGit(sourceDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(sourceDir, 'tracked.txt'), 'from bundle\n')
-      spawnSync('git', ['add', 'tracked.txt'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'source'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['checkout', '-b', 'feature'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['add', 'tracked.txt'])
+      runGit(sourceDir, ['commit', '-m', 'source'])
+      runGit(sourceDir, ['checkout', '-b', 'feature'])
       writeFileSync(join(sourceDir, 'feature.txt'), 'feature branch\n')
-      spawnSync('git', ['add', 'feature.txt'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'feature'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['checkout', 'main'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['add', 'feature.txt'])
+      runGit(sourceDir, ['commit', '-m', 'feature'])
+      runGit(sourceDir, ['checkout', 'main'])
       const bundlePath = join(getTmpRoot(), 'source.bundle')
-      spawnSync('git', ['bundle', 'create', bundlePath, '--all'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['bundle', 'create', bundlePath, '--all'])
 
       const targetDir = join(getTmpRoot(), 'bundle-target')
       mkdirSync(targetDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: targetDir, stdio: 'ignore' })
+      runGit(targetDir, ['init', '-b', 'main'])
+      runGit(targetDir, ['config', 'user.email', 'test@test.com'])
+      runGit(targetDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(targetDir, 'old.txt'), 'old\n')
-      spawnSync('git', ['add', 'old.txt'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'target'], { cwd: targetDir, stdio: 'ignore' })
+      runGit(targetDir, ['add', 'old.txt'])
+      runGit(targetDir, ['commit', '-m', 'target'])
 
       mockGetRepoById.mockReturnValue({ id: 1, fullPath: targetDir })
       mockSafeGitOut.mockImplementation(async (_repoPath: string, args: string[]) => {
@@ -360,32 +405,32 @@ describe('internal-repo-mirror routes', () => {
 
       expect(res.status).toBe(200)
       expect(readFileSync(join(targetDir, 'tracked.txt'), 'utf-8')).toBe('from bundle\n')
-      const featureRef = spawnSync('git', ['rev-parse', '--verify', 'refs/heads/feature'], { cwd: targetDir, encoding: 'utf-8' })
+      const featureRef = gitResult(targetDir, ['rev-parse', '--verify', 'refs/heads/feature'])
       expect(featureRef.status).toBe(0)
     })
 
     it('replaces a dirty manager working tree when importing a bundle', async () => {
       const sourceDir = join(getTmpRoot(), 'bundle-source-dirty')
       mkdirSync(sourceDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['init', '-b', 'main'])
+      runGit(sourceDir, ['config', 'user.email', 'test@test.com'])
+      runGit(sourceDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(sourceDir, '.gitignore'), 'ignored.txt\n')
       writeFileSync(join(sourceDir, 'tracked.txt'), 'from bundle\n')
-      spawnSync('git', ['add', '.gitignore', 'tracked.txt'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'source'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['add', '.gitignore', 'tracked.txt'])
+      runGit(sourceDir, ['commit', '-m', 'source'])
       const bundlePath = join(getTmpRoot(), 'source-dirty.bundle')
-      spawnSync('git', ['bundle', 'create', bundlePath, '--all'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['bundle', 'create', bundlePath, '--all'])
 
       const targetDir = join(getTmpRoot(), 'bundle-target-dirty')
       mkdirSync(targetDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: targetDir, stdio: 'ignore' })
+      runGit(targetDir, ['init', '-b', 'main'])
+      runGit(targetDir, ['config', 'user.email', 'test@test.com'])
+      runGit(targetDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(targetDir, '.gitignore'), 'ignored.txt\n')
       writeFileSync(join(targetDir, 'tracked.txt'), 'old\n')
-      spawnSync('git', ['add', '.gitignore', 'tracked.txt'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'target'], { cwd: targetDir, stdio: 'ignore' })
+      runGit(targetDir, ['add', '.gitignore', 'tracked.txt'])
+      runGit(targetDir, ['commit', '-m', 'target'])
       writeFileSync(join(targetDir, 'tracked.txt'), 'server-side edit\n')
       writeFileSync(join(targetDir, 'stale-untracked.txt'), 'stale\n')
       writeFileSync(join(targetDir, 'ignored.txt'), 'keep me\n')
@@ -407,37 +452,37 @@ describe('internal-repo-mirror routes', () => {
       expect(readFileSync(join(targetDir, 'tracked.txt'), 'utf-8')).toBe('from bundle\n')
       expect(existsSync(join(targetDir, 'stale-untracked.txt'))).toBe(false)
       expect(existsSync(join(targetDir, 'ignored.txt'))).toBe(true)
-      const status = spawnSync('git', ['status', '--porcelain'], { cwd: targetDir, encoding: 'utf-8' }).stdout
+      const status = gitOutput(targetDir, ['status', '--porcelain'])
       expect(status.trim()).toBe('')
     })
 
     it('does not move branches checked out in other worktrees when importing into a worktree', async () => {
       const sourceDir = join(getTmpRoot(), 'bundle-source-wt')
       mkdirSync(sourceDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['init', '-b', 'main'])
+      runGit(sourceDir, ['config', 'user.email', 'test@test.com'])
+      runGit(sourceDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(sourceDir, 'tracked.txt'), 'main from laptop\n')
-      spawnSync('git', ['add', 'tracked.txt'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'laptop main'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['checkout', '-b', 'feature'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['add', 'tracked.txt'])
+      runGit(sourceDir, ['commit', '-m', 'laptop main'])
+      runGit(sourceDir, ['checkout', '-b', 'feature'])
       writeFileSync(join(sourceDir, 'feature.txt'), 'feature\n')
-      spawnSync('git', ['add', 'feature.txt'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'feature'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['add', 'feature.txt'])
+      runGit(sourceDir, ['commit', '-m', 'feature'])
       const bundlePath = join(getTmpRoot(), 'source-wt.bundle')
-      spawnSync('git', ['bundle', 'create', bundlePath, '--all'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['bundle', 'create', bundlePath, '--all'])
 
       const baseDir = join(getTmpRoot(), 'wt-base')
       mkdirSync(baseDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: baseDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: baseDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: baseDir, stdio: 'ignore' })
+      runGit(baseDir, ['init', '-b', 'main'])
+      runGit(baseDir, ['config', 'user.email', 'test@test.com'])
+      runGit(baseDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(baseDir, 'tracked.txt'), 'server main\n')
-      spawnSync('git', ['add', 'tracked.txt'], { cwd: baseDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'server main'], { cwd: baseDir, stdio: 'ignore' })
-      const serverMainHead = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: baseDir, encoding: 'utf-8' }).stdout.trim()
+      runGit(baseDir, ['add', 'tracked.txt'])
+      runGit(baseDir, ['commit', '-m', 'server main'])
+      const serverMainHead = gitOutput(baseDir, ['rev-parse', 'HEAD']).trim()
       const worktreeDir = join(getTmpRoot(), 'wt-base-feature')
-      spawnSync('git', ['worktree', 'add', '-b', 'feature', worktreeDir], { cwd: baseDir, stdio: 'ignore' })
+      runGit(baseDir, ['worktree', 'add', '-b', 'feature', worktreeDir])
 
       mockGetRepoById.mockReturnValue({ id: 2, fullPath: worktreeDir })
       mockSafeGitOut.mockImplementation(async (_repoPath: string, args: string[]) => {
@@ -455,8 +500,8 @@ describe('internal-repo-mirror routes', () => {
       expect(res.status).toBe(200)
       expect(readFileSync(join(worktreeDir, 'feature.txt'), 'utf-8')).toBe('feature\n')
       expect(readFileSync(join(baseDir, 'tracked.txt'), 'utf-8')).toBe('server main\n')
-      expect(spawnSync('git', ['rev-parse', 'refs/heads/main'], { cwd: baseDir, encoding: 'utf-8' }).stdout.trim()).toBe(serverMainHead)
-      expect(spawnSync('git', ['status', '--porcelain'], { cwd: baseDir, encoding: 'utf-8' }).stdout.trim()).toBe('')
+      expect(gitOutput(baseDir, ['rev-parse', 'refs/heads/main']).trim()).toBe(serverMainHead)
+      expect(gitOutput(baseDir, ['status', '--porcelain']).trim()).toBe('')
     })
 
     function gitCmd(cwd: string, args: string[], input?: string) {
@@ -740,25 +785,25 @@ describe('internal-repo-mirror routes', () => {
     it('imports a bundle whose ocm-sync refs include a symbolic HEAD without failing', async () => {
       const sourceDir = join(getTmpRoot(), 'bundle-source-head')
       mkdirSync(sourceDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['init', '-b', 'main'])
+      runGit(sourceDir, ['config', 'user.email', 'test@test.com'])
+      runGit(sourceDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(sourceDir, 'tracked.txt'), 'from bundle\n')
-      spawnSync('git', ['add', 'tracked.txt'], { cwd: sourceDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'source'], { cwd: sourceDir, stdio: 'ignore' })
-      const headSha = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: sourceDir, encoding: 'utf-8' }).stdout.trim()
-      spawnSync('git', ['checkout', headSha], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['add', 'tracked.txt'])
+      runGit(sourceDir, ['commit', '-m', 'source'])
+      const headSha = gitOutput(sourceDir, ['rev-parse', 'HEAD']).trim()
+      runGit(sourceDir, ['checkout', headSha])
       const bundlePath = join(getTmpRoot(), 'source-head.bundle')
-      spawnSync('git', ['bundle', 'create', bundlePath, '--all'], { cwd: sourceDir, stdio: 'ignore' })
+      runGit(sourceDir, ['bundle', 'create', bundlePath, '--all'])
 
       const targetDir = join(getTmpRoot(), 'bundle-target-head')
       mkdirSync(targetDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: targetDir, stdio: 'ignore' })
+      runGit(targetDir, ['init', '-b', 'main'])
+      runGit(targetDir, ['config', 'user.email', 'test@test.com'])
+      runGit(targetDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(targetDir, 'old.txt'), 'old\n')
-      spawnSync('git', ['add', 'old.txt'], { cwd: targetDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'target'], { cwd: targetDir, stdio: 'ignore' })
+      runGit(targetDir, ['add', 'old.txt'])
+      runGit(targetDir, ['commit', '-m', 'target'])
 
       mockGetRepoById.mockReturnValue({ id: 1, fullPath: targetDir })
       mockSafeGitOut.mockImplementation(async (_repoPath: string, args: string[]) => {
@@ -774,19 +819,19 @@ describe('internal-repo-mirror routes', () => {
       })
 
       expect(res.status).toBe(200)
-      const headRef = spawnSync('git', ['rev-parse', '--verify', 'refs/heads/HEAD'], { cwd: targetDir, encoding: 'utf-8' })
+      const headRef = gitResultAllowingFailure(targetDir, ['rev-parse', '--verify', 'refs/heads/HEAD'])
       expect(headRef.status).not.toBe(0)
     })
 
     it('returns a git bundle for pull fast path', async () => {
       const repoDir = join(getTmpRoot(), 'bundle-download')
       mkdirSync(repoDir, { recursive: true })
-      spawnSync('git', ['init', '-b', 'main'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: repoDir, stdio: 'ignore' })
+      runGit(repoDir, ['init', '-b', 'main'])
+      runGit(repoDir, ['config', 'user.email', 'test@test.com'])
+      runGit(repoDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(repoDir, 'tracked.txt'), 'bundle payload\n')
-      spawnSync('git', ['add', 'tracked.txt'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'bundle'], { cwd: repoDir, stdio: 'ignore' })
+      runGit(repoDir, ['add', 'tracked.txt'])
+      runGit(repoDir, ['commit', '-m', 'bundle'])
       mockGetRepoById.mockReturnValue({ id: 1, fullPath: repoDir })
 
       const res = await app.request('/api/internal/repos/1/mirror/bundle')
@@ -796,20 +841,20 @@ describe('internal-repo-mirror routes', () => {
       expect(body.length).toBeGreaterThan(0)
       const verifyPath = join(getTmpRoot(), 'download.bundle')
       writeFileSync(verifyPath, body)
-      const verify = spawnSync('git', ['bundle', 'verify', verifyPath], { cwd: repoDir, encoding: 'utf-8' })
+      const verify = gitResult(repoDir, ['bundle', 'verify', verifyPath])
       expect(verify.status).toBe(0)
     })
 
     it('applies a patch to an existing manager repo', async () => {
       const repoDir = join(getTmpRoot(), 'patch-repo')
       mkdirSync(repoDir, { recursive: true })
-      spawnSync('git', ['init'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: repoDir, stdio: 'ignore' })
+      runGit(repoDir, ['init'])
+      runGit(repoDir, ['config', 'user.email', 'test@test.com'])
+      runGit(repoDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(repoDir, 'tracked.txt'), 'before\n')
-      spawnSync('git', ['add', 'tracked.txt'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'initial'], { cwd: repoDir, stdio: 'ignore' })
-      const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: repoDir, encoding: 'utf-8' }).stdout.trim()
+      runGit(repoDir, ['add', 'tracked.txt'])
+      runGit(repoDir, ['commit', '-m', 'initial'])
+      const head = gitOutput(repoDir, ['rev-parse', 'HEAD']).trim()
 
       mockGetRepoById.mockReturnValue({ id: 1, fullPath: repoDir })
       mockSafeGitOut.mockImplementation(async (_repoPath: string, args: string[]) => {
@@ -833,12 +878,12 @@ describe('internal-repo-mirror routes', () => {
     it('returns a patch snapshot for pull fast path', async () => {
       const repoDir = join(getTmpRoot(), 'snapshot-repo')
       mkdirSync(repoDir, { recursive: true })
-      spawnSync('git', ['init'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: repoDir, stdio: 'ignore' })
+      runGit(repoDir, ['init'])
+      runGit(repoDir, ['config', 'user.email', 'test@test.com'])
+      runGit(repoDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(repoDir, 'tracked.txt'), 'before\n')
-      spawnSync('git', ['add', 'tracked.txt'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'initial'], { cwd: repoDir, stdio: 'ignore' })
+      runGit(repoDir, ['add', 'tracked.txt'])
+      runGit(repoDir, ['commit', '-m', 'initial'])
       writeFileSync(join(repoDir, 'tracked.txt'), 'after\n')
 
       mockGetRepoById.mockReturnValue({ id: 1, fullPath: repoDir })
@@ -944,15 +989,15 @@ describe('internal-repo-mirror routes', () => {
     it('preserves gitignored local files on the receiving repo across commit', async () => {
       const repoDir = join(getTmpRoot(), 'test-repo')
       mkdirSync(repoDir, { recursive: true })
-      spawnSync('git', ['init'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: repoDir, stdio: 'ignore' })
+      runGit(repoDir, ['init'])
+      runGit(repoDir, ['config', 'user.email', 'test@test.com'])
+      runGit(repoDir, ['config', 'user.name', 'Test'])
       writeFileSync(join(repoDir, '.gitignore'), 'data/\n')
       writeFileSync(join(repoDir, 'tracked.txt'), 'old tracked')
       mkdirSync(join(repoDir, 'data'))
       writeFileSync(join(repoDir, 'data', 'local.db'), 'local-only')
-      spawnSync('git', ['add', '.gitignore', 'tracked.txt'], { cwd: repoDir, stdio: 'ignore' })
-      spawnSync('git', ['commit', '-m', 'init'], { cwd: repoDir, stdio: 'ignore' })
+      runGit(repoDir, ['add', '.gitignore', 'tracked.txt'])
+      runGit(repoDir, ['commit', '-m', 'init'])
 
       mockGetRepoById.mockReturnValue({ id: 1, fullPath: repoDir })
 
