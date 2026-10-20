@@ -57,11 +57,17 @@ describe('archive service', () => {
     gitRepoPath = path.join(tmpRoot, 'git-repo')
     mkdirSync(path.join(gitRepoPath, 'src'), { recursive: true })
     mkdirSync(path.join(gitRepoPath, 'ignored-dir'), { recursive: true })
+    mkdirSync(path.join(gitRepoPath, 'sub'), { recursive: true })
     writeFileSync(path.join(gitRepoPath, '.gitignore'), 'ignored.txt\nignored-dir/\n')
     writeFileSync(path.join(gitRepoPath, 'tracked.txt'), 'tracked')
     writeFileSync(path.join(gitRepoPath, 'src', 'index.ts'), 'export const value = 1\n')
     writeFileSync(path.join(gitRepoPath, 'ignored.txt'), 'ignored')
     writeFileSync(path.join(gitRepoPath, 'ignored-dir', 'nested.txt'), 'nested')
+    // A subdirectory of the repository, with a file the repository ignores in
+    // it: archiving the subdirectory means the paths handed to git are
+    // relative to the repository root, not to the directory being archived.
+    writeFileSync(path.join(gitRepoPath, 'sub', 'kept.txt'), 'kept')
+    writeFileSync(path.join(gitRepoPath, 'sub', 'ignored.txt'), 'ignored')
     runGit(gitRepoPath, ['init'])
     runGit(gitRepoPath, ['config', 'user.email', 'test@example.com'])
     runGit(gitRepoPath, ['config', 'user.name', 'Test'])
@@ -139,6 +145,20 @@ describe('archive service', () => {
       expect(entries).toContain('git-repo/ignored-dir/nested.txt')
       expect(entries).not.toContain('git-repo/ignored.txt')
     })
+
+    it('excludes gitignored files when archiving a subdirectory of the repository', async () => {
+      // The paths handed to git are relative to the *repository* here, not to
+      // the directory being archived, and git only recognises them when they
+      // are written with forward slashes. Get that wrong and git answers
+      // "nothing is ignored" - and the archive carries the very file the
+      // repository asked to keep out.
+      const zipPath = await createDirectoryArchive(path.join(gitRepoPath, 'sub'))
+      zipPaths.push(zipPath)
+
+      const entries = listZipEntries(zipPath)
+      expect(entries).toContain('sub/kept.txt')
+      expect(entries).not.toContain('sub/ignored.txt')
+    })
   })
 
   describe('createDirectoryArchive', () => {
@@ -215,7 +235,9 @@ describe('archive service', () => {
     it('returns ignored directories and .git for a git repository', async () => {
       const result = await getIgnoredPathsList(gitRepoPath)
 
-      expect(result).toEqual(['.git/', 'ignored-dir/', 'ignored.txt/'])
+      // 'sub/ignored.txt' is the one in the subdirectory fixture: the ignore
+      // rule has no slash in it, so it matches at every level.
+      expect(result).toEqual(['.git/', 'ignored-dir/', 'ignored.txt/', 'sub/ignored.txt/'])
     })
 
     it('returns [] for a non-git directory containing a .git folder', async () => {

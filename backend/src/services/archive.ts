@@ -9,6 +9,15 @@ import { canonicalPath } from '../utils/fs-safe'
 import { assertWithinAccessScope } from '../auth/access-scope'
 import { fileBase } from './file-paths'
 
+/**
+ * The paths in an archive are relative names, and both the zip format and
+ * git speak forward slashes. A path with the platform's own separator is
+ * not one git recognises: `check-ignore` answers "nothing is ignored" for
+ * it, and the archive would carry the very files the repository asked to
+ * keep out.
+ */
+const toArchivePath = (p: string): string => p.split(path.sep).join('/')
+
 async function resolvePath(userPath: string): Promise<string> {
   const absolutePath = path.isAbsolute(userPath) ? userPath : path.join(fileBase(), userPath)
   assertWithinAccessScope(absolutePath)
@@ -67,12 +76,12 @@ async function getIgnoredPaths(gitRoot: string, targetPath: string, paths: strin
   try {
     const { spawn } = await import('child_process')
     
-    const targetRelativeToRoot = path.relative(gitRoot, targetPath)
+    const targetRelativeToRoot = toArchivePath(path.relative(gitRoot, targetPath))
     logger.debug('[getIgnoredPaths] gitRoot:', gitRoot, 'targetPath:', targetPath, 'targetRelativeToRoot:', targetRelativeToRoot)
-    
+
     const relativePaths = paths.map(p => {
       const relativeToTarget = p
-      return targetRelativeToRoot ? path.join(targetRelativeToRoot, relativeToTarget) : relativeToTarget
+      return targetRelativeToRoot ? `${targetRelativeToRoot}/${relativeToTarget}` : relativeToTarget
     })
     
     logger.debug('[getIgnoredPaths] First 5 relativePaths:', relativePaths.slice(0, 5))
@@ -136,7 +145,7 @@ async function collectFiles(
   const files: string[] = []
 
   for (const entry of entries) {
-    const entryRelPath = relativePath ? path.join(relativePath, entry.name) : entry.name
+    const entryRelPath = relativePath ? `${relativePath}/${entry.name}` : entry.name
     
     if (entry.name === '.git' && !options?.includeGit) continue
     
@@ -177,7 +186,9 @@ async function filterIgnoredPaths(targetPath: string, allPaths: string[], option
 
   const filteredPaths: string[] = []
   const ignoredDirs = new Set<string>()
-  const includePathsSet = new Set(options?.includePaths || [])
+  // Normalised too: the caller may spell a path with the platform's own
+  // separator, and the paths being matched against are archive paths.
+  const includePathsSet = new Set((options?.includePaths || []).map(toArchivePath))
 
   for (const p of allPaths) {
     const isDir = p.endsWith('/')
