@@ -43,7 +43,11 @@ export function getWorkspaceLocalPathForRepo(sourcePath: string): string | null 
     return null
   }
 
-  return path.relative(reposPath, normalizedSourcePath)
+  // Forward slashes: this is a key, not a path. The same repository has to
+  // get the same key on every platform - it is stored in the database and
+  // handed to clients as part of the API - and `path.relative` spells it
+  // with the platform's own separator. `path.join` accepts it either way.
+  return path.relative(reposPath, normalizedSourcePath).split(path.sep).join('/')
 }
 
 async function isWorkspaceAliasAvailable(alias: string, sourcePath?: string): Promise<boolean> {
