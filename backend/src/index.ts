@@ -7,6 +7,7 @@ import { readFile } from 'fs/promises'
 import { readFileSync } from 'fs'
 import { basename, join } from 'path'
 import { initializeDatabase } from './db/schema'
+import { createConditionalGetMiddleware } from './middleware/conditional-get'
 import { createRepoRoutes } from './routes/repos'
 import { createIPCServer, type IPCServer } from './ipc/ipcServer'
 import { GitAuthService } from './services/git-auth'
@@ -164,6 +165,22 @@ app.use('/*', async (c, next) => {
   }
   await compress()(c, next)
 })
+
+/**
+ * Registered after the compressing middleware on purpose: this one computes
+ * the validator over the *uncompressed* body, and the compressing one then
+ * gzips on the way out. The validator is weak, which is what a body that
+ * has two encodings needs.
+ *
+ * The event stream and the terminal stream are left alone - they never
+ * end, and reading one to hash it would hang the response.
+ */
+app.use(
+  '/api/*',
+  createConditionalGetMiddleware({
+    skipPrefixes: ['/api/sse/', '/api/terminal/'],
+  }),
+)
 
 const db = initializeDatabase(DB_PATH)
 const auth = createAuth(db)
