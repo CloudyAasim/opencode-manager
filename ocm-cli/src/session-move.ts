@@ -79,10 +79,24 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
 }
 
-function relocatePath(path: string, ctx: RewriteContext): string {
-  if (path === ctx.localRoot) return ctx.remoteRoot
-  if (path.startsWith(ctx.localRoot + '/')) return ctx.remoteRoot + path.slice(ctx.localRoot.length)
-  return path
+function relocatePath(target: string, ctx: RewriteContext): string {
+  if (target === ctx.localRoot) return ctx.remoteRoot
+
+  // The separator is not always a slash. The paths come from whichever machine
+  // wrote the history, and a Windows machine writes backslashes - so matching
+  // the local root with a hardcoded '/' found the root itself and nothing
+  // else, and every path *under* it was left pointing at the machine the
+  // session came from.
+  //
+  // The substitution is one for one, so the normalized form is the same
+  // length as the original and the slice below is still the right one. The
+  // trailing separator on the root is kept: it is what stops one root from
+  // matching another that merely starts with it.
+  const normalizedRoot = ctx.localRoot.replace(/\\/g, '/')
+  const normalizedTarget = target.replace(/\\/g, '/')
+  if (normalizedRoot === '' || !normalizedTarget.startsWith(normalizedRoot + '/')) return target
+
+  return ctx.remoteRoot + target.slice(ctx.localRoot.length)
 }
 
 function relocateField(obj: Record<string, unknown>, key: string, ctx: RewriteContext): void {

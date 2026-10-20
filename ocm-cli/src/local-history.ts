@@ -29,9 +29,19 @@ export function resolveOpencodeDbPath(): string | null {
   const variants = readdirSync(dataDir)
     .filter((name) => name.startsWith('opencode-') && name.endsWith('.db'))
     .map((name) => join(dataDir, name))
-    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)
+    // OpenCode can rotate a channel database between the read and the stat,
+    // and a file that has gone is not a reason to fail the whole lookup.
+    .sort((a, b) => modifiedAt(b) - modifiedAt(a))
 
   return variants[0] ?? null
+}
+
+function modifiedAt(filePath: string): number {
+  try {
+    return statSync(filePath).mtimeMs
+  } catch {
+    return 0
+  }
 }
 
 export async function readSessionEvents(sessionID: string): Promise<HistoryEventRow[]> {

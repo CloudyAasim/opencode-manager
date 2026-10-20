@@ -76,6 +76,56 @@ describe('rewriteEventsForRemote', () => {
     expect(result[0]!.data.info).toEqual({ directory: '/workspace/repos/repo' })
   })
 
+  it('rewrites a path under the root, not only the root itself', () => {
+    const events: ReplayEvent[] = [
+      {
+        id: 'e1', aggregateID: 'ses_a', seq: 0,
+        type: 'session.created.1',
+        data: { info: { directory: '/Users/x/repo/src/lib' } },
+      },
+    ]
+
+    const result = rewriteEventsForRemote(events, ctx)
+
+    expect(result[0]!.data.info).toEqual({ directory: '/workspace/repos/repo/src/lib' })
+  })
+
+  it('rewrites a windows path under the root', () => {
+    // The paths come from whichever machine wrote the history, and a Windows
+    // machine writes backslashes. Matching the root with a hardcoded '/'
+    // found the root itself and nothing else.
+    const windowsCtx = {
+      localRoot: 'C:\\Users\\x\\repo',
+      remoteRoot: '/workspace/repos/repo',
+    }
+    const events: ReplayEvent[] = [
+      {
+        id: 'e1', aggregateID: 'ses_a', seq: 0,
+        type: 'session.created.1',
+        data: { info: { directory: 'C:\\Users\\x\\repo\\src\\lib' } },
+      },
+    ]
+
+    const result = rewriteEventsForRemote(events, windowsCtx)
+
+    expect(result[0]!.data.info).toEqual({ directory: '/workspace/repos/repo\\src\\lib' })
+  })
+
+  it('leaves a path that merely starts with the root alone', () => {
+    // 'repo2' is not under 'repo', and the trailing separator is what says so.
+    const events: ReplayEvent[] = [
+      {
+        id: 'e1', aggregateID: 'ses_a', seq: 0,
+        type: 'session.created.1',
+        data: { info: { directory: '/Users/x/repo2/src' } },
+      },
+    ]
+
+    const result = rewriteEventsForRemote(events, ctx)
+
+    expect(result[0]!.data.info).toEqual({ directory: '/Users/x/repo2/src' })
+  })
+
   it('rewrites session.updated info directory to the remote root', () => {
     const events: ReplayEvent[] = [
       {

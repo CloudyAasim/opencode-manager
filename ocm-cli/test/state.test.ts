@@ -6,6 +6,7 @@ import { join } from 'path'
 let home: string
 let configDir: string
 let savedHome: string | undefined
+let savedUserProfile: string | undefined
 
 async function loadState() {
   vi.resetModules()
@@ -14,14 +15,21 @@ async function loadState() {
 
 beforeEach(() => {
   savedHome = process.env.HOME
+  savedUserProfile = process.env.USERPROFILE
   home = mkdtempSync(join(tmpdir(), 'ocm-home-'))
   process.env.HOME = home
+  // Windows' `os.homedir()` reads USERPROFILE and ignores HOME, so the state
+  // directory would be written into the real user profile - and the test
+  // would be asserting against a file that is not the one it made.
+  process.env.USERPROFILE = home
   configDir = join(home, '.config', 'opencode-manager')
 })
 
 afterEach(() => {
   if (savedHome === undefined) delete process.env.HOME
   else process.env.HOME = savedHome
+  if (savedUserProfile === undefined) delete process.env.USERPROFILE
+  else process.env.USERPROFILE = savedUserProfile
   rmSync(home, { recursive: true, force: true })
 })
 
