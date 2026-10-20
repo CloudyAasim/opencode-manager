@@ -69,37 +69,71 @@ PMA, a share service, a p2p sender and others). When the apps are running,
 about 1.9 GB of that memory is in use and about 2 GB is available.
 
 That is the whole context for a deploy here, because **the image is built on
-this host**. The frontend build alone wants around 1.2 GB of V8 heap, and V8
-sizes its heap from the machine's memory - so on a host this size an uncapped
-build is free to grow into the space the running service needs.
+this host**. Measured on Linux, the frontend build peaks at **1830 MB** of
+process memory, of which the V8 heap itself wants 1.0-1.3 GB. That leaves
+about 165 MB of headroom against the host's 1995 MB, and with no swap there
+is no buffer at all.
 
 What that cost, on 2026-10-20:
 
 - The build started at 06:50 and the site stopped answering at 06:57, and
-  kept not answering for **25 minutes**.
-- At 07:20 the host rebooted. The build died with it (`exit_code: -1`,
-  "the remote end hung up unexpectedly") and the deploy failed.
+  kept not answering for **25 minutes**. The container was never reported
+  dead - it was starved, not killed.
+- The host rebooted at **07:14:17** (twice independently measured from
+  `/proc/uptime`, and it matches the Dokku event listener reconnecting to
+  Docker at 07:19:57 and re-registering all ten containers at 07:20:12).
+  The build died with it (`exit_code: -1`, "the remote end hung up
+  unexpectedly") and the deploy failed.
 - The site came back on the **old** build: the deploy had failed, so nothing
   new was ever deployed.
 
+**The reboot's cause is not established.** Linux's OOM killer kills processes;
+it does not reboot machines. Reading the kernel log needs root on the host,
+which this repository does not have. One command settles it:
+
+```shell
+sudo journalctl -k --since "2026-10-20 06:50" --until "2026-10-20 07:20" \
+  | grep -iE "oom|killed process|out of memory"
+```
+
 The build is now capped at **1536 MB** of heap in the Dockerfile, in CI and
-in the deploy workflow, so it cannot grow into the host's headroom. A build
-that does not fit now fails the deploy and leaves the running service alone,
-which is the outcome worth having.
+in the deploy workflow. That is the smallest cap the build passes reliably
+(768 MB always fails, 1024 MB fails about one build in three), and CI builds
+with the same cap so a cap that is too small shows up there rather than here.
+A build that does not fit now fails the deploy and leaves the running service
+alone, which is the outcome worth having.
 
-**Two things that are not in the repository and are worth knowing:**
+### The accepted risk
 
-1. **The host has no swap.** Adding some (2 GB is plenty) would keep a
-   memory spike from reaching the OOM killer at all, and it is the cheapest
-   fix available. It needs root on the host, so it is an operator action.
-2. **The structural fix is to stop building on this host.** The image is
-   already built in CI by `.github/workflows/docker-build.yml` and pushed to
-   GHCR, and `dokku/github-action` can deploy an image instead of pushing a
-   branch (`deploy_docker_image`, which becomes
-   `dokku git:from-image <app> <image>` on the host). That removes the build
-   from the host entirely, so a deploy can never take the running service
-   down. It needs the GHCR package to be pullable by the host, and it needs
-   the old images to be pruned - the host has 9.8 GB of disk free.
+**As of 2026-10-20 the owner decided to keep the current setup**: no swap on
+the host, and the image is still built on the host rather than in CI. Both
+options were priced out and deliberately declined, so the numbers below are
+what is being accepted, not an oversight:
+
+- **Every change to `frontend/src` or `shared/src` makes the host absorb a
+  ~1830 MB, ~90 second memory spike**, with roughly 165 MB of headroom and
+  no swap to absorb the overflow. With a build cache warm only the frontend
+  compile re-runs; a change to a `package.json` re-runs the whole install
+  as well, and that is the case that took the site down.
+- The mitigations that are in place: the heap cap (above), and the deploy's
+  last step, which checks that the public site is actually serving the build
+  that was just deployed - so a failed or partial deploy cannot pass
+  unnoticed.
+
+The two ways this risk would be removed, for whoever picks it up later:
+
+1. **Add swap to the host.** 2 GB, sized to the build's measured peak rather
+   than by rule of thumb: `fallocate -l 2G /swapfile`, `chmod 600`,
+   `mkswap`, `swapon`, and a `/etc/fstab` entry (this host reboots, so
+   without the entry the swap is gone after the next one). Needs root.
+2. **Stop building on this host.** The image is already built in CI by
+   `.github/workflows/docker-build.yml` and pushed to GHCR, and
+   `dokku/github-action` can deploy an image instead of pushing a branch
+   (`deploy_docker_image`, which becomes `dokku git:from-image <app> <image>`
+   on the host). That removes the build from the host entirely, so a deploy
+   can never take the running service down. It needs the GHCR package to be
+   pullable by the host, and it needs the old images to be pruned - the host
+   has 9.8 GB of disk free.
 
 ### Required for the terminal sandbox: `seccomp=unconfined`
 
