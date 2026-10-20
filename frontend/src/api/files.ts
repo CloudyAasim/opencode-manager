@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchWrapper, fetchWrapperBlob } from './fetchWrapper'
 import { API_BASE_URL } from '@/config'
 import { saveFile } from '@/lib/download'
+import { downloadFileName } from '@opencode-manager/shared/utils/download'
 import type { FileInfo, ChunkedFileInfo, PatchOperation } from '@/types/files'
 
 interface FileApiUrlOptions {
@@ -60,7 +61,7 @@ export async function downloadDirectoryAsZip(path: string, options?: DownloadOpt
   })
   
   const blob = await fetchWrapperBlob(url)
-  const dirName = path.split('/').pop() || 'download'
+  const dirName = downloadFileName(path)
   await saveFile(blob, `${dirName}.zip`)
 }
 

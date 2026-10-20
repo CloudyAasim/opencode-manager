@@ -15,6 +15,7 @@ import { logger } from '../utils/logger'
 import { repoNotFoundResponse } from '../utils/errors'
 import { getErrorMessage, getStatusCode } from '../utils/error-utils'
 import { ASSISTANT_REPO_ID } from '@opencode-manager/shared/utils'
+import { contentDispositionAttachment, downloadFileName } from '@opencode-manager/shared/utils/download'
 import { createRepoGitRoutes } from './repo-git'
 import { createScheduleRoutes } from './schedules'
 import { probeRepoDirectory } from '../services/repo/directory-state'
@@ -556,7 +557,7 @@ app.get('/', async (c) => {
       return new Response(archiveStream as unknown as ReadableStream, {
         headers: {
           'Content-Type': 'application/zip',
-          'Content-Disposition': `attachment; filename="${repoName}.zip"`,
+          'Content-Disposition': contentDispositionAttachment(`${downloadFileName(repoName, 'repo')}.zip`),
           'Content-Length': archiveSize.toString(),
         }
       })

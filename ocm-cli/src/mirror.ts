@@ -6,6 +6,7 @@ import { pipeline } from 'stream/promises'
 import { join, dirname } from 'path'
 import { tmpdir } from 'os'
 import { getRepoRoot, getDirtyPaths, getHeadSha, getBranchName, getMirrorPatch, runGit, hasCommit, isAncestor, countCommitsAhead } from './local-repo.js'
+import { tarLocalArgs, tarPath } from '@opencode-manager/shared/utils/tar-local'
 import { resolveOpenCodeProjectId } from '@opencode-manager/shared/project-id'
 import type { ManagerApi } from './manager-api.js'
 import { ManagerApiError } from './manager-api.js'
@@ -236,7 +237,7 @@ export async function mirrorUp(
 
   let bytesSent = 0
 
-  const tarArgs = ['-c', '-C', plan.repoRoot]
+  const tarArgs = [...tarLocalArgs(), '-c', '-C', tarPath(plan.repoRoot)]
   if (MIRROR_GZIP) tarArgs.unshift('-z')
   for (const dir of HARDCODED_EXCLUDES) tarArgs.push('--exclude', dir)
 
@@ -246,7 +247,7 @@ export async function mirrorUp(
   if (ignoredPaths.length > 0) {
     excludeFile = join(tmpdir(), `ocm-exclude-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`)
     await fsp.writeFile(excludeFile, ignoredPaths.join('\n'))
-    tarArgs.push('--exclude-from', excludeFile)
+    tarArgs.push('--exclude-from', tarPath(excludeFile))
   }
 
   tarArgs.push('.')
@@ -310,7 +311,7 @@ export async function mirrorDown(
   try {
     const tarball = await api.mirrorDown(repoId, MIRROR_GZIP)
 
-    const tarArgs = ['-x', '-f', '-', '-C', staging]
+    const tarArgs = [...tarLocalArgs(), '-x', '-f', '-', '-C', tarPath(staging)]
     if (MIRROR_GZIP) tarArgs.unshift('-z')
     const child = spawn('tar', tarArgs, { stdio: ['pipe', 'pipe', 'pipe'] })
 

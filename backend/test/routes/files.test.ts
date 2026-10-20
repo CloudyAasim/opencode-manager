@@ -102,6 +102,45 @@ describe('File Routes', () => {
       expect(createDirectoryArchive).not.toHaveBeenCalled()
     })
 
+    it('names the download after the last segment of the path, not the whole path', async () => {
+      // The name comes from the path, and a path is a path on every platform:
+      // the separator is not always a slash. Splitting on '/' alone left the
+      // whole path in the download name on Windows.
+      const mockStream = {
+        on: vi.fn(),
+      } as unknown as ReadStream
+
+      createDirectoryArchive.mockResolvedValue('/tmp/test-repo-123.zip')
+      getArchiveSize.mockResolvedValue(1024)
+      getArchiveStream.mockReturnValue(mockStream)
+
+      const response = await app.request('/api/files/C:\\Users\\me\\notes/download-zip')
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Content-Disposition')).toBe(
+        'attachment; filename="notes.zip"; filename*=UTF-8\'\'notes.zip',
+      )
+    })
+
+    it('keeps a quote in the path from truncating the download name', async () => {
+      const mockStream = {
+        on: vi.fn(),
+      } as unknown as ReadStream
+
+      createDirectoryArchive.mockResolvedValue('/tmp/test-repo-123.zip')
+      getArchiveSize.mockResolvedValue(1024)
+      getArchiveStream.mockReturnValue(mockStream)
+
+      const response = await app.request('/api/files/a"b/download-zip')
+
+      expect(response.status).toBe(200)
+      // One quoted name, and nothing loose after it: a second quote in the
+      // header would end the name early.
+      expect(response.headers.get('Content-Disposition')).toBe(
+        'attachment; filename="ab.zip"; filename*=UTF-8\'\'ab.zip',
+      )
+    })
+
     it('should return 500 when archive creation fails', async () => {
       createDirectoryArchive.mockRejectedValue(new Error('Directory not found'))
 

@@ -4,6 +4,7 @@ import * as fileService from '../services/files'
 import * as archiveService from '../services/archive'
 import { logger } from '../utils/logger'
 import { getErrorMessage, getStatusCode } from '../utils/error-utils'
+import { contentDispositionAttachment, downloadFileName } from '@opencode-manager/shared/utils/download'
 
 function decodeFilePath(path: string): string {
   return decodeURIComponent(path)
@@ -51,7 +52,7 @@ export function createFileRoutes() {
         const archivePath = await archiveService.createDirectoryArchive(userPath, undefined, options)
         const archiveSize = await archiveService.getArchiveSize(archivePath)
         const archiveStream = archiveService.getArchiveStream(archivePath)
-        const dirName = userPath.split('/').pop() || 'download'
+        const dirName = downloadFileName(userPath)
 
         logger.info(`ZIP archive created: ${archivePath} (${archiveSize} bytes)`)
 
@@ -67,7 +68,7 @@ export function createFileRoutes() {
           status: 200,
           headers: {
             'Content-Type': 'application/zip',
-            'Content-Disposition': `attachment; filename="${dirName}.zip"`,
+            'Content-Disposition': contentDispositionAttachment(`${dirName}.zip`),
             'Content-Length': archiveSize.toString(),
           },
         })
@@ -129,7 +130,7 @@ export function createFileRoutes() {
         return new Response(content, {
           headers: {
             'Content-Type': result.mimeType || 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${result.name}"`,
+            'Content-Disposition': contentDispositionAttachment(result.name),
             'Content-Length': result.size.toString(),
           }
         })

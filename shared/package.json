@@ -15,7 +15,9 @@
     "./config/env": "./src/config/env.ts",
     "./config/client": "./src/config/client.ts",
     "./utils": "./src/utils/index.ts",
+    "./utils/download": "./src/utils/download.ts",
     "./utils/server-url": "./src/utils/server-url.ts",
+    "./utils/tar-local": "./src/utils/tar-local.ts",
     "./notifications": "./src/notifications/index.ts",
     "./project-id": "./src/project-id-resolver.ts"
   },

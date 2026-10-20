@@ -6,6 +6,7 @@ import { gitOut } from '../git/git-commands'
 import { mkdirSyncSafe } from '../../utils/fs-safe'
 import { swallow } from '../../utils/swallow'
 import { getStagingRoot } from './mirror-staging'
+import { tarLocalArgs, tarPath } from '@opencode-manager/shared/utils/tar-local'
 
 const HARDCODED_EXCLUDES = ['node_modules', 'dist', '.next', '.venv', '__pycache__', '.turbo']
 
@@ -32,7 +33,7 @@ export async function createMirrorTarStream(
     void 0
   }
 
-  const tarArgs = ['-c', '-C', fullPath, ...excludeArgs, '.']
+  const tarArgs = [...tarLocalArgs(), '-c', '-C', tarPath(fullPath), ...excludeArgs, '.']
   if (compress) {
     tarArgs.unshift('-z')
   }

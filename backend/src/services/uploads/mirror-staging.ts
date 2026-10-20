@@ -9,6 +9,7 @@ import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { randomUUID } from 'crypto'
 import { getReposPath } from '@opencode-manager/shared/config/env'
+import { tarLocalArgs, tarPath } from '@opencode-manager/shared/utils/tar-local'
 import { mkdirSafe, mkdirSyncSafe } from '../../utils/fs-safe'
 import { swallow } from '../../utils/swallow'
 
@@ -119,7 +120,7 @@ export async function extractPartsToStaging(uploadId: string, totalParts: number
   mkdirSyncSafe(stagingParent)
   const staging = mkdtempSync(join(stagingParent, 'recv-'))
 
-  const tarArgs = ['-x', '-f', '-', '-C', staging]
+  const tarArgs = [...tarLocalArgs(), '-x', '-f', '-', '-C', tarPath(staging)]
   if (gzip) tarArgs.unshift('-z')
   const child = spawn('tar', tarArgs, { stdio: ['pipe', 'pipe', 'pipe'] })
 

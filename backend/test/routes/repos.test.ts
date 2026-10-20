@@ -1107,7 +1107,11 @@ describe('Repo Routes', () => {
 
       expect(res.status).toBe(200)
       expect(res.headers.get('Content-Type')).toBe('application/zip')
-      expect(res.headers.get('Content-Disposition')).toBe('attachment; filename="test-repo.zip"')
+      // Both forms of the name, per RFC 6266: the quoted one for a client
+      // that reads only that, and the extended one carrying the real name.
+      expect(res.headers.get('Content-Disposition')).toBe(
+        'attachment; filename="test-repo.zip"; filename*=UTF-8\'\'test-repo.zip',
+      )
       expect(res.headers.get('Content-Length')).toBe('3')
       expect(archiveService.createRepoArchive).toHaveBeenCalledWith('/tmp/repos/test-repo', {
         includeGit: true,
