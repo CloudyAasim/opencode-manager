@@ -47,7 +47,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "test": "bun scripts/build.ts && vitest run",
+    "test": "bun scripts/build.ts && vitest run --sequence.shuffle=true",
     "test:watch": "vitest",
     "prepublishOnly": "bun scripts/build.ts"
   },
