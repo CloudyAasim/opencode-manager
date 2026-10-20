@@ -62,6 +62,13 @@ See [docs/cloud/one-click-deploy.md](docs/cloud/one-click-deploy.md) for the ful
 > app behind the host's nginx with a ZeroSSL certificate. Certificate state,
 > domains and environment variables live on the server, not in CI. See
 > `上下文/13-域名与证书配置.md` for that topology.
+>
+> The same workflow can be run by hand to redeploy `main` without pushing a
+> commit for the sake of it:
+>
+> ```shell
+> gh workflow run deploy.yml
+> ```
 
 For local development setup, see the [Development Guide](https://chriswritescode-dev.github.io/opencode-manager/development/setup/).
 
