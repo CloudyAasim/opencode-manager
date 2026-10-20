@@ -87,14 +87,12 @@ What that cost, on 2026-10-20:
 - The site came back on the **old** build: the deploy had failed, so nothing
   new was ever deployed.
 
-**The reboot's cause is not established.** Linux's OOM killer kills processes;
-it does not reboot machines. Reading the kernel log needs root on the host,
-which this repository does not have. One command settles it:
-
-```shell
-sudo journalctl -k --since "2026-10-20 06:50" --until "2026-10-20 07:20" \
-  | grep -iE "oom|killed process|out of memory"
-```
+**The reboot's cause is not being pursued.** What the host was doing when it
+rebooted is not established - Linux's OOM killer kills processes, it does not
+reboot machines - and the decision is to leave that alone. What matters for
+running the service is the part that is measured: the build was taking about
+1830 MB on a host with no swap, and the running service went unresponsive for
+25 minutes. That is what the cap below addresses.
 
 The build is now capped at **1536 MB** of heap in the Dockerfile, in CI and
 in the deploy workflow. That is the smallest cap the build passes reliably
