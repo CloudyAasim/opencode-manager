@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+  # Redeploy the current main without pushing a commit for the sake of it.
+  #
+  # `deploy/DOKKU.md` tells an operator to redeploy with
+  # `gh workflow run deploy.yml`, which only works if this trigger exists -
+  # and the first deploy that failed on the host needed a retry that did not
+  # require inventing an empty commit to trigger one.
+  workflow_dispatch:
 
 # The action pushes the running commit to Dokku's `server` branch, so two
 # deploys at once race on that ref and the loser is rejected as a
