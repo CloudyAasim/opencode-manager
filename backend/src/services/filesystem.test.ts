@@ -80,7 +80,10 @@ describe('browseDirectory', () => {
     const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'ocm-outside-'))
     try {
       const linkPath = path.join(tmpRoot, 'escape-link')
-      await fs.symlink(outside, linkPath)
+      // A junction on Windows: a `dir` symlink needs Developer Mode or an
+      // elevated shell there, and a junction resolves under `realpath`
+      // exactly like the symlink it stands in for.
+      await fs.symlink(outside, linkPath, process.platform === 'win32' ? 'junction' : 'dir')
 
       await expect(browseDirectory(linkPath, tmpRoot)).rejects.toMatchObject({ statusCode: 403 })
     } finally {

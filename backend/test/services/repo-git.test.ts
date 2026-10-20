@@ -92,6 +92,22 @@ function uniqueName(prefix: string): string {
   return `${prefix}-${seq}`
 }
 
+/**
+ * How to make git run a shell script.
+ *
+ * Git hands `GIT_SSH_COMMAND` to a shell, but it does not run the value as
+ * a script: the shell tries to execute the path as a command, and a Windows
+ * path is not a command it can run - the backslashes are eaten and it
+ * reports "command not found" before the script is ever read.
+ *
+ * Going through `sh` explicitly works on both platforms. Git for Windows
+ * puts its own `usr/bin` on the PATH of the processes it starts, so `sh` is
+ * there without anybody having to add it to anything.
+ */
+function shellCommand(script: string): string {
+  return `sh "${script}"`
+}
+
 function createGitAuthService(env: Record<string, string> = {}): GitAuthService {
   return {
     getGitEnvironment: () => env,
@@ -733,7 +749,13 @@ describe('repo service real git', () => {
       const { cloneRepo } = await import('../../src/services/repo')
       const name = uniqueName('clone-missing-source')
 
-      await expect(cloneRepo(db, gitAuth, path.join(workspaceRoot, 'no-such-origin'), { directoryName: name })).rejects.toThrow(/does not exist/)
+      // Git words this two ways: "does not exist" for a path that is not
+      // there, "does not appear to be a git repository" for one that is
+      // there and is not a repository - and which of the two it picks is not
+      // the same on every platform. The condition under test is that the
+      // failure names the missing source, not which wording git used.
+      await expect(cloneRepo(db, gitAuth, path.join(workspaceRoot, 'no-such-origin'), { directoryName: name }))
+        .rejects.toThrow(/does not exist|does not appear to be a git repository/)
       expect(getRepoByLocalPath(db, name, ownedBy(null))).toBeNull()
     })
 
@@ -776,7 +798,7 @@ describe('repo service real git', () => {
       const sshScript = path.join(workspaceRoot, uniqueName('fake-ssh.sh'))
       writeFileSync(sshScript, '#!/bin/sh\necho "Permission denied (publickey)." >&2\nexit 255\n')
       chmodSync(sshScript, 0o755)
-      const sshAuth = createGitAuthService({ GIT_SSH_COMMAND: sshScript, GIT_TERMINAL_PROMPT: '0' })
+      const sshAuth = createGitAuthService({ GIT_SSH_COMMAND: shellCommand(sshScript), GIT_TERMINAL_PROMPT: '0' })
       const name = uniqueName('clone-ssh')
 
       await expect(cloneRepo(db, sshAuth, 'ssh://git@example.invalid/owner/repo.git', { directoryName: name })).rejects.toThrow(/Access denied/)
@@ -788,7 +810,7 @@ describe('repo service real git', () => {
       const sshScript = path.join(workspaceRoot, uniqueName('fake-scp-ssh.sh'))
       writeFileSync(sshScript, '#!/bin/sh\necho "Permission denied (publickey)." >&2\nexit 255\n')
       chmodSync(sshScript, 0o755)
-      const sshAuth = createGitAuthService({ GIT_SSH_COMMAND: sshScript, GIT_TERMINAL_PROMPT: '0' })
+      const sshAuth = createGitAuthService({ GIT_SSH_COMMAND: shellCommand(sshScript), GIT_TERMINAL_PROMPT: '0' })
       const name = uniqueName('clone-scp')
 
       await expect(cloneRepo(db, sshAuth, 'git@example.invalid:owner/repo.git', { directoryName: name })).rejects.toThrow(/Access denied/)

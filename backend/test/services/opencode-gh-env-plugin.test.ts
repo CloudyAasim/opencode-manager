@@ -39,7 +39,12 @@ describe('ocm-gh-env plugin', () => {
     await expect(fs.access(file)).resolves.toBeUndefined()
   })
 
-  it('atomically replaces a symlink at the plugin path with a regular file', async () => {
+  // A *file* symlink, which Windows refuses without Developer Mode or an
+  // elevated shell - a junction only stands in for a directory link, so it
+  // cannot stand in for this one. The property under test (the installer
+  // replaces the link rather than writing through it) is real and is checked
+  // on every platform that can create the link; CI runs it on Linux.
+  it.skipIf(process.platform === 'win32')('atomically replaces a symlink at the plugin path with a regular file', async () => {
     const pluginDir = getOpenCodePluginDir(configHome)
     const pluginPath = path.join(pluginDir, 'ocm-gh-env.js')
     const symlinkTarget = path.join(pluginDir, 'attacker-hook.js')

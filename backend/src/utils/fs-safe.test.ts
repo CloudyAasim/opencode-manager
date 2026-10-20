@@ -32,7 +32,10 @@ describe('fs-safe', () => {
       await expect(mkdirSafe(dir)).resolves.toBeUndefined()
     })
 
-    it('honors mode option', async () => {
+    // POSIX permission bits: Windows has no umask and reports every file as
+    // 0o666, so neither the mode it is given nor the one the test asks for
+    // can be observed there. CI runs this on Linux.
+    it.skipIf(process.platform === 'win32')('honors mode option', async () => {
       const previousUmask = process.umask(0)
       try {
         const dir = join(tmpDir, 'mode700')
@@ -44,7 +47,9 @@ describe('fs-safe', () => {
       }
     })
 
-    it('rethrows EACCES when the target directory truly does not exist', async () => {
+    // A read-only parent directory does not stop a write on Windows: there
+    // are no POSIX permission bits to stop it with. CI runs this on Linux.
+    it.skipIf(process.platform === 'win32')('rethrows EACCES when the target directory truly does not exist', async () => {
       const parent = join(tmpDir, 'readonly-parent')
       await mkdir(parent, { recursive: true })
       await chmod(parent, 0o555)
@@ -91,7 +96,9 @@ describe('fs-safe', () => {
       expect(() => mkdirSyncSafe(dir)).not.toThrow()
     })
 
-    it('rethrows EACCES when the target directory truly does not exist', () => {
+    // A read-only parent directory does not stop a write on Windows: there
+    // are no POSIX permission bits to stop it with. CI runs this on Linux.
+    it.skipIf(process.platform === 'win32')('rethrows EACCES when the target directory truly does not exist', () => {
       const parent = join(tmpDir, 'sync-readonly-parent')
       mkdirSync(parent, { recursive: true })
       chmodSync(parent, 0o555)

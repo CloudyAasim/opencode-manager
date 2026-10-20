@@ -87,7 +87,13 @@ describe('SSH Integration Tests', () => {
       expect(keyPath).toBeTruthy()
 
       const stats = await fs.stat(keyPath)
-      expect(stats.mode & 0o777).toBe(0o600)
+      // POSIX permission bits: Windows reports every file as 0o666, so the
+      // mode the key was written with cannot be observed there. The rest of
+      // the flow is the same on both, so only this one assertion is
+      // platform-conditional - on Linux it asserts exactly what it did.
+      if (process.platform !== 'win32') {
+        expect(stats.mode & 0o777).toBe(0o600)
+      }
 
       const sshResult = buildSSHCommand(keyPath)
       expect(sshResult.command).toContain(`ssh -T -i "${keyPath}"`)

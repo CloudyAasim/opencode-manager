@@ -21,9 +21,14 @@ const err = (code: string): NodeJS.ErrnoException => Object.assign(new Error(cod
 type StatAnswer = 'dir' | 'file' | { code: string } | undefined
 
 function fakeStat(answers: Record<string, StatAnswer>) {
+  // Matched in one spelling on both sides. The product joins the paths it
+  // probes with the platform's separator, while the answers here are written
+  // the way a path reads; forward slashes on both sides let the same table
+  // answer on every platform.
+  const normalize = (p: string) => p.split(/[\\/]/).join('/')
+  const table = new Map(Object.entries(answers).map(([key, answer]) => [normalize(key), answer]))
   return ((target: fsPath) => {
-    const key = String(target)
-    const answer = key in answers ? answers[key] : undefined
+    const answer = table.get(normalize(String(target)))
     if (answer === undefined) return undefined
     if (typeof answer === 'object') throw err(answer.code)
     const isDirectory = answer === 'dir'

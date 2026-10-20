@@ -7,6 +7,17 @@ import { rm } from 'fs/promises'
 
 import { resolveDefaultBranch, createWorktreeSafely, removeWorktree } from '../../src/services/repo'
 
+/**
+ * A directory link, in the form the platform allows without extra privilege.
+ *
+ * Windows refuses a `dir` symlink without Developer Mode or an elevated
+ * shell, but a junction needs neither - and a junction resolves under
+ * `realpath` exactly like the symlink it stands in for, which is what the
+ * refusal below is about. The product makes the same choice
+ * (`workspace-alias.ts`), so this is the same link, not a weaker one.
+ */
+const DIRECTORY_LINK = process.platform === 'win32' ? 'junction' : 'dir'
+
 describe('repo worktree helpers', () => {
   let baseRepoPath: string
   let originRepoPath: string
@@ -116,9 +127,8 @@ describe('repo worktree helpers', () => {
       mkdirSync(plainDir, { recursive: true })
       writeFileSync(plainFile, 'this must survive')
 
-      symlinkSync(baseRepoPath, baseSymlink)
+      symlinkSync(baseRepoPath, baseSymlink, DIRECTORY_LINK)
     })
-
     afterEach(async () => {
       // Unconditionally, even when the path is already gone: removeWorktree
       // is also what clears a stale registration, and leaving one behind makes

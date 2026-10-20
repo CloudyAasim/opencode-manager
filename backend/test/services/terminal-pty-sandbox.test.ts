@@ -23,6 +23,22 @@ const EX_CONFIG = 78
 /** sysexits EX_USAGE, which is what the shell script exits with on a bad call. */
 const EX_USAGE = 64
 
+/**
+ * The sandbox needs `python3` to run the bridge and `unshare` to confine the
+ * shell. Both are Linux tools: the bridge is a python script and the
+ * confinement is a namespace. The server this code serves runs in a Linux
+ * container, so on a machine without them there is nothing to test - the
+ * suite is skipped rather than made to pass some other way, and CI runs it
+ * on Linux where the tools are present.
+ *
+ * Probed by capability rather than by platform, so the same skip covers a
+ * Linux image that happens to be missing util-linux.
+ */
+const hasTool = (name: string): boolean =>
+  spawnSync(process.platform === 'win32' ? 'where' : 'which', [name], { stdio: 'ignore' }).status === 0
+
+const SANDBOX_TOOLS_AVAILABLE = hasTool('python3') && hasTool('unshare')
+
 const temps: string[] = []
 
 afterEach(() => {
@@ -81,7 +97,7 @@ function bridgeWithoutSandbox(): string {
   return copy
 }
 
-describe('the PTY bridge refuses to run an unconfined shell', () => {
+describe.skipIf(!SANDBOX_TOOLS_AVAILABLE)('the PTY bridge refuses to run an unconfined shell', () => {
   it('sandboxes a non-admin when the script is present', () => {
     const bridge = resolveBridgePath()
     expect(bridge).not.toBeNull()
@@ -149,7 +165,7 @@ describe('the PTY bridge refuses to run an unconfined shell', () => {
  *
  * This test fails if either side changes without the other.
  */
-describe('the availability probe and the sandbox it probes cannot drift apart', () => {
+describe.skipIf(!SANDBOX_TOOLS_AVAILABLE)('the availability probe and the sandbox it probes cannot drift apart', () => {
   it('runs the same unshare flags the bridge will actually run', () => {
     const { status, argv } = askBridge(resolveBridgePath()!, '/tmp/ocm-home')
     expect(status).toBe(0)
@@ -186,7 +202,7 @@ describe('the availability probe and the sandbox it probes cannot drift apart', 
  * mount, so they need neither a user namespace nor a writable /tmp, which is
  * what lets them run in CI and on a developer machine.
  */
-describe('the sandbox script rejects a bad invocation instead of half-running', () => {
+describe.skipIf(!SANDBOX_TOOLS_AVAILABLE)('the sandbox script rejects a bad invocation instead of half-running', () => {
   it('says what it wanted when given too few arguments', () => {
     const script = resolveSandboxScriptPath()
     expect(script).not.toBeNull()
@@ -232,7 +248,7 @@ describe('the sandbox script rejects a bad invocation instead of half-running', 
  * a host with user namespaces confirmed the shell receives only these six
  * variables and none of the sentinel values planted in the parent environment.
  */
-describe('the sandboxed shell does not inherit the server environment', () => {
+describe.skipIf(!SANDBOX_TOOLS_AVAILABLE)('the sandboxed shell does not inherit the server environment', () => {
   it('clears the environment on the way to the shell', () => {
     const script = resolveSandboxScriptPath()
     expect(script).not.toBeNull()

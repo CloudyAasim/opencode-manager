@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { spawn } from 'child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { basename, join } from 'path'
 import * as http from 'http'
 import { randomUUID } from 'crypto'
 import { createIPCServer } from '../../src/ipc/ipcServer'
@@ -82,6 +82,22 @@ async function startRawServer(socketPath: string, body: string): Promise<void> {
   })
   rawServers.push(server)
   await new Promise<void>((resolve) => server.listen(socketPath, () => resolve()))
+}
+
+/**
+ * Where a raw server listens, in the form the platform accepts.
+ *
+ * On Windows the path a `net.Server` is given is a named pipe, and a
+ * filesystem path is not a valid pipe name: the listen fails with EACCES
+ * before the server is reachable at all. The product already makes this
+ * conversion - `getIPCHandlePath` in src/ipc/ipcServer.ts - so the test
+ * mirrors it and speaks the same transport the product does.
+ */
+function rawHandle(name: string): string {
+  if (process.platform === 'win32') {
+    return `\\\\.\\pipe\\ocm-askpass-${basename(dir)}-${name}`
+  }
+  return join(dir, `${name}.sock`)
 }
 
 beforeEach(() => {
@@ -183,7 +199,7 @@ describe('askpass-main', () => {
   })
 
   it('writes a newline and exits 1 when the response body is not JSON', async () => {
-    const socketPath = join(dir, 'raw.sock')
+    const socketPath = rawHandle('raw')
     await startRawServer(socketPath, 'not-json')
 
     const result = await runAskpass(buildEnv({
@@ -201,7 +217,7 @@ describe('askpass-main', () => {
     const result = await runAskpass(buildEnv({
       VSCODE_GIT_ASKPASS_PIPE: outputPath,
       VSCODE_GIT_ASKPASS_TYPE: 'https',
-      VSCODE_GIT_IPC_HANDLE: join(dir, 'missing.sock'),
+      VSCODE_GIT_IPC_HANDLE: rawHandle('missing'),
     }))
 
     expect(result.status).toBe(1)
@@ -331,7 +347,7 @@ describe('askpass-main in-process', () => {
   })
 
   it('writes a newline and exits 1 when the response body is not JSON', async () => {
-    const socketPath = join(dir, 'raw-in-process.sock')
+    const socketPath = rawHandle('raw-in-process')
     await startRawServer(socketPath, 'not-json')
 
     const result = await runAskpassInProcess({
@@ -348,7 +364,7 @@ describe('askpass-main in-process', () => {
     const result = await runAskpassInProcess({
       VSCODE_GIT_ASKPASS_PIPE: outputPath,
       VSCODE_GIT_ASKPASS_TYPE: 'https',
-      VSCODE_GIT_IPC_HANDLE: join(dir, 'missing-in-process.sock'),
+      VSCODE_GIT_IPC_HANDLE: rawHandle('missing-in-process'),
     })
 
     expect(result.code).toBe(1)

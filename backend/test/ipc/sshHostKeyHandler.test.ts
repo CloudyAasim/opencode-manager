@@ -20,7 +20,14 @@ import * as path from 'path'
  */
 vi.mock('@opencode-manager/shared/config/env', async () => {
   const { randomUUID } = await import('node:crypto')
-  const root = `/tmp/ocm-ssh-knownhosts-${process.pid}-${randomUUID()}`
+  const os = await import('node:os')
+  const path = await import('node:path')
+  // A native temporary path, not a hardcoded `/tmp/...`. `path.join` keeps the
+  // separator it is given, so on Windows the handler builds
+  // `\tmp\ocm-...\config\known_hosts` out of a POSIX literal that is not a
+  // prefix of it - and the fixture's own guard below then rejects the path
+  // the handler just produced, taking all eighteen cases in this file with it.
+  const root = path.join(os.tmpdir(), `ocm-ssh-knownhosts-${process.pid}-${randomUUID()}`)
   return {
     ENV: {
       AUTH: {
@@ -34,11 +41,11 @@ vi.mock('@opencode-manager/shared/config/env', async () => {
       }
     },
     getWorkspacePath: () => root,
-    getReposPath: () => `${root}/repos`,
+    getReposPath: () => path.join(root, 'repos'),
   }
 })
 
-let testWorkspacePath: string = '/tmp/test-workspace'
+let testWorkspacePath: string = ''
 
 const mockPrepare = vi.fn()
 const mockExec = vi.fn()

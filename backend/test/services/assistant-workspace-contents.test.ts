@@ -95,7 +95,10 @@ describe('listAssistantWorkspaceContents', () => {
     // the link's own, which is zero.
     const outside = path.join(tmpRoot, 'outside')
     writeFileWithSize(path.join(outside, 'big.bin'), 5_000)
-    symlinkSync(outside, path.join(assistantDir, 'link'))
+    // A junction on Windows: a `dir` symlink needs Developer Mode or an
+    // elevated shell there, and a junction is reported as a link by
+    // `withFileTypes` just like the symlink it stands in for.
+    symlinkSync(outside, path.join(assistantDir, 'link'), process.platform === 'win32' ? 'junction' : 'dir')
 
     const result = await listAssistantWorkspaceContents('aasim')
     const link = result.entries.find((entry) => entry.name === 'link')

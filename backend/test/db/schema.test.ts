@@ -50,6 +50,10 @@ describe('initializeDatabase', () => {
       .all() as Array<{ detail: string }>
 
     expect(plan.map(step => step.detail).join(' ')).toContain('idx_schedule_runs_status')
+
+    // Closed before the directory is removed: Windows will not delete a file
+    // that is still open, so an open database turns the cleanup into EBUSY.
+    db.close()
   })
 
 })

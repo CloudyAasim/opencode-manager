@@ -82,7 +82,9 @@ describe('SSH Key Validation', () => {
 MIIEpAIBAAKCAQEAzR8u8I5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5
 -----END RSA PRIVATE KEY-----`
 
-    it('should accept RSA private key', async () => {
+    // POSIX permission bits: Windows reports every file as 0o666, so the mode
+    // the manager sets cannot be observed there. CI runs this on Linux.
+    it.skipIf(process.platform === 'win32')('should accept RSA private key', async () => {
       const keyPath = await writeTemporarySSHKey(rsaKey, 'test-rsa')
       expect(keyPath).toBeTruthy()
       
@@ -149,7 +151,9 @@ MHcCAQEEIP5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5
     await expect(writeTemporarySSHKey(emptyKey, 'test-empty')).rejects.toThrow('Invalid SSH key format')
   })
 
-  it('should set correct permissions on key file', async () => {
+  // POSIX permission bits: Windows reports every file as 0o666, so the mode
+  // the manager sets cannot be observed there. CI runs this on Linux.
+  it.skipIf(process.platform === 'win32')('should set correct permissions on key file', async () => {
     const validKey = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRHw== test@host'
     const keyPath = await writeTemporarySSHKey(validKey, 'test-perms')
     

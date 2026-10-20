@@ -434,7 +434,10 @@ describe('ScheduleWorktreeManager', () => {
     const escapeTarget = path.join(path.dirname(tmpDir), 'ocm-escape-target')
     const escapeLink = path.join(tmpDir, 'ocm-escape-link')
     mkdirSync(escapeTarget, { recursive: true })
-    symlinkSync(escapeTarget, escapeLink)
+    // A junction on Windows: a `dir` symlink needs Developer Mode or an
+    // elevated shell there, and a junction resolves under `realpath`
+    // exactly like the symlink it stands in for.
+    symlinkSync(escapeTarget, escapeLink, process.platform === 'win32' ? 'junction' : 'dir')
 
     const workspaceId = 'ws-escape-999'
     mockOpenCodeClient.postJson = vi.fn().mockResolvedValue({

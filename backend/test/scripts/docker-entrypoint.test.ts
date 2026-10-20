@@ -109,7 +109,35 @@ printf 'fake binary\\n' > "$(dirname "$out")/opencode"`)
 
 const curlLog = () => stubCalls().filter((c) => c.startsWith('curl '))
 
-describe('install_opencode', () => {
+/**
+ * This suite builds a hermetic PATH out of symlinks to the tools the
+ * entrypoint execve's, so that `opencode` is absent by construction rather
+ * than by luck of what the host happens to have installed.
+ *
+ * Creating a symlink on Windows needs Developer Mode or an elevated shell,
+ * and the subject here is a Linux container entrypoint: running it under
+ * MSYS2's bash would exercise a different environment than the one it is
+ * about, which is worse than not running it. So on a machine that cannot
+ * build the farm, the suite is skipped - and CI runs it on Linux, where it
+ * can.
+ *
+ * Probed by capability rather than by platform, so the same skip covers a
+ * Linux image that is missing the privilege for the same reason.
+ */
+const CAN_BUILD_SYMLINK_FARM = (() => {
+  const probe = join(tmpdir(), `ocm-symlink-probe-${process.pid}`)
+  mkdirSync(probe, { recursive: true })
+  try {
+    symlinkSync(probe, join(probe, 'link'))
+    return true
+  } catch {
+    return false
+  } finally {
+    rmSync(probe, { recursive: true, force: true })
+  }
+})()
+
+describe.skipIf(!CAN_BUILD_SYMLINK_FARM)('install_opencode', () => {
   it('installs the bundled verified version, never latest', () => {
     stubInstallTools()
     const res = runOpenCodeSection(`${installPrelude()}\ninstall_opencode`)
@@ -223,13 +251,13 @@ const noOpencodePath = () => {
   for (const tool of HERMETIC_TOOLS) {
     const resolved = spawnSync('sh', ['-c', `command -v ${tool}`], { encoding: 'utf-8' })
     const source = resolved.stdout.trim()
-    if (!source) throw new Error(`无法构造封闭 PATH：本机找不到 ${tool}`)
+    if (!source) throw new Error(`鏃犳硶鏋勯€犲皝闂?PATH锛氭湰鏈烘壘涓嶅埌 ${tool}`)
     symlinkSync(source, join(binDir, tool))
   }
   return `${stubDir}:${join(stubDir, 'home/.opencode/bin')}:${binDir}`
 }
 
-describe('persisted opencode reconciliation', () => {
+describe.skipIf(!CAN_BUILD_SYMLINK_FARM)('persisted opencode reconciliation', () => {
   it('probes the persisted binary version through runuser, never directly', () => {
     mkdirSync(join(stubDir, 'home/.opencode/bin'), { recursive: true })
     writeFileSync(homeBinPath(), `#!/bin/bash

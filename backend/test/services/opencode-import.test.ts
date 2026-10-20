@@ -38,12 +38,22 @@ vi.mock('../../src/services/opencode-single-server', () => ({
   },
 }))
 
-vi.mock('@opencode-manager/shared/config/env', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@opencode-manager/shared/config/env')>()),
-  getConfigPath: vi.fn(() => '/tmp/workspace/.config/opencode'),
-  getOpenCodeConfigFilePath: vi.fn(() => '/tmp/workspace/.config/opencode/opencode.json'),
-  getWorkspacePath: vi.fn(() => '/tmp/workspace'),
-}))
+vi.mock('@opencode-manager/shared/config/env', async (importOriginal) => {
+  const path = await import('node:path')
+  // Native paths, not POSIX literals. The service joins onto these
+  // (`path.join(configDir, name)`, `path.join(getWorkspacePath(), ...)`), and
+  // a join keeps the separator it was handed: on Windows a literal
+  // `/tmp/workspace` becomes `\tmp\workspace`, which is not the string the
+  // expectations below are written against.
+  const workspace = path.resolve('/tmp/workspace')
+  const configDir = path.join(workspace, '.config', 'opencode')
+  return {
+    ...(await importOriginal<typeof import('@opencode-manager/shared/config/env')>()),
+    getConfigPath: vi.fn(() => configDir),
+    getOpenCodeConfigFilePath: vi.fn(() => path.join(configDir, 'opencode.json')),
+    getWorkspacePath: vi.fn(() => workspace),
+  }
+})
 
 import path from 'path'
 import os from 'os'
@@ -66,6 +76,21 @@ const MockSQLiteDatabase = SQLiteDatabase as unknown as ReturnType<typeof vi.fn>
 const mockMkdtemp = mkdtemp as unknown as ReturnType<typeof vi.fn>
 const mockRename = rename as unknown as ReturnType<typeof vi.fn>
 
+/**
+ * The paths the service is expected to work with.
+ *
+ * The mocked environment module above computes the same values from the same
+ * expressions, so the two agree without either one having to be exported
+ * across the mock boundary.
+ */
+const WORKSPACE = path.resolve('/tmp/workspace')
+const CONFIG_DIR = path.join(WORKSPACE, '.config', 'opencode')
+const STATE_DIR = path.join(WORKSPACE, '.opencode', 'state')
+const OPENCODE_STATE_DIR = path.join(STATE_DIR, 'opencode')
+/** The host paths the import reads from; the service resolves them too. */
+const IMPORT_CONFIG = path.resolve('/import/opencode-config/opencode.json')
+const IMPORT_STATE = path.resolve('/import/opencode-state')
+
 describe('opencode-import service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -74,7 +99,7 @@ describe('opencode-import service', () => {
     mockReadOpenCodeConfigFile.mockResolvedValue(null)
     mockReadFileContent.mockResolvedValue('{"$schema":"https://opencode.ai/config.json"}')
     mockReaddir.mockResolvedValue([])
-    mockMkdtemp.mockResolvedValue('/tmp/workspace/.opencode/state/opencode-import-123')
+    mockMkdtemp.mockResolvedValue(path.join(STATE_DIR, 'opencode-import-123'))
     mockRename.mockResolvedValue(undefined)
     mockExistsSync.mockImplementation((candidate: string) => candidate === process.env.OPENCODE_IMPORT_CONFIG_PATH)
   })
@@ -102,7 +127,9 @@ describe('opencode-import service', () => {
   })
 
   it('preserves an explicitly imported JSONC filename', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode.jsonc'
+    // Resolved, because the service resolves the candidate before comparing
+    // it, and the mock below matches the candidate against this value.
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = path.resolve('/import/opencode.jsonc')
     mockFileExists.mockResolvedValue(false)
 
     await syncOpenCodeImport({})
@@ -111,20 +138,20 @@ describe('opencode-import service', () => {
   })
 
   it('detects importable host config and state paths with opencode.db', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
-    process.env.OPENCODE_IMPORT_STATE_PATH = '/import/opencode-state'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
+    process.env.OPENCODE_IMPORT_STATE_PATH = IMPORT_STATE
 
     mockFileExists.mockImplementation(async (candidate: string) => {
-      if (candidate === '/import/opencode-config/opencode.json') {
+      if (candidate === IMPORT_CONFIG) {
         return true
       }
-      if (candidate === '/import/opencode-state') {
+      if (candidate === IMPORT_STATE) {
         return true
       }
-      if (candidate === '/import/opencode-state/opencode.db') {
+      if (candidate === path.join(IMPORT_STATE, 'opencode.db')) {
         return true
       }
-      if (candidate === '/tmp/workspace/.opencode/state/opencode/opencode.db') {
+      if (candidate === path.join(OPENCODE_STATE_DIR, 'opencode.db')) {
         return true
       }
       return false
@@ -133,21 +160,21 @@ describe('opencode-import service', () => {
     const status = await getOpenCodeImportStatus()
 
     expect(status).toEqual({
-      configSourcePath: '/import/opencode-config/opencode.json',
-      configSourcePaths: ['/import/opencode-config/opencode.json'],
-      stateSourcePath: '/import/opencode-state',
-      workspaceConfigPath: '/tmp/workspace/.config/opencode/opencode.jsonc',
+      configSourcePath: IMPORT_CONFIG,
+      configSourcePaths: [IMPORT_CONFIG],
+      stateSourcePath: IMPORT_STATE,
+      workspaceConfigPath: path.join(CONFIG_DIR, 'opencode.jsonc'),
       workspaceConfigPathsToRemove: [],
-      workspaceStatePath: '/tmp/workspace/.opencode/state/opencode',
+      workspaceStatePath: OPENCODE_STATE_DIR,
       workspaceStateExists: true,
     })
   })
 
   it('reports workspace config sources absent from the host as pending removals', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
-    const workspaceJsoncPath = '/tmp/workspace/.config/opencode/opencode.jsonc'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
+    const workspaceJsoncPath = path.join(CONFIG_DIR, 'opencode.jsonc')
     mockExistsSync.mockImplementation((candidate: string) =>
-      candidate === '/import/opencode-config/opencode.json' || candidate === workspaceJsoncPath)
+      candidate === IMPORT_CONFIG || candidate === workspaceJsoncPath)
 
     const status = await getOpenCodeImportStatus()
 
@@ -155,10 +182,10 @@ describe('opencode-import service', () => {
   })
 
   it('reports no pending removals when workspace and host share a config basename', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
-    const workspaceJsonPath = '/tmp/workspace/.config/opencode/opencode.json'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
+    const workspaceJsonPath = path.join(CONFIG_DIR, 'opencode.json')
     mockExistsSync.mockImplementation((candidate: string) =>
-      candidate === '/import/opencode-config/opencode.json' || candidate === workspaceJsonPath)
+      candidate === IMPORT_CONFIG || candidate === workspaceJsonPath)
 
     const status = await getOpenCodeImportStatus()
 
@@ -166,7 +193,7 @@ describe('opencode-import service', () => {
   })
 
   it('reports no pending removals when no host config source is detected', async () => {
-    const workspaceJsoncPath = '/tmp/workspace/.config/opencode/opencode.jsonc'
+    const workspaceJsoncPath = path.join(CONFIG_DIR, 'opencode.jsonc')
     mockExistsSync.mockImplementation((candidate: string) => candidate === workspaceJsoncPath)
 
     const status = await getOpenCodeImportStatus()
@@ -176,14 +203,14 @@ describe('opencode-import service', () => {
   })
 
   it('imports host config and state into the workspace', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
-    process.env.OPENCODE_IMPORT_STATE_PATH = '/import/opencode-state'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
+    process.env.OPENCODE_IMPORT_STATE_PATH = IMPORT_STATE
 
     mockFileExists.mockImplementation(async (candidate: string) => {
-      return candidate === '/import/opencode-config/opencode.json'
-        || candidate === '/import/opencode-state'
-        || candidate === '/import/opencode-state/opencode.db'
-        || candidate === '/tmp/workspace/.opencode/state/opencode/opencode.db'
+      return candidate === IMPORT_CONFIG
+        || candidate === IMPORT_STATE
+        || candidate === path.join(IMPORT_STATE, 'opencode.db')
+        || candidate === path.join(OPENCODE_STATE_DIR, 'opencode.db')
     })
 
     const result = await syncOpenCodeImport({
@@ -196,20 +223,20 @@ describe('opencode-import service', () => {
     expect(mockWriteOpenCodeConfigFile).toHaveBeenCalledWith(
       expect.stringContaining(JSON.stringify('{"$schema":"https://opencode.ai/config.json"}'))
     )
-    expect(mockEnsureDirectoryExists).toHaveBeenCalledWith('/tmp/workspace/.opencode/state')
-    expect(MockSQLiteDatabase).toHaveBeenCalledWith('/import/opencode-state/opencode.db')
+    expect(mockEnsureDirectoryExists).toHaveBeenCalledWith(STATE_DIR)
+    expect(MockSQLiteDatabase).toHaveBeenCalledWith(path.join(IMPORT_STATE, 'opencode.db'))
     expect(mockRename).toHaveBeenCalledWith(
-      '/tmp/workspace/.opencode/state/opencode-import-123',
-      '/tmp/workspace/.opencode/state/opencode'
+      path.join(STATE_DIR, 'opencode-import-123'),
+      OPENCODE_STATE_DIR
     )
   })
 
   it('captures the previous on-disk config as last known good before importing over it', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
 
-    mockFileExists.mockImplementation(async (candidate: string) => candidate === '/import/opencode-config/opencode.json')
+    mockFileExists.mockImplementation(async (candidate: string) => candidate === IMPORT_CONFIG)
     const previous = {
-      path: '/tmp/workspace/.config/opencode/opencode.json',
+      path: path.join(CONFIG_DIR, 'opencode.json'),
       content: { theme: 'previous' },
       isValid: true,
       rawContent: '{"theme":"previous"}',
@@ -217,7 +244,7 @@ describe('opencode-import service', () => {
       revision: 'rev-previous',
       sources: [{
         name: 'opencode.json' as const,
-        path: '/tmp/workspace/.config/opencode/opencode.json',
+        path: path.join(CONFIG_DIR, 'opencode.json'),
         rawContent: '{"theme":"previous"}',
         content: { theme: 'previous' },
         isValid: true,
@@ -234,9 +261,9 @@ describe('opencode-import service', () => {
   })
 
   it('does not capture last known good when no previous config file exists', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
 
-    mockFileExists.mockImplementation(async (candidate: string) => candidate === '/import/opencode-config/opencode.json')
+    mockFileExists.mockImplementation(async (candidate: string) => candidate === IMPORT_CONFIG)
     mockReadOpenCodeConfigFile.mockResolvedValue(null)
     const settingsService = { saveLastKnownGoodConfig: vi.fn() } as unknown as SettingsService
 
@@ -247,12 +274,12 @@ describe('opencode-import service', () => {
   })
 
   it('does not report state imported when source db is missing', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
-    process.env.OPENCODE_IMPORT_STATE_PATH = '/import/opencode-state'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
+    process.env.OPENCODE_IMPORT_STATE_PATH = IMPORT_STATE
 
     mockFileExists.mockImplementation(async (candidate: string) => {
-      return candidate === '/import/opencode-config/opencode.json'
-        || candidate === '/import/opencode-state'
+      return candidate === IMPORT_CONFIG
+        || candidate === IMPORT_STATE
     })
 
     const result = await syncOpenCodeImport({
@@ -273,9 +300,9 @@ describe('opencode-import service', () => {
   })
 
   it('rejects invalid importable config content with the existing error', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
 
-    mockFileExists.mockImplementation(async (candidate: string) => candidate === '/import/opencode-config/opencode.json')
+    mockFileExists.mockImplementation(async (candidate: string) => candidate === IMPORT_CONFIG)
     mockReadFileContent.mockResolvedValue('{"model": 123}')
 
     await expect(syncOpenCodeImport({ overwriteState: true })).rejects.toThrow('Importable OpenCode config is invalid')
@@ -283,13 +310,13 @@ describe('opencode-import service', () => {
   })
 
   it('imports state without rewriting the config when importConfig is false', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
-    process.env.OPENCODE_IMPORT_STATE_PATH = '/import/opencode-state'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
+    process.env.OPENCODE_IMPORT_STATE_PATH = IMPORT_STATE
 
     mockFileExists.mockImplementation(async (candidate: string) => {
-      return candidate === '/import/opencode-config/opencode.json'
-        || candidate === '/import/opencode-state'
-        || candidate === '/import/opencode-state/opencode.db'
+      return candidate === IMPORT_CONFIG
+        || candidate === IMPORT_STATE
+        || candidate === path.join(IMPORT_STATE, 'opencode.db')
     })
 
     const result = await syncOpenCodeImport({ overwriteState: false, importConfig: false })
@@ -300,7 +327,7 @@ describe('opencode-import service', () => {
   })
 
   it('reads distinct session directories from imported workspace state', async () => {
-    mockFileExists.mockImplementation(async (candidate: string) => candidate === '/tmp/workspace/.opencode/state/opencode/opencode.db')
+    mockFileExists.mockImplementation(async (candidate: string) => candidate === path.join(OPENCODE_STATE_DIR, 'opencode.db'))
 
     const readonlyDatabase = {
       query: vi.fn().mockReturnValue({
@@ -315,7 +342,7 @@ describe('opencode-import service', () => {
     MockSQLiteDatabase.mockImplementationOnce(() => readonlyDatabase)
 
     const { getImportedSessionDirectories } = await import('../../src/services/opencode-import')
-    const result = await getImportedSessionDirectories('/tmp/workspace/.opencode/state/opencode')
+    const result = await getImportedSessionDirectories(OPENCODE_STATE_DIR)
 
     expect(result.directories).toEqual([
       '/Users/test/project-a',
@@ -325,20 +352,20 @@ describe('opencode-import service', () => {
   })
 
   it('reports stateSourcePath as null when candidate directory exists but lacks opencode.db', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
-    process.env.OPENCODE_IMPORT_STATE_PATH = '/import/opencode-state'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
+    process.env.OPENCODE_IMPORT_STATE_PATH = IMPORT_STATE
 
     mockFileExists.mockImplementation(async (candidate: string) => {
-      if (candidate === '/import/opencode-config/opencode.json') {
+      if (candidate === IMPORT_CONFIG) {
         return true
       }
-      if (candidate === '/import/opencode-state') {
+      if (candidate === IMPORT_STATE) {
         return true
       }
-      if (candidate === '/import/opencode-state/opencode.db') {
+      if (candidate === path.join(IMPORT_STATE, 'opencode.db')) {
         return false
       }
-      if (candidate === '/tmp/workspace/.opencode/state/opencode/opencode.db') {
+      if (candidate === path.join(OPENCODE_STATE_DIR, 'opencode.db')) {
         return false
       }
       return false
@@ -346,7 +373,7 @@ describe('opencode-import service', () => {
 
     const status = await getOpenCodeImportStatus()
 
-    expect(status.configSourcePath).toBe('/import/opencode-config/opencode.json')
+    expect(status.configSourcePath).toBe(IMPORT_CONFIG)
     expect(status.stateSourcePath).toBeNull()
     expect(status.workspaceStateExists).toBe(false)
   })
@@ -370,14 +397,14 @@ describe('opencode-import service', () => {
   })
 
   it('blocks import when workspace state exists and overwriteState is not enabled', async () => {
-    process.env.OPENCODE_IMPORT_CONFIG_PATH = '/import/opencode-config/opencode.json'
-    process.env.OPENCODE_IMPORT_STATE_PATH = '/import/opencode-state'
+    process.env.OPENCODE_IMPORT_CONFIG_PATH = IMPORT_CONFIG
+    process.env.OPENCODE_IMPORT_STATE_PATH = IMPORT_STATE
 
     mockFileExists.mockImplementation(async (candidate: string) => {
-      return candidate === '/import/opencode-config/opencode.json'
-        || candidate === '/import/opencode-state'
-        || candidate === '/import/opencode-state/opencode.db'
-        || candidate === '/tmp/workspace/.opencode/state/opencode/opencode.db'
+      return candidate === IMPORT_CONFIG
+        || candidate === IMPORT_STATE
+        || candidate === path.join(IMPORT_STATE, 'opencode.db')
+        || candidate === path.join(OPENCODE_STATE_DIR, 'opencode.db')
     })
 
     await expect(syncOpenCodeImport({
@@ -392,9 +419,9 @@ describe('opencode-import service', () => {
   it('stages imported state before replacing the target directory', async () => {
     const { importOpenCodeStateDirectory } = await import('../../src/services/opencode-import')
 
-    const sourcePath = '/import/opencode-state'
-    const targetPath = '/workspace/.opencode/state/opencode'
-    const stagedPath = '/workspace/.opencode/state/opencode-import-123'
+    const sourcePath = IMPORT_STATE
+    const targetPath = path.resolve('/workspace/.opencode/state/opencode')
+    const stagedPath = path.resolve('/workspace/.opencode/state/opencode-import-123')
 
     mockFileExists.mockImplementation(async (candidate: string) => {
       if (candidate === path.join(sourcePath, 'opencode.db')) {
@@ -438,9 +465,9 @@ describe('opencode-import service', () => {
   it('cleans up the staged import directory when snapshotting fails', async () => {
     const { importOpenCodeStateDirectory } = await import('../../src/services/opencode-import')
 
-    const sourcePath = '/import/opencode-state'
-    const targetPath = '/workspace/.opencode/state/opencode'
-    const stagedPath = '/workspace/.opencode/state/opencode-import-456'
+    const sourcePath = IMPORT_STATE
+    const targetPath = path.resolve('/workspace/.opencode/state/opencode')
+    const stagedPath = path.resolve('/workspace/.opencode/state/opencode-import-456')
 
     mockFileExists.mockImplementation(async (candidate: string) => candidate === path.join(sourcePath, 'opencode.db'))
     mockEnsureDirectoryExists.mockResolvedValue(undefined)

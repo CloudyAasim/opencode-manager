@@ -118,7 +118,10 @@ describe('opencode-config-file', () => {
     await expect(readdir(workDir)).resolves.toEqual(['opencode.jsonc'])
   })
 
-  it('preserves an existing non-default file mode when rewriting atomically', async () => {
+  // POSIX permission bits: Windows has no umask and reports every file as
+  // 0o666, so a mode that was set cannot be read back there. CI runs this on
+  // Linux.
+  it.skipIf(process.platform === 'win32')('preserves an existing non-default file mode when rewriting atomically', async () => {
     const previousUmask = process.umask(0)
     try {
       await writeFile(sourcePath('opencode.jsonc'), OPENCODE_CONFIG_SEED, 'utf8')
@@ -441,7 +444,10 @@ describe('opencode-config-file', () => {
     await expect(readFile(sourcePath('opencode.json'), 'utf8')).resolves.toBe('{"model":"a/b"}')
   })
 
-  it('leaves sources untouched when an existing source cannot be read before restore', async () => {
+  // A file made unreadable with chmod is still readable on Windows, which has
+  // no POSIX permission bits to take the permission away with. CI runs this
+  // on Linux.
+  it.skipIf(process.platform === 'win32')('leaves sources untouched when an existing source cannot be read before restore', async () => {
     await writeFile(sourcePath('opencode.json'), '{"model":"a/b"}', 'utf8')
     await chmod(sourcePath('opencode.json'), 0o000)
     const snapshot = JSON.stringify({

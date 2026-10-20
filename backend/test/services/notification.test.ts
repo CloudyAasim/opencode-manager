@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Database } from 'bun:sqlite'
+import path from 'node:path'
 
 vi.mock('web-push', () => ({
   default: {
@@ -67,7 +68,17 @@ const VAPID = {
   subject: 'mailto:ops@example.com',
 }
 
-const REPO = { id: 7, fullPath: '/repos/my-repo', cloneStatus: 'ready' } as unknown as Repo
+/**
+ * The directory the event names, resolved.
+ *
+ * The service resolves the directory it is handed before it looks anything
+ * up, and a resolution of a POSIX literal is not the same string on every
+ * platform: on Windows '/repos/my-repo' resolves to 'C:\repos\my-repo'.
+ * Passing the resolved form in and asserting against it holds on both, and on
+ * Linux it is the same string this file used before.
+ */
+const REPO_DIR = path.resolve('/repos/my-repo')
+const REPO = { id: 7, fullPath: REPO_DIR, cloneStatus: 'ready' } as unknown as Repo
 const SEND_OK = { statusCode: 201, body: '', headers: {} }
 
 const allEvents = {
@@ -480,7 +491,7 @@ describe('NotificationService handleSSEEvent', () => {
   })
 
   it('ignores event types that are not notification events', async () => {
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'session.created',
       properties: { sessionID: 'ses_1' },
     })
@@ -489,7 +500,7 @@ describe('NotificationService handleSSEEvent', () => {
 
   it('ignores events for a session a client is currently viewing', async () => {
     vi.mocked(sseAggregator.isSessionBeingViewed).mockReturnValue(true)
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1' },
     })
@@ -498,7 +509,7 @@ describe('NotificationService handleSSEEvent', () => {
 
   it('ignores events for a subagent session', async () => {
     vi.mocked(sseAggregator.isSubagentSession).mockReturnValue(true)
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'question.asked',
       properties: { sessionID: 'ses_1' },
     })
@@ -506,13 +517,13 @@ describe('NotificationService handleSSEEvent', () => {
   })
 
   it('still notifies for events without a session id', async () => {
-    await service.handleSSEEvent('/repos/my-repo', { type: 'session.idle', properties: {} })
+    await service.handleSSEEvent(REPO_DIR, { type: 'session.idle', properties: {} })
     expect(webpush.sendNotification).toHaveBeenCalledTimes(1)
   })
 
   it('ignores events when vapid is not configured', async () => {
     const unconfigured = new NotificationService(db)
-    await unconfigured.handleSSEEvent('/repos/my-repo', {
+    await unconfigured.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1' },
     })
@@ -521,7 +532,7 @@ describe('NotificationService handleSSEEvent', () => {
 
   it('ignores events when no user has a subscription', async () => {
     db.prepare('DELETE FROM push_subscriptions').run()
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1' },
     })
@@ -533,7 +544,7 @@ describe('NotificationService handleSSEEvent', () => {
       { notifications: { enabled: false, events: { ...allEvents } } },
       'user-1',
     )
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1' },
     })
@@ -550,7 +561,7 @@ describe('NotificationService handleSSEEvent', () => {
       },
       'user-1',
     )
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1' },
     })
@@ -567,7 +578,7 @@ describe('NotificationService handleSSEEvent', () => {
       },
       'user-1',
     )
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'question.asked',
       properties: { sessionID: 'ses_1' },
     })
@@ -576,7 +587,7 @@ describe('NotificationService handleSSEEvent', () => {
 
   it('sends a deep link and repo name when the directory resolves to a repo', async () => {
     vi.mocked(getRepoBySourcePath).mockReturnValue(REPO)
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1', permission: 'bash', metadata: { command: 'ls' } },
     })
@@ -585,14 +596,14 @@ describe('NotificationService handleSSEEvent', () => {
     // attached: the row it finds only decides who gets told, never what they
     // are allowed to do, so scoping it to a user would silently stop owned
     // repositories from resolving at all.
-    expect(getRepoBySourcePath).toHaveBeenCalledWith(expect.anything(), '/repos/my-repo', anyOwner())
+    expect(getRepoBySourcePath).toHaveBeenCalledWith(expect.anything(), REPO_DIR, anyOwner())
     const [payload] = sentPayloads()
     expect(payload?.title).toBe('Run Command')
     expect(payload?.tag).toBe('permission.asked-ses_1')
     expect(payload?.data).toMatchObject({
       eventType: 'permission.asked',
       sessionId: 'ses_1',
-      directory: '/repos/my-repo',
+      directory: REPO_DIR,
       repoId: 7,
       repoName: 'repo-name',
       url: '/repos/7/sessions/ses_1',
@@ -602,7 +613,7 @@ describe('NotificationService handleSSEEvent', () => {
   it('falls back to the local path lookup when the source path does not match', async () => {
     vi.mocked(getRepoBySourcePath).mockReturnValue(null)
     vi.mocked(getRepoByLocalPath).mockReturnValue(REPO)
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1', permission: 'bash' },
     })
@@ -668,7 +679,7 @@ describe('NotificationService handleSSEEvent', () => {
   it('sends one notification per subscribed user', async () => {
     service.saveSubscription('user-2', 'https://push.example/two', 'k2', 'a2')
     enableNotifications('user-2')
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1', permission: 'bash' },
     })
@@ -681,7 +692,7 @@ describe('NotificationService handleSSEEvent', () => {
       { notifications: { enabled: false, events: { ...allEvents } } },
       'user-2',
     )
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1', permission: 'bash' },
     })
@@ -691,7 +702,7 @@ describe('NotificationService handleSSEEvent', () => {
   it('refreshes last_used_at after a delivered event', async () => {
     const before = service.getSubscriptions('user-1')[0]!.lastUsedAt
     await new Promise((resolve) => setTimeout(resolve, 5))
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1', permission: 'bash' },
     })
@@ -702,7 +713,7 @@ describe('NotificationService handleSSEEvent', () => {
     vi.mocked(webpush.sendNotification).mockRejectedValue(
       Object.assign(new Error('gone'), { statusCode: 410 }),
     )
-    await service.handleSSEEvent('/repos/my-repo', {
+    await service.handleSSEEvent(REPO_DIR, {
       type: 'permission.asked',
       properties: { sessionID: 'ses_1', permission: 'bash' },
     })

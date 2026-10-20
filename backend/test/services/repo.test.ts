@@ -148,7 +148,7 @@ describe('repo service', () => {
   it('links an absolute git repo in place and preserves its source path', async () => {
     const { initLocalRepo } = await import('../../src/services/repo')
     const database = {} as never
-    const absolutePath = '/Users/test/existing-repo'
+    const absolutePath = path.resolve('/Users/test/existing-repo')
     const aliasPath = path.join(getReposPath(), 'existing-repo')
 
     getRepoBySourcePath.mockReturnValue(null)
@@ -190,7 +190,7 @@ describe('repo service', () => {
       cloneStatus: 'ready',
       isLocal: true,
     }))
-    expect(symlink).toHaveBeenCalledWith(absolutePath, aliasPath, 'dir')
+    expect(symlink).toHaveBeenCalledWith(absolutePath, aliasPath, process.platform === 'win32' ? 'junction' : 'dir')
     expect(result.localPath).toBe('existing-repo')
     expect(result.sourcePath).toBe(absolutePath)
     expect(result.fullPath).toBe(absolutePath)
@@ -199,12 +199,12 @@ describe('repo service', () => {
   it('discovers nested repos and keeps existing registrations', async () => {
     const { discoverLocalRepos } = await import('../../src/services/repo')
     const database = {} as never
-    const rootPath = '/Users/test/projects'
+    const rootPath = path.resolve('/Users/test/projects')
     const existingRepo = {
       id: 9,
       localPath: 'app-two',
-      sourcePath: '/Users/test/projects/nested/app-two',
-      fullPath: '/Users/test/projects/nested/app-two',
+      sourcePath: path.join(rootPath, 'nested', 'app-two'),
+      fullPath: path.join(rootPath, 'nested', 'app-two'),
       branch: 'main',
       defaultBranch: 'main',
       cloneStatus: 'ready' as const,
@@ -288,7 +288,7 @@ describe('repo service', () => {
     expect(result.existingCount).toBe(1)
     expect(result.errors).toEqual([])
     expect(result.repos).toHaveLength(2)
-    expect(result.repos.map((repo) => repo.fullPath)).toContain('/Users/test/projects/app-one')
+    expect(result.repos.map((repo) => repo.fullPath)).toContain(path.join(rootPath, 'app-one'))
     expect(result.repos.map((repo) => repo.fullPath)).toContain(existingRepo.fullPath)
     expect(symlink).toHaveBeenCalledTimes(1)
   })
@@ -296,7 +296,7 @@ describe('repo service', () => {
   it('continues discovery when a nested directory cannot be read', async () => {
     const { discoverLocalRepos } = await import('../../src/services/repo')
     const database = {} as never
-    const rootPath = '/Users/test/projects'
+    const rootPath = path.resolve('/Users/test/projects')
 
     getRepoByLocalPath.mockReturnValue(null)
     getRepoBySourcePath.mockReturnValue(null)
@@ -354,10 +354,10 @@ describe('repo service', () => {
     expect(result.discoveredCount).toBe(1)
     expect(result.existingCount).toBe(0)
     expect(result.repos).toHaveLength(1)
-    expect(result.repos[0]?.fullPath).toBe('/Users/test/projects/app-one')
+    expect(result.repos[0]?.fullPath).toBe(path.join(rootPath, 'app-one'))
     expect(result.errors).toEqual([
       {
-        path: '/Users/test/projects/restricted',
+        path: path.join(rootPath, 'restricted'),
         error: 'EACCES: permission denied',
       },
     ])
@@ -366,7 +366,7 @@ describe('repo service', () => {
   it('relinks imported session directories to nearest git repo roots', async () => {
     const { relinkReposFromSessionDirectories } = await import('../../src/services/repo')
     const database = {} as never
-    const repoRoot = '/Users/test/projects/app-one'
+    const repoRoot = path.resolve('/Users/test/projects/app-one')
     const aliasPath = path.join(getReposPath(), 'app-one')
 
     getRepoByLocalPath.mockReturnValue(null)
@@ -398,7 +398,7 @@ describe('repo service', () => {
 
     executeCommand.mockImplementation(async (args: string[]) => {
       if (args.includes('--show-toplevel')) {
-        if (args[2] === '/Users/test/projects/not-a-repo') {
+        if (args[2] === path.resolve('/Users/test/projects/not-a-repo')) {
           throw new Error('not a git repository')
         }
         return `${repoRoot}\n`
@@ -420,9 +420,9 @@ describe('repo service', () => {
     })
 
     const result = await relinkReposFromSessionDirectories(database, mockGitAuthService, [
-      '/Users/test/projects/app-one/apps/web',
-      '/Users/test/projects/app-one/packages/api',
-      '/Users/test/projects/not-a-repo',
+      path.resolve('/Users/test/projects/app-one/apps/web'),
+      path.resolve('/Users/test/projects/app-one/packages/api'),
+      path.resolve('/Users/test/projects/not-a-repo'),
     ])
 
     expect(result.relinkedCount).toBe(1)

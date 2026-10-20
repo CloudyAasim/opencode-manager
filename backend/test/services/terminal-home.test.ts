@@ -63,7 +63,12 @@ describe('terminal home resolution', () => {
 
     expect(existsSync(home)).toBe(true)
     expect(isInsideDirectory(base, home)).toBe(true)
-    expect(statSync(home).mode & 0o777).toBe(0o700)
+    // POSIX permission bits: Windows has no umask and reports every file as
+    // 0o666, so the mode the directory was created with cannot be observed
+    // there. CI runs this on Linux.
+    if (process.platform !== 'win32') {
+      expect(statSync(home).mode & 0o777).toBe(0o700)
+    }
     expect(home.startsWith(path.join(base, 'users'))).toBe(true)
   })
 

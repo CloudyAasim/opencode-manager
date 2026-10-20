@@ -34,23 +34,29 @@ vi.mock('bun:sqlite', () => ({
 
 vi.mock('@opencode-manager/shared/config/env', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@opencode-manager/shared/config/env')>()
+  const path = await import('node:path')
+  // Native paths, not POSIX literals. The manager joins onto whatever these
+  // return, and a join keeps the separator it was handed: on Windows a
+  // literal '/test/workspace' becomes '\test\workspace', which is not the
+  // string the expectations below are written against.
+  const ws = path.resolve('/test/workspace')
   return {
     ...actual,
-    getWorkspacePath: vi.fn(() => '/test/workspace'),
-    getOpenCodeConfigFilePath: vi.fn(() => '/test/workspace/.config/opencode.json'),
-    getOpenCodeHealthWatchPath: vi.fn(() => '/test/workspace/health-watch'),
-    getOpenCodeStateHome: vi.fn(() => '/test/workspace/.opencode/state'),
-    getOpenCodeConfigHome: vi.fn(() => '/test/workspace/.config'),
-    getOpenCodeTmpHome: vi.fn(() => '/test/workspace/.opencode/tmp'),
-    getOpenCodeAgentTmpPath: vi.fn(() => '/test/workspace/.opencode/tmp/opencode'),
-    getReposPath: vi.fn(() => '/test/workspace/repos'),
-    getAgentsMdPath: vi.fn(() => '/test/workspace/AGENTS.md'),
+    getWorkspacePath: vi.fn(() => ws),
+    getOpenCodeConfigFilePath: vi.fn(() => path.join(ws, '.config', 'opencode.json')),
+    getOpenCodeHealthWatchPath: vi.fn(() => path.join(ws, 'health-watch')),
+    getOpenCodeStateHome: vi.fn(() => path.join(ws, '.opencode', 'state')),
+    getOpenCodeConfigHome: vi.fn(() => path.join(ws, '.config')),
+    getOpenCodeTmpHome: vi.fn(() => path.join(ws, '.opencode', 'tmp')),
+    getOpenCodeAgentTmpPath: vi.fn(() => path.join(ws, '.opencode', 'tmp', 'opencode')),
+    getReposPath: vi.fn(() => path.join(ws, 'repos')),
+    getAgentsMdPath: vi.fn(() => path.join(ws, 'AGENTS.md')),
     getDatabasePath: vi.fn(() => ':memory:'),
-    getConfigPath: vi.fn(() => '/test/workspace/config'),
+    getConfigPath: vi.fn(() => path.join(ws, 'config')),
     ENV: {
       ...actual.ENV,
       SERVER: { ...actual.ENV.SERVER, NODE_ENV: 'test' },
-      WORKSPACE: { ...actual.ENV.WORKSPACE, BASE_PATH: '/test/workspace' },
+      WORKSPACE: { ...actual.ENV.WORKSPACE, BASE_PATH: ws },
       OPENCODE: {
         ...actual.ENV.OPENCODE,
         PORT: 5551,
@@ -118,10 +124,28 @@ vi.mock('../../src/services/opencode/plugin-registry', () => ({
 
 import { promises as fs, accessSync, readdirSync } from 'fs'
 import { execSync, spawnSync } from 'child_process'
+import path from 'node:path'
 import { ConfigReloadError, resolveOpenCodeExecutable } from '../../src/services/opencode-single-server'
 import { forceProcessAttestation, resetProcessIdentityProvider } from '../../src/services/opencode/process-identity'
 import { encryptSecret } from '../../src/utils/crypto'
 import { ENV } from '@opencode-manager/shared/config/env'
+
+/**
+ * The paths the manager is expected to work with.
+ *
+ * The mocked environment module above computes the same values from the same
+ * expressions, so the two agree without either one having to be exported
+ * across the mock boundary.
+ */
+const WS = path.resolve('/test/workspace')
+const CONFIG_DIR = path.join(WS, '.config')
+const STATE_HOME = path.join(WS, '.opencode', 'state')
+const TMP_HOME = path.join(WS, '.opencode', 'tmp')
+const AGENT_TMP = path.join(TMP_HOME, 'opencode')
+const CHILD_MARKER = path.join(STATE_HOME, 'opencode-server-child.json')
+const HOME_DIR = '/test/home'
+/** The manager joins this one itself, so it is written the same way. */
+const HOME_BIN = path.join(HOME_DIR, '.opencode', 'bin', 'opencode')
 
 vi.mock('../../src/utils/logger', () => ({
   logger: {
@@ -353,10 +377,10 @@ describe('OpenCodeServerManager - server auth', () => {
     await manager.start()
 
     const env = (spawnMock.mock.calls[0] as unknown as [unknown, unknown, { env: Record<string, string> }])[2].env
-    expect(env.TMPDIR).toBe('/test/workspace/.opencode/tmp')
-    expect(mkdirMock).toHaveBeenCalledWith('/test/workspace/.opencode/tmp/opencode', expect.objectContaining({ recursive: true }))
-    expect(rmMock).toHaveBeenCalledWith('/test/workspace/.opencode/tmp/opencode/stale-run', { recursive: true, force: true })
-    expect(rmMock).toHaveBeenCalledWith('/test/workspace/.opencode/tmp/opencode/leftover.txt', { recursive: true, force: true })
+    expect(env.TMPDIR).toBe(TMP_HOME)
+    expect(mkdirMock).toHaveBeenCalledWith(AGENT_TMP, expect.objectContaining({ recursive: true }))
+    expect(rmMock).toHaveBeenCalledWith(path.join(AGENT_TMP, 'stale-run'), { recursive: true, force: true })
+    expect(rmMock).toHaveBeenCalledWith(path.join(AGENT_TMP, 'leftover.txt'), { recursive: true, force: true })
   })
 
   it('strips an inherited OPENCODE_PURE from the manager process env before spawning', async () => {
@@ -451,7 +475,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
       const env = (spawnMock.mock.calls[0] as unknown as [unknown, unknown, { env: Record<string, string> }])[2].env
       expect(env.OPENCODE_CONFIG).toBeUndefined()
-      expect(env.XDG_CONFIG_HOME).toBe('/test/workspace/.config')
+      expect(env.XDG_CONFIG_HOME).toBe(CONFIG_DIR)
     } finally {
       delete process.env.OPENCODE_CONFIG
     }
@@ -593,14 +617,14 @@ describe('OpenCodeServerManager - server auth', () => {
 
   it('prefers the user-installed OpenCode executable over the bundled executable', () => {
     const previousHome = process.env.HOME
-    process.env.HOME = '/test/home'
+    process.env.HOME = HOME_DIR
     try {
       accessSyncMock.mockImplementation((candidate) => {
-        if (candidate === '/test/home/.opencode/bin/opencode' || candidate === '/usr/local/bin/opencode') return
+        if (candidate === HOME_BIN || candidate === '/usr/local/bin/opencode') return
         throw new Error('ENOENT')
       })
 
-      expect(resolveOpenCodeExecutable()).toBe('/test/home/.opencode/bin/opencode')
+      expect(resolveOpenCodeExecutable()).toBe(HOME_BIN)
     } finally {
       if (previousHome === undefined) {
         delete process.env.HOME
@@ -730,7 +754,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
       await expect(manager.stop()).rejects.toThrow('refusing to complete the stop')
       expect(rmMock).not.toHaveBeenCalledWith(
-        '/test/workspace/.opencode/state/opencode-server-child.json',
+        CHILD_MARKER,
         { force: true },
       )
       expect((manager as any).serverPid).not.toBeNull()
@@ -802,7 +826,7 @@ describe('OpenCodeServerManager - server auth', () => {
       expect(killSpy).toHaveBeenCalledWith(-4194305, 'SIGTERM')
       expect(killSpy).toHaveBeenCalledWith(-4194305, 'SIGKILL')
       expect(rmMock).not.toHaveBeenCalledWith(
-        '/test/workspace/.opencode/state/opencode-server-child.json',
+        CHILD_MARKER,
         { force: true },
       )
       expect((manager as any).serverPid).not.toBeNull()
@@ -841,7 +865,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
       await expect(manager.restart()).rejects.toThrow('refusing to complete the stop')
       expect(rmMock).not.toHaveBeenCalledWith(
-        '/test/workspace/.opencode/state/opencode-server-child.json',
+        CHILD_MARKER,
         { force: true },
       )
       expect((manager as any).isHealthy).toBe(false)
@@ -929,7 +953,7 @@ describe('OpenCodeServerManager - server auth', () => {
 
       expect(killSpy).toHaveBeenCalledWith(-4194305, 'SIGTERM')
       expect(rmMock).toHaveBeenCalledWith(
-        '/test/workspace/.opencode/state/opencode-server-child.json',
+        CHILD_MARKER,
         { force: true },
       )
       expect((manager as any).serverPid).toBeNull()
@@ -1099,7 +1123,7 @@ describe('OpenCodeServerManager - server auth', () => {
       expect(spawnMock).not.toHaveBeenCalled()
       const rmMock = fs.rm as unknown as ReturnType<typeof vi.fn>
       expect(rmMock).not.toHaveBeenCalledWith(
-        '/test/workspace/.opencode/state/opencode-server-child.json',
+        CHILD_MARKER,
         { force: true },
       )
       expect(manager.getLastStartupError()).toContain('4194307')
@@ -1411,7 +1435,7 @@ describe('OpenCodeServerManager - server auth', () => {
       expect(killSpy).not.toHaveBeenCalledWith(-4194305, 'SIGTERM')
       expect(killSpy).not.toHaveBeenCalledWith(4194305, 'SIGKILL')
       expect(rmMock).not.toHaveBeenCalledWith(
-        '/test/workspace/.opencode/state/opencode-server-child.json',
+        CHILD_MARKER,
         { force: true },
       )
     } finally {
@@ -1756,7 +1780,7 @@ describe('OpenCodeServerManager - server auth', () => {
       await manager.stop()
 
       const rmMock = fs.rm as unknown as ReturnType<typeof vi.fn>
-      expect(rmMock).toHaveBeenCalledWith('/test/workspace/.opencode/state/opencode-server-child.json', { force: true })
+      expect(rmMock).toHaveBeenCalledWith(CHILD_MARKER, { force: true })
     } finally {
       Object.defineProperty(ENV.SERVER, 'NODE_ENV', { value: originalNodeEnv, configurable: true, writable: true })
     }
@@ -1808,14 +1832,14 @@ describe('OpenCodeServerManager - server auth', () => {
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     await OpenCodeServerManager.getInstance().start()
 
-    expect(installManagedPluginsMock).toHaveBeenCalledWith('/test/workspace/.config')
+    expect(installManagedPluginsMock).toHaveBeenCalledWith(CONFIG_DIR)
   })
 
   it('installs all generated plugins into the same auto-discovery config dir', async () => {
     const { OpenCodeServerManager } = await import('../../src/services/opencode-single-server')
     await OpenCodeServerManager.getInstance().start()
 
-    expect(installManagedPluginsMock).toHaveBeenCalledWith('/test/workspace/.config')
+    expect(installManagedPluginsMock).toHaveBeenCalledWith(CONFIG_DIR)
   })
 
   it('continues startup when the gh-env plugin cannot be installed', async () => {
@@ -1993,7 +2017,7 @@ describe('OpenCodeServerManager - reinitializeBinDirectory', () => {
     // reinitializeBinDirectory() before it ever reaches `bun init -y`.
     mkdirMock.mockReset()
     mkdirMock.mockResolvedValue(undefined)
-    process.env.WORKSPACE_PATH = '/test/workspace'
+    process.env.WORKSPACE_PATH = WS
   })
 
   afterEach(() => {
@@ -2014,13 +2038,13 @@ describe('OpenCodeServerManager - reinitializeBinDirectory', () => {
       await opencodeServerManager.reinitializeBinDirectory()
 
       expect(mkdirMock).toHaveBeenCalledWith(
-        '/test/workspace/.opencode/state/opencode/bin',
+        path.join(STATE_HOME, 'opencode', 'bin'),
         { recursive: true }
       )
       expect(execSyncMock).toHaveBeenCalledWith(
         'bun init -y',
         expect.objectContaining({
-          cwd: '/test/workspace/.opencode/state/opencode/bin',
+          cwd: path.join(STATE_HOME, 'opencode', 'bin'),
           stdio: 'inherit',
           timeout: 30000
         })
@@ -2038,7 +2062,7 @@ describe('OpenCodeServerManager - reinitializeBinDirectory', () => {
       await opencodeServerManager.reinitializeBinDirectory()
 
       expect(mkdirMock).toHaveBeenCalledWith(
-        '/test/workspace/.opencode/state/opencode/bin',
+        path.join(STATE_HOME, 'opencode', 'bin'),
         { recursive: true }
       )
       expect(execSyncMock).not.toHaveBeenCalled()

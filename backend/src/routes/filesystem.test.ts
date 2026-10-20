@@ -71,7 +71,10 @@ describe('GET /api/filesystem/browse', () => {
       await fs.writeFile(path.join(outside, 'secret.txt'), 'not yours')
 
       const link = path.join(tmpRoot, 'innocent-looking')
-      await fs.symlink(outside, link, 'dir')
+      // A junction on Windows: a `dir` symlink needs Developer Mode or an
+      // elevated shell there, and a junction resolves under `realpath`
+      // exactly like the symlink it stands in for.
+      await fs.symlink(outside, link, process.platform === 'win32' ? 'junction' : 'dir')
 
       const res = await scopedRequest(
         `/filesystem/browse?path=${encodeURIComponent(link)}`,
