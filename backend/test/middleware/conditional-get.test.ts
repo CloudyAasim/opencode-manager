@@ -154,7 +154,7 @@ describe('createConditionalGetMiddleware', () => {
     // complete - dropping the part that was read would send a short answer.
     expect(res.status).toBe(200)
     expect(res.headers.get('etag')).toBeNull()
-    const body = await res.json()
+    const body = (await res.json()) as { blob: string }
     expect(body.blob).toHaveLength(5000)
   })
 
