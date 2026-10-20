@@ -110,8 +110,18 @@ jobs:
       # It is not caught on the way out either: `deploy.yml` runs on every push
       # to main independently of this workflow's conclusion, so the failure
       # surfaces as a failed deploy rather than as a failed commit.
+      #
+      # The three legs are run separately rather than through `pnpm build`,
+      # because the frontend one carries a memory cap - the same cap the
+      # Dockerfile puts on the same build. The cap is what keeps a build on
+      # a small host from taking that host down, and CI is where a cap that
+      # is too small shows up: the build fails here, on a machine with
+      # memory to spare, instead of on production.
       - name: Build
-        run: pnpm build
+        run: |
+          pnpm run build:cli
+          pnpm run build:backend
+          NODE_OPTIONS=--max-old-space-size=1536 pnpm run build:frontend
 
       - name: Confirm the artefact exists
         run: |

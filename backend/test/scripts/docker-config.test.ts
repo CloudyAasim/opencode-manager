@@ -212,6 +212,73 @@ describe('docker lifecycle scripts', () => {
   })
 })
 
+describe('the frontend build is memory-bounded', () => {
+  // On 2026-10-20 the image build on the production host grew until it took
+  // the host down with it: the running service stopped answering and the
+  // host rebooted, taking the build with it. The host has 3.9 GB of RAM, no
+  // swap, and nine other applications, and V8 sizes its heap from the
+  // machine's memory - so an uncapped build was free to grow into the space
+  // the running service needed.
+  //
+  // The cap has to be in every place the frontend is built, and it has to
+  // be the same number in all of them: CI builds with it to prove the cap
+  // is big enough, and the deploy builds with it because that is the build
+  // the production image is made from. A cap that drifts between the two
+  // would mean CI proves a number the host never uses.
+  const CAP_RE = /--max-old-space-size=(\d+)/
+  const FRONTEND_BUILD_RE = /^(.*(?:pnpm --filter frontend build|pnpm run build:frontend).*)$/m
+
+  const sources = {
+    'the Dockerfile': read(dockerfilePath),
+    'the CI workflow': read(join(repoRoot, '.github/workflows/ci.yml')),
+    'the deploy workflow': read(join(repoRoot, '.github/workflows/deploy.yml')),
+  }
+
+  const frontendBuildLine = (text: string): string | null => {
+    const match = text.match(FRONTEND_BUILD_RE)
+    return match?.[1] ?? null
+  }
+
+  const capOf = (text: string): number | null => {
+    const line = frontendBuildLine(text)
+    const match = line?.match(CAP_RE)
+    return match?.[1] ? Number(match[1]) : null
+  }
+
+  it('caps the heap wherever the frontend is built', () => {
+    for (const [where, text] of Object.entries(sources)) {
+      const line = frontendBuildLine(text)
+      expect(line, `${where} must build the frontend`).not.toBeNull()
+      expect(
+        CAP_RE.test(line ?? ''),
+        `${where} must cap the frontend build's heap: ${line}`,
+      ).toBe(true)
+    }
+  })
+
+  it('uses the same cap everywhere the frontend is built', () => {
+    const caps = Object.entries(sources).map(([where, text]) => {
+      const cap = capOf(text)
+      expect(cap, `${where} must carry a heap cap`).not.toBeNull()
+      return cap
+    })
+    expect(new Set(caps).size, `the caps differ: ${caps.join(', ')}`).toBe(1)
+  })
+
+  it('caps the heap high enough for the build and low enough for the host', () => {
+    const cap = capOf(sources['the Dockerfile'])
+    expect(cap).not.toBeNull()
+    // Measured on Linux: 768 MB always fails with "JavaScript heap out of
+    // memory" and 1024 MB fails about one build in three, so a cap below
+    // 1280 MB makes the build flaky - and a flaky build on the production
+    // host is a failed deploy. Above 2048 MB the cap stops being a cap:
+    // the host has about 2 GB free, and a build allowed more than that can
+    // take the running service down again.
+    expect(cap!).toBeGreaterThanOrEqual(1280)
+    expect(cap!).toBeLessThanOrEqual(2048)
+  })
+})
+
 describe('named-volume migration recipe', () => {
   const runMigrationShell = (src: string, dst: string) => {
     const scriptDir = mkdtempSync(join(tmpdir(), 'migrate-script-'))

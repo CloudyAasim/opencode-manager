@@ -69,7 +69,22 @@ COPY frontend/public ./frontend/public
 COPY frontend/plugins ./frontend/plugins
 COPY frontend/index.html frontend/vite.config.ts frontend/tsconfig*.json frontend/components.json frontend/eslint.config.js ./frontend/
 
-RUN pnpm --filter frontend build
+# The frontend build is the most memory-hungry step in this image, and the
+# host that builds it is small: 3.9 GB of RAM, no swap, and nine other
+# applications. On 2026-10-20 the build here grew until it took the host
+# down with it - the running service stopped answering for 25 minutes and
+# the host itself rebooted, taking the build with it.
+#
+# V8 sizes its heap from the machine's memory, so on that host it was free
+# to grow into the space the running service needed. The cap says how much
+# it may have: the build then either fits or fails, and a failed build
+# leaves the running service alone, which is the outcome worth having.
+#
+# 1536 MB is the smallest cap the build passes reliably - 1024 MB fails
+# about one build in three, 768 MB always fails. CI builds the frontend
+# with the same cap, so a cap that is too small is caught there instead of
+# on the host.
+RUN NODE_OPTIONS=--max-old-space-size=1536 pnpm --filter frontend build
 
 # Runtime stage.
 FROM base AS runner

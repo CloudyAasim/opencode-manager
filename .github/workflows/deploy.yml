@@ -61,8 +61,17 @@ jobs:
       #
       # Second, this workflow runs on every push to `main` independently of
       # CI's conclusion, so it cannot lean on CI having built anything.
+      #
+      # The memory cap is the same one CI and the Dockerfile use. The host
+      # that builds the image has 3.9 GB of RAM, no swap and nine other
+      # applications, and an uncapped build grew until it took that host
+      # down - see the Dockerfile for the whole story. Capping it here
+      # matters twice over: the build cannot exhaust the host, and the
+      # build this step produces is the one the check below compares
+      # against.
       - name: Build the frontend
-        run: pnpm --filter frontend build
+        id: build-frontend
+        run: NODE_OPTIONS=--max-old-space-size=1536 pnpm --filter frontend build
 
       - name: Deploy to Dokku
         # Pinned to the exact commit this workflow has been running, not to a
@@ -101,7 +110,14 @@ jobs:
       # own deployment, and the default keeps the check working without any
       # setup at all - a check that needs a secret to switch itself on is a
       # check that silently does nothing.
+      #
+      # `always()`, so that it also runs when the deploy step failed: that
+      # is exactly when it is worth knowing what the site is serving. A
+      # failed deploy on 2026-10-20 left the site healthy on the old
+      # build, and nobody could tell that from the run itself. The build
+      # step is the one thing it needs, so it is skipped when that failed.
       - name: Confirm the site is serving this build
+        if: always() && steps.build-frontend.outcome == 'success'
         env:
           PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://code.aasim.l.cd' }}
         run: node scripts/verify-production-deploy.mjs --site "$PRODUCTION_URL" --dist frontend/dist --timeout 180 --interval 10

@@ -61,6 +61,46 @@ no repository equivalent:
 question about `OCM_TERMINAL_*` that the documentation used to answer wrongly.
 Do not trust a document over it.
 
+### The host is small, and that changes how a deploy behaves
+
+The machine this app is deployed on has **3.9 GB of RAM, no swap at all, and
+nine other applications on it** (a relay, a search service, a form app, a
+PMA, a share service, a p2p sender and others). When the apps are running,
+about 1.9 GB of that memory is in use and about 2 GB is available.
+
+That is the whole context for a deploy here, because **the image is built on
+this host**. The frontend build alone wants around 1.2 GB of V8 heap, and V8
+sizes its heap from the machine's memory - so on a host this size an uncapped
+build is free to grow into the space the running service needs.
+
+What that cost, on 2026-10-20:
+
+- The build started at 06:50 and the site stopped answering at 06:57, and
+  kept not answering for **25 minutes**.
+- At 07:20 the host rebooted. The build died with it (`exit_code: -1`,
+  "the remote end hung up unexpectedly") and the deploy failed.
+- The site came back on the **old** build: the deploy had failed, so nothing
+  new was ever deployed.
+
+The build is now capped at **1536 MB** of heap in the Dockerfile, in CI and
+in the deploy workflow, so it cannot grow into the host's headroom. A build
+that does not fit now fails the deploy and leaves the running service alone,
+which is the outcome worth having.
+
+**Two things that are not in the repository and are worth knowing:**
+
+1. **The host has no swap.** Adding some (2 GB is plenty) would keep a
+   memory spike from reaching the OOM killer at all, and it is the cheapest
+   fix available. It needs root on the host, so it is an operator action.
+2. **The structural fix is to stop building on this host.** The image is
+   already built in CI by `.github/workflows/docker-build.yml` and pushed to
+   GHCR, and `dokku/github-action` can deploy an image instead of pushing a
+   branch (`deploy_docker_image`, which becomes
+   `dokku git:from-image <app> <image>` on the host). That removes the build
+   from the host entirely, so a deploy can never take the running service
+   down. It needs the GHCR package to be pullable by the host, and it needs
+   the old images to be pruned - the host has 9.8 GB of disk free.
+
 ### Required for the terminal sandbox: `seccomp=unconfined`
 
 The web terminal gives non-admins a confined shell, built as
