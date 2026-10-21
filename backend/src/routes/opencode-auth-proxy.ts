@@ -387,9 +387,9 @@ export function createAuthenticatedOpenCodeProxyRoutes(
      * An administrator runs this server and keeps the whole API. Everybody
      * else gets the list, and the list is short on purpose.
      */
+    const upstreamPath = upstreamPathFrom(requestPath.slice(PROXY_PREFIX.length))
     let scope: ProxyScope = 'reading'
     if (!isAdmin) {
-      const upstreamPath = upstreamPathFrom(requestPath.slice(PROXY_PREFIX.length))
       const route = upstreamPath ? matchProxyRoute(c.req.method, upstreamPath) : null
       if (!route) {
         logger.warn(`Blocked an OpenCode proxy request that is not on the list: ${c.req.method} ${requestPath}`)
@@ -426,9 +426,8 @@ export function createAuthenticatedOpenCodeProxyRoutes(
     // people who cloned the same repository share one project, and one
     // person's conversation can be read, renamed, deleted or driven from
     // the other person's session.
-    const upstreamPath = upstreamPathFrom(requestPath.slice(PROXY_PREFIX.length))
     const sessionId = upstreamPath ? sessionIdFromUpstreamPath(upstreamPath) : null
-    if (scope === 'conversation' && sessionId && principal && !isAdmin) {
+    if (scope === 'conversation' && sessionId && !isAdmin) {
       const record = findAgentSession(database, sessionId)
       const allowed = await sessionBelongsToCaller(sessionId, record, principal, roots, resolveDirectory)
       if (!allowed) {
@@ -443,7 +442,7 @@ export function createAuthenticatedOpenCodeProxyRoutes(
     // A pending permission or question belongs to a conversation, so the
     // conversation decides - not the id, which is a bare token.
     const pendingRequest = upstreamPath ? requestIdFromUpstreamPath(upstreamPath) : null
-    if (scope === 'request' && pendingRequest && principal && !isAdmin) {
+    if (scope === 'request' && pendingRequest && !isAdmin) {
       const conversationId = await requestConversationId(
         openCodeClient,
         pendingRequest.kind,
