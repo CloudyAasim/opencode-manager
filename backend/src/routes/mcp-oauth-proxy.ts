@@ -138,9 +138,6 @@ async function registerClient(
   return result
 }
 
- 
-import type { MiddlewareHandler } from 'hono'
-
 export function createMcpOauthProxyRoutes(
   openCodeClient: OpenCodeClient,
   requireAuth?: MiddlewareHandler,
@@ -164,7 +161,9 @@ export function createMcpOauthProxyRoutes(
       // otherwise one person could wire a server into another person's
       // checkout by naming it.
       if (directory && db) {
-        const principal = principalFrom(c.get('user') as Session['user'] | undefined)
+        const principal = principalFrom(
+          (c as unknown as { get: (key: string) => Session['user'] | undefined }).get('user'),
+        )
         if (principal && !principalIsAdmin(principal)) {
           const roots = resolveAccessRoots(db, principal)
           if (!isWithinRoots(directory, roots)) {
