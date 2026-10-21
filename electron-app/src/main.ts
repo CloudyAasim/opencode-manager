@@ -17,6 +17,8 @@ let mainWindow: BrowserWindow | null = null
 let serverDialog: BrowserWindow | null = null
 let proxy: Proxy | null = null
 let allowedOrigin = ''
+/** The port the client is listening on right now. */
+let boundPort = 0
 
 function log(message: string) {
   // stdout is the only thing a packaged app has; there is no console to read
@@ -78,10 +80,15 @@ async function startProxy(): Promise<void> {
     secureTransport: false,
     // Remembered before it is applied: a client that points one way and
     // remembers another forgets the moment it restarts.
-    onTargetChange: (next) => store.write({ target: next, port: remembered.port }),
+    //
+    // The port written alongside it is the one the client is listening on
+    // *now* - not the one it asked for at startup, which may have been
+    // taken by something else.
+    onTargetChange: (next) => store.write({ target: next, port: boundPort }),
   })
 
   const address = await listenOnPreferredPort(proxy, remembered.port ?? 0)
+  boundPort = address.port
   // The port that was actually bound is the one worth remembering: it is the
   // one the page's origin will have next time.
   store.write({ target: proxy.getTarget(), port: address.port })
