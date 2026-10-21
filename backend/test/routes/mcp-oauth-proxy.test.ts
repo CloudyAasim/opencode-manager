@@ -2,8 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFile, writeFile, mkdir, rm } from 'fs/promises'
 import { dirname } from 'path'
 import type { MiddlewareHandler } from 'hono'
+import type { Database } from 'bun:sqlite'
 import { createMcpOauthProxyRoutes } from '../../src/routes/mcp-oauth-proxy'
 import { createStubOpenCodeClient } from '../helpers/stub-opencode-client'
+import { createTestDb } from '../helpers/assistant-workspace'
+import { getUserSettingPath } from '@opencode-manager/shared/config/env'
 import type { OpenCodeClient } from '../../src/services/opencode/client'
 
 vi.mock('../../src/utils/logger', () => ({
@@ -46,8 +49,9 @@ function discoveryMetadata(overrides: Record<string, unknown> = {}) {
 function createApp(
   client: OpenCodeClient = createStubOpenCodeClient(),
   requireAuth?: MiddlewareHandler,
+  db?: Database,
 ) {
-  return createMcpOauthProxyRoutes(client, requireAuth)
+  return createMcpOauthProxyRoutes(client, requireAuth, db)
 }
 
 async function startFlow(
@@ -87,6 +91,40 @@ describe('mcp oauth proxy routes', () => {
   })
 
   describe('POST /start', () => {
+    it('refuses a flow that names a working directory that is not the caller\'s', async () => {
+      // The flow ends in a working directory: the server it authenticates
+      // for is connected there. One person must not be able to wire a server
+      // into another person's checkout by naming it.
+      const db = createTestDb()
+      const asAlice: MiddlewareHandler = async (c, next) => {
+        c.set('user' as never, { id: 'u-alice', username: 'alice', role: 'user' } as never)
+        await next()
+      }
+      const app = createApp(createStubOpenCodeClient(), asAlice, db)
+
+      const res = await startFlow(app, { directory: `${getUserSettingPath('bob')}/assistant` })
+
+      expect(res.status).toBe(403)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('lets a person start a flow in a working directory of their own', async () => {
+      const db = createTestDb()
+      const asAlice: MiddlewareHandler = async (c, next) => {
+        c.set('user' as never, { id: 'u-alice', username: 'alice', role: 'user' } as never)
+        await next()
+      }
+      const app = createApp(createStubOpenCodeClient(), asAlice, db)
+      fetchMock.mockResolvedValueOnce(jsonResponse(discoveryMetadata()))
+
+      const res = await startFlow(app, {
+        directory: `${getUserSettingPath('alice')}/assistant`,
+        clientId: 'client-123',
+      })
+
+      expect(res.status).toBe(200)
+    })
+
     it('returns 400 when OAuth metadata discovery responds with an error', async () => {
       fetchMock.mockResolvedValueOnce(textResponse('not found', 404))
 

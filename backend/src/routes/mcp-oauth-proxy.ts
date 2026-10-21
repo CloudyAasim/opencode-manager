@@ -1,5 +1,10 @@
 import { Hono } from 'hono'
+import type { MiddlewareHandler } from 'hono'
+import type { Database } from 'bun:sqlite'
 import type { OpenCodeClient } from '../services/opencode/client'
+import { principalFrom, principalIsAdmin, resolveAccessRoots } from '../auth/ownership'
+import { isWithinRoots } from '../auth/access-scope'
+import type { Session } from '../auth'
 import { z } from 'zod'
 import crypto from 'crypto'
 import path from 'path'
@@ -136,7 +141,11 @@ async function registerClient(
  
 import type { MiddlewareHandler } from 'hono'
 
-export function createMcpOauthProxyRoutes(openCodeClient: OpenCodeClient, requireAuth?: MiddlewareHandler) {
+export function createMcpOauthProxyRoutes(
+  openCodeClient: OpenCodeClient,
+  requireAuth?: MiddlewareHandler,
+  db?: Database,
+) {
   const app = new Hono()
 
   if (requireAuth) {
@@ -148,6 +157,22 @@ export function createMcpOauthProxyRoutes(openCodeClient: OpenCodeClient, requir
     try {
       const body = await c.req.json()
       const { serverName, serverUrl, scope, clientId, clientSecret, directory } = StartSchema.parse(body)
+
+      // The flow ends in a working directory: the server it authenticates
+      // for is connected there, and the directory decides whose sessions
+      // can see it. A directory that is not the caller's own is refused -
+      // otherwise one person could wire a server into another person's
+      // checkout by naming it.
+      if (directory && db) {
+        const principal = principalFrom(c.get('user') as Session['user'] | undefined)
+        if (principal && !principalIsAdmin(principal)) {
+          const roots = resolveAccessRoots(db, principal)
+          if (!isWithinRoots(directory, roots)) {
+            logger.warn(`Blocked a cross-tenant MCP OAuth flow for directory: ${directory}`)
+            return c.json({ error: 'Forbidden' }, 403)
+          }
+        }
+      }
 
       const origin = c.req.header('x-forwarded-proto') && c.req.header('host')
         ? `${c.req.header('x-forwarded-proto')}://${c.req.header('host')}`
