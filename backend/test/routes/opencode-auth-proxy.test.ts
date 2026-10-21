@@ -148,7 +148,31 @@ describe('authenticated opencode proxy routes', () => {
     expect(forwardRawMock).toHaveBeenCalledTimes(2)
   })
 
-  it('refuses to cache when the caller cannot be identified', async () => {
+  it('refuses to cache when the caller cannot be keyed safely', async () => {
+    const app = new Hono()
+    // A caller without a username cannot be given a bucket of their own:
+    // sharing one between two callers we cannot tell apart would hand one
+    // tenant another's connected list.
+    const asNameless: MiddlewareHandler = async (c, next) => {
+      c.set('user' as never, { id: 'id-nameless', role: 'user' } as never)
+      await next()
+    }
+    app.route(
+      '/api/opencode',
+      createAuthenticatedOpenCodeProxyRoutes(
+        { forwardRaw: forwardRawMock } as unknown as OpenCodeClient,
+        asNameless,
+        proxyTestDb,
+      ),
+    )
+
+    await app.request('/api/opencode/provider?case=anonymous')
+    await app.request('/api/opencode/provider?case=anonymous')
+
+    expect(forwardRawMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('refuses a caller it cannot identify at all', async () => {
     const app = new Hono()
     // no user on the context at all
     app.route(
@@ -160,10 +184,10 @@ describe('authenticated opencode proxy routes', () => {
       ),
     )
 
-    await app.request('/api/opencode/provider?case=anonymous')
-    await app.request('/api/opencode/provider?case=anonymous')
+    const res = await app.request('/api/opencode/provider?case=anonymous')
 
-    expect(forwardRawMock).toHaveBeenCalledTimes(2)
+    expect(res.status).toBe(403)
+    expect(forwardRawMock).not.toHaveBeenCalled()
   })
 
   it('returns 503 and never forwards when the OpenCode lifecycle is not initialized', async () => {

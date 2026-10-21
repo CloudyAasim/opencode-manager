@@ -372,6 +372,15 @@ export function createAuthenticatedOpenCodeProxyRoutes(
     const roots = principal ? resolveAccessRoots(database, principal) : []
     const isAdmin = principalIsAdmin(principal)
 
+    // The proxy answers a person it can name. A caller it cannot name is
+    // refused before anything else is decided: without an identity there is
+    // no telling whose conversations are whose, and an answer that is
+    // narrowed by nobody is an answer that is narrowed by nobody at all.
+    if (!principal) {
+      logger.warn(`Blocked an OpenCode proxy request from a caller that could not be identified: ${c.req.method} ${requestPath}`)
+      return c.json({ error: 'Forbidden' }, 403)
+    }
+
     /**
      * The route the request falls under, and what has to be true of it.
      *
@@ -475,8 +484,7 @@ export function createAuthenticatedOpenCodeProxyRoutes(
     if (
       c.req.method === 'GET' &&
       scope === 'listing' &&
-      response.status === 200 &&
-      principal
+      response.status === 200
     ) {
       const filtered = await filterSessionListResponse(response, database, principal, roots)
       if (filtered) return filtered
@@ -484,7 +492,7 @@ export function createAuthenticatedOpenCodeProxyRoutes(
 
     // The pending requests and the state of the conversations are answers
     // about conversations too, so they are narrowed the same way.
-    if (c.req.method === 'GET' && response.status === 200 && principal && !isAdmin) {
+    if (c.req.method === 'GET' && response.status === 200 && !isAdmin) {
       if (upstreamPath === '/session/status') {
         const filtered = await filterStatusMapResponse(response, database, principal)
         if (filtered) return filtered
