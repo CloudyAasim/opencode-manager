@@ -3,7 +3,10 @@ import { existsSync } from 'node:fs'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { createProxy, InvalidTargetError, type Proxy } from '../../desktop/src/proxy.ts'
 import { candidateTargets, detectServer } from '../../desktop/src/detect.ts'
+import { createSettingsStore } from '../../desktop/src/settings-store.ts'
+import { listenOnPreferredPort } from '../../desktop/src/listen.ts'
 import { appWindowOptions, isAllowedNavigation, isExternallyOpenable, loadUrlFor } from './window.ts'
+import { serverDialogHtml, serverDialogOptions } from './server-dialog.ts'
 
 // `__dirname`, not `import.meta.url`: the bundle is CommonJS so that the
 // sandboxed preload can be CommonJS too, and esbuild has no honest way to
@@ -11,6 +14,7 @@ import { appWindowOptions, isAllowedNavigation, isExternallyOpenable, loadUrlFor
 const here = __dirname
 
 let mainWindow: BrowserWindow | null = null
+let serverDialog: BrowserWindow | null = null
 let proxy: Proxy | null = null
 let allowedOrigin = ''
 
@@ -37,8 +41,23 @@ function resolveStaticRoot(): string {
 async function startProxy(): Promise<void> {
   const staticRoot = resolveStaticRoot()
 
+  // What this client remembers: which server, and which port. Both are
+  // remembered so that opening the app a second time is not a form to fill in
+  // again - and so that the page's origin is the same one as last time, which
+  // is what keeps the browser's own memory (localStorage, the service worker)
+  // attached to it.
+  const store = createSettingsStore(path.join(app.getPath('userData'), 'client.json'))
+  const remembered = store.read()
+
+  // Which server, in order: one named right now, one remembered, one found on
+  // this machine. An instruction beats a memory, and a memory beats a guess.
   let target = process.env.OCM_SERVER_URL?.trim()
-  if (!target) {
+  if (target) {
+    log(`using ${target}`)
+  } else if (remembered.target) {
+    target = remembered.target
+    log(`using the remembered server ${target}`)
+  } else {
     log('no server configured; probing this machine')
     const found = await detectServer(candidateTargets())
     if (found) {
@@ -53,10 +72,24 @@ async function startProxy(): Promise<void> {
     }
   }
 
-  proxy = createProxy({ staticRoot, target, secureTransport: false })
-  const address = await proxy.listen(0)
+  proxy = createProxy({
+    staticRoot,
+    target,
+    secureTransport: false,
+    // Remembered before it is applied: a client that points one way and
+    // remembers another forgets the moment it restarts.
+    onTargetChange: (next) => store.write({ target: next, port: remembered.port }),
+  })
+
+  const address = await listenOnPreferredPort(proxy, remembered.port ?? 0)
+  // The port that was actually bound is the one worth remembering: it is the
+  // one the page's origin will have next time.
+  store.write({ target: proxy.getTarget(), port: address.port })
   allowedOrigin = `http://${address.host}:${address.port}`
   log(`proxy on ${allowedOrigin} -> ${proxy.getTarget()}`)
+  if (address.ephemeral) {
+    log('the port this client used last time was taken, so this is a new one')
+  }
 }
 
 function wireSecurity(contents: Electron.WebContents) {
@@ -119,7 +152,12 @@ function wireIpc() {
   ipcMain.handle('ocm:set-target', (_event, target: unknown) => {
     if (typeof target !== 'string') return { ok: false, error: 'target must be a string' }
     try {
-      return { ok: true, target: proxy?.setTarget(target) }
+      const applied = proxy?.setTarget(target) ?? ''
+      // The page is signed in to the server it was pointing at. After the
+      // change that session belongs to a different server, so the page has to
+      // start again rather than keep a session nobody can use.
+      mainWindow?.reload()
+      return { ok: true, target: applied }
     } catch (error) {
       return {
         ok: false,
@@ -127,6 +165,34 @@ function wireIpc() {
       }
     }
   })
+
+  ipcMain.handle('ocm:change-server', () => {
+    openServerDialog()
+  })
+}
+
+/**
+ * The shell's own "which server?" dialog.
+ *
+ * A window of its own rather than a page of the app: the person who needs it
+ * is often not signed in yet, and the app is served by the very proxy whose
+ * target is in question.
+ */
+function openServerDialog(): void {
+  if (serverDialog) {
+    serverDialog.focus()
+    return
+  }
+
+  serverDialog = new BrowserWindow(serverDialogOptions(path.join(here, 'preload.js')))
+  serverDialog.setMenuBarVisibility(false)
+  serverDialog.once('ready-to-show', () => serverDialog?.show())
+  serverDialog.on('closed', () => {
+    serverDialog = null
+  })
+
+  const html = serverDialogHtml(proxy?.getTarget() ?? '')
+  void serverDialog.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
 }
 
 // A second launch should focus the window that is already open, not start a

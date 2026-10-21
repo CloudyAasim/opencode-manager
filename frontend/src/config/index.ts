@@ -1,6 +1,7 @@
 import { createClientConfig, DEFAULTS, ALLOWED_MIME_TYPES, GIT_PROVIDERS } from '../../../shared/src/config/client'
 import { resolveServerUrl } from '@opencode-manager/shared/utils'
 import { getStoredServerUrl } from '@/lib/server-selection'
+import { hostBridge } from '@/lib/host-shell'
 
 /**
  * Injected by `/config.js`, which sits in front of the bundle so a self-hoster
@@ -13,9 +14,21 @@ declare global {
   }
 }
 
+/**
+ * Inside a shell, this page is served by the shell's own proxy and talks to
+ * it - never to a server of its own.
+ *
+ * The proxy is what makes the session cookie travel: better-auth's cookie is
+ * `SameSite=Lax`, so a cross-site request drops it silently and the sign-in
+ * fails with nothing in the UI to explain it. A shell's address is the
+ * proxy's business (the shell keeps it), and a page that pointed itself at a
+ * remote origin would undo the one thing the proxy is there for.
+ */
+const inShell = hostBridge() !== null
+
 const serverUrl = resolveServerUrl({
   // What the person chose, which is also what survives a server moving.
-  userSelected: getStoredServerUrl(),
+  userSelected: inShell ? null : getStoredServerUrl(),
   // What the operator of this deployment put in config.js.
   fromConfigFile: typeof window === 'undefined' ? null : window.__OCM_RUNTIME_CONFIG__?.serverUrl,
   // What the build was made with.

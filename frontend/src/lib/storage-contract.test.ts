@@ -143,4 +143,21 @@ describe('the resolved base URL', () => {
     const mod = await import('@/config')
     expect(mod.OPENCODE_API_ENDPOINT).toBe('https://code.example.com/api/opencode')
   })
+
+  it('ignores the stored address inside a shell, because the shell owns it', async () => {
+    // Inside a client shell the page is served by the shell's own proxy, and
+    // the proxy is what has to be pointed at the server. A page that pointed
+    // itself at a remote origin would drop the session cookie on every
+    // request - which is the failure the proxy exists to remove.
+    store.set('ocm.serverUrl', 'https://chosen.example.com')
+    Object.defineProperty(window, 'ocmHost', {
+      configurable: true,
+      writable: true,
+      value: { changeServer: () => {} },
+    })
+
+    expect(await loadApiBaseUrl()).toBe('')
+
+    delete (window as { ocmHost?: unknown }).ocmHost
+  })
 })

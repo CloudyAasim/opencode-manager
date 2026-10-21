@@ -949,6 +949,8 @@ export const settingsPanels = {
     title: '服务器地址',
     description:
       '这个应用要连接哪台服务器。留空表示使用正在提供当前页面的那台。保存后会刷新页面，因为地址是在应用启动时确定的。',
+    proxyNotice:
+      '这个客户端通过自己的本地代理与服务器通信，所以这里的地址是代理的去向，而不是这个页面发请求的地址。地址由客户端保存。',
     label: '服务器地址',
     placeholder: 'code.example.com',
     check: '测试',

@@ -6,25 +6,34 @@ shipped three ways:
 | Target | Technology | Notes |
 | --- | --- | --- |
 | Web | existing Vite build served by the backend | default deployment |
-| Windows | Tauri v2 | NSIS/MSI installers |
-| Linux | Tauri v2 | AppImage and `.deb` |
-| Android | Tauri v2 mobile | Android 14+ (`minSdk 34`), phone UI |
+| Windows | Electron (`electron-app/`) + a Node same-origin proxy (`desktop/`) | NSIS installer and a portable build |
+| Linux | Electron, same code as Windows | not packaged yet |
+| Android | native Kotlin shell (`android/`) + a hand-written HTTP/1.1 proxy | Android 8.0+ (`minSdk 26`), no AndroidX |
 
-Tauri v2 is used because it targets desktop **and** mobile from one codebase,
-produces small binaries, and reuses the existing web UI unchanged.
+> **The Tauri target this document used to describe was never scaffolded.** There is
+> no `src-tauri/` in the repository, no `tauri.conf.*` anywhere in the tree and no
+> Tauri dependency in any `package.json`; the Windows client is Electron and the
+> Android client is a native Kotlin shell. Both were built that way on purpose:
+> the Android shell must not depend on AndroidX so its proxy can be tested on a
+> plain JDK, and the Windows client reuses the proxy the desktop package already
+> had. (Corrected at `6eb45140`; the Tauri text was checked at `f26e2ee` and was
+> a direction, never a scaffolded target.)
 
 ## Repository layout
 
 ```
 frontend/        React + Vite UI (shared by web, desktop and Android)
 backend/         Bun + Hono API
+desktop/         the Node same-origin proxy, shared by the CLI and the Electron shell
+electron-app/    the Windows shell (not a workspace member - see below)
+android/         the native Android shell, independent of everything above
 ```
 
-> **There is no `src-tauri/` in the repository.** The Tauri target below is a
-> direction, not something that has been scaffolded: there is no
-> `tauri.conf.*` anywhere in the tree and no Tauri dependency in any
-> `package.json`. The desktop and Android shells have to be initialised before
-> the build commands work. (Checked at `f26e2ee`.)
+> `electron-app/` is **not** in `pnpm-workspace.yaml`, and that is deliberate: the
+> Electron binary is 266 MB unpacked, and a server that never loads a desktop
+> runtime should not download one on every build. The package has its own
+> `package-lock.json`, and the CI job that runs its tests installs with
+> `--ignore-scripts`, so the binary is never downloaded there.
 
 ## Building
 
@@ -32,18 +41,17 @@ backend/         Bun + Hono API
 # Web (default deployment)
 pnpm --filter frontend build
 
-# Desktop app (Linux AppImage / deb, Windows installers)
-pnpm dlx @tauri-apps/cli@^2 build
+# Windows client (NSIS installer + portable build)
+cd electron-app && npm install && npm run package
 
-# Android (requires Android SDK + NDK, JDK 17)
-pnpm dlx @tauri-apps/cli@^2 android init
-pnpm dlx @tauri-apps/cli@^2 android build
+# Android (requires the Android SDK, JDK 17)
+./gradlew :app:assembleDebug
 ```
 
-Icons are generated once with `pnpm dlx @tauri-apps/cli@^2 icon <path-to-1024px-png>`.
-
 The desktop/mobile client talks to a self-hosted server: point it at the
-deployment origin (`https://code.example.com`) on first launch.
+deployment origin (`https://code.example.com`) on first launch, or let the
+client find one on the machine.
+
 
 ## UI direction
 

@@ -976,6 +976,8 @@ export const settingsPanels = {
     title: 'Server Address',
     description:
       'Which server this app talks to. Leave it empty to use the one serving this page. Saving reloads the page, because the address is fixed while the app starts.',
+    proxyNotice:
+      'This client reaches the server through a local proxy of its own, so the address here is where the proxy points - not where this page sends its requests. The client keeps it.',
     label: 'Server address',
     placeholder: 'code.example.com',
     check: 'Test',

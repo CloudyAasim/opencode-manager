@@ -60,6 +60,15 @@ export type ProxyOptions = {
   target: string
   /** Controls `Secure` cookie rewriting. Defaults to false for loopback. */
   secureTransport?: boolean
+  /**
+   * Called before the target changes, so the change can be remembered.
+   *
+   * It may throw, and then the change is refused: the proxy keeps pointing
+   * where it was. A client whose memory and whose behaviour disagree is a
+   * client that forgets the moment it restarts, and the disagreement is
+   * invisible until then.
+   */
+  onTargetChange?: (target: string) => void
   onError?: (error: unknown, context: { path: string }) => void
 }
 
@@ -96,7 +105,7 @@ export type Proxy = {
  */
 export function createProxy(options: ProxyOptions): Proxy {
   const secureTransport = options.secureTransport ?? false
-  const { staticRoot, onError } = options
+  const { staticRoot, onError, onTargetChange } = options
   // Fail at construction rather than on the first request: a desktop app that
   // starts with a bad address should say so while there is still a console.
   let upstreamUrl = toUpstreamUrl(options.target)
@@ -179,7 +188,14 @@ export function createProxy(options: ProxyOptions): Proxy {
         try {
           setTarget(next)
         } catch (error) {
-          json(400, { error: 'invalid_target', message: String(error) })
+          if (error instanceof InvalidTargetError) {
+            json(400, { error: 'invalid_target', message: error.message })
+            return
+          }
+          // The address was fine; it could not be remembered. Saying so is the
+          // only thing that keeps the answer and the memory from drifting
+          // apart without anybody noticing.
+          json(500, { error: 'target_not_saved', message: String(error) })
           return
         }
         json(200, { target: currentTarget() })
@@ -191,12 +207,26 @@ export function createProxy(options: ProxyOptions): Proxy {
   }
 
   function currentTarget(): string {
-    return upstreamUrl.origin + upstreamUrl.pathname.replace(/\/$/, '')
+    return targetOf(upstreamUrl)
   }
 
+  function targetOf(url: URL): string {
+    return url.origin + url.pathname.replace(/\/$/, '')
+  }
+
+  /**
+   * Point the proxy somewhere else.
+   *
+   * The change is remembered **before** it is applied. If it cannot be
+   * remembered, it is refused: a client that is pointing one way and remembers
+   * another forgets the moment it restarts, and nothing says so until then.
+   */
   function setTarget(next: string): string {
-    upstreamUrl = toUpstreamUrl(next)
-    return currentTarget()
+    const parsed = toUpstreamUrl(next)
+    const applied = targetOf(parsed)
+    onTargetChange?.(applied)
+    upstreamUrl = parsed
+    return applied
   }
 
   async function forward(req: http.IncomingMessage, res: http.ServerResponse, requestUrl: string) {

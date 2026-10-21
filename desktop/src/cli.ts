@@ -3,6 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createProxy } from './proxy.ts'
 import { candidateTargets, detectServer } from './detect.ts'
+import { createSettingsStore, defaultSettingsPath } from './settings-store.ts'
+import { listenOnPreferredPort } from './listen.ts'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
@@ -43,8 +45,19 @@ async function main() {
   const explicitTarget = flag('target') ?? process.env.OCM_SERVER_URL
   const staticRoot = resolveStaticRoot(flag('static'))
 
+  const settingsPath = flag('settings') ?? process.env.OCM_CLIENT_SETTINGS ?? defaultSettingsPath()
+  const store = createSettingsStore(settingsPath)
+  const remembered = store.read()
+
+  // Which server, in order: one named right now, one remembered, one found on
+  // this machine. An instruction beats a memory, and a memory beats a guess.
   let target = explicitTarget?.trim()
-  if (!target) {
+  if (target) {
+    process.stdout.write(`using ${target}\n`)
+  } else if (remembered.target) {
+    target = remembered.target
+    process.stdout.write(`using the remembered server ${target}\n`)
+  } else {
     process.stdout.write('No server given; looking for one on this machine...\n')
     const found = await detectServer(candidateTargets())
     if (!found) {
@@ -62,13 +75,32 @@ async function main() {
     }
   }
 
-  const proxy = createProxy({ staticRoot, target, secureTransport: false })
-  const port = Number(flag('port') ?? process.env.OCM_PROXY_PORT ?? 0)
-  const address = await proxy.listen(port)
+  const proxy = createProxy({
+    staticRoot,
+    target,
+    secureTransport: false,
+    // Remembered before it is applied: a client that points one way and
+    // remembers another forgets the moment it restarts.
+    onTargetChange: (next) => store.write({ target: next, port: remembered.port }),
+  })
+
+  const preferredPort = Number(flag('port') ?? process.env.OCM_PROXY_PORT ?? remembered.port ?? 0)
+  const address = await listenOnPreferredPort(proxy, preferredPort)
+
+  // The port that was actually bound is the one worth remembering: it is the
+  // one the page's origin will have next time.
+  store.write({ target: proxy.getTarget(), port: address.port })
 
   process.stdout.write(`\nOpenCode Manager: http://${address.host}:${address.port}\n`)
   process.stdout.write(`  serving  ${staticRoot}\n`)
-  process.stdout.write(`  proxying ${proxy.getTarget()}\n\n`)
+  process.stdout.write(`  proxying ${proxy.getTarget()}\n`)
+  if (address.ephemeral) {
+    process.stdout.write(
+      '  the port this client used last time was taken, so this is a new one.\n' +
+      '  The app still works; the browser will treat it as a new origin.\n',
+    )
+  }
+  process.stdout.write('\n')
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.on(signal, () => {

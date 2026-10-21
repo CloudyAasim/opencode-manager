@@ -22,6 +22,9 @@
  * front of a user.
  */
 import { EventEmitter } from 'node:events'
+import { mkdirSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown
 
@@ -34,6 +37,7 @@ type StubState = {
   singleInstance: boolean
   appEvents: EventEmitter
   appVersion: string
+  userData: string | null
 }
 
 const GLOBAL_KEY = '__ocmElectronStub'
@@ -51,6 +55,7 @@ function state(): StubState {
       singleInstance: true,
       appEvents: new EventEmitter(),
       appVersion: '0.18.0',
+      userData: null,
     }
     globals[GLOBAL_KEY] = existing
   }
@@ -113,6 +118,8 @@ export class WebContents extends EventEmitter {
 export class BrowserWindow extends EventEmitter {
   webContents = new WebContents()
   shown = false
+  /** How many times the app asked this window to start again. */
+  reloads = 0
 
   constructor(options: unknown) {
     super()
@@ -140,6 +147,16 @@ export class BrowserWindow extends EventEmitter {
 
   restore() {}
   focus() {}
+
+  /** Real BrowserWindow has this; a dialog that cannot hide its menu bar is
+   *  a dialog with a menu bar in it. */
+  setMenuBarVisibility(_visible: boolean) {}
+
+  /** Real BrowserWindow has this, and the app uses it: after the server
+   *  changes, the session in the window belongs to a different server. */
+  reload() {
+    this.reloads += 1
+  }
 
   show() {
     this.shown = true
@@ -174,6 +191,23 @@ class FakeApp extends EventEmitter {
     state().singleInstance = value
   }
 
+  /**
+   * Where the app keeps its own files.
+   *
+   * A real Electron hands out a per-user directory; the stub hands out one
+   * directory for the whole run, which is what a test needs - otherwise the
+   * settings a case writes would be there for the next case too.
+   */
+  getPath(name: string): string {
+    let userData = state().userData
+    if (!userData) {
+      userData = path.join(tmpdir(), 'ocm-electron-stub')
+      state().userData = userData
+      mkdirSync(userData, { recursive: true })
+    }
+    return path.join(userData, name)
+  }
+
   whenReady(): Promise<void> {
     return Promise.resolve()
   }
@@ -204,6 +238,14 @@ class FakeApp extends EventEmitter {
 
 export const app = new FakeApp()
 
+/**
+ * Where the app's own files live, so a test can put something there before
+ * the app starts - a remembered server, for instance.
+ */
+export function stubUserDataPath(name = 'userData'): string {
+  return app.getPath(name)
+}
+
 export function resetStubs() {
   const s = state()
   s.handlers.clear()
@@ -213,4 +255,10 @@ export function resetStubs() {
   s.appExitCode = null
   s.singleInstance = true
   s.appEvents.removeAllListeners()
+  // The settings directory is wiped with everything else: a case that wrote a
+  // remembered server must not hand it to the next case.
+  if (s.userData) {
+    rmSync(s.userData, { recursive: true, force: true })
+    s.userData = null
+  }
 }

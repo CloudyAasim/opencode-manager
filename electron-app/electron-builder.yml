@@ -1,0 +1,64 @@
+# How the Windows client is packaged.
+#
+# Two targets, because there are two kinds of person: one who installs the
+# client and one who carries it on a stick. The installer is the normal case;
+# the portable build is for the machine where installing something is a
+# decision that has to be justified.
+#
+# The Electron binary is 266 MB unpacked. It is deliberately **not** in the
+# repository's lockfile: a server that never loads a desktop runtime should
+# not download one on every build. That is why this package has its own
+# `package-lock.json` and is not a workspace member - see
+# `deploy/DOKKU.md` and the CI job that runs these tests without the binary.
+appId: dev.opencodemanager.desktop
+productName: OpenCode Manager
+copyright: OpenCode Manager
+
+directories:
+  output: release
+  # Not `build/`: the repository's root `.gitignore` excludes every directory
+  # called `build`, and the icon is a source file that has to be committed.
+  buildResources: resources
+
+# Only what the app needs at runtime. `node_modules` is not listed: the app is
+# bundled into `dist/` by esbuild, and Electron itself is provided by the
+# runtime that is packaged with it.
+files:
+  - dist/**/*
+  - frontend/**/*
+  - package.json
+
+asar: true
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  # The build runs on Windows, so it cannot be signed without a certificate.
+  # An unsigned build is what a build machine can produce, and the design
+  # says so rather than pretending otherwise: Windows will show its
+  # "unknown publisher" warning, and signing is a separate piece of work
+  # with its own key to keep.
+  signAndEditExecutable: true
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: OpenCode Manager
+  # No installer "finish" page running the app: the client is a window around
+  # a server, and starting it before the person has chosen a server is how
+  # the "server not found" screen becomes the first thing they see.
+  runAfterFinish: false
+
+portable:
+  # The portable build is one file, so the app's own files have to sit next to
+  # it rather than inside it.
+  artifactName: OpenCodeManager-${version}-portable.${ext}

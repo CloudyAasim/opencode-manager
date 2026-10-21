@@ -512,6 +512,86 @@ describe('同源代理：切换服务器', () => {
   })
 })
 
+describe('同源代理：切换服务器时要先记住', () => {
+  it('切换前先交给外面记住，外面拿到的是已经归一化的地址', async () => {
+    const upstream = await serve((_req, res) => {
+      res.writeHead(200)
+      res.end('{}')
+    })
+    const remembered: string[] = []
+    const proxy = createProxy({
+      staticRoot: await makeStaticRoot(),
+      target: upstream,
+      onTargetChange: (target) => remembered.push(target),
+    })
+    openServers.push(proxy as unknown as http.Server)
+    const { port } = await proxy.listen(0)
+    const base = `http://127.0.0.1:${port}`
+
+    const put = await fetch(`${base}/__ocm/target`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ target: 'http://127.0.0.1:9/api/health' }),
+    })
+
+    expect(put.status).toBe(200)
+    expect(remembered).toEqual(['http://127.0.0.1:9'])
+  })
+
+  it('记不住就不切换：代理还指着原来那台', async () => {
+    // A client that points one way and remembers another forgets the moment it
+    // restarts, and nothing says so until then.
+    const upstream = await serve((_req, res) => {
+      res.writeHead(200)
+      res.end('{}')
+    })
+    const proxy = createProxy({
+      staticRoot: await makeStaticRoot(),
+      target: upstream,
+      onTargetChange: () => {
+        throw new Error('the disk said no')
+      },
+    })
+    openServers.push(proxy as unknown as http.Server)
+    const { port } = await proxy.listen(0)
+    const base = `http://127.0.0.1:${port}`
+
+    const put = await fetch(`${base}/__ocm/target`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ target: 'http://127.0.0.1:9' }),
+    })
+
+    expect(put.status).toBe(500)
+    expect(proxy.getTarget()).toBe(upstream)
+  })
+
+  it('地址不合法时，根本不会去记', async () => {
+    const upstream = await serve((_req, res) => {
+      res.writeHead(200)
+      res.end('{}')
+    })
+    const remembered: string[] = []
+    const proxy = createProxy({
+      staticRoot: await makeStaticRoot(),
+      target: upstream,
+      onTargetChange: (target) => remembered.push(target),
+    })
+    openServers.push(proxy as unknown as http.Server)
+    const { port } = await proxy.listen(0)
+    const base = `http://127.0.0.1:${port}`
+
+    const put = await fetch(`${base}/__ocm/target`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ target: 'ftp://example.com' }),
+    })
+
+    expect(put.status).toBe(400)
+    expect(remembered).toEqual([])
+  })
+})
+
 describe('首部改写的纯函数', () => {
   const target = targetOrigin(new URL('https://upstream.example:8443'))
 

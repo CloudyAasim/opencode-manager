@@ -3,18 +3,28 @@
   "productName": "OpenCode Manager",
   "version": "0.18.0",
   "private": true,
+  "description": "The Windows client for OpenCode Manager: a window around your own server.",
+  "author": "OpenCode Manager",
   "main": "dist/main.js",
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "npm run build && electron .",
+    "package": "npm run build && electron-builder --win --x64",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "electron": "^33.4.11",
+    "electron-builder": "^26.0.0",
     "esbuild": "^0.25.0",
     "typescript": "^5",
     "vitest": "^3.2.4"
+  },
+  "allowScripts": {
+    "electron@33.4.11": true,
+    "electron-winstaller@5.4.0": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
   }
 }

@@ -46,6 +46,7 @@ nav:
     - Manager Logs: features/logs.md
     - Web Terminal: features/terminal.md
     - Mobile & PWA: features/mobile.md
+    - Windows Desktop Client: features/desktop.md
   - Configuration:
     - Environment Variables: configuration/environment.md
     - Authentication: configuration/authentication.md

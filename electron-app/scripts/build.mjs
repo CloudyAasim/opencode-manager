@@ -43,10 +43,18 @@ await build({
 
 // The built app has to travel with the desktop bundle, or the window loads a
 // directory that does not exist on the user's machine.
+//
+// It goes next to the bundle's *sibling*, not inside it: `main.ts` looks for
+// `../frontend/dist` relative to itself, which is `<app>/frontend/dist` in a
+// packaged app (where the bundle sits in `<app>/dist`) and
+// `<repo>/frontend/dist` in a development run.
 const frontendDist = path.resolve(root, '..', 'frontend', 'dist')
+const staged = path.join(root, 'frontend', 'dist')
 try {
-  await cp(frontendDist, path.join(dist, 'frontend', 'dist'), { recursive: true })
-  console.log('copied the built app into dist/frontend/dist')
+  await rm(staged, { recursive: true, force: true })
+  await mkdir(path.dirname(staged), { recursive: true })
+  await cp(frontendDist, staged, { recursive: true })
+  console.log('copied the built app into frontend/dist')
 } catch {
   console.warn(`no built app at ${frontendDist} - run \`pnpm --filter frontend build\` first`)
 }

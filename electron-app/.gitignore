@@ -1,2 +1,7 @@
 node_modules/
 dist/
+release/
+# The staged copy of the built app. It is produced by `npm run build` and
+# lives inside the package so that the packaged app finds it; it is never a
+# source file.
+frontend/

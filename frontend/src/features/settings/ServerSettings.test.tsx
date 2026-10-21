@@ -221,3 +221,110 @@ describe('ServerSettings', () => {
     expect(listRecentServerUrls()).toContain('https://code.example.com')
   })
 })
+
+/**
+ * Inside a desktop client the page is served by the client's own proxy, and
+ * the address is the proxy's target rather than the origin this page sends
+ * its requests to. Writing it into the page's own storage would point the
+ * page at a remote origin and undo the one thing the proxy is there for.
+ */
+describe('ServerSettings behind a client proxy', () => {
+  let store: Map<string, string>
+  let reload: ReturnType<typeof vi.fn>
+
+  function installProxy(target: string, putStatus = 200): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn(async (url: string, init?: { method?: string }) => {
+      if (String(url).includes('/__ocm/target')) {
+        // The probe asks; the save tells. They are different requests and the
+        // proxy answers them differently.
+        if (init?.method !== 'PUT') {
+          return { ok: true, status: 200, json: async () => ({ target, secureTransport: false }) }
+        }
+        if (putStatus === 200) {
+          return { ok: true, status: 200, json: async () => ({ target, secureTransport: false }) }
+        }
+        return { ok: false, status: putStatus, json: async () => ({ error: 'invalid_target', message: 'not an absolute http(s) address' }) }
+      }
+      return { ok: true, status: 200, json: async () => ({ status: 'healthy' }) }
+    })
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    return fetchMock
+  }
+
+  beforeEach(() => {
+    store = installStorage()
+    reload = vi.fn()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, reload, origin: 'https://app.example.com' },
+    })
+  })
+
+  it('shows the address the proxy points at', async () => {
+    installProxy('https://code.example.com')
+    render(<ServerSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/server address/i)).toHaveValue('https://code.example.com')
+    })
+  })
+
+  it('saves the address to the proxy, not to the page', async () => {
+    const fetchMock = installProxy('https://code.example.com')
+    const user = userEvent.setup()
+    render(<ServerSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/server address/i)).toHaveValue('https://code.example.com')
+    })
+    await user.clear(screen.getByLabelText(/server address/i))
+    await user.type(screen.getByLabelText(/server address/i), 'https://other.example.com')
+    await user.click(screen.getByRole('button', { name: /save and reload/i }))
+
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([url, init]) =>
+        String(url).includes('/__ocm/target') && (init as { method?: string })?.method === 'PUT')
+      expect(call).toBeTruthy()
+      const body = JSON.parse((call![1] as { body: string }).body) as { target: string }
+      expect(body.target).toBe('https://other.example.com')
+    })
+    // The page's own storage is not where this address belongs: the page must
+    // keep talking to its own origin, or the session cookie stops travelling.
+    expect(store.get('ocm.serverUrl')).toBeUndefined()
+    expect(reload).toHaveBeenCalled()
+  })
+
+  it('says why the proxy refused it', async () => {
+    installProxy('https://code.example.com', 400)
+    const user = userEvent.setup()
+    render(<ServerSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/server address/i)).toHaveValue('https://code.example.com')
+    })
+    await user.clear(screen.getByLabelText(/server address/i))
+    await user.type(screen.getByLabelText(/server address/i), 'nope')
+    await user.click(screen.getByRole('button', { name: /save and reload/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/absolute http/i)).toBeInTheDocument()
+    })
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('does not offer "the server serving this page" behind a proxy', async () => {
+    installProxy('https://code.example.com')
+    const user = userEvent.setup()
+    render(<ServerSettings />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/server address/i)).toHaveValue('https://code.example.com')
+    })
+    await user.clear(screen.getByLabelText(/server address/i))
+
+    // A proxy needs somewhere to point. There is no "the page's own server"
+    // to fall back to.
+    expect(screen.getByRole('button', { name: /save and reload/i })).toBeDisabled()
+    expect(screen.queryByText(/the server serving this page/i)).not.toBeInTheDocument()
+  })
+})

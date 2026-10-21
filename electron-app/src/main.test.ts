@@ -1,10 +1,10 @@
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { app, BrowserWindow, ipcMain, resetStubs, shell } from '../test/electron-stub.ts'
+import { app, BrowserWindow, ipcMain, resetStubs, shell, stubUserDataPath } from '../test/electron-stub.ts'
 
 /**
  * Drives the real main process against a stub electron.
@@ -184,10 +184,10 @@ describe('导航限制接上了没有', () => {
 })
 
 describe('给渲染进程的 IPC 接口', () => {
-  it('两个通道都注册了', () => {
-    // A preload that exposes `ocmDesktop.info()` against a channel nobody
+  it('三个通道都注册了', () => {
+    // A preload that exposes `ocmHost.info()` against a channel nobody
     // handles fails at click time, in a packaged app, on a user's machine.
-    expect(ipcMain.channels().sort()).toEqual(['ocm:info', 'ocm:set-target'])
+    expect(ipcMain.channels().sort()).toEqual(['ocm:change-server', 'ocm:info', 'ocm:set-target'])
   })
 
   it('info 报出当前目标', async () => {
@@ -224,6 +224,113 @@ describe('给渲染进程的 IPC 接口', () => {
 
     const info = (await ipcMain.invoke('ocm:info')) as { target: string }
     expect(info.target).toBe(upstream)
+  })
+
+  it('换服务器之后，窗口重新开始', async () => {
+    // The session in the window belongs to the server the proxy used to point
+    // at. After the change it belongs to a different server, and a window
+    // that keeps it is a window that says "signed in" to nobody.
+    const upstream = await serve((_req, res) => {
+      res.writeHead(200)
+      res.end('{}')
+    })
+    const window = BrowserWindow.instances[0]!
+
+    await ipcMain.invoke('ocm:set-target', upstream)
+
+    expect(window.reloads).toBe(1)
+  })
+})
+
+describe('客户端记住什么', () => {
+  it('换过服务器之后，记住的是换过的那台', async () => {
+    const upstream = await serve((_req, res) => {
+      res.writeHead(200)
+      res.end('{}')
+    })
+
+    await ipcMain.invoke('ocm:set-target', upstream)
+
+    const settings = JSON.parse(
+      await readFile(path.join(stubUserDataPath(), 'client.json'), 'utf8'),
+    ) as { target?: string }
+    expect(settings.target).toBe(upstream)
+  })
+
+  it('记住的端口也留下来', async () => {
+    const window = BrowserWindow.instances[0]!
+    const origin = new URL(window.webContents.loadedUrl!).origin
+
+    const settings = JSON.parse(
+      await readFile(path.join(stubUserDataPath(), 'client.json'), 'utf8'),
+    ) as { port?: number }
+    expect(settings.port).toBe(Number(new URL(origin).port))
+  })
+
+  it('记住的那台服务器，下次启动就是它', async () => {
+    const upstream = await serve((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end('{"which":"upstream"}')
+    })
+    await ipcMain.invoke('ocm:set-target', upstream)
+
+    // A fresh start with nothing named on the command line: the remembered
+    // server is the one the client uses.
+    process.env.OCM_SERVER_URL = ''
+    await bootMainProcess()
+
+    const info = (await ipcMain.invoke('ocm:info')) as { target: string }
+    expect(info.target).toBe(upstream)
+  })
+
+  it('命令行给的地址，比记住的那台优先', async () => {
+    const upstream = await serve((_req, res) => {
+      res.writeHead(200)
+      res.end('{}')
+    })
+    await ipcMain.invoke('ocm:set-target', upstream)
+
+    const named = await serve((_req, res) => {
+      res.writeHead(200)
+      res.end('{}')
+    })
+    process.env.OCM_SERVER_URL = named
+    await bootMainProcess()
+
+    const info = (await ipcMain.invoke('ocm:info')) as { target: string }
+    expect(info.target).toBe(named)
+  })
+})
+
+describe('换服务器的对话框', () => {
+  it('页面上能问出这个对话框', async () => {
+    await ipcMain.invoke('ocm:change-server')
+
+    // The app window plus the dialog.
+    expect(BrowserWindow.instances.length).toBe(2)
+    const dialog = BrowserWindow.instances[1]!
+    expect(dialog.webContents.loadedUrl).toMatch(/^data:text\/html/)
+  })
+
+  it('对话框里带着当前的地址', async () => {
+    const upstream = await serve((_req, res) => {
+      res.writeHead(200)
+      res.end('{}')
+    })
+    await ipcMain.invoke('ocm:set-target', upstream)
+    await ipcMain.invoke('ocm:change-server')
+
+    const dialog = BrowserWindow.instances[1]!
+    expect(decodeURIComponent(dialog.webContents.loadedUrl ?? '')).toContain(upstream)
+  })
+
+  it('对话框自己也没有 Node 能力', () => {
+    void ipcMain.invoke('ocm:change-server')
+
+    const options = BrowserWindow.constructedWith[1] as { webPreferences: Record<string, unknown> }
+    expect(options.webPreferences.nodeIntegration).toBe(false)
+    expect(options.webPreferences.contextIsolation).toBe(true)
+    expect(options.webPreferences.sandbox).toBe(true)
   })
 })
 
