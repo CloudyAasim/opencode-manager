@@ -82,10 +82,14 @@ export const mcpApi = {
     }
   },
 
-  async completeAuth(name: string, code: string): Promise<McpStatus> {
+  async completeAuth(name: string, code: string, directory?: string): Promise<McpStatus> {
+    // The directory says which working directory the flow belongs to. Without
+    // it the request lands on the server's own directory, which is nobody's
+    // - so a person who is not the administrator cannot finish a flow there.
     return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp/${encodeURIComponent(name)}/auth/callback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      params: { directory },
       body: JSON.stringify({ code }),
     })
   },

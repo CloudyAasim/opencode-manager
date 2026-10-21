@@ -28,11 +28,23 @@ const passThroughAuth: MiddlewareHandler = async (c, next) => {
   await next()
 }
 
+/**
+ * The administrator runs this server and keeps the whole OpenCode API.
+ *
+ * The tests that use this are about the proxy forwarding a request
+ * faithfully - the body that arrives, the path that is passed on. Who is
+ * allowed to ask is a question of its own, and it has its own tests below.
+ */
+const asAdministrator: MiddlewareHandler = async (c, next) => {
+  c.set('user' as never, { id: 'id-root', username: 'root', role: 'admin' } as never)
+  await next()
+}
+
 function buildApp() {
   const app = new Hono()
   app.route(
     '/api/opencode',
-    createAuthenticatedOpenCodeProxyRoutes({ forwardRaw: forwardRawMock } as unknown as OpenCodeClient, passThroughAuth, proxyTestDb),
+    createAuthenticatedOpenCodeProxyRoutes({ forwardRaw: forwardRawMock } as unknown as OpenCodeClient, asAdministrator, proxyTestDb),
   )
   return app
 }
@@ -91,15 +103,11 @@ describe('authenticated opencode proxy routes', () => {
     // everything for this user". buildApp() would have passed either way,
     // because an anonymous caller is never cached at all.
     const app = new Hono()
-    const asAlice: MiddlewareHandler = async (c, next) => {
-      c.set('user' as never, { id: 'id-alice', username: 'alice', role: 'user' } as never)
-      await next()
-    }
     app.route(
       '/api/opencode',
       createAuthenticatedOpenCodeProxyRoutes(
         { forwardRaw: forwardRawMock } as unknown as OpenCodeClient,
-        asAlice,
+        asAdministrator,
         proxyTestDb,
       ),
     )
@@ -560,6 +568,14 @@ describe('recording who a new OpenCode session belongs to', () => {
       headers: { 'content-type': 'application/json' },
     })
 
+  /**
+   * A write lands in a working directory, so the request has to name one
+   * that belongs to the person asking. Alice's own assistant workspace is
+   * the one she can always reach.
+   */
+  const aliceDirectory = `${getUserSettingPath('alice')}/assistant`
+  const inAliceWorkspace = `?directory=${encodeURIComponent(aliceDirectory)}`
+
   beforeEach(() => {
     vi.clearAllMocks()
     isLifecycleInitializedMock.mockReturnValue(true)
@@ -601,11 +617,14 @@ describe('recording who a new OpenCode session belongs to', () => {
   it('records a session created at the path with a trailing slash', async () => {
     forwardRawMock.mockResolvedValue(sessionCreated('ses_slash'))
 
-    await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    })
+    await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request(
+      `/api/opencode/session/${inAliceWorkspace}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      },
+    )
 
     expect(recorded('ses_slash')).toMatchObject({ user_id: 'u-alice' })
   })
@@ -616,37 +635,39 @@ describe('recording who a new OpenCode session belongs to', () => {
     // looks nothing like an audit problem.
     forwardRawMock.mockResolvedValue(sessionCreated('ses_body'))
 
-    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    })
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request(
+      `/api/opencode/session${inAliceWorkspace}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      },
+    )
 
     expect(await res.json()).toEqual({ id: 'ses_body' })
     expect(recorded('ses_body')).toMatchObject({ user_id: 'u-alice' })
   })
 
-  it('records nothing when the caller cannot be identified, and says nothing either', async () => {
+  it('refuses a caller it cannot identify, and records nothing', async () => {
     forwardRawMock.mockResolvedValue(sessionCreated('ses_anon'))
 
-    const res = await buildFor(null).request('/api/opencode/session', {
+    const res = await buildFor(null).request(`/api/opencode/session${inAliceWorkspace}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
     })
 
-    expect(res.status).toBe(200)
+    // Nobody to attribute means nobody to trust with a write either: the
+    // request never reaches the upstream, so there is nothing to record.
+    expect(res.status).toBe(403)
     expect(recorded('ses_anon')).toBeNull()
-    // Nothing failed here - there was simply no one to attribute. A warning
-    // would be a lie, and it would be the only way to notice the difference
-    // between this and a genuine write failure.
-    expect(warnSpy).not.toHaveBeenCalled()
+    expect(forwardRawMock).not.toHaveBeenCalled()
   })
 
   it('records nothing for a request that does not create a session', async () => {
     forwardRawMock.mockResolvedValue(sessionCreated('ses_wrong_path'))
 
-    await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session/ses_1/message', {
+    await buildFor({ id: 'u-root', username: 'root', role: 'admin' }).request('/api/opencode/session/ses_1/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
@@ -671,11 +692,14 @@ describe('recording who a new OpenCode session belongs to', () => {
       }),
     )
 
-    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    })
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request(
+      `/api/opencode/session${inAliceWorkspace}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      },
+    )
 
     expect(res.status).toBe(400)
     expect(recorded('ses_rejected')).toBeNull()
@@ -689,11 +713,14 @@ describe('recording who a new OpenCode session belongs to', () => {
       }),
     )
 
-    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    })
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request(
+      `/api/opencode/session${inAliceWorkspace}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      },
+    )
 
     expect(res.status).toBe(200)
     expect(
@@ -706,11 +733,14 @@ describe('recording who a new OpenCode session belongs to', () => {
       new Response('<html>gateway</html>', { status: 200, headers: { 'content-type': 'text/html' } }),
     )
 
-    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request('/api/opencode/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    })
+    const res = await buildFor({ id: 'u-alice', username: 'alice', role: 'user' }).request(
+      `/api/opencode/session${inAliceWorkspace}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      },
+    )
 
     expect(res.status).toBe(200)
     expect(
@@ -750,7 +780,7 @@ describe('recording who a new OpenCode session belongs to', () => {
       ),
     )
 
-    const res = await app.request('/api/opencode/session', {
+    const res = await app.request(`/api/opencode/session?directory=${encodeURIComponent(aliceDirectory)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',

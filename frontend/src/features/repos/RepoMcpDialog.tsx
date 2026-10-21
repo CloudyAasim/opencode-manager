@@ -107,7 +107,7 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
 
   const handleOAuthCompleteAuth = async (code: string) => {
     if (!authDialogServerId) return
-    await mcpApi.completeAuth(authDialogServerId, code)
+    await mcpApi.completeAuth(authDialogServerId, code, directory)
     await fetchStatus()
     invalidateSessionCaches(queryClient)
     setAuthDialogServerId(null)

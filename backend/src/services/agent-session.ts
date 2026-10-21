@@ -129,3 +129,36 @@ export function findAgentSession(db: Database, sessionId: string): AgentSession 
     createdAt: row.created_at,
   }
 }
+
+/**
+ * Several sessions at once.
+ *
+ * A list of sessions is filtered against the ledger, and asking the
+ * database about them one at a time is a round trip per session. One query
+ * with the ids in it is the same answer.
+ */
+export function findAgentSessions(
+  db: Database,
+  sessionIds: readonly string[],
+): Map<string, AgentSession> {
+  const found = new Map<string, AgentSession>()
+  if (sessionIds.length === 0) return found
+
+  const placeholders = sessionIds.map(() => '?').join(', ')
+  const rows = db
+    .prepare(`SELECT * FROM ocm_agent_session WHERE session_id IN (${placeholders})`)
+    .all(...sessionIds) as AgentSessionRow[]
+
+  for (const row of rows) {
+    found.set(row.session_id, {
+      sessionId: row.session_id,
+      userId: row.user_id,
+      username: row.username,
+      role: row.role as AgentSessionRole,
+      directory: row.directory,
+      source: row.source as AgentSessionSource,
+      createdAt: row.created_at,
+    })
+  }
+  return found
+}

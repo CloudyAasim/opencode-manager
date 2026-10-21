@@ -18,7 +18,7 @@ export function getAccessScope(): AccessScope | null {
   return storage.getStore() ?? null
 }
 
-export function isWithinRoots(target: string, roots: string[]): boolean {
+export function isWithinRoots(target: string, roots: readonly string[]): boolean {
   if (roots.length === 0) return false
   const resolved = path.resolve(target)
   return roots.some((root) => {
