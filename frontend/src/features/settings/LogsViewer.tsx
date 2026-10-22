@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Pause, Play, Trash2 } from 'lucide-react'
+import { Pause, Play, ScrollText, Trash2 } from 'lucide-react'
 import type { ManagerLogLevel, ManagerLogSource } from '@opencode-manager/shared/schemas'
 import { Card, CardContent } from '@/components/ui/card'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -130,7 +131,13 @@ export function LogsViewer() {
           className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-md border border-border bg-background p-2 font-mono text-xs"
         >
           {entries.length === 0 ? (
-            <p className="p-4 text-center font-sans text-muted-foreground">{t('settingsPanels.logs.empty')}</p>
+            <PanelMessage
+              size="sm"
+              icon={<ScrollText />}
+              title={t('settingsPanels.logs.empty')}
+              detail={t('settingsPanels.logs.emptyHint')}
+              className="py-4"
+            />
           ) : (
             displayedEntries.map((entry) => (
               <div key={entry.seq} className="flex min-w-0 gap-2">

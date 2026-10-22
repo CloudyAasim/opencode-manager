@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { Badge } from '@/components/ui/badge'
 import { History, Loader2, XCircle, CheckCircle2, Ban, ChevronDown, Trash2 } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import type { ScheduleRun } from '@opencode-manager/shared/types'
 import { getRunTone } from './schedule-utils'
 import { RunDetailPanel } from '@/features/schedules/RunDetailPanel'
@@ -66,13 +67,13 @@ export function RunHistoryCards({
 
   if (!runs?.length) {
     return (
-      <div className="flex items-center justify-center p-6">
-        <div className="text-center">
-          <History className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-          <p className="text-sm font-medium">{t('schedules.runs.noRunsYet')}</p>
-          <p className="text-xs text-muted-foreground mt-1">{t('schedules.runs.noRunsHint')}</p>
-        </div>
-      </div>
+      <PanelMessage
+  size="sm"
+  icon={<History />}
+  title={t('schedules.runs.noRunsYet')}
+  detail={t('schedules.runs.noRunsHint')}
+  className="p-6"
+/>
     )
   }
 

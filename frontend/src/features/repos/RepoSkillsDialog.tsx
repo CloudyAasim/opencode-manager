@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { DialogTitleBar } from '@/components/ui/dialog-layout'
 import { Button } from '@/components/ui/button'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { SkillLibraryList } from '@/components/skills/SkillLibraryList'
@@ -67,20 +68,15 @@ export function RepoSkillsDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
-          <DialogHeader className="p-4 sm:p-6 border-b shrink-0">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <DialogTitle>{t('repo.skills.title')}</DialogTitle>
-                <DialogDescription>
-                  {canLoad ? t('repo.skills.descriptionLoad') : t('repo.skills.descriptionAvailable')}
-                </DialogDescription>
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => setInstallDialogOpen(true)}>
+          <DialogTitleBar
+            title={t('repo.skills.title')}
+            description={canLoad ? t('repo.skills.descriptionLoad') : t('repo.skills.descriptionAvailable')}
+          >
+            <Button type="button" variant="outline" size="sm" onClick={() => setInstallDialogOpen(true)}>
                 <Download className="h-4 w-4 mr-1" />
                 {t('repo.skills.install')}
               </Button>
-            </div>
-          </DialogHeader>
+          </DialogTitleBar>
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <SkillLibraryList
               isLoading={isLoading}

@@ -349,7 +349,7 @@ export function McpOAuthDialog({
                   onClick={handleOpenAuthPage}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  {t('settingsPanels.mcpOAuth.tryAgain')}
+                  {t('common.retry')}
                 </Button>
               )}
             </div>
@@ -373,7 +373,7 @@ export function McpOAuthDialog({
         <DialogFooter className="gap-2 sm:gap-0">
           {step === 'error' && (
             <Button variant="outline" onClick={handleRetry}>
-              {t('settingsPanels.mcpOAuth.tryAgain')}
+              {t('common.retry')}
             </Button>
           )}
           {step !== 'success' && (

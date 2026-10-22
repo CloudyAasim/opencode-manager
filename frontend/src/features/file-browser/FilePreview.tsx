@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, memo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Download, X, Edit3, Save, X as XIcon, WrapText, Eye, Code } from 'lucide-react'
+import { Download, X, Edit3, Save, X as XIcon, WrapText, Eye, Code, FileText } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import type { FileInfo } from '@/types/files'
 import { getFileApiUrl } from '@/api/files'
 import { saveFileFromUrl } from '@/lib/download'
@@ -291,9 +292,13 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
         const displayContent = isMarkdownFile ? localMdContent ?? textContent : textContent
         if (!displayContent) {
           return (
-            <div className="text-center text-muted-foreground py-8">
-              {t('repo.fileBrowser.emptyFile')}
-            </div>
+            <PanelMessage
+  size="sm"
+  icon={<FileText />}
+  title={t('repo.fileBrowser.emptyFile')}
+  detail={t('repo.fileBrowser.emptyFileHint')}
+  className="py-8"
+/>
           )
         }
         
@@ -330,17 +335,25 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
         )
       } catch {
         return (
-          <div className="text-center text-muted-foreground py-8">
-            {t('repo.fileBrowser.cannotPreview')}
-          </div>
+          <PanelMessage
+  size="sm"
+  icon={<Eye />}
+  title={t('repo.fileBrowser.cannotPreview')}
+  detail={t('repo.fileBrowser.cannotPreviewHint')}
+  className="py-8"
+/>
         )
       }
     }
 
     return (
-      <div className="text-center text-muted-foreground py-8">
-        {t('repo.fileBrowser.binaryFile')}
-      </div>
+      <PanelMessage
+  size="sm"
+  icon={<FileText />}
+  title={t('repo.fileBrowser.binaryFile')}
+  detail={t('repo.fileBrowser.binaryFileHint')}
+  className="py-8"
+/>
     )
   }
 

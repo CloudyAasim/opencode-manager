@@ -124,7 +124,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
           className="bg-accent p-4 rounded-lg border border-border overflow-x-auto"
           dangerouslySetInnerHTML={{ __html: svg }}
         />
-        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 max-sm:opacity-100">
           <button
             onClick={() => setIsExpanded(true)}
             className="p-1.5 rounded bg-card hover:bg-card-hover text-muted-foreground hover:text-foreground"

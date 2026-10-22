@@ -9,6 +9,7 @@ import {
   hasSkillMetadata,
 } from './schedule-utils'
 import { Bot, CalendarClock, Clock3, History, Loader2, Pencil, Play, Sparkles, Trash2 } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useScheduleModels } from '@/hooks/useScheduleModels'
 import { resolveScheduleModel } from '@/lib/schedules/schedule-model'
 import { useI18n } from '@/lib/i18n'
@@ -42,13 +43,12 @@ export function JobDetailTab({
 
   if (!selectedJob) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <CalendarClock className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
-          <p className="text-lg font-medium">{t('schedules.jobDetail.noJobSelected')}</p>
-          <p className="mt-2 text-sm text-muted-foreground">{t('schedules.jobDetail.selectJobToViewDetails')}</p>
-        </div>
-      </div>
+      <PanelMessage
+  icon={<CalendarClock />}
+  title={t('schedules.jobDetail.noJobSelected')}
+  detail={t('schedules.jobDetail.selectJobToViewDetails')}
+  className="h-full"
+/>
     )
   }
 

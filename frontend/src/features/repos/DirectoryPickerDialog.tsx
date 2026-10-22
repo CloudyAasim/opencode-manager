@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useQuery } from '@tanstack/react-query'
 import { browseDirectory } from '@/api/filesystem'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Folder, FolderGit2, ChevronUp } from 'lucide-react'
+import { AlertCircle, Folder, FolderGit2, ChevronUp } from 'lucide-react'
 import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
 
@@ -66,9 +67,14 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
           {isLoading ? (
             <PanelLoading className="h-[240px] text-muted-foreground" size="sm" />
           ) : isError ? (
-            <div className="flex h-[240px] items-center justify-center px-4 text-center text-sm text-destructive">
-              {error instanceof Error ? error.message : t('repo.directoryPicker.loadFailed')}
-            </div>
+            <PanelMessage
+              tone="error"
+              size="sm"
+              icon={<AlertCircle />}
+              title={error instanceof Error ? error.message : t('repo.directoryPicker.loadFailed')}
+              detail={t('common.loadFailedHint')}
+              className="h-[240px] px-4"
+            />
           ) : (
             <ul className="divide-y divide-border">
               {data && !data.isRoot && data.parentPath !== null && (
@@ -84,7 +90,9 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
                 </li>
               )}
               {data?.entries.length === 0 && (
-                <li className="px-3 py-4 text-center text-sm text-muted-foreground">{t('repo.directoryPicker.noSubfolders')}</li>
+                <li className="px-3 py-4 text-center text-sm text-muted-foreground">
+                {t('repo.directoryPicker.noSubfolders')}
+              </li>
               )}
               {data?.entries.map((entry) => (
                 <li key={entry.path}>

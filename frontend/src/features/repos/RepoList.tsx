@@ -7,7 +7,9 @@ import { listRepos, deleteRepo, updateRepoOrder, type RepoDeleteResult } from "@
 import { showToast } from "@/lib/toast"
 import { fetchReposGitStatus } from "@/api/git"
 import { DeleteDialog } from "@/components/ui/delete-dialog"
-import { GitBranch, Search, GripVertical } from "lucide-react"
+import { GitBranch, Search, GripVertical, AlertCircle } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
+import { Button } from '@/components/ui/button'
 import type { Repo } from "@/api/types"
 import type { GitStatusResponse } from "@/types/git"
 import { RepoCard } from "./RepoCard"
@@ -173,6 +175,7 @@ export function RepoList() {
     data: repos,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["repos"],
     queryFn: listRepos,
@@ -375,20 +378,28 @@ export function RepoList() {
 
       case !!error:
         return (
-          <div className="text-center p-8 text-destructive">
-            {t('repo.list.failedToLoad')}{" "}
-            {error instanceof Error ? error.message : t('repo.list.unknownError')}
-          </div>
+          <PanelMessage
+  tone="error"
+  icon={<AlertCircle />}
+  title={t('repo.list.failedToLoad')}
+  detail={error instanceof Error ? error.message : t('common.loadFailedHint')}
+  action={
+    <Button variant="outline" size="sm" onClick={() => void refetch()}>
+      {t('common.retry')}
+    </Button>
+  }
+  className="p-8"
+/>
         )
 
       case !repos || repos.length === 0:
         return (
-          <div className="text-center p-12">
-            <GitBranch className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
-            <p className="text-zinc-500">
-              {t('repo.list.empty')}
-            </p>
-          </div>
+          <PanelMessage
+  icon={<GitBranch />}
+  title={t('repo.list.empty')}
+  detail={t('repo.list.emptyHint')}
+  className="p-12"
+/>
         )
 
       default:

@@ -4,7 +4,8 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
+import { DialogTitleBar } from '@/components/ui/dialog-layout'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { SettingsListRow } from '@/components/ui/settings-list'
 import { settingsApi } from '@/api/settings'
@@ -91,9 +92,7 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
 
       <Dialog open={!!editingFile} onOpenChange={(open) => !open && setEditingFile(null)}>
         <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
-          <DialogHeader className="p-4 sm:p-6 border-b">
-            <DialogTitle className="break-all pr-8">{editingFile?.relativePath}</DialogTitle>
-          </DialogHeader>
+          <DialogTitleBar title={editingFile?.relativePath} titleClassName="break-all pr-8" />
 
           <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-4">
             <Textarea

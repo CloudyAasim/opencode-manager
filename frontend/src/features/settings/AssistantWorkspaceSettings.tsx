@@ -3,12 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Folder, FileText, Loader2, RefreshCw, Trash2, RotateCcw, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDestructiveDialog } from '@/components/ui/confirm-destructive-dialog'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
+import { DialogTitleBar } from '@/components/ui/dialog-layout'
 import { Textarea } from '@/components/ui/textarea'
 import { getAssistantWorkspaceContents, resetAssistantWorkspace } from '@/api/repos'
 import { deleteFileOrFolder, saveFileContent, useFile } from '@/api/files'
@@ -164,13 +166,25 @@ export function AssistantWorkspaceSettings() {
           {contentsQuery.isLoading ? (
             <PanelLoading className="py-8" size="sm" />
           ) : contentsQuery.isError ? (
-            <p className="py-6 text-center text-sm text-destructive">
-              {t('settings.assistantWorkspace.loadFailed')}
-            </p>
+            <PanelMessage
+              tone="error"
+              icon={<AlertTriangle />}
+              title={t('settings.assistantWorkspace.loadFailed')}
+              detail={t('common.loadFailedHint')}
+              action={
+                <Button variant="outline" size="sm" onClick={() => void contentsQuery.refetch()}>
+                  {t('common.retry')}
+                </Button>
+              }
+              className="py-6"
+            />
           ) : entries.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              {t('settings.assistantWorkspace.empty')}
-            </p>
+            <PanelMessage
+              icon={<Folder />}
+              title={t('settings.assistantWorkspace.empty')}
+              detail={t('settings.assistantWorkspace.emptyHint')}
+              className="py-6"
+            />
           ) : (
             <ul className="divide-y divide-border/60">
               {entries.map((entry) => (
@@ -227,11 +241,10 @@ export function AssistantWorkspaceSettings() {
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent mobileFullscreen keyboardAware className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
-          <DialogHeader className="p-4 sm:p-6 border-b">
-            <DialogTitle className="break-all pr-8">
-              {t('settings.assistantWorkspace.editTitle', { name: editing?.name ?? '' })}
-            </DialogTitle>
-          </DialogHeader>
+          <DialogTitleBar
+            title={t('settings.assistantWorkspace.editTitle', { name: editing?.name ?? '' })}
+            titleClassName="break-all pr-8"
+          />
           <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-4">
             <Textarea
               value={draft ?? fileContent}

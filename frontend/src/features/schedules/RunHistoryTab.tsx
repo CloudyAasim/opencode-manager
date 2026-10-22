@@ -1,8 +1,9 @@
 import type { ScheduleJob, ScheduleRun } from '@opencode-manager/shared/types'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { History, Loader2, Trash2 } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { RunHistoryCards } from '@/features/schedules/RunHistoryCards'
 import { RunDetailPanel } from '@/features/schedules/RunDetailPanel'
 import { useI18n } from '@/lib/i18n'
@@ -49,11 +50,12 @@ export function RunHistoryTab({
     return (
       <div className="flex min-h-0 flex-1 h-full items-start">
         <Card className="max-w-3xl border-dashed border-border/70 w-full">
-          <CardContent className="flex flex-col items-center p-8 sm:p-10 text-center">
-            <History className="h-10 w-10 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">{t('schedules.jobDetail.noJobSelected')}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{t('schedules.runs.selectJobToView')}</p>
-          </CardContent>
+          <PanelMessage
+  icon={<History />}
+  title={t('schedules.jobDetail.noJobSelected')}
+  detail={t('schedules.runs.selectJobToView')}
+  className="p-8 sm:p-10"
+/>
         </Card>
       </div>
     )

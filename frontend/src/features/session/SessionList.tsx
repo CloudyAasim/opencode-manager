@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Trash2, Pencil, X, Plus } from "lucide-react";
+import { PanelMessage } from '@/components/ui/panel-message';
 import { useI18n } from '@/lib/i18n';
 import { STORAGE_KEYS } from '@/lib/storage-keys';
 
@@ -167,7 +168,7 @@ export const SessionList = ({
         <div className="flex flex-col items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
           <p>{t('session.list.loadFailed')}</p>
           <Button variant="outline" size="sm" onClick={handleRetryNextPage} disabled={isFetchingNextPage}>
-            {t('session.list.retry')}
+            {t('common.retry')}
           </Button>
         </div>
       );
@@ -370,9 +371,13 @@ export const SessionList = ({
       >
         <div className="flex flex-col gap-4">
           {filteredSessions.length === 0 && !isFetchingNextPage ? (
-            <div className="text-sm text-muted-foreground text-center py-4">
-              {t('session.list.noResults')}
-            </div>
+            <PanelMessage
+  size="sm"
+  icon={<Search />}
+  title={t('session.list.noResults')}
+  detail={t('session.list.noResultsHint')}
+  className="py-4"
+/>
           ) : (
             <>
               {pinnedSessions.length > 0 && (
@@ -404,7 +409,7 @@ export const SessionList = ({
             <div className="flex flex-col items-center gap-2 py-4">
               <p className="text-sm text-muted-foreground">{t('session.list.loadMoreFailed')}</p>
               <Button variant="outline" size="sm" onClick={handleRetryNextPage} disabled={isFetchingNextPage}>
-                {t('session.list.retry')}
+                {t('common.retry')}
               </Button>
             </div>
           )}

@@ -192,7 +192,8 @@ export const schedules = {
     selectLabel: 'Select skills for this schedule',
     description:
       'Skills provide domain-specific instructions to the agent. Select which skills should be available when this schedule runs.',
-    empty: 'No skills discovered. Configure skill paths in Settings to make skills available here.',
+    empty: 'No skills discovered.',
+      emptyHint: 'Configure skill paths in Settings to make skills available here.',
     searchPlaceholder: 'Search and select skills...',
     notes: 'Notes',
     notesPlaceholder: 'Optional notes about skill usage for this schedule.',

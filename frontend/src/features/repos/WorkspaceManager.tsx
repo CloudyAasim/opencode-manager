@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { DialogTitleBar } from '@/components/ui/dialog-layout'
 import { GitBranch, Plus, Search, Trash2 } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { workspaceLabel, type RepoSibling } from '@/api/repos'
 import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
@@ -94,10 +96,10 @@ export function WorkspaceManager({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent mobileFullscreen className="flex flex-col gap-0 overflow-hidden p-0 sm:max-h-[85vh] sm:max-w-[560px]">
-          <DialogHeader className="border-b border-border px-4 py-4">
-            <DialogTitle>{t('repo.workspaces')}</DialogTitle>
-            <DialogDescription>{t('repo.workspaceManager.description')}</DialogDescription>
-          </DialogHeader>
+          <DialogTitleBar
+            title={t('repo.workspaces')}
+            description={t('repo.workspaceManager.description')}
+          />
           <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
             <div className="flex items-center justify-between gap-3">
             {manageMode ? (
@@ -233,9 +235,13 @@ export function WorkspaceManager({
               )
             })}
             {filteredWorkspaces.length === 0 && (
-              <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-                {t('repo.workspaceManager.noWorkspaces')}
-              </div>
+              <PanelMessage
+  size="sm"
+  icon={<GitBranch />}
+  title={t('repo.workspaceManager.noWorkspaces')}
+  detail={t('repo.workspaceManager.noWorkspacesHint')}
+  className="px-3 py-6"
+/>
             )}
             </div>
           </div>

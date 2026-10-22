@@ -42,6 +42,7 @@ export const misc = {
     available: '可用',
     noModelsFound: '未找到模型',
     noProvidersFound: '未找到提供商',
+    noProvidersFoundHint: '在设置里添加一个提供商才能选模型。',
     selectModel: '选择模型',
     chooseModel: '选择一个模型',
     moreModels: '更多模型',
@@ -74,6 +75,7 @@ export const misc = {
   changesTab: {
     loadFailed: '加载 Git 状态失败',
     noChanges: '没有未提交的更改',
+    noChangesHint: '工作区是干净的。',
     commitPlaceholder: '提交信息...',
     commit: '提交',
     stagedCount: '（{{n}} 项已暂存）',
@@ -88,6 +90,7 @@ export const misc = {
     monthsAgo: '{{n}} 个月前',
     loadFailed: '加载提交失败',
     noCommits: '未找到提交',
+    noCommitsHint: '这个仓库还没有历史。',
     local: '本地',
     remote: '远程',
   },
@@ -112,6 +115,7 @@ export const misc = {
     loadFailed: '加载分支失败',
     noMatch: '没有匹配“{{query}}”的分支',
     noBranches: '未找到分支',
+    noBranchesHint: '这个仓库还没有分支。',
   },
   fileItem: {
     staged: '已暂存',

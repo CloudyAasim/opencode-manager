@@ -17,12 +17,6 @@ export interface RepoViewModel extends Repo {
   activityTimestamp: number
 }
 
-export interface RepoListSection {
-  title: string
-  repos: RepoViewModel[]
-  emptyMessage?: string
-}
-
 export function getActivityTimestamp(repo: Repo): number {
   return repo.lastAccessedAt ?? repo.lastPulled ?? repo.clonedAt
 }
@@ -140,112 +134,6 @@ export function sortRepos(repos: RepoViewModel[], mode: RepoSortMode, manualOrde
     default:
       return repos
   }
-}
-
-export function groupReposIntoSections(
-  repos: RepoViewModel[],
-  filterMode: RepoFilterMode,
-  sortMode: RepoSortMode
-): RepoListSection[] {
-  if (sortMode === 'manual') {
-    return [{
-      title: 'All Repositories',
-      repos,
-      emptyMessage: repos.length === 0 ? 'No repositories found' : undefined
-    }]
-  }
-
-  if (filterMode === 'attention') {
-    const needsAttention = repos.filter(
-      (repo) =>
-        repo.attentionState.hasChanges ||
-        repo.attentionState.ahead > 0 ||
-        repo.attentionState.behind > 0
-    )
-    
-    if (needsAttention.length === 0) {
-      return [{
-        title: 'Needs Attention',
-        repos: [],
-        emptyMessage: 'No repositories need attention'
-      }]
-    }
-
-    return [{
-      title: 'Needs Attention',
-      repos: needsAttention
-    }]
-  }
-
-  if (filterMode === 'recent') {
-    const recentRepos = repos.filter((repo) => repo.attentionState.isCloneStatusReady)
-    
-    if (recentRepos.length === 0) {
-      return [{
-        title: 'Recent',
-        repos: [],
-        emptyMessage: 'No recently accessed repositories'
-      }]
-    }
-
-    return [{
-      title: 'Recent',
-      repos: recentRepos
-    }]
-  }
-
-  const now = Date.now()
-  const oneDayAgo = now - 24 * 60 * 60 * 1000
-  const needsAttention = repos.filter(
-    (repo) =>
-      repo.attentionState.isCloneStatusReady &&
-      (repo.attentionState.hasChanges ||
-        repo.attentionState.ahead > 0 ||
-        repo.attentionState.behind > 0)
-  )
-
-  const recentThreshold = oneDayAgo
-  const recentlyActive = repos.filter(
-    (repo) =>
-      repo.attentionState.isCloneStatusReady &&
-      repo.activityTimestamp >= recentThreshold
-  )
-
-  const sections: RepoListSection[] = []
-
-  if (needsAttention.length > 0) {
-    sections.push({
-      title: 'Needs Attention',
-      repos: needsAttention
-    })
-  }
-
-  if (recentlyActive.length > 0) {
-    sections.push({
-      title: 'Recent',
-      repos: recentlyActive
-    })
-  }
-
-  const remaining = repos.filter(
-    (repo) =>
-      !needsAttention.includes(repo) && !recentlyActive.includes(repo)
-  )
-
-  if (remaining.length > 0) {
-    sections.push({
-      title: 'All Repositories',
-      repos: remaining
-    })
-  } else if (sections.length === 0) {
-    sections.push({
-      title: 'All Repositories',
-      repos,
-      emptyMessage: repos.length === 0 ? 'No repositories found' : undefined
-    })
-  }
-
-  return sections
 }
 
 export function countAttentionItems(repos: RepoViewModel[]): number {

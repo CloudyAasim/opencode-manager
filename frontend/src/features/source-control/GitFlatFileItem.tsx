@@ -83,7 +83,7 @@ export function GitFlatFileItem({ file, isSelected, onSelect, onStage, onUnstage
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          className="h-6 w-6 p-0 opacity-0 transition-opacity flex-shrink-0 group-hover:opacity-100 max-sm:opacity-100 max-sm:h-11 max-sm:w-11"
           onClick={handleAction}
         >
           {file.staged ? (
@@ -97,7 +97,7 @@ export function GitFlatFileItem({ file, isSelected, onSelect, onStage, onUnstage
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          className="h-6 w-6 p-0 opacity-0 transition-opacity flex-shrink-0 group-hover:opacity-100 max-sm:opacity-100 max-sm:h-11 max-sm:w-11"
           onClick={handleDiscard}
           title={t('misc.fileItem.discardChanges')}
         >

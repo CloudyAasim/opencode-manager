@@ -4,6 +4,7 @@ import { TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { Sparkles } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useI18n } from '@/lib/i18n'
 
 type SkillsTabProps = {
@@ -38,10 +39,12 @@ export function SkillsTab({
         {skillsLoading ? (
           <PanelLoading className="py-8" size="md" />
         ) : skills.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-card/50 p-6 text-center">
-            <Sparkles className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">{t('schedules.skills.empty')}</p>
-          </div>
+          <PanelMessage
+  icon={<Sparkles />}
+  title={t('schedules.skills.empty')}
+  detail={t('schedules.skills.emptyHint')}
+  className="p-6"
+/>
         ) : (
           <MultiSelect
             value={skillSlugs}

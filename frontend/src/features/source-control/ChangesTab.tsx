@@ -122,7 +122,11 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
               )}
             </>
           ) : (
-            <PanelMessage icon={<FileText />} title={t('misc.changesTab.noChanges')} />
+            <PanelMessage
+              icon={<FileText />}
+              title={t('misc.changesTab.noChanges')}
+              detail={t('misc.changesTab.noChangesHint')}
+            />
           )}
         </div>
 

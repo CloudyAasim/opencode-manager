@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useId, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Loader2, Download, ChevronDown } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
+import { DialogTitleBar } from '@/components/ui/dialog-layout'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CodeEditor } from '@/components/ui/code-editor'
 import { EditorFindBar } from '@/components/ui/editor-find-bar'
@@ -194,11 +195,10 @@ export function OpenCodeConfigEditor({
           }}
           className="flex w-full min-w-0 flex-col gap-0 p-0 sm:max-h-[85vh] sm:max-w-4xl sm:p-6"
         >
-          <DialogHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b p-4 sm:p-6">
-            <DialogTitle className="text-lg font-semibold sm:text-xl">
-              {t('settingsPanels.configEditor.editTitle', { name: draftSource.name })}
-            </DialogTitle>
-          </DialogHeader>
+          <DialogTitleBar
+            title={t('settingsPanels.configEditor.editTitle', { name: draftSource.name })}
+            titleClassName="text-lg font-semibold sm:text-xl"
+          />
 
           <details
             open

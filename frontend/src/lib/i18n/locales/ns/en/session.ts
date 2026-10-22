@@ -2,12 +2,12 @@ export const session = {
   list: {
     loading: 'Loading sessions...',
     loadFailed: 'Failed to load sessions.',
-    retry: 'Retry',
     emptyTitle: 'No sessions yet',
     emptyHint: 'Click here to start a new session',
     loadMoreFailed: 'Failed to load more sessions.',
     loadingMore: 'Loading more sessions...',
     noResults: 'No sessions found',
+    noResultsHint: 'Try a different search, or start a new session.',
     newSession: 'New session',
     newSessionAria: 'Start a new session',
     pinned: 'Pinned',

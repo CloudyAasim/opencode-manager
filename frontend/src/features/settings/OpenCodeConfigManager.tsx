@@ -2,6 +2,7 @@ import { useState, useRef, useId } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { cn } from '@/lib/utils'
 import { Loader2, Edit, Download, RotateCcw, FileText, ChevronDown, AlertTriangle } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { RestartServerDialog } from './RestartServerDialog'
@@ -235,9 +236,12 @@ export function OpenCodeConfigManager() {
       />
 
       {!config ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          {t('settingsPanels.configManager.noConfig')}
-        </p>
+        <PanelMessage
+  icon={<FileText />}
+  title={t('settingsPanels.configManager.noConfig')}
+  detail={t('settingsPanels.configManager.noConfigHint')}
+  className="py-8"
+/>
       ) : (
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -18,7 +18,6 @@ export const ui = {
   deleteDialog: {
     warning: '这将永久删除“{{itemName}}”。此操作无法撤销。',
     delete: '删除',
-    deleteConfiguration: '删除配置',
     deleting: '删除中…',
   },
   dialog: {
@@ -58,7 +57,6 @@ export const ui = {
   },
   errorBoundary: {
     title: '出错了',
-    tryAgain: '重试',
   },
   header: {
     settings: '设置',

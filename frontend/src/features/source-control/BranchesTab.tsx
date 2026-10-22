@@ -237,6 +237,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
             title={searchQuery.trim()
               ? t('misc.branches.noMatch', { query: searchQuery.trim() })
               : t('misc.branches.noBranches')}
+            detail={t('misc.branches.noBranchesHint')}
           />
         )}
       </div>

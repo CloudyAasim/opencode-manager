@@ -42,6 +42,7 @@ export const misc = {
     available: 'Available',
     noModelsFound: 'No models found',
     noProvidersFound: 'No providers found',
+    noProvidersFoundHint: 'Add a provider in Settings to pick a model.',
     selectModel: 'Select model',
     chooseModel: 'Choose a model',
     moreModels: 'More models',
@@ -74,6 +75,7 @@ export const misc = {
   changesTab: {
     loadFailed: 'Failed to load git status',
     noChanges: 'No uncommitted changes',
+    noChangesHint: 'The working tree is clean.',
     commitPlaceholder: 'Commit message...',
     commit: 'Commit',
     stagedCount: '({{n}} staged)',
@@ -88,6 +90,7 @@ export const misc = {
     monthsAgo: '{{n}}mo ago',
     loadFailed: 'Failed to load commits',
     noCommits: 'No commits found',
+    noCommitsHint: 'This repository has no history yet.',
     local: 'Local',
     remote: 'Remote',
   },
@@ -112,6 +115,7 @@ export const misc = {
     loadFailed: 'Failed to load branches',
     noMatch: 'No branches match "{{query}}"',
     noBranches: 'No branches found',
+    noBranchesHint: 'This repository has no branches yet.',
   },
   fileItem: {
     staged: 'staged',

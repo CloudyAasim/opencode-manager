@@ -18,7 +18,6 @@ export const ui = {
   deleteDialog: {
     warning: 'This will permanently delete "{{itemName}}". This action cannot be undone.',
     delete: 'Delete',
-    deleteConfiguration: 'Delete Configuration',
     deleting: 'Deleting...',
   },
   dialog: {
@@ -58,7 +57,6 @@ export const ui = {
   },
   errorBoundary: {
     title: 'Something went wrong',
-    tryAgain: 'Try again',
   },
   header: {
     settings: 'Settings',

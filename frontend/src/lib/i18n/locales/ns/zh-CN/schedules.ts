@@ -186,7 +186,8 @@ export const schedules = {
   skills: {
     selectLabel: '为此计划选择技能',
     description: '技能为智能体提供特定领域的指令。选择此计划运行时应可用的技能。',
-    empty: '未发现技能。在“设置”中配置技能路径后即可在此使用。',
+    empty: '未发现技能。',
+    emptyHint: '请在设置中配置技能路径，这里才会有技能可用。',
     searchPlaceholder: '搜索并选择技能…',
     notes: '备注',
     notesPlaceholder: '关于此计划使用技能的可选备注。',

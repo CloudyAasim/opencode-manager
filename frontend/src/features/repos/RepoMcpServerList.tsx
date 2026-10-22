@@ -105,7 +105,7 @@ export function RepoMcpServerList({
           action={
             <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
               <RefreshCw className="h-3 w-3 mr-1" />
-              {t('repo.mcp.retry')}
+              {t('common.retry')}
             </Button>
           }
         />

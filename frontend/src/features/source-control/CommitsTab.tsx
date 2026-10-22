@@ -54,7 +54,11 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
 
   if (!data?.commits || data.commits.length === 0) {
     return (
-      <PanelMessage icon={<GitCommit />} title={t('misc.commitsTab.noCommits')} />
+      <PanelMessage
+        icon={<GitCommit />}
+        title={t('misc.commitsTab.noCommits')}
+        detail={t('misc.commitsTab.noCommitsHint')}
+      />
     )
   }
 

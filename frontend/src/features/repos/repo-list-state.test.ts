@@ -8,7 +8,6 @@ import {
   filterReposBySearch,
   filterReposByMode,
   sortRepos,
-  groupReposIntoSections,
   countAttentionItems,
   type RepoViewModel,
 } from './repo-list-state'
@@ -292,61 +291,6 @@ describe('repo-list-state', () => {
       const repos = [createViewModel(1), createViewModel(2)]
       const result = sortRepos(repos, 'manual', [])
       expect(result).toEqual(repos)
-    })
-  })
-
-  describe('groupReposIntoSections', () => {
-    const createViewModel = (id: number, overrides: Partial<Repo & { activityTimestamp: number }> = {}): RepoViewModel => {
-      const repo = createMockRepo({ id, ...overrides })
-      return {
-        ...repo,
-        attentionState: getAttentionState(repo),
-        activityTimestamp: overrides.activityTimestamp ?? getActivityTimestamp(repo),
-      }
-    }
-
-    it('should return single section for manual sort mode', () => {
-      const repos = [createViewModel(1), createViewModel(2)]
-      const result = groupReposIntoSections(repos, 'all', 'manual')
-      expect(result).toHaveLength(1)
-      expect(result[0].title).toBe('All Repositories')
-    })
-
-    it('should return attention section for attention filter', () => {
-      const now = Date.now()
-      const repos: RepoViewModel[] = [
-        {
-          ...createMockRepo({ id: 1 }),
-          activityTimestamp: now,
-          attentionState: { hasChanges: true, ahead: 0, behind: 0, isCloneStatusReady: true }
-        },
-        {
-          ...createMockRepo({ id: 2 }),
-          activityTimestamp: now,
-          attentionState: { hasChanges: false, ahead: 0, behind: 0, isCloneStatusReady: true }
-        },
-      ]
-      const result = groupReposIntoSections(repos, 'attention', 'recent')
-      expect(result).toHaveLength(1)
-      expect(result[0].title).toBe('Needs Attention')
-      expect(result[0].repos).toHaveLength(1)
-    })
-
-    it('should group repos into recent and all sections', () => {
-      const now = Date.now()
-      const oneHourAgo = now - 60 * 60 * 1000
-      const repos = [
-        createViewModel(1, {
-          activityTimestamp: now,
-          attentionState: { hasChanges: false, ahead: 0, behind: 0, isCloneStatusReady: true }
-        }),
-        createViewModel(2, {
-          activityTimestamp: oneHourAgo,
-          attentionState: { hasChanges: false, ahead: 0, behind: 0, isCloneStatusReady: true }
-        }),
-      ]
-      const result = groupReposIntoSections(repos, 'all', 'recent')
-      expect(result.length).toBeGreaterThanOrEqual(1)
     })
   })
 

@@ -3,8 +3,9 @@ import { PanelLoading } from '@/components/ui/panel-loading'
 import type { CreatePromptTemplateRequest } from '@opencode-manager/shared/types'
 import type { PromptDialog } from '@/hooks/useScheduleUrlState'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { FileText, Plus, Upload } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { usePromptTemplates, useDeletePromptTemplate } from '@/hooks/usePromptTemplates'
 import { parseMarkdownTemplate } from '@/lib/schedules/markdownTemplate'
 import { PromptTemplateDialog } from './PromptTemplateDialog'
@@ -115,17 +116,12 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
         ) : templates.length === 0 ? (
           <div className="flex min-h-full items-center justify-center">
             <Card className="max-w-md border-dashed border-border/70">
-              <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-                <div className="rounded-full border border-border bg-muted/40 p-4">
-                  <FileText className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-lg font-semibold">{t('schedules.promptTemplates.emptyTitle')}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t('schedules.promptTemplates.emptyDescription')}
-                  </p>
-                </div>
-              </CardContent>
+              <PanelMessage
+                icon={<FileText />}
+                title={t('schedules.promptTemplates.emptyTitle')}
+                detail={t('schedules.promptTemplates.emptyDescription')}
+                className="p-8"
+              />
             </Card>
           </div>
         ) : (

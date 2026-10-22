@@ -292,7 +292,7 @@ export function FileDiffView({
             >
               <div className="text-sm font-medium text-foreground truncate group-hover:text-primary group-hover:underline flex items-center gap-1">
                 {fileName}
-                <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ExternalLink className="w-3 h-3 opacity-0 transition-opacity group-hover:opacity-100 max-sm:opacity-100" />
               </div>
               {dirPath && (
                 <div className="text-xs text-muted-foreground truncate">

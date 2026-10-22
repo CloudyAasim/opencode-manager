@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CalendarClock, Plus, ArrowLeft, Play, Pencil, Trash2, Pause, PlayCircle, Clock3, History, SlidersHorizontal } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 
 import { useScheduleUrlState } from '@/hooks/useScheduleUrlState'
 import type { ScheduleTab } from '@/hooks/useScheduleUrlState'
@@ -503,47 +504,41 @@ export function GlobalSchedulesView() {
             {!hasJobs ? (
               <div className="flex min-h-full items-center justify-center">
                 <Card className="max-w-md border-dashed border-border/70">
-                  <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-                    <div className="rounded-full border border-border bg-muted/40 p-4">
-                      <CalendarClock className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-lg font-semibold">{t('schedules.global.noSchedulesYet')}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {t('schedules.global.noSchedulesHint')}
-                      </p>
-                    </div>
-                    <Button onClick={() => navigate('/')}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t('schedules.global.goToRepositories')}
-                    </Button>
-                  </CardContent>
+                  <PanelMessage
+                    icon={<CalendarClock />}
+                    title={t('schedules.global.noSchedulesYet')}
+                    detail={t('schedules.global.noSchedulesHint')}
+                    action={
+                      <Button onClick={() => navigate('/')}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        {t('schedules.global.goToRepositories')}
+                      </Button>
+                    }
+                    className="p-8"
+                  />
                 </Card>
               </div>
             ) : filteredAndSortedJobs.length === 0 ? (
               <div className="flex min-h-full items-center justify-center">
                 <Card className="max-w-md border-dashed border-border/70">
-                  <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-                    <div className="rounded-full border border-border bg-muted/40 p-4">
-                      <CalendarClock className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-lg font-semibold">{t('schedules.global.noMatching')}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {t('schedules.global.tryAdjustingFilters')}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setStatusFilter('all')
-                        setScheduleModeFilter('all')
-                        setRepoFilter('all')
-                      }}
-                    >
-                      {t('schedules.global.clearFilters')}
-                    </Button>
-                  </CardContent>
+                  <PanelMessage
+                    icon={<CalendarClock />}
+                    title={t('schedules.global.noMatching')}
+                    detail={t('schedules.global.tryAdjustingFilters')}
+                    action={
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setStatusFilter('all')
+                          setScheduleModeFilter('all')
+                          setRepoFilter('all')
+                        }}
+                      >
+                        {t('schedules.global.clearFilters')}
+                      </Button>
+                    }
+                    className="p-8"
+                  />
                 </Card>
               </div>
             ) : (
@@ -817,32 +812,34 @@ export function GlobalSchedulesView() {
             ) : allRuns.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <Card className="max-w-md border-dashed border-border/70">
-                  <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-                    <div className="rounded-full border border-border bg-muted/40 p-4">
-                      <History className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-lg font-semibold">{t('schedules.global.noRunsFound')}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {runStatusFilter !== 'all' || runRepoFilter !== 'all' || runTriggerFilter !== 'all'
-                          ? t('schedules.global.tryAdjustingFilters')
-                          : t('schedules.global.scheduleRunsWillAppear')}
-                      </p>
-                    </div>
-                    {(runStatusFilter !== 'all' || runRepoFilter !== 'all' || runTriggerFilter !== 'all' || runSortOption !== 'startedAt') && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setRunStatusFilter('all')
-                          setRunRepoFilter('all')
-                          setRunTriggerFilter('all')
-                          setRunSortOption('startedAt')
-                        }}
-                      >
-                        {t('schedules.global.clearFilters')}
-                      </Button>
-                    )}
-                  </CardContent>
+                  <PanelMessage
+                    icon={<History />}
+                    title={t('schedules.global.noRunsFound')}
+                    detail={
+                      runStatusFilter !== 'all' || runRepoFilter !== 'all' || runTriggerFilter !== 'all'
+                        ? t('schedules.global.tryAdjustingFilters')
+                        : t('schedules.global.scheduleRunsWillAppear')
+                    }
+                    action={
+                      (runStatusFilter !== 'all' ||
+                        runRepoFilter !== 'all' ||
+                        runTriggerFilter !== 'all' ||
+                        runSortOption !== 'startedAt') && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setRunStatusFilter('all')
+                            setRunRepoFilter('all')
+                            setRunTriggerFilter('all')
+                            setRunSortOption('startedAt')
+                          }}
+                        >
+                          {t('schedules.global.clearFilters')}
+                        </Button>
+                      )
+                    }
+                    className="p-8"
+                  />
                 </Card>
               </div>
             ) : (

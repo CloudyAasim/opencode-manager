@@ -31,6 +31,8 @@ interface SettingsListProps {
   isEmpty: boolean
   emptyTitle?: string
   emptyHint?: string
+  emptyAction?: ReactNode
+  errorAction?: ReactNode
   loadingLabel?: string
   errorTitle?: string
   maxHeightClassName?: string
@@ -57,6 +59,8 @@ export function SettingsList({
   isEmpty,
   emptyTitle,
   emptyHint,
+  emptyAction,
+  errorAction,
   loadingLabel,
   errorTitle,
   maxHeightClassName,
@@ -72,9 +76,11 @@ export function SettingsList({
   if (error) {
     return (
       <PanelMessage
-        icon={<AlertCircle className="text-destructive" />}
+        tone="error"
+        icon={<AlertCircle />}
         title={errorTitle ?? t('ui.settingsList.failedToLoad')}
         detail={error.message}
+        action={errorAction}
         className="py-6"
       />
     )
@@ -84,7 +90,8 @@ export function SettingsList({
     return (
       <div className="h-auto max-h-40 min-h-24 rounded-lg border border-dashed border-border bg-card/50 p-6 text-center text-muted-foreground [[data-opencode-settings]_&]:rounded-none [[data-opencode-settings]_&]:border-0 [[data-opencode-settings]_&]:bg-transparent">
         <p className="text-sm font-medium text-foreground">{emptyTitle}</p>
-        <p className="text-xs mt-1">{emptyHint}</p>
+        {emptyHint && <p className="text-xs mt-1">{emptyHint}</p>}
+        {emptyAction && <div className="mt-3 flex items-center justify-center gap-2">{emptyAction}</div>}
       </div>
     )
   }

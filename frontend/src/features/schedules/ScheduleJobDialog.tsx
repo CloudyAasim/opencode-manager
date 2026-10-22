@@ -10,7 +10,8 @@ import type { Repo } from '@/api/types'
 import { OPENCODE_API_ENDPOINT } from '@/config'
 import { Button } from '@/components/ui/button'
 import type { ComboboxOption } from '@/components/ui/combobox'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { DialogTitleBar } from '@/components/ui/dialog-layout'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   buildCronExpressionFromPreset,
@@ -312,12 +313,10 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
         mobileFullscreen
         className="flex h-dvh max-h-dvh w-full max-w-4xl flex-col gap-0 overflow-hidden border-border bg-background p-0 shadow-lg sm:h-[min(85vh,760px)] sm:max-h-[85vh] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
       >
-        <DialogHeader className="shrink-0 space-y-1 border-b border-border px-3 sm:px-6 py-4">
-          <DialogTitle>{job ? t('schedules.scheduleDialog.editTitle') : t('schedules.scheduleDialog.newTitle')}</DialogTitle>
-          <DialogDescription className="mt-0">
-            {t('schedules.scheduleDialog.description')}
-          </DialogDescription>
-        </DialogHeader>
+        <DialogTitleBar
+          title={job ? t('schedules.scheduleDialog.editTitle') : t('schedules.scheduleDialog.newTitle')}
+          description={t('schedules.scheduleDialog.description')}
+        />
 
         <Tabs defaultValue="basics" className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="border-b border-border px-3 sm:px-6 pb-3">

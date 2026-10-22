@@ -46,7 +46,7 @@ class ErrorBoundaryInner extends Component<InnerProps, State> {
           </div>
           <Button variant="outline" onClick={this.reset} className="gap-2">
             <RefreshCw className="w-4 h-4" />
-            {this.props.t('ui.errorBoundary.tryAgain')}
+            {this.props.t('common.retry')}
           </Button>
         </div>
       )

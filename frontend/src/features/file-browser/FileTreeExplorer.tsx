@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, memo } from 'react'
 import { ChevronDown, ChevronRight, File, Folder, FolderOpen, RefreshCw } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { getFileApiUrl } from '@/api/files'
 import type { FileInfo } from '@/types/files'
 import { cn } from '@/lib/utils'
@@ -177,7 +178,13 @@ export const FileTreeExplorer = memo(function FileTreeExplorer({
             />
           ))
         ) : (
-          <div className="px-3 py-6 text-center text-sm text-muted-foreground">{t('repo.fileBrowser.noFiles')}</div>
+          <PanelMessage
+  size="sm"
+  icon={<Folder />}
+  title={t('repo.fileBrowser.noFiles')}
+  detail={t('repo.fileBrowser.noFilesHint')}
+  className="px-3 py-6"
+/>
         )}
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, CheckCircle, KeyRound, Loader2, RefreshCw, ShieldCheck, Trash2, UserPlus } from 'lucide-react'
 import { adminUsersApi, type ManagedUser, type UserRole } from '@/api/adminUsers'
@@ -252,9 +253,25 @@ export function UsersSettings() {
           {usersQuery.isLoading ? (
             <PanelLoading className="py-6" size="sm" />
           ) : usersQuery.isError ? (
-            <p className="py-3 text-center text-sm text-destructive">{t('settings.users.loadFailed')}</p>
+            <PanelMessage
+              tone="error"
+              icon={<AlertCircle />}
+              title={t('settings.users.loadFailed')}
+              detail={t('common.loadFailedHint')}
+              action={
+                <Button variant="outline" size="sm" onClick={() => void usersQuery.refetch()}>
+                  {t('common.retry')}
+                </Button>
+              }
+              className="py-3"
+            />
           ) : users.length === 0 ? (
-            <p className="py-3 text-center text-sm text-muted-foreground">{t('settings.users.empty')}</p>
+            <PanelMessage
+              icon={<ShieldCheck />}
+              title={t('settings.users.empty')}
+              detail={t('settings.users.emptyHint')}
+              className="py-3"
+            />
           ) : (
             users.map((managedUser) => {
               const isSelf = managedUser.id === user?.id

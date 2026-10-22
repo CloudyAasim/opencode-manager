@@ -2,12 +2,12 @@ export const session = {
   list: {
     loading: '正在加载会话…',
     loadFailed: '加载会话失败。',
-    retry: '重试',
     emptyTitle: '暂无会话',
     emptyHint: '点击此处开始新会话',
     loadMoreFailed: '加载更多会话失败。',
     loadingMore: '正在加载更多会话…',
     noResults: '未找到会话',
+    noResultsHint: '换个词再找，或者直接开始一个新会话。',
     newSession: '新建会话',
     newSessionAria: '开始一个新会话',
     pinned: '已置顶',

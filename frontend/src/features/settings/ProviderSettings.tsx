@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
-import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2 } from 'lucide-react'
+import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2, KeyRound } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { providerCredentialsApi, getProviders } from '@/api/providers'
 import type { Provider } from '@/api/providers'
 import { oauthApi, type OAuthAuthorizeResponse } from '@/api/oauth'
@@ -184,9 +185,13 @@ export function ProviderSettings() {
         {oauthProviders.length === 0 ? (
           <Card className="bg-card border-border">
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground text-center">
-                {t('settingsPanels.provider.noOauthProviders')}
-              </p>
+              <PanelMessage
+  size="sm"
+  icon={<KeyRound />}
+  title={t('settingsPanels.provider.noOauthProviders')}
+  detail={t('settingsPanels.provider.noOauthProvidersHint')}
+  className="pt-6"
+/>
             </CardContent>
           </Card>
         ) : (

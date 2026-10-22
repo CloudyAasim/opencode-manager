@@ -19,7 +19,9 @@ describe('DialogLayout', () => {
       </DialogLayout>,
     )
 
-    const header = screen.getByText('Edit agent').closest('div')
+    // The title sits in a column of its own now, so the bar that carries the
+    // rule under it is the header, one level above the title.
+    const header = screen.getByText('Edit agent').closest('div')?.parentElement
     expect(header?.className).toContain('border-b')
 
     const body = screen.getByText('body').parentElement

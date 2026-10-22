@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, CheckCircle, History, Loader2, RefreshCw, Trash2, FileCog } from 'lucide-react'
 import { auditApi, type OpenCodeConfigAuditEntry } from '@/api/audit'
@@ -210,9 +211,25 @@ export function AuditSettings() {
           {auditQuery.isLoading ? (
             <PanelLoading className="py-8" size="sm" />
           ) : auditQuery.isError ? (
-            <p className="py-6 text-center text-sm text-destructive">{t('settings.audit.loadFailed')}</p>
+            <PanelMessage
+              tone="error"
+              icon={<AlertCircle />}
+              title={t('settings.audit.loadFailed')}
+              detail={t('common.loadFailedHint')}
+              action={
+                <Button variant="outline" size="sm" onClick={() => void auditQuery.refetch()}>
+                  {t('common.retry')}
+                </Button>
+              }
+              className="py-6"
+            />
           ) : entries.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">{t('settings.audit.empty')}</p>
+            <PanelMessage
+              icon={<History />}
+              title={t('settings.audit.empty')}
+              detail={t('settings.audit.emptyHint')}
+              className="py-6"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] border-collapse text-left text-sm">
@@ -271,9 +288,25 @@ export function AuditSettings() {
           {configQuery.isLoading ? (
             <PanelLoading className="py-8" size="sm" />
           ) : configQuery.isError ? (
-            <p className="py-6 text-center text-sm text-destructive">{t('settings.audit.loadFailed')}</p>
+            <PanelMessage
+              tone="error"
+              icon={<AlertCircle />}
+              title={t('settings.audit.loadFailed')}
+              detail={t('common.loadFailedHint')}
+              action={
+                <Button variant="outline" size="sm" onClick={() => void configQuery.refetch()}>
+                  {t('common.retry')}
+                </Button>
+              }
+              className="py-6"
+            />
           ) : configEntries.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">{t('settings.audit.configEmpty')}</p>
+            <PanelMessage
+              icon={<FileCog />}
+              title={t('settings.audit.configEmpty')}
+              detail={t('settings.audit.configEmptyHint')}
+              className="py-6"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] border-collapse text-left text-sm">

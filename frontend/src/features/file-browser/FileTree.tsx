@@ -12,6 +12,7 @@ import {
   Download,
   Copy,
 } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
@@ -380,7 +381,13 @@ export const FileTree = memo(function FileTree({
   if (files.length === 0) {
     return (
       <>
-        <div className="text-center text-muted-foreground py-8">{t('repo.fileBrowser.noFiles')}</div>
+        <PanelMessage
+  size="sm"
+  icon={<Folder />}
+  title={t('repo.fileBrowser.noFiles')}
+  detail={t('repo.fileBrowser.noFilesHint')}
+  className="py-8"
+/>
         {deleteDialog}
       </>
     )

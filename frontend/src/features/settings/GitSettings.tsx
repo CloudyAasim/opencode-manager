@@ -3,6 +3,7 @@ import { PanelLoading } from '@/components/ui/panel-loading'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSettings } from '@/hooks/useSettings'
 import { Loader2, Plus, Trash2, Save, User, Key, Pencil } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { showToast } from '@/lib/toast'
 import { GitCredentialDialog, type GitCredentialSaveOptions } from './GitCredentialDialog'
 import { RestartServerDialog } from './RestartServerDialog'
@@ -286,11 +287,13 @@ export function GitSettings() {
               </div>
 
               {gitCredentials.length === 0 ? (
-               <div className="rounded-lg border border-dashed border-border p-4 text-center">
-                 <p className="text-sm text-muted-foreground">
-                   {t('settingsPanels.git.noCredentials')}
-                 </p>
-               </div>
+               <PanelMessage
+  size="sm"
+  icon={<Key />}
+  title={t('settingsPanels.git.noCredentials')}
+  detail={t('settingsPanels.git.noCredentialsHint')}
+  className="p-4"
+/>
              ) : (
                 <div className="min-w-0 overflow-x-auto rounded-lg border border-border">
                  <table className="w-full text-sm">

@@ -1,5 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Search, Star, Trash2, X } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { useVariants } from '@/hooks/useVariants'
 import { formatModelName, formatProviderName, getProviders } from '@/api/providers'
@@ -731,7 +732,14 @@ export function ModelQuickSelect({
                       )}
                     </div>
                     {filteredProviderItems.length === 0 && (
-                      <div className="py-10 text-center text-sm text-muted-foreground">{t('misc.modelQuickSelect.noProvidersFound')}</div>
+                      <PanelMessage
+  size="sm"
+  icon={<Search />}
+  title={t('misc.modelQuickSelect.noProvidersFound')}
+
+  detail={t('misc.modelQuickSelect.noProvidersFoundHint')}
+  className="py-10"
+/>
                     )}
                   </div>
                 )}

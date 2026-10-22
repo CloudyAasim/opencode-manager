@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { SettingsList } from '@/components/ui/settings-list'
-import { Plus, Loader2, RefreshCw } from 'lucide-react'
+import { Plus, Loader2, RefreshCw, Plug } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { AddMcpServerDialog } from './AddMcpServerDialog'
 import { McpServerCard } from './McpServerCard'
@@ -178,9 +179,12 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
 
   if (!config) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">{t('settingsPanels.mcpManager.noConfig')}</p>
-      </div>
+      <PanelMessage
+  icon={<Plug />}
+  title={t('settingsPanels.mcpManager.noConfig')}
+  detail={t('settingsPanels.mcpManager.noConfigHint')}
+  className="py-8"
+/>
     )
   }
 

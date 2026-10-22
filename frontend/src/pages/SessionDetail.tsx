@@ -6,6 +6,7 @@ import { MessageThread } from "@/features/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/features/message/PromptInput";
 import { FloatingTTSButton } from '@/features/message/FloatingTTSButton'
 import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare, FileText, Command as CommandIcon } from "lucide-react";
+import { PanelMessage } from '@/components/ui/panel-message';
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/features/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
@@ -179,9 +180,13 @@ export function SessionDetail() {
           {panelFile && !panelFile.isDirectory ? (
             <FilePreview key={panelFile.path} file={panelFile} />
           ) : (
-            <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
-              {t('repo.fileBrowser.selectFileToPreview')}
-            </div>
+            <PanelMessage
+  size="sm"
+  icon={<FileText />}
+  title={t('repo.fileBrowser.selectFileToPreview')}
+  detail={t('repo.fileBrowser.selectFileToPreviewHint')}
+  className="h-full p-4"
+/>
           )}
         </div>
       </div>

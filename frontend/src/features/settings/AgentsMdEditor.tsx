@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Save, RotateCcw } from 'lucide-react'
+import { AlertCircle, Loader2, Save, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CodeEditor } from '@/components/ui/code-editor'
 import { EditorFindBar } from '@/components/ui/editor-find-bar'
@@ -21,7 +22,7 @@ export function AgentsMdEditor() {
   const savedContentRef = useRef('')
   savedContentRef.current = savedContent
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['agents-md'],
     queryFn: () => settingsApi.getAgentsMd(),
   })
@@ -84,9 +85,18 @@ export function AgentsMdEditor() {
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-500">
-        {t('settingsPanels.agentsMd.loadFailed')}
-      </div>
+      <PanelMessage
+        tone="error"
+        icon={<AlertCircle />}
+        title={t('settingsPanels.agentsMd.loadFailed')}
+        detail={t('common.loadFailedHint')}
+        action={
+          <Button variant="outline" size="sm" onClick={() => void refetch()}>
+            {t('common.retry')}
+          </Button>
+        }
+        className="py-8"
+      />
     )
   }
 

@@ -198,7 +198,7 @@ export function SessionPanel({
                     type="button"
                     onClick={() => removeTab(id)}
                     aria-label={t('navigation.remove')}
-                    className="h-7 rounded-r-md px-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                    className="h-7 rounded-r-md px-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 max-sm:opacity-100"
                   >
                     <X className="h-3 w-3" />
                   </button>

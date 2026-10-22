@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Check, Download } from 'lucide-react'
+import { AlertCircle, Loader2, Check, Download } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { settingsApi } from '@/api/settings'
@@ -19,7 +20,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
   const queryClient = useQueryClient()
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['opencode-versions'],
     queryFn: () => settingsApi.getOpenCodeVersions(),
     enabled: open,
@@ -87,9 +88,18 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
         )}
 
         {error && (
-          <div className="text-center py-8 text-red-500">
-            {t('settingsPanels.versionSelect.loadFailed')}
-          </div>
+          <PanelMessage
+            tone="error"
+            icon={<AlertCircle />}
+            title={t('settingsPanels.versionSelect.loadFailed')}
+            detail={t('common.loadFailedHint')}
+            action={
+              <Button variant="outline" size="sm" onClick={() => void refetch()}>
+                {t('common.retry')}
+              </Button>
+            }
+            className="py-8"
+          />
         )}
 
         {data && (

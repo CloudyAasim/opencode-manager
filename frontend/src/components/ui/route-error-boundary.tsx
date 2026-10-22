@@ -104,7 +104,7 @@ export function RouteErrorBoundary() {
         {isRetryable && (
           <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
             <RefreshCw className="w-4 h-4" />
-            {t('ui.routeErrorBoundary.tryAgain')}
+            {t('common.retry')}
           </Button>
         )}
       </div>
