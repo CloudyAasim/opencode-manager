@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import { Bot, CalendarClock, Folder, FolderGit2, GitCommitHorizontal, LogOut, Plug, Settings, ShieldOff, Sparkles, TerminalSquare } from 'lucide-react'
-import { getAssistantPath, isAssistantPath } from '@/lib/navigation'
+import { getAssistantPath, isAssistantPath, isProjectPath, isSettingsPath } from '@/lib/navigation'
 
 export interface NavItem {
   key: string
@@ -44,7 +44,10 @@ export function buildNavModel(options: NavModelOptions = {}): NavModel {
       icon: FolderGit2,
       to: '/',
       primary: true,
-      matches: (pathname) => pathname === '/',
+      // The list, the projects inside it and the sessions inside those are
+      // one place. The entry used to claim only the list, so opening a
+      // project took the highlight off the thing that leads you there.
+      matches: (pathname) => isProjectPath(pathname),
     },
     {
       key: 'assistant',
@@ -97,7 +100,9 @@ export function buildNavModel(options: NavModelOptions = {}): NavModel {
       icon: Settings,
       to: '/settings',
       primary: true,
-      matches: (pathname) => pathname === '/settings',
+      // The OpenCode configuration page is settings too, and it used to
+      // leave the entry unlit.
+      matches: (pathname) => isSettingsPath(pathname),
     },
     { key: 'logout', label: 'Logout', labelKey: 'navigation.logout', icon: LogOut },
   )

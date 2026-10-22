@@ -9,9 +9,9 @@ import { useQuery } from '@tanstack/react-query'
 import { getRepo } from '@/api/repos'
 import { useRefreshOnOpen } from '@/hooks/useRefreshOnOpen'
 import { SideDrawer, SideDrawerContent } from '@/components/ui/side-drawer'
-import { buildGlobalMoreItems, buildProjectToolItems, type NavItem } from '@/framework/navigation/navModel'
+import { buildGlobalMoreItems, buildProjectToolItems, isNavItemActive, type NavItem } from '@/framework/navigation/navModel'
 import { useSwipeBack } from '@/hooks/useMobile'
-import { getRepoDisplayName } from '@/lib/utils'
+import { cn, getRepoDisplayName } from '@/lib/utils'
 import { getPathWithReturnTo, isAssistantPath } from '@/lib/navigation'
 import { useI18n } from '@/lib/i18n'
 
@@ -145,27 +145,37 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
           )}
         </div>
         <SideDrawerContent className="flex flex-col gap-1">
-          {items.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => {
-                if (item.to) {
-                  handleItemClick(item)
-                } else if (item.key === 'settings') {
-                  handleSettingsClick()
-                } else if (item.key === 'logout') {
-                  handleLogoutClick()
-                } else {
-                  handleItemClick(item)
-                }
-              }}
-              className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left w-full"
-            >
-              <item.icon className="w-5 h-5 text-muted-foreground" />
-              <span className="font-medium text-foreground">{item.labelKey ? t(item.labelKey) : item.label}</span>
-            </button>
-          ))}
+          {items.map((item) => {
+            // The drawer is the phone's face of the same navigation, so it
+            // says where you are the same way the top bar does - and it asks
+            // the same model, so the two cannot disagree.
+            const current = isNavItemActive(item, location.pathname)
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => {
+                  if (item.to) {
+                    handleItemClick(item)
+                  } else if (item.key === 'settings') {
+                    handleSettingsClick()
+                  } else if (item.key === 'logout') {
+                    handleLogoutClick()
+                  } else {
+                    handleItemClick(item)
+                  }
+                }}
+                aria-current={current ? 'page' : undefined}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-lg transition-colors text-left w-full',
+                  current ? 'bg-accent' : 'hover:bg-accent',
+                )}
+              >
+                <item.icon className={cn('w-5 h-5', current ? 'text-foreground' : 'text-muted-foreground')} />
+                <span className="font-medium text-foreground">{item.labelKey ? t(item.labelKey) : item.label}</span>
+              </button>
+            )
+          })}
         </SideDrawerContent>
       </div>
     </SideDrawer>

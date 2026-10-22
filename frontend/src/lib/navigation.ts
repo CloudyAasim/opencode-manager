@@ -10,6 +10,29 @@ export function isAssistantPath(pathname: string): boolean {
   return pathname === '/assistant' || /^\/repos\/[^/]+\/assistant$/.test(pathname);
 }
 
+/**
+ * Whether the path is somewhere inside the projects area.
+ *
+ * A project and the sessions inside it are the same place as the list, so
+ * the list has to stay lit while you are in one of them. The two
+ * sub-places that have an entry of their own - a project's assistant and its
+ * schedules - are not part of this, and they say so by lighting up
+ * instead.
+ */
+export function isProjectPath(pathname: string): boolean {
+  return pathname === '/' || /^\/repos\/[^/]+(?:\/sessions\/[^/]+)?$/.test(pathname);
+}
+
+/**
+ * Whether the path is somewhere inside the settings.
+ *
+ * The OpenCode configuration page is settings, and opening it used to take
+ * the highlight off the entry that leads you there.
+ */
+export function isSettingsPath(pathname: string): boolean {
+  return pathname === '/settings' || /^\/settings\/.+/.test(pathname);
+}
+
 export function getSessionListPath(isAssistantSession: boolean): string {
   if (isAssistantSession) {
     return getAssistantSessionListPath();

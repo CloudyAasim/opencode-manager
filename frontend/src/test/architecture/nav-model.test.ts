@@ -214,7 +214,40 @@ describe('导航只有顶栏一张脸', () => {
     expect(active('/files')).toEqual(['files'])
     expect(active('/settings')).toEqual(['settings'])
     expect(active('/terminal')).toEqual(['terminal'])
-    // 真正离开之后就不该还亮着
-    expect(active('/repos/7/sessions/abc')).toEqual([])
+
+    // 这条原来写着 "打开项目之后就不该还亮着"，把 bug 当成了规格：
+    // 打开一个项目，顶部栏里"项目"那一项的高亮就没了，而它正是带你去
+    // 项目列表的那一项。一个条目在自己的地盘里必须一直是亮的。
+    expect(active('/repos/7')).toEqual(['projects'])
+    expect(active('/repos/7/sessions/abc')).toEqual(['projects'])
+    // OpenCode 配置页是设置的一部分，打开它也一样
+    expect(active('/settings/opencode')).toEqual(['settings'])
+    // 列表本身当然是亮的
+    expect(active('/')).toEqual(['projects'])
+  })
+
+  it('任何时候只有一项亮着', () => {
+    // 两项同时亮着读起来像"选错了"，而且会让用户不知道自己在哪。
+    // 每一处只属于一个地方：项目里的助手是助手，项目里的排程是排程。
+    const paths = [
+      '/',
+      '/repos/7',
+      '/repos/7/sessions/abc',
+      '/repos/7/assistant',
+      '/repos/7/schedules',
+      '/assistant',
+      '/files',
+      '/settings',
+      '/settings/opencode',
+      '/schedules',
+      '/terminal',
+    ]
+    for (const pathname of paths) {
+      const lit = buildNavModel({ isAdmin: true, terminalAllowed: true })
+        .items.filter((item) => item.to)
+        .filter((item) => isNavItemActive(item, pathname))
+        .map((item) => item.key)
+      expect(lit.length, `${pathname} 上亮了 ${lit.length} 项：${lit.join(', ')}`).toBeLessThanOrEqual(1)
+    }
   })
 })

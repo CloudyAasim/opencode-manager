@@ -128,6 +128,22 @@ describe('the two phone drawers', () => {
     expect(isNavItemActive(byKey.schedules!, '/repos/3/sessions/s1')).toBe(false)
   })
 
+  it('keeps the entry lit while you are inside the place it leads to', () => {
+    const byKey = Object.fromEntries(buildNavModel().items.map((item) => [item.key, item]))
+
+    // The list, the project and the session inside it are one place.
+    expect(isNavItemActive(byKey.projects!, '/')).toBe(true)
+    expect(isNavItemActive(byKey.projects!, '/repos/3')).toBe(true)
+    expect(isNavItemActive(byKey.projects!, '/repos/3/sessions/s1')).toBe(true)
+    // The two sub-places with an entry of their own are not the list.
+    expect(isNavItemActive(byKey.projects!, '/repos/3/assistant')).toBe(false)
+    expect(isNavItemActive(byKey.projects!, '/repos/3/schedules')).toBe(false)
+
+    // The OpenCode configuration page is settings.
+    expect(isNavItemActive(byKey.settings!, '/settings')).toBe(true)
+    expect(isNavItemActive(byKey.settings!, '/settings/opencode')).toBe(true)
+  })
+
   it('marks reset permissions as dangerous', () => {
     const reset = buildProjectToolItems('/repos/42').find((item) => item.key === 'reset-permissions')
     expect(reset?.danger).toBe(true)
