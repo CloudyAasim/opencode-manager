@@ -24,104 +24,154 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 
-  --color-background: #09090b;
-  --color-foreground: #fafafa;
-  --color-card: #141418;
-  --color-card-foreground: #fafafa;
-  --color-card-hover: #1c1c21;
-  --color-popover: #141418;
-  --color-popover-foreground: #fafafa;
-  --color-border: #26262b;
-  --color-input: #2a2a30;
-  --color-ring: #2563eb;
+  /* -----------------------------------------------------------------------
+   * Breeze Ocean - the dark half of KDE's Breeze family.
+   *
+   * The values are KDE's own, not a recollection of them: the scheme comes
+   * from `KDE/breeze` (colors/BreezeDark.colors) and the inks from the
+   * official Breeze colour table. KDE's names are used because they say
+   * what a value is for - "Coastal Fog" says what "muted" only pretends to.
+   *
+   *   Paper White     #fcfcfc    Charcoal Gray   #31363b
+   *   Cardboard Gray  #eff0f1    Shade Black     #232629
+   *   Alternate Gray  #bdc3c7    Coastal Fog     #7f8c8d
+   *   Plasma Blue     #3daee9    Icon Blue       #1d99f3
+   *
+   * The window background is the one value that is not straight out of the
+   * file: Breeze Dark's is a neutral #202326, and Blue Ocean - the direction
+   * Plasma 6 took the theme - is bluer, so the window sits on #1b2a33.
+   * Everything else is measured.
+   * --------------------------------------------------------------------- */
+  --color-background: #1b2a33;
+  --color-foreground: #fcfcfc;
+  --color-card: #141618;
+  --color-card-foreground: #fcfcfc;
+  --color-card-hover: #23272b;
+  --color-popover: #292c30;
+  --color-popover-foreground: #fcfcfc;
+  --color-border: #2f3438;
+  --color-input: #292c30;
+  --color-ring: #3daee9;
 
-  --color-muted: #1a1a1f;
-  --color-muted-foreground: #a1a1aa;
+  --color-muted: #202326;
+  --color-muted-foreground: #a1a9b1;
 
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-foreground: #ffffff;
-  --color-primary-soft: #172554;
+  /* Plasma Blue is a light blue. White on it is 2.4:1 and fails; the deep
+   * ink of the scheme on it is 6.9:1 and passes. */
+  --color-primary: #3daee9;
+  --color-primary-hover: #1d99f3;
+  --color-primary-foreground: #0d1b24;
+  /* The ocean blue: Breeze Dark's alternate surface, which is where the
+   * scheme's blue is meant to show. */
+  --color-primary-soft: #1e5774;
 
-  --color-secondary: #1c1c21;
-  --color-secondary-foreground: #fafafa;
-  --color-accent: #1c1c21;
-  --color-accent-foreground: #fafafa;
+  --color-secondary: #23272b;
+  --color-secondary-foreground: #fcfcfc;
+  --color-accent: #23272b;
+  --color-accent-foreground: #fcfcfc;
 
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
+  --color-destructive: #da4453;
+  --color-destructive-foreground: #fcfcfc;
+  --color-success: #27ae60;
+  --color-warning: #f47750;
+
+  /* A surface you can see through. Breeze's widgets sit on a blurred
+   * background, and a panel that only looks frosted is not frosted. */
+  --color-surface-glass: rgb(20 22 24 / 0.72);
+  --color-surface-glass-border: rgb(252 252 252 / 0.08);
 
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.12), 0 1px 2px -1px rgb(0 0 0 / 0.12);
-  --shadow-md: 0 6px 18px -6px rgb(0 0 0 / 0.35);
+  /* Breeze's elevation is soft: a dark line under a surface, not a heavy
+   * drop shadow. The old one cast a 35% black shadow, which is what a
+   * near-black interface needs and a light one does not. */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.28);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.32), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 10px 28px -12px rgb(0 0 0 / 0.55);
 
-  --color-status-running: #f59e0b;
-  --color-status-running-text: #fcd34d;
-  --color-status-completed: #10b981;
+  --color-status-running: #f47750;
+  --color-status-running-text: #fdbc4b;
+  --color-status-completed: #27ae60;
   --color-status-completed-text: #6ee7b7;
-  --color-status-failed: #ef4444;
+  --color-status-failed: #da4453;
   --color-status-failed-text: #fca5a5;
-  --color-status-cancelled: #64748b;
+  --color-status-cancelled: #7f8c8d;
   --color-status-cancelled-text: #cbd5e1;
-  --color-status-idle: #71717a;
-  --color-status-idle-text: #d4d4d8;
-  --color-info: #3b82f6;
-  --color-info-text: #60a5fa;
-  --color-link: #3b82f6;
-  --color-link-hover: #93c5fd;
+  --color-status-idle: #4d4d4d;
+  --color-status-idle-text: #a1a9b1;
+  --color-info: #1d99f3;
+  --color-info-text: #3daee9;
+  --color-link: #1d99f3;
+  --color-link-hover: #3daee9;
 }
 
+/* -----------------------------------------------------------------------
+ * Breeze - the light half.
+ *
+ * The same KDE scheme, light: paper white on cardboard gray, Plasma Blue
+ * for what is selected or actionable, Coastal Fog for what is secondary.
+ *
+ *   Paper White     #fcfcfc    Charcoal Gray   #31363b
+ *   Cardboard Gray  #eff0f1    Shade Black     #232629
+ *   Alternate Gray  #bdc3c7    Coastal Fog     #7f8c8d
+ *   Plasma Blue     #3daee9    Icon Blue       #1d99f3
+ * --------------------------------------------------------------------- */
 :root:not(.dark) {
-  --color-background: #f7f7f8;
-  --color-foreground: #0a0a0a;
-  --color-card: #ffffff;
-  --color-card-foreground: #0a0a0a;
-  --color-card-hover: #f4f4f5;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #0a0a0a;
-  --color-border: #e4e4e7;
-  --color-input: #e4e4e7;
-  --color-ring: #1d4ed8;
+  --color-background: #eff0f1;
+  --color-foreground: #232629;
+  --color-card: #fcfcfc;
+  --color-card-foreground: #232629;
+  --color-card-hover: #f7f7f7;
+  --color-popover: #fcfcfc;
+  --color-popover-foreground: #232629;
+  --color-border: #bdc3c7;
+  --color-input: #fcfcfc;
+  --color-ring: #3daee9;
 
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #71717a;
+  --color-muted: #e3e5e7;
+  --color-muted-foreground: #7f8c8d;
 
-  --color-primary: #1d4ed8;
-  --color-primary-hover: #1e40af;
-  --color-primary-foreground: #ffffff;
-  --color-primary-soft: #eff6ff;
+  --color-primary: #3daee9;
+  --color-primary-hover: #2980b9;
+  --color-primary-foreground: #0d1b24;
+  --color-primary-soft: #a3d4fa;
 
-  --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #18181b;
-  --color-accent: #f4f4f5;
-  --color-accent-foreground: #18181b;
+  --color-secondary: #e3e5e7;
+  --color-secondary-foreground: #232629;
+  --color-accent: #e3e5e7;
+  --color-accent-foreground: #232629;
 
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
+  --color-destructive: #da4453;
+  --color-destructive-foreground: #fcfcfc;
+  --color-success: #27ae60;
+  --color-warning: #f47750;
 
-  --color-status-running: #d97706;
-  --color-status-running-text: #b45309;
-  --color-status-completed: #059669;
-  --color-status-completed-text: #047857;
-  --color-status-failed: #dc2626;
-  --color-status-failed-text: #b91c1c;
-  --color-status-cancelled: #475569;
-  --color-status-cancelled-text: #334155;
-  --color-status-idle: #71717a;
-  --color-status-idle-text: #52525b;
-  --color-info: #2563eb;
-  --color-info-text: #1d4ed8;
-  --color-link: #2563eb;
-  --color-link-hover: #1e40af;
+  --color-surface-glass: rgb(252 252 252 / 0.76);
+  --color-surface-glass-border: rgb(35 38 41 / 0.08);
+
+  /* A light interface does not need a black shadow to look lifted: the
+   * shadow is the ink of the scheme, barely there. */
+  --shadow-xs: 0 1px 2px 0 rgb(35 38 41 / 0.06);
+  --shadow-sm: 0 1px 3px 0 rgb(35 38 41 / 0.08), 0 1px 2px -1px rgb(35 38 41 / 0.06);
+  --shadow-md: 0 10px 28px -14px rgb(35 38 41 / 0.22);
+
+  --color-status-running: #f47750;
+  --color-status-running-text: #b2501f;
+  --color-status-completed: #27ae60;
+  --color-status-completed-text: #1e8449;
+  --color-status-failed: #da4453;
+  --color-status-failed-text: #b0343f;
+  --color-status-cancelled: #7f8c8d;
+  --color-status-cancelled-text: #5f6b6c;
+  --color-status-idle: #afb0b3;
+  --color-status-idle-text: #7f8c8d;
+  --color-info: #1d99f3;
+  --color-info-text: #1668a8;
+  --color-link: #2980b9;
+  --color-link-hover: #1d99f3;
 }
 
 html {
@@ -282,41 +332,30 @@ body {
   color: var(--color-foreground);
 }
 
+/* The prose colours are the scheme's, not the old palette's: a link in a
+ * rendered message is a link, and it should look like one in both themes. */
 .prose-enhanced a {
-  color: #60a5fa;
+  color: var(--color-link);
   text-decoration: none;
 }
 
-.dark .prose-enhanced a {
-  color: #60a5fa;
-}
-
 .prose-enhanced a:hover {
-  color: #93c5fd;
+  color: var(--color-link-hover);
   text-decoration: underline;
 }
 
 .prose-enhanced hr {
   margin-top: 2em;
   margin-bottom: 2em;
-  border-color: #d0d0d0;
-}
-
-.dark .prose-enhanced hr {
-  border-color: #3f3f46;
+  border-color: var(--color-border);
 }
 
 .prose-enhanced blockquote {
   margin-top: 1em;
   margin-bottom: 1em;
   padding-left: 1em;
-  border-left: 3px solid #d0d0d0;
-  color: #6b7280;
-}
-
-.dark .prose-enhanced blockquote {
-  border-left: 3px solid #3f3f46;
-  color: #a1a1aa;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-muted-foreground);
 }
 
 .prose-enhanced pre {

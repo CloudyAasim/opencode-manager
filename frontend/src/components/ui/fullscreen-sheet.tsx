@@ -21,7 +21,7 @@ const FullscreenSheet = React.forwardRef<HTMLDivElement, FullscreenSheetProps>(
   ({ children, className, style, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("fixed inset-0 z-50 bg-background flex flex-col", className)}
+      className={cn("fixed inset-0 z-50 bg-surface-glass backdrop-blur-lg flex flex-col", className)}
       style={style}
       {...props}
     >
@@ -36,7 +36,7 @@ const FullscreenSheetHeader = React.forwardRef<HTMLDivElement, FullscreenSheetHe
     <div
       ref={ref}
       className={cn(
-        "flex-shrink-0 border-b border-border bg-background backdrop-blur-sm pt-safe",
+        "flex-shrink-0 border-b border-border bg-surface-glass backdrop-blur-md pt-safe",
         className
       )}
       {...props}

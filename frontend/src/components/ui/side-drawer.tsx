@@ -70,7 +70,7 @@ export function SideDrawer({
       />
       <div
         className={cn(
-          'fixed top-0 bottom-0 bg-background border-l border-border pt-safe pb-safe flex flex-col z-50',
+          'fixed top-0 bottom-0 bg-surface-glass backdrop-blur-lg border-l border-border pt-safe pb-safe flex flex-col z-50',
           side === 'right' ? 'right-0' : 'left-0',
           widthClass,
           className,
@@ -94,7 +94,7 @@ export interface SideDrawerHeaderProps {
 export function SideDrawerHeader({ title, onClose, meta }: SideDrawerHeaderProps) {
   const { t } = useI18n()
   return (
-    <div className="flex-shrink-0 border-b border-border bg-background px-4 py-2 flex items-center justify-between gap-3">
+    <div className="flex-shrink-0 border-b border-border bg-surface-glass px-4 py-2 flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
         <h2 className="text-lg font-semibold text-foreground leading-none">{title}</h2>
         {meta ? <div className="mt-1 min-w-0">{meta}</div> : null}

@@ -79,7 +79,7 @@ export function BottomSheet({
       <div
         ref={panelRef}
         className={cn(
-          'fixed inset-x-0 bottom-0 flex flex-col bg-background rounded-t-2xl border-t border-border',
+          'fixed inset-x-0 bottom-0 flex flex-col bg-surface-glass backdrop-blur-lg rounded-t-2xl border-t border-border',
           heightClass,
           className,
         )}
@@ -108,7 +108,7 @@ export interface BottomSheetHeaderProps {
 
 export function BottomSheetHeader({ title, children }: BottomSheetHeaderProps) {
   return (
-    <div className="flex-shrink-0 border-b border-border bg-background px-4 py-3">
+    <div className="flex-shrink-0 border-b border-border bg-surface-glass px-4 py-3">
       {title && (
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
       )}

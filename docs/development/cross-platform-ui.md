@@ -59,6 +59,15 @@ The UI stays on **shadcn/ui + Tailwind** (already used) and follows the
 chat-first application shell popularised by mature clients such as LobeChat,
 Jan, and Open WebUI, adapted to a cloud workspace:
 
+- **The palette is KDE's Breeze.** The light theme is Breeze (Paper White cards
+  on Cardboard Gray, Plasma Blue for what is selected), the dark one is
+  Breeze Ocean (the ocean-blue window, the same Plasma Blue). The values come
+  from KDE's own colour files rather than from memory, they live in one place -
+  the token layer in `frontend/src/index.css` - and a gate
+  (`frontend/src/test/architecture/theme-tokens.test.ts`) holds the two themes
+  to the same token set, to the palette's identity, and to a legible contrast
+  on the primary button.
+
 - **Top bar** — the *only* navigation surface, at every width. Primary spaces:
   Projects, Assistant, Files, Schedules, Settings, Terminal (Terminal is
   permission-gated); account and logout are pushed conditionally. Items,

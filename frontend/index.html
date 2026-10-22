@@ -21,7 +21,7 @@
     <link rel="apple-touch-startup-image" href="/splash/splash-1668x2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
     <link rel="apple-touch-startup-image" href="/splash/splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" content="#eff0f1" />
     <meta name="description" content="AI-powered coding assistant interface" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -29,8 +29,13 @@
     <meta name="apple-mobile-web-app-title" content="OpenCode" />
     <title>OpenCode Manager</title>
     <style>
-      html { background: #ffffff; }
-      @media (prefers-color-scheme: dark) { html { background: #0a0a0a; } }
+      /* The boot screen is the first thing on the screen, and it is the only
+         thing there before the bundle has run - so its background has to be
+         the background of the theme it is booting into, or the app starts
+       with a white flash. Cardboard Gray in the light theme, the ocean window
+       in the dark one. */
+      html { background: #eff0f1; }
+      @media (prefers-color-scheme: dark) { html { background: #1b2a33; } }
       #boot {
         position: fixed; inset: 0; display: flex; flex-direction: column;
         gap: 12px; padding: 12px; box-sizing: border-box;
