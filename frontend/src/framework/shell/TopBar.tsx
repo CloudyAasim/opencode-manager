@@ -17,6 +17,7 @@ import { buildNavModel, isNavItemActive } from '@/framework/navigation/navModel'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { RepoSwitcher } from './RepoSwitcher'
+import { useFloatingShell } from './shell-layout'
 
 // The one place navigation happens. It used to be three: a left rail, a bottom
 // bar, and a drawer, each with its own copy of the item list and its own idea
@@ -36,7 +37,7 @@ export function TopBar() {
   // is no room. A web page has no "maximised window" to dock for, so the
   // room is the thing that decides - and it is the same room the labels
   // need, so the bar has one wide form rather than two.
-  const floating = spreadOut
+  const floating = useFloatingShell()
   const { user, logout } = useAuth()
   const terminalAllowed = useTerminalAllowed()
   const { updateParams } = useUrlParams()

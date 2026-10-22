@@ -234,6 +234,61 @@ const sourceOf = (rel: string): string => {
 }
 
 describe('Breeze 几何', () => {
+  it('顶栏和页面交界处的效果看上去有些奇怪，请完善', () => {
+    // The shell is a desktop: a panel at the top, a window in the middle, a
+    // strip at the bottom. When only the top bar floated, the page ran to
+    // the edges underneath it, and the two met at a seam four pixels wide -
+    // a rounded pill sitting on a full-bleed bar, which read as one thing
+    // with a mistake in it rather than as two things on purpose.
+    //
+    // Three surfaces that share one gutter and one radius read as three
+    // surfaces. So the rule is that they all use the same ones.
+    const surfaces = [
+      { rel: 'framework/shell/TopBar.tsx', vertical: 'mt-3' },
+      { rel: 'framework/shell/ShellFrame.tsx', vertical: 'my-3' },
+      { rel: 'framework/shell/StatusBar.tsx', vertical: 'mb-3' },
+    ]
+
+    const gutters = new Set<string>()
+    const radii = new Set<string>()
+
+    for (const surface of surfaces) {
+      const source = SOURCES.find((candidate) => candidate.rel === surface.rel)
+      expect(source, `找不到 ${surface.rel}`).toBeDefined()
+      const text = source!.text
+
+      // The floating surface is the class list that has both a corner radius
+      // and a horizontal margin. Picking it by those two things rather than
+      // by "the class list that mentions rounded-" keeps the rule from
+      // landing on an unrelated call - a status dot has a radius too.
+      const floating = stringLiterals(text)
+        .map((literal) => literal.split(/[\s'"\n]+/).filter(Boolean))
+        .find(
+          (tokens) =>
+            tokens.some((token) => /^rounded-/.test(token)) &&
+            tokens.some((token) => /^mx-\d/.test(token)),
+        )
+      expect(
+        floating,
+        `${surface.rel} 的浮起面没有同时有圆角和横向边距`,
+      ).toBeDefined()
+
+      const tokens = floating!
+      const gutter = tokens.find((token) => /^mx-\d/.test(token))!
+      const radius = tokens.find((token) => /^rounded-/.test(token))!
+      expect(
+        tokens,
+        `${surface.rel} 的浮起面没有自己的纵向边距（${surface.vertical}）`,
+      ).toContain(surface.vertical)
+
+      gutters.add(gutter)
+      radii.add(radius)
+    }
+
+    expect([...gutters], '三块浮起的东西没有共用同一条边距，就不是一套东西').toHaveLength(1)
+    expect([...radii], '三块浮起的东西没有共用同一个圆角，就不是一套东西').toHaveLength(1)
+  })
+
   it('圆角刻度是 Breeze 的那一套', () => {
     const tokens = themeBlock(/@theme\s*\{/)
 
