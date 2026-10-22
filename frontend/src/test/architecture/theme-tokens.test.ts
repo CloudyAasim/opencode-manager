@@ -32,7 +32,12 @@ function tokensOf(css: string, blockStart: RegExp): Map<string, string> {
   const end = body.indexOf('\n}')
   const tokens = new Map<string, string>()
   for (const line of body.slice(0, end).split('\n')) {
-    const match = /^\s*(--color-[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8})\s*;/.exec(line)
+    // The value can be a hex or an rgb() - the glass surfaces are
+    // translucent and cannot be written as hex. A parser that only knew
+    // about hex left every rgb() token out of the comparison below, which
+    // is how a token could exist in one theme and not the other for a
+    // whole release.
+    const match = /^\s*(--color-[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\))\s*;/.exec(line)
     if (match) tokens.set(match[1], match[2])
   }
   return tokens
@@ -124,6 +129,88 @@ describe('两个主题', () => {
     for (const [name, tokens] of [['light', light()], ['dark', dark()]] as const) {
       const ratio = contrast(tokens.get('--color-muted-foreground')!, tokens.get('--color-background')!)
       expect(ratio, `${name} 主题的次要文字对比度不到 3:1`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('悬停态上的字也看得清', () => {
+    // The hover state is a different colour from the button, so the ink has
+    // to clear the bar over that colour too. It used to be Icon Blue, which
+    // is more saturated and darker: the ink on it fell from 6.9:1 to 5.6:1.
+    for (const [name, tokens] of [['light', light()], ['dark', dark()]] as const) {
+      const ratio = contrast(
+        tokens.get('--color-primary-foreground')!,
+        tokens.get('--color-primary-hover')!,
+      )
+      expect(ratio, `${name} 主题的主按钮悬停态文字对比度不到 4.5:1`).toBeGreaterThanOrEqual(4.5)
+
+      expect(
+        tokens.get('--color-primary-hover'),
+        `${name} 主题的悬停态和主色一模一样，那不是悬停态`,
+      ).not.toBe(tokens.get('--color-primary'))
+    }
+  })
+
+  it('搜索命中的墨看得清', () => {
+    for (const [name, tokens] of [['light', light()], ['dark', dark()]] as const) {
+      const ratio = contrast(
+        tokens.get('--color-match-foreground')!,
+        tokens.get('--color-match')!,
+      )
+      expect(ratio, `${name} 主题的搜索命中对比度不到 4.5:1`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('开关的旋钮是纸白，两边一样', () => {
+    // A dark knob on a bright blue track is not what a Plasma switch
+    // looks like, and the knob is the one part the eye goes to.
+    expect(light().get('--color-switch-thumb')).toBe('#fcfcfc')
+    expect(dark().get('--color-switch-thumb')).toBe('#fcfcfc')
+  })
+
+  it('diff 的颜色就是方案里那几个颜色，不另起一套', () => {
+    // Three spellings of the same green used to live in three files, which
+    // is how a diff ends up with a green that does not match the green
+    // beside it. The values are pinned so that cannot happen quietly.
+    expect(light().get('--color-diff-add')).toBe('#1e8449')
+    expect(light().get('--color-diff-remove')).toBe('#b0343f')
+    expect(light().get('--color-diff-modify')).toBe('#b2501f')
+    expect(light().get('--color-diff-info')).toBe('#1668a8')
+    expect(dark().get('--color-diff-add')).toBe('#6ee7b7')
+    expect(dark().get('--color-diff-remove')).toBe('#fca5a5')
+    expect(dark().get('--color-diff-modify')).toBe('#fdbc4b')
+    expect(dark().get('--color-diff-info')).toBe('#3daee9')
+  })
+
+  it('两个主题都认得玻璃面这个令牌', () => {
+    // The glass surfaces are rgb(), and the parser used to skip those, so
+    // this token could have been missing from a theme without anything
+    // noticing.
+    expect(light().get('--color-surface-glass')).toBeTruthy()
+    expect(dark().get('--color-surface-glass')).toBeTruthy()
+  })
+
+  it('每一支状态色在自己的卡片上都看得清', () => {
+    // The state colours are used as text on the card, so the bar is the
+    // one that matters - not the one on the window. A purple that is a
+    // shade too light reads as a smudge on white.
+    const stateful = [
+      '--color-diff-add',
+      '--color-diff-remove',
+      '--color-diff-modify',
+      '--color-diff-info',
+      '--color-diff-pushed',
+      '--color-status-compact',
+      '--color-worktree',
+    ]
+    for (const [name, tokens] of [['light', light()], ['dark', dark()]] as const) {
+      for (const token of stateful) {
+        const value = tokens.get(token)
+        expect(value, `${name} 主题没有 ${token}`).toBeTruthy()
+        expect(
+          contrast(value!, tokens.get('--color-card')!),
+          `${name} 主题的 ${token} 在卡片上不到 4.5:1`,
+        ).toBeGreaterThanOrEqual(4.5)
+      }
     }
   })
 })

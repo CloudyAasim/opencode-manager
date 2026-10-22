@@ -31,6 +31,12 @@ export function TopBar() {
   // 六个入口要到 spacious 这一档才排得下。窄于摊得开的那一档就收成一颗
   // 按钮，别让标签一个个截成 'Assis…'。
   const spreadOut = useMediaQuery(MEDIA.spaciousUp)
+  // Plasma 6 lets the panel float away from the screen edge, with rounded
+  // corners and a gap behind it, and docks it back to the edge when there
+  // is no room. A web page has no "maximised window" to dock for, so the
+  // room is the thing that decides - and it is the same room the labels
+  // need, so the bar has one wide form rather than two.
+  const floating = spreadOut
   const { user, logout } = useAuth()
   const terminalAllowed = useTerminalAllowed()
   const { updateParams } = useUrlParams()
@@ -56,7 +62,14 @@ export function TopBar() {
   }
 
   return (
-    <header className="flex min-h-11 shrink-0 items-center gap-2 border-b border-border bg-card px-3 pt-safe">
+    <header
+      className={cn(
+        'flex min-h-11 shrink-0 items-center gap-2 px-3 pt-safe',
+        floating
+          ? 'mx-3 mt-3 rounded-xl border border-border bg-surface-glass backdrop-blur-lg shadow-sm'
+          : 'border-b border-border bg-card',
+      )}
+    >
       {/* `pt-safe`, and `min-h-11` rather than `h-11`.
         *
         * This is the one box that touches the top edge of the screen, so this is

@@ -62,7 +62,7 @@ export function ConfirmDestructiveDialog({
             variant="destructive"
             onClick={onConfirm}
             disabled={isPending}
-            className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white font-semibold border-red-600"
+            className="flex-1 sm:flex-none font-semibold"
           >
             {isPending && pendingLabel ? pendingLabel : confirmLabel}
           </Button>

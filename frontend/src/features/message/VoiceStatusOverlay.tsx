@@ -11,7 +11,7 @@ interface VoiceStatusOverlayProps {
 
 function WaveformBars() {
   return (
-    <div className="flex items-end gap-[3px] h-8">
+    <div className="flex items-end gap-1 h-8">
       {[0, 1, 2, 3, 4].map((i) => (
         <div
           key={i}

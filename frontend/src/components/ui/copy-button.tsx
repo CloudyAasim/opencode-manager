@@ -67,9 +67,9 @@ export function CopyButton({
       title={copied ? t('ui.copyButton.copied') : resolvedTitle}
     >
       {copied ? (
-        <Check className={cn(sizeClasses, 'text-green-500')} />
+        <Check className={cn(sizeClasses, 'text-success')} />
       ) : (
-        <Copy className={cn(sizeClasses, copied && 'text-green-500')} />
+        <Copy className={cn(sizeClasses, copied && 'text-success')} />
       )}
     </button>
   )

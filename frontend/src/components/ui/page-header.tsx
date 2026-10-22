@@ -25,7 +25,7 @@ export const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
           // The inset belongs to `framework/shell/TopBar.tsx`, which is the
           // one that starts at y=0. There is a gate for this:
           // `test/architecture/safe-area-top.test.ts`.
-          "sticky top-0 z-10 border-b border-border/60 bg-background/80 backdrop-blur-xl",
+          "sticky top-0 z-10 border-b border-border/60 bg-surface-glass backdrop-blur-xl",
           className
         )}
         {...props}

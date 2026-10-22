@@ -1,5 +1,7 @@
 import { usePermissions, useQuestions, useSSEHealth } from '@/contexts/EventContext'
 import { useServerHealth } from '@/hooks/useServerHealth'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { MEDIA } from './breakpoints'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +24,10 @@ export function StatusBar() {
   const questions = useQuestions()
   const sse = useSSEHealth()
   const { data: health, isError } = useServerHealth()
+  // The same Plasma rule the top bar follows: the panel floats clear of the
+  // screen edge when there is room for it, and is docked to the edge when
+  // there is not.
+  const floating = useMediaQuery(MEDIA.spaciousUp)
 
   const pending = permissions.pendingCount + questions.pendingCount
   const healthStatus = isError ? 'unhealthy' : health?.status ?? 'healthy'
@@ -38,7 +44,14 @@ export function StatusBar() {
       : t('shell.status.degraded')
 
   return (
-    <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border bg-card px-3 text-xs text-muted-foreground">
+    <div
+      className={cn(
+        'flex h-7 shrink-0 items-center gap-3 px-3 text-xs text-muted-foreground',
+        floating
+          ? 'mx-3 mb-3 mt-1 rounded-lg border border-border bg-surface-glass backdrop-blur-lg shadow-sm'
+          : 'border-t border-border bg-card',
+      )}
+    >
       <span className="flex items-center gap-1.5">
         <Dot tone={tone} />
         {label}

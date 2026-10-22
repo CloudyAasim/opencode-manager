@@ -12,9 +12,9 @@ const colorStyles: Record<BadgeColor, { bg: string; hover: string; text: string 
     text: 'text-warning',
   },
   blue: {
-    bg: 'bg-blue-500/10',
-    hover: 'hover:bg-blue-500/20',
-    text: 'text-blue-500',
+    bg: 'bg-info/10',
+    hover: 'hover:bg-info/20',
+    text: 'text-info',
   },
 }
 
@@ -60,7 +60,7 @@ export function PendingActionBadge({
       <span
         className={cn(
           'absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse',
-          color === 'orange' ? 'bg-warning' : 'bg-blue-500'
+          color === 'orange' ? 'bg-warning' : 'bg-info'
         )}
       />
     </Button>

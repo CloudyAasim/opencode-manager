@@ -112,8 +112,8 @@ export function GitFlatFileList({
         </span>
         {(totalAdditions !== undefined && totalAdditions > 0 || totalDeletions !== undefined && totalDeletions > 0) && (
           <div className="flex items-center gap-1 text-xs">
-            {totalAdditions !== undefined && totalAdditions > 0 && <span className="text-green-500">+{totalAdditions}</span>}
-            {totalDeletions !== undefined && totalDeletions > 0 && <span className="text-red-500">-{totalDeletions}</span>}
+            {totalAdditions !== undefined && totalAdditions > 0 && <span className="text-diff-add">+{totalAdditions}</span>}
+            {totalDeletions !== undefined && totalDeletions > 0 && <span className="text-diff-remove">-{totalDeletions}</span>}
           </div>
         )}
         {!readOnly && (
@@ -122,7 +122,7 @@ export function GitFlatFileList({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-xs text-rose-500 hover:text-rose-600"
+                className="h-6 px-2 text-xs text-diff-remove hover:opacity-80"
                 onClick={handleDiscardAll}
               >
                 {t('misc.fileList.discardAll')}

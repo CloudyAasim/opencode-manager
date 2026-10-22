@@ -168,7 +168,7 @@ export function MultiSelect({
       </div>
 
       {isOpen && (
-        <div className="absolute z-[150] mt-1 w-full bg-popover border border-border rounded-md shadow-lg">
+        <div className="absolute z-[150] mt-1 w-full bg-surface-glass backdrop-blur-md border border-border rounded-md shadow-lg">
           <div className="p-2 border-b border-border">
             <input
               ref={inputRef}

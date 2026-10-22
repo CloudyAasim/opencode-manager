@@ -62,7 +62,7 @@ export function MentionSuggestions({
   return (
     <div
       ref={listRef}
-      className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-background border border-border rounded-lg shadow-xl max-h-48 md:max-h-[40vh] lg:max-h-[50vh] overflow-y-auto"
+      className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-surface-glass backdrop-blur-md border border-border rounded-lg shadow-xl max-h-48 md:max-h-[40vh] lg:max-h-[50vh] overflow-y-auto"
     >
       {items.map((item, idx) => (
         <button

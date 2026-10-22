@@ -215,13 +215,13 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                   title={isCheckedOutElsewhere ? t('misc.branches.checkedOutElsewhere') : undefined}
                 >
                   {isRemote ? (
-                    <Globe className="w-4 h-4 text-blue-500" />
+                    <Globe className="w-4 h-4 text-info" />
                   ) : (
                     <GitBranch className={cn('w-4 h-4', isCurrent ? GIT_UI_COLORS.current : 'text-muted-foreground')} />
                   )}
                   <span className="flex-1 text-sm truncate">{branch.name}</span>
                   {(isCheckedOutElsewhere || (isCurrent && isRepoWorktree)) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">{t('misc.branches.worktreeBadge')}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-worktree/20 text-worktree">{t('misc.branches.worktreeBadge')}</span>
                   )}
                   {branch.type === 'local' && !branch.upstream && !branch.isWorktree && !(isCurrent && isRepoWorktree) && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t('misc.branches.localBadge')}</span>

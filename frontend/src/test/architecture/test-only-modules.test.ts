@@ -38,6 +38,7 @@ const EXEMPT: Record<string, string> = {
   'test/test-utils.tsx': 'a helper, only tests need it',
   'test/fixtures/opencode-config.ts': 'a fixture, only tests need it',
   'test/architecture/import-graph.ts': 'the scanner the other gates are built on',
+  'test/architecture/source-text.ts': 'the source reader the other gates are built on',
 }
 
 describe('没有只被测试引用的模块', () => {

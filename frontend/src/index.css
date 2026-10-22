@@ -59,12 +59,47 @@
   /* Plasma Blue is a light blue. White on it is 2.4:1 and fails; the deep
    * ink of the scheme on it is 6.9:1 and passes. */
   --color-primary: #3daee9;
-  --color-primary-hover: #1d99f3;
+  /* The hover is a *softer* step of the same blue, not a different hue.
+   * It used to be Icon Blue (#1d99f3), which is more saturated and darker:
+   * in a dark theme the button dimmed on hover, and the ink on it fell from
+   * 6.9:1 to 5.6:1. Breeze Ocean is about softer blues and lighter tones,
+   * so the pressed state goes up in lightness - 7.9:1 on the ink. */
+  --color-primary-hover: #5cbced;
   --color-primary-foreground: #0d1b24;
   /* The ocean blue: Breeze Dark's alternate surface, which is where the
    * scheme's blue is meant to show. */
   --color-primary-soft: #1e5774;
 
+  /* The knob of a switch. Paper White in both themes, because the knob
+   * sits on the Plasma Blue track and a dark knob on a bright blue is
+   * not what a Plasma switch looks like. */
+  --color-switch-thumb: #fcfcfc;
+
+  /* Highlighting. Breeze marks a hit with a soft yellow rather than a
+   * saturated one; this is the mark itself, used with an opacity modifier
+   * so one token serves a row wash and a faint edit tint. */
+  --color-highlight: #fdbc4b;
+  /* A search hit is opaque, so it needs an ink of its own. */
+  --color-match: #f3d063;
+  --color-match-foreground: #232629;
+
+  /* The session scanner shows what the session is doing. The scheme has no
+   * name for "compacting", so this colour is not out of the Breeze table. */
+  --color-status-compact: #a98fd6;
+  /* A worktree is not the repository next to it. The scheme has no name for
+   * that either. */
+  --color-worktree: #a98fd6;
+
+  /* A diff. These are the same inks as the status colours - a green line is
+   * the scheme's green and a red line is the scheme's red - under names that
+   * say what they are for. Three different spellings of the same green used
+   * to live in three files, which is how a diff ends up with a green that
+   * does not match the green next to it. */
+  --color-diff-add: #6ee7b7;
+  --color-diff-remove: #fca5a5;
+  --color-diff-modify: #fdbc4b;
+  --color-diff-info: #3daee9;
+  --color-diff-pushed: #a98fd6;
   --color-secondary: #23272b;
   --color-secondary-foreground: #fcfcfc;
   --color-accent: #23272b;
@@ -80,10 +115,19 @@
   --color-surface-glass: rgb(20 22 24 / 0.72);
   --color-surface-glass-border: rgb(252 252 252 / 0.08);
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  /* Breeze's shape language is geometric, not bubbly.
+   *
+   * The scale used to run 6/8/12/16px, one step rounder than Tailwind's own
+   * defaults, which made every card and every button read as a pill. KDE
+   * draws the same elements tighter: a frame is about 8px, a button about
+   * 8px, a chip 4px, a dialog 12px. One scale, used everywhere, is what
+   * "modern and soft" means - soft is the relationship between the steps,
+   * not a bigger number.
+   */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
 
   /* Breeze's elevation is soft: a dark line under a surface, not a heavy
    * drop shadow. The old one cast a 35% black shadow, which is what a
@@ -135,9 +179,26 @@
   --color-muted-foreground: #7f8c8d;
 
   --color-primary: #3daee9;
-  --color-primary-hover: #2980b9;
+  /* A softer step down, not a different hue: the old value was a teal-blue
+   * that read as a different colour from the button it belonged to. */
+  --color-primary-hover: #2f9bd0;
   --color-primary-foreground: #0d1b24;
   --color-primary-soft: #a3d4fa;
+
+  --color-switch-thumb: #fcfcfc;
+
+  --color-highlight: #fdbc4b;
+  --color-match: #f3d063;
+  --color-match-foreground: #232629;
+
+  --color-status-compact: #7a52b5;
+  --color-worktree: #7a52b5;
+
+  --color-diff-add: #1e8449;
+  --color-diff-remove: #b0343f;
+  --color-diff-modify: #b2501f;
+  --color-diff-info: #1668a8;
+  --color-diff-pushed: #7a52b5;
 
   --color-secondary: #e3e5e7;
   --color-secondary-foreground: #232629;
@@ -200,6 +261,20 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+}
+
+/* One line weight for every icon on the screen.
+ *
+ * Breeze draws its icons with a fine, even line, and monchrome is the
+ * point: an icon that carries its own colour competes with the text
+ * instead of supporting it. Lucide ships `stroke-width="2"` on every
+ * icon, which is heavier than the scheme's, and the weight was never
+ * set anywhere - it was simply inherited from the library.
+ *
+ * A presentation attribute is weaker than any CSS rule, so one line here
+ * re-draws the whole icon set without touching a single component. */
+.lucide {
+  stroke-width: 1.75;
 }
 
 /* Custom animations */

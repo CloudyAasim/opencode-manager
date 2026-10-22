@@ -81,7 +81,20 @@ describe('NotificationSettings', () => {
 
     const rows = container.querySelector('.divide-y') as HTMLElement
     expect(rows).toHaveClass('divide-border')
-    expect(rows.querySelector('.border, .p-4')).toBeNull()
+
+    // The list is divided by hairlines, not by cards. The check is on the
+    // row, and on everything inside it that is not a control: a switch has
+    // a one-pixel edge of its own, and a switch is a switch, not a card.
+    // Scanning the whole subtree for a class name would also forbid that
+    // edge, which is not what "compact divider rows" is about.
+    for (const row of Array.from(rows.children) as HTMLElement[]) {
+      expect(row, '分隔行不该是卡片').not.toHaveClass('border')
+      expect(row, '分隔行不该有 4px 内边距').not.toHaveClass('p-4')
+    }
+    const cards = Array.from(rows.querySelectorAll('.border, .p-4')).filter(
+      (element) => !element.hasAttribute('role'),
+    )
+    expect(cards, '分隔行里不该再有一张卡片').toEqual([])
 
     expect(screen.getByRole('switch', { name: 'Enable push notifications' })).toBeChecked()
     expect(screen.getByRole('switch', { name: 'Permission requests' })).toBeChecked()

@@ -1,22 +1,30 @@
 export const GIT_STATUS_COLORS = {
-  modified: 'text-amber-600 dark:text-amber-400',
-  added: 'text-emerald-600 dark:text-emerald-400',
-  deleted: 'text-rose-600 dark:text-rose-400',
-  renamed: 'text-blue-600 dark:text-blue-400',
-  untracked: 'text-gray-500 dark:text-gray-400',
-  copied: 'text-emerald-600 dark:text-emerald-400',
+  modified: 'text-diff-modify',
+  added: 'text-diff-add',
+  deleted: 'text-diff-remove',
+  renamed: 'text-diff-info',
+  untracked: 'text-muted-foreground',
+  copied: 'text-diff-add',
 } as const
 
 export const GIT_UI_COLORS = {
-  ahead: 'text-emerald-600 dark:text-emerald-400',
-  behind: 'text-amber-600 dark:text-amber-400',
+  ahead: 'text-diff-add',
+  behind: 'text-diff-modify',
   current: 'text-primary',
-  remote: 'text-blue-600 dark:text-blue-400',
-  stage: 'text-emerald-600 dark:text-emerald-400',
-  unstage: 'text-rose-600 dark:text-rose-400',
-  stagedBadge: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-  unpushed: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-  pushed: 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400',
+  remote: 'text-diff-info',
+  stage: 'text-diff-add',
+  unstage: 'text-diff-remove',
+  stagedBadge: 'bg-diff-add/10 text-diff-add dark:bg-diff-add/20',
+  unpushed: 'bg-diff-info/10 text-diff-info dark:bg-diff-info/20',
+  pushed: 'bg-diff-pushed/10 text-diff-pushed dark:bg-diff-pushed/20',
+} as const
+
+export const GIT_DIFF_BACKGROUNDS = {
+  modified: 'bg-diff-modify/10',
+  added: 'bg-diff-add/10',
+  deleted: 'bg-diff-remove/10',
+  renamed: 'bg-diff-info/10',
+  copied: 'bg-diff-add/10',
 } as const
 
 export const GIT_STATUS_LABELS = {

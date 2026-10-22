@@ -155,7 +155,7 @@ export function SessionPanel({
         // what a bottom sheet with a long list in it is supposed to have. The
         // desktop branch is unaffected: `md:inset-y-0` gave it a definite
         // height there, which is why this only ever showed up on mobile.
-        className="absolute inset-x-0 bottom-0 z-40 flex h-[78vh] shrink-0 flex-col overflow-hidden rounded-t-xl border-t border-border bg-card shadow-[0_-12px_32px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out md:inset-y-0 md:right-0 md:left-auto md:z-auto md:h-auto md:w-auto md:rounded-none md:border-l md:border-t-0 md:bg-card/75 md:shadow-none md:backdrop-blur-xl"
+        className="absolute inset-x-0 bottom-0 z-40 flex h-[78vh] shrink-0 flex-col overflow-hidden rounded-t-xl border-t border-border bg-surface-glass backdrop-blur-lg shadow-[0_-12px_32px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out md:inset-y-0 md:right-0 md:left-auto md:z-auto md:h-auto md:w-auto md:rounded-none md:border-l md:border-t-0 md:bg-card/75 md:shadow-none md:backdrop-blur-xl"
         style={isDesktop ? { width } : undefined}
       >
         <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2 py-1.5 scrollbar-thin">

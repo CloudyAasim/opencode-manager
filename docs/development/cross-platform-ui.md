@@ -68,6 +68,25 @@ Jan, and Open WebUI, adapted to a cloud workspace:
   to the same token set, to the palette's identity, and to a legible contrast
   on the primary button.
 
+- **The geometry is Breeze's too.** The palette is only half of a design
+  system; the other half is shape. The corner-radius scale is one scale
+  (4/6/8/12px), used everywhere, because "soft" is the relationship between
+  the steps and not a bigger number. Icons are monochrome and share one
+  line weight (one CSS rule, not 100+ call sites). Buttons and text fields
+  keep at least 8px of breathing room inside. Spacing lands on a 4px grid.
+  Every surface that floats above the page is glass, and the top bar and
+  the status strip float clear of the screen edge when there is room for
+  them, the way a Plasma 6 panel does. These are stated as rules in
+  `frontend/src/test/architecture/breeze-design.test.ts`, which keys on the
+  shape of the markup rather than on the names of the files.
+
+- **Colours come from tokens, not from the library.** `components/ui/`,
+  `features/source-control/` and `lib/` are held to a hard rule: no
+  Tailwind palette classes, only semantic tokens (`--color-primary`,
+  `--color-destructive`, `--color-diff-add`, ...). The rest of `features/`
+  is held to a baseline that may only go down. A gate that is red on the
+  day it is written is a gate that gets deleted rather than obeyed.
+
 - **Top bar** — the *only* navigation surface, at every width. Primary spaces:
   Projects, Assistant, Files, Schedules, Settings, Terminal (Terminal is
   permission-gated); account and logout are pushed conditionally. Items,

@@ -72,7 +72,7 @@ export function SettingsList({
   if (error) {
     return (
       <PanelMessage
-        icon={<AlertCircle className="text-red-500" />}
+        icon={<AlertCircle className="text-destructive" />}
         title={errorTitle ?? t('ui.settingsList.failedToLoad')}
         detail={error.message}
         className="py-6"

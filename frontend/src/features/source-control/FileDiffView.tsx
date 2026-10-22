@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils";
 import type { GitFileStatusType } from "@/types/git";
-import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from "@/lib/git-status-styles";
+import { GIT_DIFF_BACKGROUNDS, GIT_STATUS_COLORS, GIT_STATUS_LABELS } from "@/lib/git-status-styles";
 import { useI18n } from '@/lib/i18n';
 
 interface FileDiffViewProps {
@@ -94,25 +94,25 @@ const statusConfig: Record<
   modified: {
     icon: FileEdit,
     color: GIT_STATUS_COLORS.modified,
-    bgColor: "bg-amber-500/10",
+    bgColor: GIT_DIFF_BACKGROUNDS.modified,
     label: GIT_STATUS_LABELS.modified,
   },
   added: {
     icon: FilePlus,
     color: GIT_STATUS_COLORS.added,
-    bgColor: "bg-emerald-500/10",
+    bgColor: GIT_DIFF_BACKGROUNDS.added,
     label: GIT_STATUS_LABELS.added,
   },
   deleted: {
     icon: FileX,
     color: GIT_STATUS_COLORS.deleted,
-    bgColor: "bg-rose-500/10",
+    bgColor: GIT_DIFF_BACKGROUNDS.deleted,
     label: GIT_STATUS_LABELS.deleted,
   },
   renamed: {
     icon: FileText,
     color: GIT_STATUS_COLORS.renamed,
-    bgColor: "bg-blue-500/10",
+    bgColor: GIT_DIFF_BACKGROUNDS.renamed,
     label: GIT_STATUS_LABELS.renamed,
   },
   untracked: {
@@ -124,7 +124,7 @@ const statusConfig: Record<
   copied: {
     icon: FileText,
     color: GIT_STATUS_COLORS.copied,
-    bgColor: "bg-emerald-500/10",
+    bgColor: GIT_DIFF_BACKGROUNDS.copied,
     label: GIT_STATUS_LABELS.copied,
   },
 };
@@ -156,16 +156,16 @@ function DiffLineComponent({
 
   const bgClass =
     line.type === "add"
-      ? "bg-emerald-500/10"
+      ? GIT_DIFF_BACKGROUNDS.added
       : line.type === "remove"
-        ? "bg-rose-500/10"
+        ? GIT_DIFF_BACKGROUNDS.deleted
         : "";
 
   const textClass =
     line.type === "add"
-      ? "text-emerald-700 dark:text-emerald-300"
+      ? "text-diff-add"
       : line.type === "remove"
-        ? "text-rose-700 dark:text-rose-300"
+        ? "text-diff-remove"
         : "text-foreground";
 
   const lineNumber = line.newLineNumber ?? line.oldLineNumber;
@@ -176,8 +176,8 @@ function DiffLineComponent({
       className={cn(
         "flex min-w-0 max-w-full font-mono text-sm border-l-2 transition-colors",
         bgClass,
-        line.type === "add" && "border-l-emerald-500",
-        line.type === "remove" && "border-l-rose-500",
+        line.type === "add" && "border-l-diff-add",
+        line.type === "remove" && "border-l-diff-remove",
         line.type === "context" && "border-l-transparent",
         isClickable && "cursor-pointer hover:bg-accent/30",
       )}
@@ -197,10 +197,10 @@ function DiffLineComponent({
       )}
       <div className="w-6 flex-shrink-0 flex items-center justify-center bg-muted/20">
         {line.type === "add" && (
-          <Plus className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+          <Plus className="w-3 h-3 text-diff-add" />
         )}
         {line.type === "remove" && (
-          <Minus className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+          <Minus className="w-3 h-3 text-diff-remove" />
         )}
       </div>
       <pre
@@ -325,8 +325,8 @@ export function FileDiffView({
           </span>
           {!diffData.isBinary && (
             <>
-              <span className="text-green-500">+{diffData.additions}</span>
-              <span className="text-red-500">-{diffData.deletions}</span>
+              <span className="text-diff-add">+{diffData.additions}</span>
+              <span className="text-diff-remove">-{diffData.deletions}</span>
             </>
           )}
           {diffData.diff && (
