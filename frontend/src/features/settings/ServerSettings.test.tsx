@@ -27,16 +27,26 @@ function installStorage(): Map<string, string> {
 describe('ServerSettings', () => {
   let store: Map<string, string>
   let reload: ReturnType<typeof vi.fn>
+  let originalFetch: typeof globalThis.fetch
 
   beforeEach(() => {
     store = installStorage()
     reload = vi.fn()
+    originalFetch = globalThis.fetch
     // jsdom's reload is "not implemented"; the panel is only useful if saving
     // really does reload, so the call is asserted rather than stubbed away.
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...window.location, reload, origin: 'https://app.example.com' },
     })
+  })
+
+  afterEach(() => {
+    // The panel asks the client proxy whether there is one, and several cases
+    // below answer that question by replacing the global fetch. A case that
+    // inherited another's answer would decide it is behind a proxy when it is
+    // not - and the order these run in is shuffled.
+    globalThis.fetch = originalFetch
   })
 
   it('shows what the app is using right now', () => {
@@ -231,6 +241,7 @@ describe('ServerSettings', () => {
 describe('ServerSettings behind a client proxy', () => {
   let store: Map<string, string>
   let reload: ReturnType<typeof vi.fn>
+  let originalFetch: typeof globalThis.fetch
 
   function installProxy(target: string, putStatus = 200): ReturnType<typeof vi.fn> {
     const fetchMock = vi.fn(async (url: string, init?: { method?: string }) => {
@@ -254,10 +265,15 @@ describe('ServerSettings behind a client proxy', () => {
   beforeEach(() => {
     store = installStorage()
     reload = vi.fn()
+    originalFetch = globalThis.fetch
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...window.location, reload, origin: 'https://app.example.com' },
     })
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
   })
 
   it('shows the address the proxy points at', async () => {
