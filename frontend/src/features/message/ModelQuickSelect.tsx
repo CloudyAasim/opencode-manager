@@ -608,7 +608,7 @@ export function ModelQuickSelect({
                 <X className="h-5 w-5" />
               </button>
               <div className="min-w-0 flex-1 px-3 text-center">
-                <h2 className="truncate text-base font-semibold tracking-tight">
+                <h2 className="truncate text-lg font-semibold tracking-tight leading-none">
                   {selectedModelLabel}
                   <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-warning" />
                 </h2>

@@ -65,7 +65,7 @@ export function JobDetailTab({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-xl font-semibold tracking-tight">{selectedJob.name}</h3>
+                <h3 className="text-base font-semibold tracking-tight">{selectedJob.name}</h3>
                 <Badge className={getJobStatusTone(selectedJob)}>{selectedJob.enabled ? t('schedules.common.enabled') : t('schedules.common.paused')}</Badge>
               </div>
               <p className="text-sm text-muted-foreground">{selectedJob.description || t('schedules.common.noDescriptionProvided')}</p>

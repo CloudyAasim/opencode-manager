@@ -135,7 +135,7 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
          */}
         <div className="flex shrink-0 items-start gap-3 px-4 pb-1 pt-4">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold leading-tight text-foreground">
+            <h2 className="truncate text-lg font-semibold leading-none text-foreground">
               {scope === 'project' && repoDisplayName ? repoDisplayName : t('navigation.more')}
             </h2>
             {scope === 'project' && currentBranch && (

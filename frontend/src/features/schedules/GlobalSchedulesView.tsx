@@ -562,7 +562,7 @@ export function GlobalSchedulesView() {
                           >
                             {job.repoName}
                           </button>
-                          <h3 className="font-medium truncate">{job.name}</h3>
+                          <h3 className="text-base font-medium truncate">{job.name}</h3>
                           <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
                             {job.description || t('schedules.common.noDescription')}
                           </p>

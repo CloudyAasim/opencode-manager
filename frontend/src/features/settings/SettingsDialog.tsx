@@ -46,7 +46,7 @@ function OpenCodeSettings({ onOpenVersionDialog }: { onOpenVersionDialog: () => 
             document two front doors, and the two would drift. */}
         {auth?.user?.role === 'admin' && (
           <div className="rounded-md border border-border p-4">
-            <h2 className="text-sm font-medium text-foreground">{t('settingsPanels.coreConfig.pageTitle')}</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t('settingsPanels.coreConfig.pageTitle')}</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               {t('settingsPanels.coreConfig.pageDescription')}
             </p>
@@ -284,7 +284,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                          <item.icon className="w-6 h-6 text-primary" />
                        </div>
                        <div className="flex-1 min-w-0">
-                         <h3 className="font-semibold text-foreground mb-1">{item.label}</h3>
+                         <h3 className="text-base font-semibold text-foreground mb-1">{item.label}</h3>
                          <p className="text-sm text-muted-foreground">{item.description}</p>
                        </div>
                      </div>

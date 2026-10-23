@@ -43,8 +43,28 @@ describe('FileBrowserSheet', () => {
     expect(screen.getByPlaceholderText(/search/i)).toBeInTheDocument()
   })
 
-  it('does not render when isOpen is false and shouldRender is false', () => {
-    const { container } = render(
+  it('says the repository as a label, not as a heading', () => {
+    // The repository name is the root of the path, and the path is the place.
+    // It was an `<h1>` once - a page title in a drawer that is not a page -
+    // then an `<h2>`, a section in a drawer that has no sections. It is a
+    // label, and it says so.
+    render(
+      <FileBrowserSheet
+        isOpen={true}
+        onClose={mockOnClose}
+        repoName="demo"
+      />,
+      { wrapper: createWrapper() }
+    )
+
+    expect(screen.getByText('demo')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'demo' }) !== null,
+      'the repository name is the root of the path, not a heading',
+    ).toBe(false)
+  })
+
+  it('does not render when isOpen is false and shouldRender is false', () => {    const { container } = render(
       <FileBrowserSheet
         isOpen={false}
         onClose={mockOnClose}
