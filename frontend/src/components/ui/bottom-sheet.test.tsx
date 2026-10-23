@@ -83,6 +83,25 @@ describe('BottomSheet', () => {
     expect(content).toHaveClass('pb-safe')
   })
 
+  it('浮起来：离边留出沟槽，圆角在刻度上', () => {
+    // The sheet is a floating panel too. Painted to the bottom edge it read as
+    // a slab of another screen, and its 16px top corner was off the radius
+    // scale the whole interface is drawn on.
+    render(
+      <BottomSheet isOpen onClose={() => {}} ariaLabel="Test sheet">
+        <div>Test content</div>
+      </BottomSheet>,
+    )
+    const panel = document.querySelector('[role="dialog"]')!
+
+    expect(panel.className).toContain('rounded-xl')
+    expect(panel.className).toContain('shadow-lg')
+    expect(panel.className).toContain('inset-x-3')
+    expect(panel.className).toContain('bottom-3')
+    expect(panel.className).not.toContain('rounded-t-2xl')
+    expect(panel.className).not.toMatch(/(^|\s)(inset-x-0|bottom-0)(\s|$)/)
+  })
+
   it('applies custom heightClass', () => {
     render(
       <BottomSheet isOpen onClose={() => {}} heightClass="h-[50dvh]" ariaLabel="Test sheet">

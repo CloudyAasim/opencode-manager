@@ -133,9 +133,13 @@ const TOP_INSET_OWNERS = new Map<string, string>([
   // Overlays. These do cover the entire screen, so the inset is theirs to take -
   // they are drawn above the shell bar, not below it.
   ['components/ui/fullscreen-sheet.tsx', '全屏 sheet，盖住整屏'],
-  ['components/ui/side-drawer.tsx', '侧边抽屉，fixed 覆盖整屏高度'],
   ['components/ui/EditSessionTitleDialog.tsx', '手机上全屏的改名弹窗'],
   ['features/file-browser/MobileFilePreviewModal.tsx', '全屏文件预览弹窗'],
+  // The side drawer used to be here: it was `fixed top-0 bottom-0`, so it
+  // covered the full height of the screen and the inset was its to take. It
+  // floats now - it clears the top edge by the safe area plus the gutter -
+  // so the inset belongs to the panel's margin rather than to its padding, and
+  // claiming it as padding would push the drawer's own content down twice.
 ])
 
 describe('顶部安全区：只能由贴着屏幕顶边的那一层认领', () => {

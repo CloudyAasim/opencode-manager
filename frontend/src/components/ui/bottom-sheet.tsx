@@ -79,7 +79,16 @@ export function BottomSheet({
       <div
         ref={panelRef}
         className={cn(
-          'fixed inset-x-0 bottom-0 flex flex-col bg-surface-glass backdrop-blur-lg rounded-t-2xl border-t border-border',
+          // A sheet is a floating panel too: it clears the edge by the same
+          // gutter the desktop shell uses and carries the same radius and
+          // shadow. Painted to the bottom edge it read as a slab of another
+          // screen, and its 16px top corner was off the radius scale the
+          // whole interface is drawn on.
+          //
+          // One class list, on purpose - the geometry gate reads the panel out
+          // of it, and a panel whose position and whose looks live in two
+          // strings cannot be read.
+          'fixed inset-x-3 bottom-3 z-[250] flex flex-col rounded-xl border border-border bg-surface-glass backdrop-blur-lg shadow-lg',
           heightClass,
           className,
         )}

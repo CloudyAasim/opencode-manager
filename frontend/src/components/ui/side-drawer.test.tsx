@@ -48,6 +48,25 @@ describe('SideDrawer', () => {
     expect(handleClose).toHaveBeenCalled()
   })
 
+  it('浮起来：离边留出沟槽，有圆角和影子', () => {
+    // The phone's face of the same floating panel the desktop floats. A
+    // drawer painted to the edge of the screen with a square corner is the
+    // interface from before the geometry arrived.
+    render(
+      <SideDrawer isOpen onClose={() => {}} ariaLabel="Test drawer">
+        <div>Test content</div>
+      </SideDrawer>,
+    )
+    const panel = document.querySelector('[role="dialog"]')!
+
+    expect(panel.className).toContain('rounded-xl')
+    expect(panel.className).toContain('shadow-lg')
+    expect(panel.className).toContain('bg-surface-glass')
+    // Not painted to the edge: the panel clears it on every side.
+    expect(panel.className).not.toMatch(/(^|\s)(inset-0|inset-x-0|inset-y-0|top-0|bottom-0|left-0|right-0)(\s|$)/)
+    expect(panel.className).toContain('right-3')
+  })
+
 })
 
 describe('SideDrawerHeader', () => {

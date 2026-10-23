@@ -7,17 +7,24 @@ import { useI18n } from '@/lib/i18n'
 export interface SideDrawerProps {
   isOpen: boolean
   onClose: () => void
-  side?: 'left' | 'right'
   widthClass?: string
   className?: string
   children: React.ReactNode
   ariaLabel?: string
 }
 
+/**
+ * The drawer that comes up on a phone.
+ *
+ * There is one of them and it is on the right, so there is no `side` to
+ * choose: the prop existed for a second drawer that was never built, and it
+ * cost the class list a split that the geometry gate could not read - a panel
+ * whose position and whose looks live in two strings cannot be checked
+ * against either.
+ */
 export function SideDrawer({
   isOpen,
   onClose,
-  side = 'right',
   widthClass = 'w-[min(85vw,320px)]',
   className,
   children,
@@ -70,8 +77,23 @@ export function SideDrawer({
       />
       <div
         className={cn(
-          'fixed top-0 bottom-0 bg-surface-glass backdrop-blur-lg border-l border-border pt-safe pb-safe flex flex-col z-50',
-          side === 'right' ? 'right-0' : 'left-0',
+          // The drawer is the phone's face of the same floating panel the
+          // desktop shell floats. It used to be a slab painted to the edge of
+          // the screen - a square corner on the right, a hard rule under the
+          // header - which is the one thing the rest of the interface stopped
+          // being. Now it clears the edge by the same gutter the shell uses,
+          // and it carries the same radius, border and shadow.
+          //
+          // The top inset is the safe area plus that gutter: a phone with a
+          // punch hole would otherwise have the notch cut into the panel's
+          // top corner, and a phone without one would have the panel flush
+          // against the top.
+          //
+          // One class list, on purpose. The geometry gate reads the panel out
+          // of it, and a panel whose position and whose looks live in two
+          // strings cannot be read - the gate would see the corner and not
+          // the gutter, and say nothing.
+          'fixed bottom-3 right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-50 flex flex-col rounded-xl border border-border bg-surface-glass backdrop-blur-lg shadow-lg',
           widthClass,
           className,
         )}

@@ -113,38 +113,48 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
   ].filter(Boolean).join(' · ')
 
   return (
-    <SideDrawer isOpen={isOpen} onClose={onClose} side="right" ariaLabel={t('navigation.more')} widthClass="w-screen sm:w-[min(90vw,420px)]">
+    <SideDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel={t('navigation.more')}
+      widthClass="w-[min(92vw,420px)]"
+    >
       <div ref={swipeRef} className="flex flex-col flex-1 min-h-0">
-        <div className="flex flex-col flex-shrink-0 border-b border-border bg-background px-4 py-1.5">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            {versionLabel && (
-              <span className="truncate text-xs leading-tight text-muted-foreground">{versionLabel}</span>
+        {/* The head of the drawer says where you are.
+         *
+         * It used to be a band with a rule under it, holding a version string
+         * on the left and a close button that jumped to the right when the
+         * version happened to be missing - which is most of the time, because
+         * the version only shows up once the health check answers. So the
+         * drawer opened with an empty strip and a lonely X in the corner of
+         * it.
+         *
+         * Now it is a title and a close button, the same way the desktop
+         * dialogs are, and the version has moved down to the foot of the
+         * drawer where it is information rather than a heading.
+         */}
+        <div className="flex shrink-0 items-start gap-3 px-4 pb-1 pt-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-semibold leading-tight text-foreground">
+              {scope === 'project' && repoDisplayName ? repoDisplayName : t('navigation.more')}
+            </h2>
+            {scope === 'project' && currentBranch && (
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <GitBranch className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{currentBranch}</span>
+              </div>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 rounded-sm p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={t('navigation.close')}
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
-          {scope === 'project' && (repoDisplayName || currentBranch) && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {repoDisplayName && (
-                <span className="font-medium text-primary">{repoDisplayName}</span>
-              )}
-
-              {currentBranch && (
-                <>
-                  <GitBranch className="h-3.5 w-3.5" />
-                  <span>{currentBranch}</span>
-                </>
-              )}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="-mr-1 shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={t('navigation.close')}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        <SideDrawerContent className="flex flex-col gap-1">
+        <SideDrawerContent className="flex flex-col gap-1 pt-2">
           {items.map((item) => {
             // The drawer is the phone's face of the same navigation, so it
             // says where you are the same way the top bar does - and it asks
@@ -167,16 +177,21 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
                 }}
                 aria-current={current ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-3 p-3 rounded-lg transition-colors text-left w-full',
+                  'flex min-h-11 items-center gap-3 rounded-lg p-3 text-left w-full transition-colors',
                   current ? 'bg-accent' : 'hover:bg-accent',
                 )}
               >
-                <item.icon className={cn('w-5 h-5', current ? 'text-foreground' : 'text-muted-foreground')} />
+                <item.icon className={cn('w-5 h-5 shrink-0', current ? 'text-foreground' : 'text-muted-foreground')} />
                 <span className="font-medium text-foreground">{item.labelKey ? t(item.labelKey) : item.label}</span>
               </button>
             )
           })}
         </SideDrawerContent>
+        {versionLabel && (
+          <div className="shrink-0 px-4 pb-4 pt-2 text-xs leading-tight text-muted-foreground">
+            {versionLabel}
+          </div>
+        )}
       </div>
     </SideDrawer>
   )
