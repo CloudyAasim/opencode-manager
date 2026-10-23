@@ -87,10 +87,10 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
     autoPlay: autoPlay ? t('message.tts.autoPlayEnabledState') : t('message.tts.autoPlayDisabledState'),
   })
   const buttonToneClasses = showStop
-    ? 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-red-600 to-red-700 border border-red-500/60 shadow-red-500/30 ring-red-500/20 hover:ring-red-500/40 text-white'
+    ? 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-destructive to-destructive border border-destructive shadow-destructive ring-destructive hover:ring-destructive text-white'
     : autoPlay
-      ? 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 border border-blue-400/60 shadow-blue-500/30 ring-blue-500/20 hover:ring-blue-500/40 text-white'
-      : 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 border border-amber-400/60 shadow-amber-500/30 ring-amber-500/20 hover:ring-amber-500/40 text-white'
+      ? 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-primary to-primary border border-primary/40 shadow-primary ring-primary hover:ring-primary text-white'
+      : 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-warning to-warning border border-warning/40 shadow-warning ring-warning hover:ring-warning text-white'
 
   return (
       <button

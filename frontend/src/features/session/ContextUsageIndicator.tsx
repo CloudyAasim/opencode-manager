@@ -14,9 +14,9 @@ interface ContextUsageIndicatorProps {
 const COMPACT_QUERY = MEDIA.layoutUp
 
 const getUsageTextColor = (percentage: number) => {
-  if (percentage < 50) return 'text-green-700 dark:text-green-400'
-  if (percentage < 80) return 'text-yellow-700 dark:text-yellow-400'
-  return 'text-red-700 dark:text-red-400'
+  if (percentage < 50) return 'text-success'
+  if (percentage < 80) return 'text-warning'
+  return 'text-destructive'
 }
 
 export function ContextUsageIndicator({ opcodeUrl, sessionID, directory, isConnected, isReconnecting }: ContextUsageIndicatorProps) {
@@ -45,10 +45,10 @@ export function ContextUsageIndicator({ opcodeUrl, sessionID, directory, isConne
 
   if (isReconnecting) {
     return isRoomy ? (
-      <span className="text-xs text-yellow-700 dark:text-yellow-400 font-medium">{t('session.contextUsage.reconnecting')}</span>
+      <span className="text-xs text-warning font-medium">{t('session.contextUsage.reconnecting')}</span>
     ) : (
       <span
-        className="h-2 w-2 shrink-0 rounded-full bg-yellow-500"
+        className="h-2 w-2 shrink-0 rounded-full bg-warning"
         title={t('session.contextUsage.reconnecting')}
         aria-label={t('session.contextUsage.reconnecting')}
       />

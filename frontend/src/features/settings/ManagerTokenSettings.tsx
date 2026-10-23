@@ -89,7 +89,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
           aria-label={t('settingsPanels.managerToken.copy')}
           title={t('settingsPanels.managerToken.copy')}
         >
-          {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+          {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
         </Button>
         <Button
           variant={confirmRotate ? 'destructive' : 'outline'}

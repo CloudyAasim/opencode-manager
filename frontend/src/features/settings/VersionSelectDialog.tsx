@@ -119,7 +119,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                         isSelected
                           ? 'border-primary bg-primary/10'
                           : isCurrent
-                            ? 'border-green-500/50 bg-green-500/10 cursor-default'
+                            ? 'border-success bg-success cursor-default'
                             : 'border-border hover:border-primary/50 hover:bg-muted/50'
                       }`}
                     >
@@ -128,7 +128,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                           <div className="font-medium flex items-center gap-2">
                             v{release.version}
                             {isCurrent && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-600 dark:text-green-400">
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-success text-success">
                                 {t('settingsPanels.versionSelect.current')}
                               </span>
                             )}

@@ -217,7 +217,7 @@ export const FileTree = memo(function FileTree({
               </DropdownMenuItem>
             )}
             {onDelete && (
-              <DropdownMenuItem onClick={() => setDeleteTarget(file.path)} className="text-red-600">
+              <DropdownMenuItem onClick={() => setDeleteTarget(file.path)} className="text-destructive">
                 <Trash2 className="w-4 h-4 mr-2" />
                 {t('repo.fileBrowser.actions.delete')}
               </DropdownMenuItem>

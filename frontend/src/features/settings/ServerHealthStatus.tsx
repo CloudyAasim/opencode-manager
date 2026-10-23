@@ -38,7 +38,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
     <>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <div className={`h-3 w-3 rounded-full ${isUnhealthy ? 'bg-destructive animate-pulse' : 'bg-green-500'}`} />
+          <div className={`h-3 w-3 rounded-full ${isUnhealthy ? 'bg-destructive animate-pulse' : 'bg-success'}`} />
           <p className="font-medium text-sm">
             {t('settingsPanels.serverHealth.label', {
               status: isUnhealthy ? t('settingsPanels.serverHealth.unhealthy') : t('settingsPanels.serverHealth.healthy'),

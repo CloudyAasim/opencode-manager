@@ -108,9 +108,9 @@ export function CreateWorktreeDialog({
 
         <div className="space-y-4">
           {!canCreate ? (
-            <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded p-3">
-              <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+            <div className="flex items-start gap-2 bg-warning border border-warning rounded p-3">
+              <AlertCircle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-warning">
                 {t('repo.worktreeCreation.needsRemote')}
               </p>
             </div>
@@ -154,7 +154,7 @@ export function CreateWorktreeDialog({
                     {remoteBranches.map((branch) => (
                       <SelectItem key={`remote-${branch.name}`} value={branch.shortName}>
                         <div className="flex items-center gap-2">
-                          <GitBranch className="w-3.5 h-3.5 text-blue-500" />
+                          <GitBranch className="w-3.5 h-3.5 text-primary" />
                           <span>{branch.shortName}</span>
                           <span className="text-xs text-muted-foreground">{t('repo.worktreeCreation.remote')}</span>
                         </div>
@@ -170,9 +170,9 @@ export function CreateWorktreeDialog({
           )}
 
           {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded p-3">
-              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <div className="flex items-start gap-2 bg-destructive border border-destructive rounded p-3">
+              <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
@@ -187,7 +187,7 @@ export function CreateWorktreeDialog({
             <Button
               onClick={handleCreate}
               disabled={!canCreate || !branchName.trim() || !baseBranch || worktreeMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              className="bg-primary hover:bg-primary disabled:opacity-50"
             >
               {worktreeMutation.isPending ? (
                 <>

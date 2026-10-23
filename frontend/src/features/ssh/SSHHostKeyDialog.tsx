@@ -93,7 +93,7 @@ export function SSHHostKeyDialog({
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <WarningIcon className={cn(
               "h-5 w-5",
-              request.isKeyChanged ? "text-red-500" : "text-amber-500"
+              request.isKeyChanged ? "text-destructive" : "text-warning"
             )} />
             <span>{request.isKeyChanged ? t('misc.ssh.hostKeyChanged') : t('misc.ssh.verifyTitle')}</span>
           </DialogTitle>
@@ -139,7 +139,7 @@ export function SSHHostKeyDialog({
           <div className="text-xs text-muted-foreground">
             <div className="flex justify-between">
               <span>{t('misc.ssh.autoRejectIn')}</span>
-              <span className={cn("font-mono", isExpired && "text-red-500")}>
+              <span className={cn("font-mono", isExpired && "text-destructive")}>
                 {isExpired ? t('misc.ssh.expired') : formatTime(timeRemaining)}
               </span>
             </div>

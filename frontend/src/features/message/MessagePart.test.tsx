@@ -224,8 +224,8 @@ describe('MessagePart', () => {
     )
     
     const button = screen.getByRole('button')
-    expect(button).toHaveClass('bg-red-500/20')
-    expect(button).toHaveClass('text-red-500')
+    expect(button).toHaveClass('bg-destructive')
+    expect(button).toHaveClass('text-destructive')
   })
 
   it('shows active state when this message is loading', () => {
@@ -240,7 +240,7 @@ describe('MessagePart', () => {
     )
     
     const button = screen.getByRole('button')
-    expect(button).toHaveClass('bg-red-500/20')
+    expect(button).toHaveClass('bg-destructive')
   })
 
   it('does not show active state when different message is playing', () => {
@@ -255,7 +255,7 @@ describe('MessagePart', () => {
     )
     
     const button = screen.getByRole('button')
-    expect(button).not.toHaveClass('bg-red-500/20')
+    expect(button).not.toHaveClass('bg-destructive')
   })
 
   it('tracks playback by message id not text', () => {
@@ -270,7 +270,7 @@ describe('MessagePart', () => {
       />
     )
     
-    expect(screen.getByRole('button')).toHaveClass('bg-red-500/20')
+    expect(screen.getByRole('button')).toHaveClass('bg-destructive')
     
     rerender(
       <MessagePart
@@ -279,7 +279,7 @@ describe('MessagePart', () => {
       />
     )
     
-    expect(screen.getByRole('button')).not.toHaveClass('bg-red-500/20')
+    expect(screen.getByRole('button')).not.toHaveClass('bg-destructive')
   })
 
   describe('tool output clamping', () => {

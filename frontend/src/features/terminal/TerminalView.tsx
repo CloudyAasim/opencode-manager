@@ -243,7 +243,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
           <span
             className={cn(
               'inline-block h-2 w-2 rounded-full',
-              status === 'ready' ? 'bg-green-500' : status === 'connecting' ? 'bg-amber-500' : 'bg-muted-foreground',
+              status === 'ready' ? 'bg-success' : status === 'connecting' ? 'bg-warning' : 'bg-muted-foreground',
             )}
           />
           <span>{statusLabel}</span>

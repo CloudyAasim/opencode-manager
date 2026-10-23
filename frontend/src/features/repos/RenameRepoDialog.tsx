@@ -66,7 +66,7 @@ export function RenameRepoDialog({
                   setEditName('')
                   inputRef.current?.focus()
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-red-500/10 text-red-500 transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-destructive text-destructive transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

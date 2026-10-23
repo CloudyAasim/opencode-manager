@@ -489,7 +489,7 @@ export function ModelQuickSelect({
             className="rounded-full p-1.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground/80"
             aria-label={t('misc.modelQuickSelect.removeFromRecent')}
           >
-            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
           </button>
         )}
         <button
@@ -501,7 +501,7 @@ export function ModelQuickSelect({
           className="rounded-full p-1.5 text-muted-foreground transition-opacity hover:bg-muted hover:text-foreground"
           aria-label={isFavorite ? t('misc.modelQuickSelect.removeFromFavorites') : t('misc.modelQuickSelect.addToFavorites')}
         >
-          <Star className={`h-4 w-4 ${isFavorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+          <Star className={`h-4 w-4 ${isFavorite ? 'fill-warning text-warning' : ''}`} />
         </button>
         {isSelected && <Check className="h-5 w-5 shrink-0 pr-2 text-warning" />}
       </div>

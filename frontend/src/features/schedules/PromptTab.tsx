@@ -40,7 +40,7 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
         <Badge className="border-transparent bg-warning text-2xs uppercase tracking-wide text-white">
           {template.category}
         </Badge>
-        <Badge className="border-transparent bg-slate-600 text-2xs uppercase tracking-wide text-white">
+        <Badge className="border-transparent bg-muted text-2xs uppercase tracking-wide text-white">
           {template.cadenceHint}
         </Badge>
       </div>

@@ -81,7 +81,7 @@ function ClickableJson({ json, onFileClick }: { json: unknown; onFileClick?: (fi
           e.stopPropagation()
           onFileClick?.(ref.filePath)
         }}
-        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer underline decoration-dotted"
+        className="text-primary hover:text-primary dark:hover:text-primary cursor-pointer underline decoration-dotted"
         title={t('message.parts.clickToOpen', { path: ref.filePath })}
       >
         {ref.fullMatch}
@@ -134,13 +134,13 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
   const getStatusColor = () => {
     switch (part.state.status) {
       case 'completed':
-        return 'text-green-600 dark:text-green-400'
+        return 'text-success'
       case 'error':
-        return 'text-red-600 dark:text-red-400'
+        return 'text-destructive'
       case 'running':
         if (isWaitingPermission) return 'text-primary'
-        if (isWaitingQuestion) return 'text-blue-600 dark:text-blue-400'
-        return 'text-yellow-600 dark:text-yellow-400'
+        if (isWaitingQuestion) return 'text-primary'
+        return 'text-warning'
       default:
         return 'text-muted-foreground'
     }
@@ -214,16 +214,16 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
         )}
         {isRunning && (
           <div className="flex gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+            <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
         )}
-        {isCompleted && <span className="text-green-600 text-sm font-medium">✓</span>}
-        {isError && <span className="text-red-600 text-sm font-medium">✗</span>}
+        {isCompleted && <span className="text-success text-sm font-medium">✓</span>}
+        {isError && <span className="text-destructive text-sm font-medium">✗</span>}
         <span className="font-medium text-foreground truncate">{description}</span>
         <span className="text-2xs font-medium text-primary shrink-0">{t('message.parts.subAgent')}</span>
-        {sessionId && <ExternalLink className="w-3 h-3 shrink-0 text-blue-600 dark:text-blue-400" />}
+        {sessionId && <ExternalLink className="w-3 h-3 shrink-0 text-primary" />}
       </div>
     )
 
@@ -231,7 +231,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
       return (
         <button
           onClick={() => onChildSessionClick?.(sessionId)}
-          className="my-1 w-full rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-blue-500/10 hover:border-blue-500/30 transition-all duration-200 shadow-sm shadow-blue-500/5"
+          className="my-1 w-full rounded-lg border border-primary bg-primary px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-primary hover:border-primary transition-all duration-200 shadow-sm shadow-primary"
           title={t('message.actions.viewSubagentSession')}
         >
           {content}
@@ -240,7 +240,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
     }
 
     return (
-      <div className="my-1 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-1.5 text-xs text-muted-foreground shadow-sm shadow-blue-500/5">
+      <div className="my-1 rounded-lg border border-primary bg-primary px-3 py-1.5 text-xs text-muted-foreground shadow-sm shadow-primary">
         {content}
       </div>
     )
@@ -249,7 +249,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
   if (isTodoTool) {
     if (part.state.status === 'error') {
       return (
-        <div className="my-2 text-sm text-red-600 dark:text-red-400">
+        <div className="my-2 text-sm text-destructive">
           {t('message.todos.updateError', { error: part.state.error })}
         </div>
       )
@@ -269,7 +269,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
     return (
       <div className="my-2">
         <div className="flex items-center gap-2 text-sm mb-2">
-          <span className="text-green-600 dark:text-green-400">✓</span>
+          <span className="text-success">✓</span>
           <span className="font-medium">$</span>
           <span className="text-foreground">{command}</span>
           {part.state.status === 'completed' && part.state.time && (
@@ -289,13 +289,13 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
   const getBorderStyle = () => {
     switch (part.state.status) {
       case 'running':
-        if (isWaitingPermission) return 'border-orange-500/50 shadow-sm shadow-orange-500/20'
-        if (isWaitingQuestion) return 'border-blue-500/50 shadow-sm shadow-blue-500/20'
-        return 'border-yellow-500/50 shadow-sm shadow-yellow-500/10'
+        if (isWaitingPermission) return 'border-warning shadow-sm shadow-warning'
+        if (isWaitingQuestion) return 'border-primary shadow-sm shadow-primary'
+        return 'border-warning shadow-sm shadow-warning'
       case 'pending':
-        return 'border-blue-500/30'
+        return 'border-primary'
       case 'error':
-        return 'border-red-500/30'
+        return 'border-destructive'
       case 'completed':
         return 'border-border'
       default:
@@ -320,7 +320,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
                 onFileClick(previewText)
               }
             }}
-            className="text-blue-600 dark:text-blue-400 text-xs truncate hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer underline decoration-dotted"
+            className="text-primary text-xs truncate hover:text-primary dark:hover:text-primary cursor-pointer underline decoration-dotted"
             title={t('message.parts.clickToOpen', { path: previewText })}
           >
             {previewText}
@@ -337,7 +337,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
                 e.stopPropagation()
                 onChildSessionClick?.(sessionId)
               }}
-              className="text-blue-600 dark:text-blue-400 text-xs hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer underline decoration-dotted flex items-center gap-1"
+              className="text-primary text-xs hover:text-primary dark:hover:text-primary cursor-pointer underline decoration-dotted flex items-center gap-1"
               title={t('message.actions.viewSubagentSession')}
             >
               <ExternalLink className="w-3 h-3" />
@@ -353,9 +353,9 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
           {part.state.status === 'pending' && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <div className="flex gap-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
               <span>{t('message.tools.preparing')}</span>
             </div>
@@ -373,9 +373,9 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
                     />
                   </div>
                   <div className="bg-accent p-2 rounded text-xs overflow-x-auto whitespace-pre-wrap break-words">
-                    <span className="text-green-600 dark:text-green-400">$</span> {displayCommand ?? ''}
+                    <span className="text-success">$</span> {displayCommand ?? ''}
                   </div>
-                  <div className={`flex items-center gap-2 mt-2 text-xs ${isWaitingPermission ? 'text-primary' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                  <div className={`flex items-center gap-2 mt-2 text-xs ${isWaitingPermission ? 'text-primary' : 'text-warning'}`}>
                     <Loader2 className="w-3 h-3 animate-spin" />
                     <span>{isWaitingPermission ? t('message.tools.waitingPermission') : t('message.tools.running')}</span>
                   </div>
@@ -384,7 +384,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
                 <div className="text-sm">
                   <div className="text-muted-foreground mb-1">{t('message.tools.input')}</div>
                   <ClickableJson json={part.state.input} onFileClick={onFileClick} />
-                  <div className={`flex items-center gap-2 mt-2 text-xs ${isWaitingPermission ? 'text-primary' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                  <div className={`flex items-center gap-2 mt-2 text-xs ${isWaitingPermission ? 'text-primary' : 'text-warning'}`}>
                     <Loader2 className="w-3 h-3 animate-spin" />
                     <span>{isWaitingPermission ? t('message.tools.waitingPermission') : t('message.tools.running')}</span>
                   </div>
@@ -405,7 +405,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
                     />
                   </div>
                   <div className="bg-accent p-2 rounded text-xs overflow-x-auto whitespace-pre-wrap break-words">
-                    <span className="text-green-600 dark:text-green-400">$</span> {displayCommand ?? ''}
+                    <span className="text-success">$</span> {displayCommand ?? ''}
                   </div>
                 </div>
               ) : (
@@ -436,10 +436,10 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
 
           {part.state.status === 'error' && (
             <div className="text-sm">
-              <div className="text-red-600 dark:text-red-400 mb-1">{t('message.tools.error')}</div>
+              <div className="text-destructive mb-1">{t('message.tools.error')}</div>
               <BoundedPre
                 content={part.state.error ?? ''}
-                className="bg-accent p-2 rounded text-xs overflow-x-auto whitespace-pre-wrap break-words text-red-600 dark:text-red-300"
+                className="bg-accent p-2 rounded text-xs overflow-x-auto whitespace-pre-wrap break-words text-destructive"
               />
             </div>
           )}

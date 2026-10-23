@@ -85,12 +85,12 @@ export function RepoCard({
     <div
       onClick={handleCardClick}
       className={`relative border rounded-xl overflow-hidden transition-all duration-200 w-full ${
-        isReady ? "cursor-pointer active:scale-[0.98] hover:border-blue-500/50 hover:bg-accent/50 hover:shadow-md" : "cursor-default"
+        isReady ? "cursor-pointer active:scale-[0.98] hover:border-primary hover:bg-accent/50 hover:shadow-md" : "cursor-default"
       } ${
         directoryMissing ? "border-destructive/60 bg-destructive/5" : ""
       } ${
         isSelected
-          ? "border-blue-500 bg-blue-500/5"
+          ? "border-primary bg-primary"
           : "border-border bg-card"
       }`}
     >
@@ -102,7 +102,7 @@ export function RepoCard({
                 {repoName}
               </h3>
               {isUsable && (
-                <div className={`w-2 h-2 rounded-full shrink-0 ${isDirty ? 'bg-warning' : 'bg-green-500'}`} />
+                <div className={`w-2 h-2 rounded-full shrink-0 ${isDirty ? 'bg-warning' : 'bg-success'}`} />
               )}
             </div>
 
@@ -130,12 +130,12 @@ export function RepoCard({
                 </span>
               ) : isCloning ? (
                 <span className="flex items-center gap-1.5">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                   {t('repo.cloning')}
                 </span>
               ) : (
                 <>
-                  <span className={`flex items-center gap-1 shrink-0 ${repo.isWorktree ? 'text-purple-400' : ''}`}>
+                  <span className={`flex items-center gap-1 shrink-0 ${repo.isWorktree ? 'text-worktree' : ''}`}>
                     <GitBranch className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate max-w-[80px]">{branchToDisplay || DEFAULT_REPO_BRANCH}</span>
                   </span>
@@ -150,7 +150,7 @@ export function RepoCard({
                     </span>
                   )}
                   {(ahead > 0 || behind > 0) && (
-                    <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400 shrink-0">
+                    <span className="flex items-center gap-1 text-primary shrink-0">
                       <span className="text-xs whitespace-nowrap">
                         {ahead > 0 && `↑${ahead}`}
                         {behind > 0 && `↓${behind}`}

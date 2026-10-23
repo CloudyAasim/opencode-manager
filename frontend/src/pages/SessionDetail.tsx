@@ -1034,7 +1034,7 @@ export function SessionDetail() {
                           onClick={() => handleSelectCommand(command)}
                           className="flex w-full min-w-0 items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent"
                         >
-                          <span className="font-mono text-sm font-medium text-blue-600 dark:text-blue-400">
+                          <span className="font-mono text-sm font-medium text-primary">
                             {command.name}
                           </span>
                           {command.description && (

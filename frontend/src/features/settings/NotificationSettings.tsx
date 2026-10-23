@@ -57,7 +57,7 @@ export function NotificationSettings() {
   if (permission === "denied") {
     return (
       <SettingsPanel title={t("settingsPanels.notifications.title")}>
-        <div className="flex items-center gap-3 text-yellow-500">
+        <div className="flex items-center gap-3 text-warning">
           <BellOff className="h-5 w-5" />
           <p className="text-sm">
             {t("settingsPanels.notifications.denied")}

@@ -26,7 +26,7 @@ interface McpServerCardProps {
 function getStatusBadge(status: McpStatus, t: Translate) {
   switch (status.status) {
     case 'connected':
-      return <Badge variant="default" className="text-xs bg-green-600">{t('settingsPanels.mcpServerCard.connected')}</Badge>
+      return <Badge variant="default" className="text-xs bg-success">{t('settingsPanels.mcpServerCard.connected')}</Badge>
     case 'disabled':
       return <Badge variant="secondary" className="text-xs">{t('settingsPanels.mcpServerCard.disabled')}</Badge>
     case 'failed':
@@ -38,14 +38,14 @@ function getStatusBadge(status: McpStatus, t: Translate) {
       )
     case 'needs_auth':
       return (
-        <Badge variant="outline" className="text-xs flex items-center gap-1 border-yellow-500 text-yellow-600">
+        <Badge variant="outline" className="text-xs flex items-center gap-1 border-warning text-warning">
           <Key className="h-3 w-3" />
           {t('settingsPanels.mcpServerCard.authRequired')}
         </Badge>
       )
     case 'needs_client_registration':
       return (
-        <Badge variant="outline" className="text-xs flex items-center gap-1 border-orange-500 text-primary">
+        <Badge variant="outline" className="text-xs flex items-center gap-1 border-warning text-primary">
           <AlertCircle className="h-3 w-3" />
           {t('settingsPanels.mcpServerCard.registrationRequired')}
         </Badge>
@@ -133,7 +133,7 @@ export function McpServerCard({
       }
       description={getServerDescription(serverConfig, t)}
       belowDescription={errorMessage ? (
-        <div className="flex items-start gap-1.5 mt-1.5 text-xs text-red-500">
+        <div className="flex items-start gap-1.5 mt-1.5 text-xs text-destructive">
           <XCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
           <span className="break-words line-clamp-2">{errorMessage}</span>
         </div>

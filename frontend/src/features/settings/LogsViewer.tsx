@@ -17,7 +17,7 @@ type SourceFilter = ManagerLogSource | 'all'
 
 const LEVEL_CHIP_CLASSES: Record<ManagerLogLevel, string> = {
   error: 'bg-destructive/15 text-destructive',
-  warn: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  warn: 'bg-warning text-warning',
   info: 'bg-accent text-accent-foreground',
   debug: 'bg-muted text-muted-foreground',
 }

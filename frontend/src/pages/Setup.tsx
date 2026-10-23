@@ -58,7 +58,7 @@ export function Setup() {
       {!config.registrationEnabled ? (
         <AuthCard>
           <div className="flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-amber-500" />
+            <ShieldAlert className="h-5 w-5 text-warning" />
             <h1 className="text-base font-semibold">{t('setup.disabledTitle')}</h1>
           </div>
           <p className="text-sm text-muted-foreground">{t('setup.disabledDescription')}</p>

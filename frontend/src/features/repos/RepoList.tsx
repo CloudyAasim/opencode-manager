@@ -478,8 +478,8 @@ export function RepoList() {
                 case sortedViewModels.length === 0:
                   return (
                     <div className="text-center p-12">
-                      <Search className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
-                      <p className="text-zinc-500">
+                      <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground">
                         {emptyMessage}
                       </p>
                     </div>

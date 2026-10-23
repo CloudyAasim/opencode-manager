@@ -25,12 +25,12 @@ export function OpenCodeConfigSourcesNotice({ config, targetName }: OpenCodeConf
   if (!writeTargetName) return null
 
   return (
-    <Alert className="border-blue-500/30 bg-blue-500/5">
-      <Info className="h-4 w-4 text-blue-500" />
+    <Alert className="border-primary bg-primary">
+      <Info className="h-4 w-4 text-primary" />
       <details className="group" open>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
           <AlertTitle className="mb-0">{t('settingsPanels.configSources.mergedTitle')}</AlertTitle>
-          <ChevronDown className="h-4 w-4 shrink-0 text-blue-500 transition-transform group-open:rotate-180" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-primary transition-transform group-open:rotate-180" />
         </summary>
         <AlertDescription>
           <p>

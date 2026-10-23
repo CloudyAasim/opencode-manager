@@ -51,7 +51,7 @@ export function VoiceStatusOverlay({ show, label, state }: VoiceStatusOverlayPro
       className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
     >
       <span className="sr-only">{label}</span>
-      <div className="animate-voice-overlay-in relative flex h-44 w-full flex-col items-center justify-between overflow-hidden rounded-xl border border-green-300/70 bg-gradient-to-t from-green-700 via-green-500 to-emerald-400 px-1 py-4 text-white shadow-lg shadow-green-500/40">
+      <div className="animate-voice-overlay-in relative flex h-44 w-full flex-col items-center justify-between overflow-hidden rounded-xl border border-success/40 bg-gradient-to-t from-success via-success to-success px-1 py-4 text-white shadow-lg shadow-success">
         <div className="absolute inset-x-1 top-1 h-10 rounded-full bg-white/20 blur-sm" />
         <div className="relative flex flex-1 flex-col items-center justify-center gap-1">
           {isLoading ? (

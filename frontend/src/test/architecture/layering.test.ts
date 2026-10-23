@@ -135,29 +135,35 @@ describe('frontend 分层契约', () => {
   })
 })
 
-const TOKEN_ONLY_PREFIXES = ['framework/', 'components/ui/', 'features/source-control/']
+/**
+ * The directories the hard rule covers.
+ *
+ * When this was written the whole tree could not be a hard rule: there were
+ * hundreds of raw-palette classes in `features/`, and a rule that is red on
+ * the day it is written is a rule that gets deleted rather than obeyed. So
+ * the remainder was a number that could only go down, and the number was
+ * written down here so that raising it would be a decision somebody had to
+ * make out loud.
+ *
+ * The sweep is finished: the last of them went in 2026-10-23, and the rule
+ * is now the whole tree. `test/` is the one place left out - the gates write
+ * their own samples there, and a gate that has to be careful about its own
+ * source is a gate that will be turned off.
+ */
+const TOKEN_ONLY_PREFIXES = [
+  'api/',
+  'components/',
+  'contexts/',
+  'features/',
+  'framework/',
+  'hooks/',
+  'lib/',
+  'pages/',
+  'stores/',
+]
 
 const RAW_PALETTE =
   /\b(?:bg|text|border|ring|from|to|via|fill|stroke|outline|decoration|shadow|accent|caret|divide)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/
-
-/**
- * The raw palette classes outside the directories that are held to the hard
- * rule, and how many each of them is allowed to keep.
- *
- * The whole tree could be a hard rule, and it used to be tempting: one
- * number, no exceptions. But there were hundreds of these classes when
- * this was written, and a rule that is red on the day it is written is a
- * rule that gets deleted rather than obeyed.
- *
- * So the remainder is a number that may only go down. The number is
- * written down here, which means raising it is a decision somebody has to
- * make out loud, in the place where the other decisions are written down.
- */
-const RAW_PALETTE_BASELINE: ReadonlyArray<readonly [string, number]> = [
-  ['features/', 217],
-  ['lib/', 0],
-  ['pages/', 2],
-]
 
 /**
  * The raw palette classes in a file, with the line they are on.
@@ -191,7 +197,7 @@ describe('frontend 设计令牌', () => {
     const scanned = graph.files.filter((file) =>
       TOKEN_ONLY_PREFIXES.some((prefix) => fileRel(file).startsWith(prefix)),
     )
-    expect(scanned.length, '一个文件都没扫到，这道门禁没有判别力').toBeGreaterThan(30)
+    expect(scanned.length, '一个文件都没扫到，这道门禁没有判别力').toBeGreaterThan(200)
 
     expect(RAW_PALETTE.test('className="bg-green-600"'), '认不出原生色板').toBe(true)
     expect(RAW_PALETTE.test('className="bg-primary text-destructive"'), '把语义令牌误判成原生色板').toBe(false)
@@ -199,25 +205,6 @@ describe('frontend 设计令牌', () => {
       rawPaletteOffenders('framework/shell/StatusBar.tsx').length,
       'StatusBar 里没有原生色板，但这道检查读不懂它',
     ).toBe(0)
-  })
-
-  it('还没换完的目录只能越换越少', () => {
-    const offenders: string[] = []
-    for (const [prefix, baseline] of RAW_PALETTE_BASELINE) {
-      const count = graph.files
-        .map((file) => fileRel(file))
-        .filter((rel) => rel.startsWith(prefix) && !TOKEN_ONLY_PREFIXES.some((p) => rel.startsWith(p)))
-        .reduce((sum, rel) => sum + rawPaletteOffenders(rel).length, 0)
-
-      expect(
-        count,
-        [
-          `${prefix} 里的原生色板比基线还多（基线 ${baseline}，实际 ${count}）`,
-          '要么换掉，要么把基线调高并在基线旁写清楚为什么。',
-        ].join('\n'),
-      ).toBeLessThanOrEqual(baseline)
-    }
-    expect(offenders).toEqual([])
   })
 })
 

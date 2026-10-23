@@ -213,12 +213,12 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
 
   return (
     <div 
-      className="w-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-950 dark:to-blue-900 border-2 border-blue-300 dark:border-blue-700 rounded-xl shadow-lg shadow-blue-500/20 mb-1 overflow-hidden"
+      className="w-full bg-gradient-to-br from-primary to-primary border-2 border-primary/40 rounded-xl shadow-lg shadow-primary mb-1 overflow-hidden"
     >
-      <div className="flex items-center px-3 py-2 sm:px-4 sm:py-2.5 border-b border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/50">
+      <div className="flex items-center px-3 py-2 sm:px-4 sm:py-2.5 border-b border-primary/40 bg-primary/10">
         <button
           onClick={() => isMinimized ? setIsMinimized(false) : handleMinimize()}
-          className="flex items-center gap-1.5 flex-1 text-left text-xs sm:text-sm font-semibold text-blue-600 dark:text-white"
+          className="flex items-center gap-1.5 flex-1 text-left text-xs sm:text-sm font-semibold text-primary dark:text-white"
         >
           {isMinimized
             ? <ChevronUp className="w-3 h-3 opacity-60 flex-shrink-0" />
@@ -229,7 +229,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
         <button
           onClick={handleReject}
           disabled={isSubmitting}
-          className="p-1.5 sm:p-2 hover:bg-red-500/20 text-muted-foreground hover:text-red-500 transition-colors"
+          className="p-1.5 sm:p-2 hover:bg-destructive text-muted-foreground hover:text-destructive transition-colors"
         >
           <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
@@ -266,7 +266,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
         </div>
       ) : null}
 
-      <div className="flex gap-1.5 sm:gap-2 px-2 py-2 sm:px-3 sm:py-3 border-t border-blue-200 dark:border-blue-800">
+      <div className="flex gap-1.5 sm:gap-2 px-2 py-2 sm:px-3 sm:py-3 border-t border-primary/40">
         <Button
           size="sm"
           onClick={handleReject}
@@ -281,7 +281,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               size="sm"
               onClick={handleSubmit}
               disabled={isSubmitting || !allQuestionsAnswered}
-              className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-success hover:bg-success text-white"
             >
               {isSubmitting ? (
                 <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
@@ -294,7 +294,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               size="sm"
               onClick={handleNext}
               disabled={isSubmitting || (expandedOther === currentIndex && !customInputs[currentIndex]?.trim())}
-              className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-success hover:bg-success text-white"
             >
               {expandedOther === currentIndex ? t('session.question.confirm') : t('session.question.next')}
             </Button>
@@ -365,7 +365,7 @@ function QuestionStep({
               className={cn(
                 "w-full text-left p-2 sm:p-3 rounded-lg transition-all duration-200 active:scale-[0.98]",
                 isSelected
-                  ? "bg-blue-200 dark:bg-blue-700/50"
+                  ? "bg-primary/10"
                   : "bg-white/40 dark:bg-white/5 hover:bg-white/60 dark:hover:bg-white/10"
               )}
             >
@@ -374,14 +374,14 @@ function QuestionStep({
                   <div className={cn(
                     "w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
                     isSelected 
-                      ? "border-blue-500 bg-blue-500" 
+                      ? "border-primary bg-primary" 
                       : "border-muted-foreground"
                   )}>
                     {isSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />}
                   </div>
                   <span className={cn(
                     "text-xs sm:text-sm font-semibold",
-                    isSelected ? "text-blue-600 dark:text-blue-300" : "text-foreground"
+                    isSelected ? "text-primary" : "text-foreground"
                   )}>
                     {option.label}
                   </span>
@@ -407,7 +407,7 @@ function QuestionStep({
           className={cn(
             "w-full text-left p-2 sm:p-3 rounded-lg transition-all duration-200",
             expandedOther || isCustomSelected
-              ? "bg-blue-200 dark:bg-blue-700/50"
+              ? "bg-primary/10"
               : "bg-white/40 dark:bg-white/5 hover:bg-white/60 dark:hover:bg-white/10"
           )}
         >
@@ -415,14 +415,14 @@ function QuestionStep({
             <div className={cn(
               "w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
               isCustomSelected
-                ? "border-blue-500 bg-blue-500" 
+                ? "border-primary bg-primary" 
                 : "border-muted-foreground"
             )}>
               {isCustomSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />}
             </div>
             <span className={cn(
               "text-xs sm:text-sm font-semibold",
-              expandedOther || isCustomSelected ? "text-blue-600 dark:text-blue-300" : "text-foreground"
+              expandedOther || isCustomSelected ? "text-primary" : "text-foreground"
             )}>
               {t('session.question.other')}
             </span>
@@ -436,7 +436,7 @@ function QuestionStep({
               value={customInput}
               onChange={(e) => onCustomInputChange(e.target.value)}
               placeholder={t('session.question.customPlaceholder')}
-              className="min-h-[60px] sm:min-h-[80px] field-text resize-none border-blue-500/30 focus:border-blue-500"
+              className="min-h-[60px] sm:min-h-[80px] field-text resize-none border-primary focus:border-primary"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
@@ -483,8 +483,8 @@ function ConfirmStep({ questions, answers, onEditQuestion }: ConfirmStepProps) {
               className={cn(
                 "w-full text-left p-2 sm:p-3 rounded-lg transition-colors",
                 hasAnswer 
-                  ? "bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50" 
-                  : "bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50"
+                  ? "bg-success/10 hover:bg-success/10 dark:hover:bg-success" 
+                  : "bg-destructive/10 hover:bg-destructive/10 dark:hover:bg-destructive"
               )}
             >
               <div className="flex items-start justify-between gap-1.5 sm:gap-2">
@@ -492,7 +492,7 @@ function ConfirmStep({ questions, answers, onEditQuestion }: ConfirmStepProps) {
                   <p className="text-xs text-muted-foreground truncate">{q.header}</p>
                   <p className={cn(
                     "text-xs sm:text-sm font-semibold mt-0.5",
-                    hasAnswer ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+                    hasAnswer ? "text-success" : "text-destructive"
                   )}>
                     {hasAnswer ? answer.join(', ') : t('session.question.notAnswered')}
                   </p>

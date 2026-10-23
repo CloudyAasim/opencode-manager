@@ -165,7 +165,7 @@ export function AgentsMdEditor() {
       </div>
 
       {hasChanges && (
-        <p className="text-xs text-amber-500">{t('settingsPanels.agentsMd.unsavedChanges')}</p>
+        <p className="text-xs text-warning">{t('settingsPanels.agentsMd.unsavedChanges')}</p>
       )}
     </div>
   )

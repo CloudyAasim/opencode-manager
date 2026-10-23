@@ -74,9 +74,9 @@ export function RepoMcpServerList({
 
     switch (status.status) {
       case 'connected':
-        return <Badge variant="default" className="text-xs bg-green-600">{t('repo.mcp.connected')}</Badge>
+        return <Badge variant="default" className="text-xs bg-success">{t('repo.mcp.connected')}</Badge>
       case 'disabled':
-        return <Badge className="text-xs bg-gray-700 text-gray-300 border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">{t('repo.mcp.disabled')}</Badge>
+        return <Badge className="text-xs bg-muted text-muted-foreground border-border">{t('repo.mcp.disabled')}</Badge>
       case 'failed':
         return (
           <Badge variant="destructive" className="text-xs flex items-center gap-1">
@@ -86,7 +86,7 @@ export function RepoMcpServerList({
         )
       case 'needs_auth':
         return (
-          <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">
+          <Badge variant="outline" className="text-xs border-warning text-warning">
             {t('repo.mcp.needsAuth')}
           </Badge>
         )
@@ -99,7 +99,7 @@ export function RepoMcpServerList({
     <div className="px-4 sm:px-6 py-3 sm:py-4 flex-1 overflow-y-auto min-h-0">
       {statusError ? (
         <PanelMessage
-          icon={<AlertCircle className="text-red-500" />}
+          icon={<AlertCircle className="text-destructive" />}
           title={t('repo.mcp.statusLoadFailed')}
           detail={statusError.message}
           action={
@@ -151,17 +151,17 @@ export function RepoMcpServerList({
                             title={t('repo.mcp.optionsTitle')}
                           >
                             {status?.status === 'connected' && (
-                              <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                              <span className="text-xs bg-success text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                                 {t('repo.mcp.connected')}<ChevronDown className="h-3 w-3" />
                               </span>
                             )}
                             {status?.status === 'needs_auth' && (
-                              <span className="text-xs border border-yellow-500 text-yellow-600 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                              <span className="text-xs border border-warning text-warning px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                                 {t('repo.mcp.needsAuth')}<ChevronDown className="h-3 w-3" />
                               </span>
                             )}
                             {status?.status === 'failed' && (
-                              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                              <span className="text-xs bg-destructive text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                                 <AlertCircle className="h-3 w-3" />{t('repo.mcp.failed')}<ChevronDown className="h-3 w-3" />
                               </span>
                             )}
@@ -202,7 +202,7 @@ export function RepoMcpServerList({
                     {serverConfig ? getDescription(serverConfig) : t('repo.mcp.server')}
                   </p>
                   {failed && status.status === 'failed' && (
-                    <div className="flex items-center gap-1 mt-1 text-xs text-red-500">
+                    <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
                       <XCircle className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate">{status.error}</span>
                     </div>

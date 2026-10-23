@@ -165,7 +165,7 @@ describe('RepoCard', () => {
     const { container } = renderWithRouter(<RepoCard {...props} />)
 
     expect(screen.getByText('Directory missing')).toBeInTheDocument()
-    expect(container.querySelector('.bg-green-500')).toBeFalsy()
+    expect(container.querySelector('.bg-success')).toBeFalsy()
   })
 
   it('still opens a project whose directory is gone, so the path can be shown', () => {
@@ -187,7 +187,7 @@ describe('RepoCard', () => {
     const { container } = renderWithRouter(<RepoCard {...props} />)
 
     expect(screen.queryByText('Directory missing')).not.toBeInTheDocument()
-    expect(container.querySelector('.bg-green-500')).toBeTruthy()
+    expect(container.querySelector('.bg-success')).toBeTruthy()
   })
 
   it('keeps the branch line for a healthy project', () => {

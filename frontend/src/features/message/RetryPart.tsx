@@ -39,24 +39,24 @@ export const RetryPart = memo(function RetryPart({ part }: RetryPartProps) {
   const errorMessage = part.error?.data?.message || t('message.retry.errorFallback')
   
   return (
-    <div className="flex items-center gap-3 p-3 my-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
+    <div className="flex items-center gap-3 p-3 my-2 rounded-lg bg-warning border border-warning">
       <div className="flex-shrink-0">
         <div className="relative">
-          <RefreshCw className="w-5 h-5 text-amber-500 animate-spin" style={{ animationDuration: '2s' }} />
-          <AlertTriangle className="w-3 h-3 text-amber-600 absolute -bottom-0.5 -right-0.5" />
+          <RefreshCw className="w-5 h-5 text-warning animate-spin" style={{ animationDuration: '2s' }} />
+          <AlertTriangle className="w-3 h-3 text-warning absolute -bottom-0.5 -right-0.5" />
         </div>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+          <span className="text-sm font-medium text-warning">
             {t('message.retry.attempt', { attempt: part.attempt })}
           </span>
           {countdown > 0 ? (
-            <span className="text-xs text-amber-500/80">
+            <span className="text-xs text-warning">
               {t('message.retry.retryingIn', { countdown })}
             </span>
           ) : (
-            <span className="text-xs text-amber-500/80">
+            <span className="text-xs text-warning">
               {t('message.retry.retrying')}
             </span>
           )}

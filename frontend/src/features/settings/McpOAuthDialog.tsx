@@ -357,7 +357,7 @@ export function McpOAuthDialog({
 
           {step === 'success' && (
             <div className="flex flex-col items-center justify-center py-6 gap-2">
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
               <p className="text-sm font-medium">{t('settingsPanels.mcpOAuth.success')}</p>
             </div>
           )}

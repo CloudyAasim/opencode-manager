@@ -1193,12 +1193,12 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
     const buttonClassName = isDesktop
       ? `hidden md:flex p-2 rounded-lg transition-all duration-200 active:scale-95 hover:scale-105 shadow-md border items-center justify-center touch-none select-none ${
         isBusy
-          ? 'bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border-red-500/60 animate-pulse'
+          ? 'bg-gradient-to-br from-destructive to-destructive hover:from-destructive hover:to-destructive text-destructive-foreground border-destructive animate-pulse'
           : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground border-border'
       }`
       : `px-4 py-2 rounded-lg transition-all duration-150 flex items-center justify-center min-w-[52px] border touch-none select-none ${
         isBusy
-          ? 'bg-gradient-to-t from-green-700 via-green-500 to-emerald-400 text-white border-green-300/70 shadow-lg shadow-green-500/40'
+          ? 'bg-gradient-to-t from-success via-success to-success text-white border-success/40 shadow-lg shadow-success'
           : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground border-border active:bg-muted-foreground/30 active:scale-95'
       }`
 
@@ -1261,11 +1261,11 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
   
 
 return (
-    <div className={`relative backdrop-blur-md bg-background opacity-95 border border-border dark:border-white/30 rounded-xl p-2 md:p-3 mb-4 md:mb-1 w-full transition-all ${hasPendingPermissionForSession ? 'border-orange-500/50 ring-1 ring-orange-500/30' : ''}`}>
+    <div className={`relative backdrop-blur-md bg-background opacity-95 border border-border dark:border-white/30 rounded-xl p-2 md:p-3 mb-4 md:mb-1 w-full transition-all ${hasPendingPermissionForSession ? 'border-warning ring-1 ring-warning' : ''}`}>
       {showStopButton && (
         <button
           onClick={handleStop}
-          className="absolute bottom-full right-0 mb-2 md:hidden z-50 p-3 rounded-xl transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 shadow-lg shadow-red-500/30"
+          className="absolute bottom-full right-0 mb-2 md:hidden z-50 p-3 rounded-xl transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-destructive to-destructive hover:from-destructive hover:to-destructive text-destructive-foreground border border-destructive shadow-lg shadow-destructive"
           title={t('message.actions.stop')}
         >
           <SquareFill className="w-5 h-5" />
@@ -1288,8 +1288,8 @@ return (
         }
         className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 field-text text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed md:text-sm rounded-lg [field-sizing:content] ${
           isBashMode
-            ? 'border-purple-500/50 bg-purple-500/5 focus:bg-purple-500/10'
-            : isDragging ? 'border-blue-500/50 border-dashed bg-blue-500/5' : ''
+            ? 'border-worktree bg-worktree focus:bg-worktree'
+            : isDragging ? 'border-primary border-dashed bg-primary' : ''
         }`}
         rows={1}
       />
@@ -1321,7 +1321,7 @@ return (
               <button
                 type="button"
                 onClick={onScrollToBottom}
-                className="flex items-center gap-1.5 px-3 min-h-[36px] rounded-lg text-xs font-medium border bg-zinc-950/80 hover:bg-zinc-900/90 text-blue-300 hover:text-blue-200 border-blue-400/20 shadow-md backdrop-blur-md transition-all duration-200 active:scale-95 ring-1 ring-blue-400/15"
+                className="flex items-center gap-1.5 px-3 min-h-[36px] rounded-lg text-xs font-medium border bg-muted hover:bg-muted text-primary hover:text-primary border-primary/40 shadow-md backdrop-blur-md transition-all duration-200 active:scale-95 ring-1 ring-primary"
                 title={t('message.actions.scrollToBottom')}
                 aria-label={t('message.actions.scrollToBottom')}
               >
@@ -1371,7 +1371,7 @@ return (
             {!isMobile && (
               <button
                 onClick={onScrollToBottom}
-                className={`p-2 rounded-lg bg-zinc-950/80 hover:bg-zinc-900/90 text-blue-300 hover:text-blue-200 transition-all duration-200 active:scale-95 hover:scale-105 shadow-md border border-blue-400/20 backdrop-blur-md ring-1 ring-blue-400/15 ${showScrollButton ? 'visible' : 'invisible'}`}
+                className={`p-2 rounded-lg bg-muted hover:bg-muted text-primary hover:text-primary transition-all duration-200 active:scale-95 hover:scale-105 shadow-md border border-primary/40 backdrop-blur-md ring-1 ring-primary ${showScrollButton ? 'visible' : 'invisible'}`}
                 title={t('message.actions.scrollToBottom')}
               >
                 <ArrowDown className="w-6 h-6" />
@@ -1380,7 +1380,7 @@ return (
 {showStopButton && (
             <button
               onClick={handleStop}
-              className="hidden md:block p-1.5 px-5 md:p-2 md:px-6 rounded-lg transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-destructive-foreground border border-red-500/60 hover:border-red-400 shadow-md shadow-red-500/30 hover:shadow-red-500/40 ring-1 ring-red-500/20 hover:ring-red-500/30"
+              className="hidden md:block p-1.5 px-5 md:p-2 md:px-6 rounded-lg transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-destructive to-destructive hover:from-destructive hover:to-destructive text-destructive-foreground border border-destructive hover:border-destructive/40 shadow-md shadow-destructive hover:shadow-destructive ring-1 ring-destructive hover:ring-destructive"
               title={t('message.actions.stop')}
             >
               <SquareFill className="w-4 h-4 md:w-5 md:h-5" />
@@ -1412,7 +1412,7 @@ return (
               disabled={hasPendingPermissionForSession ? false : ((!prompt.trim() && imageAttachments.length === 0) || (isPromptSubmitPending && !isStreamingResponse))}
               className={`px-4 md:px-5 py-1.5 md:py-2 rounded-lg text-sm font-medium transition-colors dark:border flex-shrink-0 min-w-[52px] ${
                 hasPendingPermissionForSession
-                  ? 'bg-warning hover:bg-orange-600 border-orange-400 text-primary-foreground ring-orange-500/20'
+                  ? 'bg-warning hover:bg-warning border-warning/40 text-primary-foreground ring-warning'
                   : 'bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground border-white/30'
               }`}
               title={hasPendingPermissionForSession ? t('message.actions.viewPendingPermission') : (isStreamingResponse ? t('message.actions.queueMessage') : t('message.actions.send'))}

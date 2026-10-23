@@ -153,7 +153,7 @@ export const ClickableUserMessage = memo(function ClickableUserMessage({
   return (
     <button
       onClick={onClick}
-      className="text-left text-sm whitespace-pre-wrap break-words w-full group/edit hover:bg-blue-600/10 rounded p-1 -m-1 transition-colors flex items-start gap-2"
+      className="text-left text-sm whitespace-pre-wrap break-words w-full group/edit hover:bg-primary rounded p-1 -m-1 transition-colors flex items-start gap-2"
       title={t('message.actions.clickToEditAndResend')}
     >
       <span className="flex-1">{content}</span>

@@ -75,7 +75,7 @@ export function RunDetailPanel({ repoId, activeRun, selectedRunLoading, onCancel
         {selectedRunLoading && !activeRun ? (
           <PanelLoading className="p-4" size="md" />
         ) : (
-          <pre className={`whitespace-pre-wrap break-words text-sm font-mono leading-6 ${activeRun.status === 'cancelled' ? 'text-muted-foreground' : 'text-red-300'}`}>{activeRun.errorText ?? t('schedules.runs.noErrorRecorded')}</pre>
+          <pre className={`whitespace-pre-wrap break-words text-sm font-mono leading-6 ${activeRun.status === 'cancelled' ? 'text-muted-foreground' : 'text-destructive'}`}>{activeRun.errorText ?? t('schedules.runs.noErrorRecorded')}</pre>
         )}
       </TabsContent>
     </Tabs>
