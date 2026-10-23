@@ -88,7 +88,7 @@ export function SSHHostKeyDialog({
 
   return (
     <Dialog open={parentOpen ?? true} onOpenChange={onOpenChange ?? (() => {})}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md p-4 sm:p-6">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <WarningIcon className={cn(

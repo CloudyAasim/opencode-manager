@@ -193,7 +193,7 @@ export function OpenCodeConfigEditor({
           onOpenAutoFocus={(event) => {
             if (isMobile) event.preventDefault()
           }}
-          className="flex w-full min-w-0 flex-col gap-0 p-0 sm:max-h-[85vh] sm:max-w-4xl sm:p-6"
+          className="flex w-full min-w-0 flex-col gap-0 sm:max-h-[85vh] sm:max-w-4xl"
         >
           <DialogTitleBar
             title={t('settingsPanels.configEditor.editTitle', { name: draftSource.name })}
@@ -203,11 +203,11 @@ export function OpenCodeConfigEditor({
             open
             className="group/file-details max-h-[45dvh] shrink-0 overflow-y-auto border-b"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:px-6 [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
               <span className="text-sm font-medium">{t('settingsPanels.configEditor.fileDetails')}</span>
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open/file-details:rotate-180" />
             </summary>
-            <div className="space-y-2 px-4 pb-3 sm:px-6">
+            <div className="space-y-2 pb-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 {sources.length > 1 ? (
                   <div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ export function OpenCodeConfigEditor({
             placeholder={t('settingsPanels.configEditor.findPlaceholder')}
           />
 
-          <div className="min-h-0 flex-1 overflow-hidden sm:p-4">
+          <div className="min-h-0 flex-1 overflow-hidden">
             <CodeEditor
               id="edit-config-content"
               ariaLabel={t('settingsPanels.configEditor.configContent')}
@@ -316,7 +316,7 @@ export function OpenCodeConfigEditor({
             </div>
           )}
 
-          <DialogFooter data-editor-footer className="shrink-0 gap-2 border-t p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4 sm:pb-4">
+          <DialogFooter data-editor-footer className="shrink-0 gap-2 border-t pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-6">
             <Button
               variant="outline"
               onClick={requestClose}

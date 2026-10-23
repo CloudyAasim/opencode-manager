@@ -53,11 +53,11 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent mobileFullscreen className="grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 sm:max-w-[560px] sm:max-h-[80vh]">
-        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 h-fit">
+        <DialogHeader className="h-fit">
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
 
-        <div className="px-4 sm:px-6 pb-2">
+        <div className="pb-2">
           <p className="truncate rounded bg-muted px-3 py-2 text-xs text-muted-foreground" title={displayPath}>
             {displayPath ?? t('repo.loading')}
           </p>
@@ -115,7 +115,7 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
           )}
         </div>
 
-        <DialogFooter className="px-4 sm:px-6 pb-4 sm:pb-6 gap-2">
+        <DialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('repo.cancel')}
           </Button>

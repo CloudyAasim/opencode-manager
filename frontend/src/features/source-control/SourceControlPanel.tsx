@@ -31,7 +31,7 @@ export function SourceControlPanel({
         mobileFullscreen
         hideCloseButton={isMobile}
         className={cn(
-          'p-0 flex flex-col bg-card border-border gap-0',
+          'flex flex-col bg-card border-border gap-0',
           isMobile ? 'h-full' : 'w-[90vw] sm:max-w-6xl h-[90vh] sm:pb-0'
         )}
       >
@@ -43,7 +43,7 @@ export function SourceControlPanel({
             </>
           }
           titleClassName="flex items-center gap-2"
-          className={cn('px-4 py-2', isMobile && 'relative')}
+          className={cn(isMobile && 'relative')}
         >
           {isMobile && (
             <Button

@@ -144,8 +144,8 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-         <DialogContent mobileFullscreen className="sm:fixed sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[400px] sm:max-w-[400px] sm:h-auto sm:max-h-[80vh] flex flex-col gap-0 pb-safe">
-        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 sm:pb-3 shrink-0 ">
+         <DialogContent mobileFullscreen className="sm:fixed sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[400px] sm:max-w-[400px] sm:h-auto sm:max-h-[80vh] flex flex-col gap-0 pb-safe sm:pb-6">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{t('repo.mcp.title')}</DialogTitle>
           <DialogDescription>
             {t('repo.mcp.description')}

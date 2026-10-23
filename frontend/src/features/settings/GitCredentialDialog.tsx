@@ -163,12 +163,12 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent mobileFullscreen className="max-w-lg h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-2 sm:pb-3">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{credential ? t('settingsPanels.gitCredential.editTitle') : t('settingsPanels.gitCredential.addTitle')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
-              className="flex-1 min-h-0 flex flex-col px-4 sm:px-6 py-2 sm:py-3 overflow-y-auto">
+              className="flex-1 min-h-0 flex flex-col py-2 sm:py-3 overflow-y-auto">
           <div className="space-y-4 sm:space-y-4 flex-shrink-0">
             <div className="space-y-2">
               <Label htmlFor="cred-name">{t('settingsPanels.gitCredential.name')}</Label>
@@ -388,7 +388,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
           </div>
         </form>
 
-        <DialogFooter className="p-3 sm:p-4 border-t gap-2">
+        <DialogFooter className="border-t gap-2">
           <Button
             type="button"
             variant="outline"

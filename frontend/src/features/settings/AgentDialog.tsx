@@ -173,7 +173,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
+      <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col pb-safe sm:pb-6">
         <DialogLayout title={editingAgent ? t('settingsPanels.agentDialog.editTitle') : t('settingsPanels.agentDialog.createTitle')}>
           <Form {...form}>
             <div className="space-y-4">
@@ -514,7 +514,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
           </Form>
         </DialogLayout>
 
-        <DialogFooter className="p-3 sm:p-4 border-t gap-2 pb-4">
+        <DialogFooter className="border-t gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)} className="h-11 flex-1 sm:h-9 sm:flex-none">
             {t('settingsPanels.agentDialog.cancel')}
           </Button>

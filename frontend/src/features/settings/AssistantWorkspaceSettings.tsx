@@ -241,12 +241,12 @@ export function AssistantWorkspaceSettings() {
       )}
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent mobileFullscreen keyboardAware className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
+        <DialogContent mobileFullscreen keyboardAware className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col pb-safe sm:pb-6">
           <DialogTitleBar
             title={t('settings.assistantWorkspace.editTitle', { name: editing?.name ?? '' })}
             titleClassName="break-all pr-8"
           />
-          <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-4">
+          <div className="flex min-h-0 flex-1 flex-col">
             <Textarea
               value={draft ?? fileContent}
               onChange={(e) => setDraft(e.target.value)}
@@ -255,7 +255,7 @@ export function AssistantWorkspaceSettings() {
               className="h-full min-h-0 flex-1 field-sizing-fixed resize-none font-mono md:text-sm"
             />
           </div>
-          <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end pb-4 p-3">
+          <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
             <Button variant="outline" onClick={() => setEditing(null)} className="h-11 flex-1 sm:h-9 sm:flex-none">
               {t('common.cancel')}
             </Button>

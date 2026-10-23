@@ -534,4 +534,26 @@ describe("DialogHeader", () => {
     expect(title.className).toContain("text-lg");
     expect(title.className).not.toMatch(/text-(xs|sm|base|xl|2xl)/);
   });
+
+  it("brings its own padding, so that the content does not", () => {
+    // The frame is where a dialog's margin lives: 16px on a phone, 24px on a
+    // desktop. The title bar and the body used to bring their own as well,
+    // and then the same dialog was indented two different ways.
+    render(
+      <Dialog open>
+        <DialogContent data-testid="dialog-content">
+          <DialogHeader data-testid="dialog-header">
+            <DialogTitle>Test Dialog</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+
+    const content = screen.getByTestId("dialog-content");
+    expect(content.className).toContain("p-4");
+    expect(content.className).toContain("sm:p-6");
+
+    const header = screen.getByTestId("dialog-header");
+    expect(header.className).not.toMatch(/(?:^|\s)p[trblxy]?-(?:\d|sm:|md:|lg:)/);
+  });
 });

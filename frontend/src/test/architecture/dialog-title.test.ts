@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { stripComments } from './source-text'
+import { stripComments, stringLiterals } from './source-text'
 
 /**
  * 弹窗的顶栏，在每一块屏幕上都是同一副。
@@ -46,25 +46,54 @@ const SHARED_DIALOG_PARTS = [
 ]
 
 /**
- * 顶栏的内边距，谁自己写了。
+ * 自己管版式的弹窗。
  *
- * 一个弹窗在手机上占满整屏时，框是**没有**内边距的（`mobileFullscreen`
- * 那一支就是 `p-0`）——那时候顶栏得自己带一格。于是有五个弹窗各自写了一
- * 份。这里把它们记下来，是为了让**第六个**不能悄悄地再写一份：名字、理由、
- * 文件，都在这里。
+ * 有三个弹窗的**内容**不是一个弹窗的标题栏加一身子，而是一整块自己管版式的
+ * 东西：命令面板的搜索框要贴着卡片边（像 KDE 的命令面板）、设置页整页住在
+ * 弹窗里、改标题的框在手机上占满整屏。它们自己带内边距，这里把它们记下来，
+ * 是为了让**第四个**不能悄悄地再写一份。
  */
-const OWN_PADDING: ReadonlyArray<readonly [string, string]> = [
+const OWN_LAYOUT: ReadonlyArray<readonly [string, string]> = [
   [
-    'features/repos/AddRepoDialog.tsx',
-    '这个弹窗在手机上占满整屏，而整屏的框没有内边距——顶栏得自己带一格',
+    'framework/commands/CommandPalette.tsx',
+    '命令面板不是有标题栏的弹窗：它的搜索框贴着卡片边（像 KDE 的命令面板）',
   ],
   [
-    'features/repos/DirectoryPickerDialog.tsx',
-    '同上',
+    'features/settings/SettingsDialog.tsx',
+    '整页住在弹窗里：那一页自己管版式，它的两条栏就是页面的标题栏',
   ],
-  ['features/repos/RepoMcpDialog.tsx', '同上'],
-  ['features/settings/GitCredentialDialog.tsx', '同上'],
-  ['framework/commands/CommandPalette.tsx', '命令面板在手机上占满整屏，而整屏的框没有内边距'],
+  [
+    'components/ui/EditSessionTitleDialog.tsx',
+    '改标题的框在手机上占满整屏，版式是它自己的',
+  ],
+  [
+    'features/repos/RepoMcpDialog.tsx',
+    '这个弹窗在手机上占满整屏：框的下边距是安全区（刘海与手势条），不是弹窗的留白',
+  ],
+  [
+    'features/repos/RepoSkillsDialog.tsx',
+    '这个弹窗在手机上占满整屏：框的下边距是安全区（刘海与手势条），不是弹窗的留白',
+  ],
+  [
+    'features/settings/AgentDialog.tsx',
+    '这个弹窗在手机上占满整屏：框的下边距是安全区（刘海与手势条），不是弹窗的留白',
+  ],
+  [
+    'features/settings/AssistantWorkspaceSettings.tsx',
+    '这个弹窗在手机上占满整屏：框的下边距是安全区（刘海与手势条），不是弹窗的留白',
+  ],
+  [
+    'features/settings/DirectoryFilesList.tsx',
+    '这个弹窗在手机上占满整屏：框的下边距是安全区（刘海与手势条），不是弹窗的留白',
+  ],
+  [
+    'features/settings/SkillDialog.tsx',
+    '这个弹窗在手机上占满整屏：框的下边距是安全区（刘海与手势条），不是弹窗的留白',
+  ],
+  [
+    'features/settings/SkillInstallDialog.tsx',
+    '这个弹窗在手机上占满整屏：框的下边距是安全区（刘海与手势条），不是弹窗的留白',
+  ],
 ]
 
 /**
@@ -129,6 +158,8 @@ interface Usage {
   headerClasses: string
   /** 标题自己带的 class（`DialogTitle` 的 `className`、`DialogTitleBar` 的 `titleClassName`）。 */
   titleClasses: string
+  /** 框自己带的 class（`DialogContent` 的 `className`）。 */
+  frameClasses: string
 }
 
 /**
@@ -151,6 +182,7 @@ function usagesOf(text: string, part: string): Usage[] {
       part,
       headerClasses: part === 'DialogHeader' ? className : '',
       titleClasses: part === 'DialogTitleBar' ? titleClassName : className,
+      frameClasses: part === 'DialogContent' ? className : '',
     })
   }
   return found
@@ -188,8 +220,9 @@ function bodyOf(text: string, name: string): string {
   return next === -1 ? rest : rest.slice(0, next)
 }
 
-/** 全部弹窗顶栏零件的用法（共享组件自己的除外）。 */function everyUsage(): Usage[] {
-  const parts = ['DialogHeader', 'DialogTitle', 'DialogDescription', 'DialogTitleBar']
+/** 全部弹窗顶栏零件的用法（共享组件自己的除外）。 */
+function everyUsage(): Usage[] {
+  const parts = ['DialogContent', 'DialogHeader', 'DialogTitle', 'DialogDescription', 'DialogTitleBar']
   const found: Usage[] = []
   for (const source of SOURCES) {
     if (SHARED_DIALOG_PARTS.includes(source.rel)) continue
@@ -296,10 +329,10 @@ describe('弹窗的顶栏只有一副', () => {
   })
 
   it('顶栏的形状由共享的组件画', () => {
-    // 调用点可以带一格内边距（整屏的弹窗在窄屏上没有内边距），
-    // 但对齐和分隔线是共享组件的事——那两样一改，窄屏上和桌面上就不是
-    // 同一副了。标题自己留的那一点空白（`pr-8`，给右上角的关闭按钮让位）
-    // 不算顶栏的内边距。
+    // 内边距由**框**带（共享的那一副），对齐和分隔线是共享组件的事——那两样
+    // 一改，窄屏上和桌面上就不是同一副了。只有"自己管版式"的那几个弹窗能
+    // 自己带内边距。标题自己留的那一点空白（`pr-8`，给右上角的关闭按钮
+    // 让位）不算顶栏的内边距。
     const offenders: string[] = []
     for (const usage of usages) {
       const alignments = alignmentsIn(usage.titleClasses).concat(
@@ -310,11 +343,11 @@ describe('弹窗的顶栏只有一副', () => {
         offenders.push(`${usage.rel}: ${[...alignments, ...rules].join(' ')}`)
         continue
       }
-      const padding = usage.headerClasses
-        .split(/\s+/)
-        .filter((token) => /^(?:[a-z]+:)*p[trblxy]?-/.test(utilityOf(token)))
+      const padding = [...usage.headerClasses.split(/\s+/), ...usage.frameClasses.split(/\s+/)].filter(
+        (token) => /^(?:[a-z]+:)*p[trblxy]?-/.test(utilityOf(token)),
+      )
       if (padding.length === 0) continue
-      if (!OWN_PADDING.some(([rel]) => rel === usage.rel)) {
+      if (!OWN_LAYOUT.some(([rel]) => rel === usage.rel)) {
         offenders.push(`${usage.rel}: 自己写了内边距 ${padding.join(' ')}`)
       }
     }
@@ -324,10 +357,30 @@ describe('弹窗的顶栏只有一副', () => {
       [
         `这些弹窗自己写了顶栏的样子：${offenders.length} 处`,
         ...offenders,
-        '对齐、分隔线和字号是共享组件的事；内边距只有整屏的弹窗能自己带，',
-        '而且要写进例外名单。',
+        '对齐、分隔线和字号是共享组件的事；内边距由框带，',
+        '只有自己管版式的那几个弹窗能自己带，而且要写进例外名单。',
       ].join('\n'),
     ).toEqual([])
+  })
+
+  it('分隔线只有共享的顶栏画', () => {
+    // 分隔线是"标题和身子之间"的那一条：它属于顶栏，不属于任何一个弹窗。
+    // 以前只有 `DialogTitleBar` 那一套有，普通那套没有——同一个弹窗两副
+    // 画法。现在共享的顶栏画它，两种画法都有。
+    const header = sharedClassOf('DialogHeader')
+    expect(rulesIn(header), '共享的顶栏没有画分隔线').not.toEqual([])
+
+    expect(
+      rulesIn(sharedClassOf('DialogTitleBar')),
+      '顶栏那一套又自己画了一条线',
+    ).toEqual([])
+
+    for (const usage of usages) {
+      expect(
+        rulesIn(usage.headerClasses).concat(rulesIn(usage.titleClasses)),
+        `${usage.rel} 自己画了一条分隔线`,
+      ).toEqual([])
+    }
   })
 
   it('标题和说明之间只有一档距离', () => {
@@ -350,9 +403,34 @@ describe('弹窗的顶栏只有一副', () => {
     ).not.toMatch(/\bspace-y-/)
   })
 
+  it('共享的框带内边距', () => {
+    // 弹窗的留白由框带：手机 16px、桌面 24px。卡片那两副框都是同一份——
+    // 不然"同一个弹窗"在两种框上又是两种留白。
+    //
+    // 整屏那一副（设置页住在弹窗里）不在其中：那一页自己管版式。
+    const variants = stringLiterals(sourceOf('components/ui/dialog.tsx')).filter((literal) =>
+      /left-\[50%\]/.test(literal),
+    )
+    expect(variants.length, '认不出共享的框的那两副画法').toBeGreaterThan(1)
+
+    for (const variant of variants) {
+      expect(variant, `框的这一副没有带内边距：${variant.slice(0, 60)}`).toMatch(/\bp-4\b/)
+    }
+  })
+
+  it('共享的顶栏不自己带内边距', () => {
+    // 内边距由框带，顶栏不自己带——带了就是两副画法：标题离框的边时远时近。
+    const header = sharedClassOf('DialogHeader')
+    expect(header, '认不出共享的顶栏').not.toBe('')
+    expect(
+      header.split(/\s+/).filter((token) => /^(?:[a-z]+:)*p[trblxy]?-/.test(utilityOf(token))),
+      '共享的顶栏自己带了内边距',
+    ).toEqual([])
+  })
+
   it('例外都写明了为什么', () => {
-    for (const [rel, reason] of OWN_PADDING) {
-      expect(reason.trim().length, `${rel} 没有写为什么可以自己带内边距`).toBeGreaterThan(0)
+    for (const [rel, reason] of OWN_LAYOUT) {
+      expect(reason.trim().length, `${rel} 没有写为什么可以自己管版式`).toBeGreaterThan(0)
       expect(
         SOURCES.some((source) => source.rel === rel),
         `例外里的 ${rel} 不存在了，这条该删`,

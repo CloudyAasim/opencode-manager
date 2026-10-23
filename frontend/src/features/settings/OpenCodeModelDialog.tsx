@@ -432,7 +432,7 @@ export function OpenCodeModelDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange} key={editingModel ? `edit-${editingModel.modelId}` : 'create'}>
-      <DialogContent mobileFullscreen className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6">
+      <DialogContent mobileFullscreen className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col">
         <DialogLayout
           title={isEditing ? t('settingsPanels.modelDialog.editTitle') : t('settingsPanels.modelDialog.createTitle')}
           onBodyClick={(e) => e.stopPropagation()}
@@ -778,7 +778,7 @@ export function OpenCodeModelDialog({
           </Form>
         </DialogLayout>
 
-        <DialogFooter className="p-3 sm:p-4 border-t gap-2 pb-4">
+        <DialogFooter className="border-t gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">{t('settingsPanels.modelDialog.cancel')}</Button>
           <Button onClick={() => form.handleSubmit(handleSubmit)()} disabled={!isValid} className="flex-1 sm:flex-none">
             {isEditing ? t('settingsPanels.modelDialog.update') : t('settingsPanels.modelDialog.create')}

@@ -91,10 +91,10 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
       })}
 
       <Dialog open={!!editingFile} onOpenChange={(open) => !open && setEditingFile(null)}>
-        <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
+        <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col pb-safe sm:pb-6">
           <DialogTitleBar title={editingFile?.relativePath} titleClassName="break-all pr-8" />
 
-          <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-4">
+          <div className="flex min-h-0 flex-1 flex-col">
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -104,7 +104,7 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
             />
           </div>
 
-          <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end pb-4 p-3">
+          <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
             <Button variant="outline" onClick={() => setEditingFile(null)} className="h-11 flex-1 sm:h-9 sm:flex-none">
               {t('settingsPanels.directoryFiles.cancel')}
             </Button>

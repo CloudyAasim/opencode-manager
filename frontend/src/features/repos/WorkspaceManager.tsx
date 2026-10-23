@@ -95,12 +95,12 @@ export function WorkspaceManager({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent mobileFullscreen className="flex flex-col gap-0 overflow-hidden p-0 sm:max-h-[85vh] sm:max-w-[560px]">
+        <DialogContent mobileFullscreen className="flex flex-col gap-0 overflow-hidden sm:max-h-[85vh] sm:max-w-[560px]">
           <DialogTitleBar
             title={t('repo.workspaces')}
             description={t('repo.workspaceManager.description')}
           />
-          <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
             {manageMode ? (
               <div className="flex items-center gap-2">

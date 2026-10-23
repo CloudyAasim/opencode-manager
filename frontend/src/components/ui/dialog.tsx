@@ -113,8 +113,8 @@ const DialogContent = React.forwardRef<
           fullscreen
             ? "inset-0 w-full h-full max-w-none max-h-none p-0 rounded-none"
             : mobileFullscreen
-              ? "inset-0 w-full h-full max-w-none max-h-none p-0 rounded-none sm:inset-auto sm:left-[50%] sm:bottom-auto sm:w-[90%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:top-[8%] sm:p-6"
-              : "left-[50%] top-[50%] w-[90%] max-w-lg translate-x-[-50%] translate-y-[-50%] p-6 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl",
+              ? "inset-0 w-full h-full max-w-none max-h-none p-4 rounded-none sm:inset-auto sm:left-[50%] sm:bottom-auto sm:w-[90%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:top-[8%] sm:p-6"
+              : "left-[50%] top-[50%] w-[90%] max-w-lg translate-x-[-50%] translate-y-[-50%] p-4 sm:p-6 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl",
           className
         )}
         style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
@@ -156,7 +156,13 @@ const DialogHeader = ({
       // the line under it belongs to the line under it (`DialogDescription`),
       // so that both ways of drawing a dialog's title bar - the plain header
       // and the `DialogTitleBar` - have the same distance.
-      "flex flex-col text-left",
+      //
+      // The rule under the title is here, and not in the call sites: a
+      // dialog's title is separated from its body in every dialog, not only
+      // in the ones that used `DialogTitleBar`. `border-border`, because a
+      // rule with no colour of its own is drawn in the text colour - which
+      // is the darkest thing on the screen.
+      "flex flex-col text-left border-b border-border",
       className
     )}
     {...props}

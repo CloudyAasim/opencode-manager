@@ -27,7 +27,9 @@ describe('DialogLayout', () => {
     const body = screen.getByText('body').parentElement
     expect(body?.className).toContain('overflow-y-auto')
     expect(body?.className).toContain('flex-1')
-    expect(body?.className).toContain('p-2 sm:p-4')
+    // The body's padding is the frame's: the frame brings the dialog's
+    // margin, so a body that brought its own would indent the content twice.
+    expect(body?.className).not.toMatch(/(?:^|\s)p[trblxy]?-(?:\d|sm:|md:|lg:)/)
   })
 
   it('主体只在传了钩子时才拦事件', () => {

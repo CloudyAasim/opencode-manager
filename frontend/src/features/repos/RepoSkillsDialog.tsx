@@ -67,7 +67,7 @@ export function RepoSkillsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
+        <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col pb-safe sm:pb-6">
           <DialogTitleBar
             title={t('repo.skills.title')}
             description={canLoad ? t('repo.skills.descriptionLoad') : t('repo.skills.descriptionAvailable')}
@@ -77,7 +77,7 @@ export function RepoSkillsDialog({
                 {t('repo.skills.install')}
               </Button>
           </DialogTitleBar>
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto">
             <SkillLibraryList
               isLoading={isLoading}
               data={data}

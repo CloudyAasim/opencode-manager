@@ -311,7 +311,7 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
       <DialogContent
         overlayClassName="bg-black/80"
         mobileFullscreen
-        className="flex h-dvh max-h-dvh w-full max-w-4xl flex-col gap-0 overflow-hidden border-border bg-background p-0 shadow-lg sm:h-[min(85vh,760px)] sm:max-h-[85vh] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
+        className="flex h-dvh max-h-dvh w-full max-w-4xl flex-col gap-0 overflow-hidden border-border bg-background shadow-lg sm:h-[min(85vh,760px)] sm:max-h-[85vh] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
       >
         <DialogTitleBar
           title={job ? t('schedules.scheduleDialog.editTitle') : t('schedules.scheduleDialog.newTitle')}
@@ -319,7 +319,7 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
         />
 
         <Tabs defaultValue="basics" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="border-b border-border px-3 sm:px-6 pb-3">
+          <div className="border-b border-border pb-3">
             <TabsList className="grid h-9 w-full grid-cols-4 bg-card p-0.5">
               <TabsTrigger value="basics" className="h-8 px-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">{t('schedules.scheduleDialog.generalTab')}</TabsTrigger>
               <TabsTrigger value="timing" className="h-8 px-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">{t('schedules.scheduleDialog.timingTab')}</TabsTrigger>
@@ -398,7 +398,7 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
           />
         </Tabs>
 
-        <div className="mt-0 shrink-0 border-t border-border px-3 sm:px-6 py-4 flex flex-row gap-2 sm:justify-end">
+        <div className="mt-0 shrink-0 border-t border-border py-4 flex flex-row gap-2 sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={isSaving || !name.trim() || !prompt.trim() || isScheduleConfigInvalid || (!!showRepoSelector && !job && selectedRepoId === undefined)} className="flex-1 sm:flex-none">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

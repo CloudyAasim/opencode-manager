@@ -177,7 +177,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6">
+      <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col">
         <DialogLayout title={t('settingsPanels.addMcpServer.title')}>
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -361,7 +361,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
           </div>
         </DialogLayout>
 
-        <DialogFooter className="p-3 sm:p-4 border-t gap-2 pb-4">
+        <DialogFooter className="border-t gap-2">
           <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
             {t('settingsPanels.addMcpServer.cancel')}
           </Button>

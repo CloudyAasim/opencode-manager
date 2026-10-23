@@ -23,6 +23,11 @@ interface DialogLayoutProps {
  * title, sometimes a line under it, and sometimes a button on the right. A
  * user who has learned one dialog has to learn the next one again, and the
  * only thing that differs is the padding.
+ *
+ * Now it is the header with the title on the left and, if there is one, a
+ * button on the right. The line under it belongs to the shared header
+ * (`DialogHeader`), so every dialog has one; the margin belongs to the
+ * frame, so the title sits the same distance from the edge everywhere.
  */
 export function DialogTitleBar({
   title,
@@ -40,7 +45,7 @@ export function DialogTitleBar({
   return (
     <DialogHeader
       className={cn(
-        'p-4 sm:p-6 border-b flex flex-row items-center justify-between gap-3',
+        'flex flex-row items-center justify-between gap-3',
         className,
       )}
     >
@@ -63,7 +68,7 @@ export function DialogLayout({
     <>
       <DialogTitleBar title={title} />
       <div
-        className="flex-1 overflow-y-auto p-2 sm:p-4"
+        className="flex-1 overflow-y-auto"
         onClick={onBodyClick}
         onPointerDown={onBodyPointerDown}
       >

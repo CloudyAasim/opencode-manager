@@ -127,7 +127,7 @@ export function SkillInstallDialog({ open, onOpenChange, onInstalled }: SkillIns
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent mobileFullscreen className="sm:max-w-lg sm:max-h-[85vh] gap-0 flex flex-col p-0 md:p-6 pb-safe">
+      <DialogContent mobileFullscreen className="sm:max-w-lg sm:max-h-[85vh] gap-0 flex flex-col pb-safe sm:pb-6">
         <DialogLayout title={t('settingsPanels.skillInstall.title')}>
           <div className="space-y-4">
             <Tabs value={sourceType} onValueChange={(v) => setSourceType(v as 'github' | 'upload')}>
@@ -213,7 +213,7 @@ export function SkillInstallDialog({ open, onOpenChange, onInstalled }: SkillIns
           </div>
         </DialogLayout>
 
-        <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end pb-4 p-3">
+        <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
           <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
             {t('settingsPanels.skillInstall.cancel')}
           </Button>
