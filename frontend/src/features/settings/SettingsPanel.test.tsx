@@ -18,16 +18,29 @@ describe('SettingsPanel', () => {
     expect(card?.firstElementChild).toBe(heading)
   })
 
-  it('给了右侧内容就排成一行', () => {
+  it('给了右侧内容就排成一行，右侧和标题齐平', () => {
     render(
       <SettingsPanel title="Speech" actions={<span>saved</span>}>
         <p>body</p>
       </SettingsPanel>,
     )
 
-    const header = screen.getByText('Speech').parentElement
-    expect(header?.className).toContain('flex items-center justify-between')
+    const header = screen.getByText('Speech').parentElement?.parentElement
+    expect(header?.className).toContain('flex items-start justify-between')
     expect(screen.getByText('saved')).toBeInTheDocument()
+  })
+
+  it('有说明时，说明在标题下面 4px', () => {
+    render(
+      <SettingsPanel title="Git" description="克隆与凭据">
+        <p>body</p>
+      </SettingsPanel>,
+    )
+
+    const heading = screen.getByText('Git')
+    const description = screen.getByText('克隆与凭据')
+    expect(description.className).toContain('mt-1 text-sm text-muted-foreground')
+    expect(heading.parentElement).toBe(description.parentElement)
   })
 
   it('没给右侧内容时标题直接贴在卡片上，不套 flex 行', () => {

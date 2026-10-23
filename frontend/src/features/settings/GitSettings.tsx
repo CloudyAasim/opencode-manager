@@ -10,6 +10,7 @@ import { RestartServerDialog } from './RestartServerDialog'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SettingsPanel } from '@/features/settings/SettingsPanel'
 import { randomId } from '@/lib/utils'
 import type { GitCredential, GitIdentity, UserPreferences } from '@/api/types/settings'
 import { listRepos, updateRepoGitCredential } from '@/api/repos'
@@ -196,15 +197,11 @@ export function GitSettings() {
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">{t('settingsPanels.git.title')}</h2>
-          <p className="text-sm text-muted-foreground">
-            {t('settingsPanels.git.description')}
-          </p>
-        </div>
-        {hasChanges && (
+    <SettingsPanel
+      title={t('settingsPanels.git.title')}
+      description={t('settingsPanels.git.description')}
+      actions={
+        hasChanges ? (
           <Button
             type="button"
             variant="default"
@@ -215,9 +212,9 @@ export function GitSettings() {
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
             {t('settingsPanels.git.saveChanges')}
           </Button>
-        )}
-      </div>
-
+        ) : undefined
+      }
+    >
         <div className="grid grid-cols-1 gap-4 p-4 sm:gap-6 sm:p-6 @min-[1000px]:grid-cols-3 @min-[1000px]:items-start">
           <div className="min-w-0 space-y-4">
             <div className="flex items-center gap-3">
@@ -379,6 +376,6 @@ export function GitSettings() {
           onCancel={() => setConfirmOpen(false)}
           onConfirm={confirmRestart}
         />
-    </div>
+    </SettingsPanel>
   )
 }

@@ -24,6 +24,9 @@ const PANELS = [
   'features/settings/STTSettings.tsx',
   'features/settings/TTSSettings.tsx',
   'features/settings/KeyboardShortcuts.tsx',
+  // The Git panel used to draw a card of its own - a strip with a rule under
+  // it - for the same job. It is the shared card now.
+  'features/settings/GitSettings.tsx',
 ]
 
 describe('设置面板只有一副卡片', () => {
@@ -54,14 +57,17 @@ describe('设置面板只有一副卡片', () => {
     const owner = SOURCES.find((source) => source.rel === OWNER)!.text
     expect(owner).toContain('bg-card border border-border rounded-lg p-6')
     expect(owner).toContain('text-lg font-semibold text-foreground mb-6')
-    expect(owner).toContain('flex items-center justify-between mb-6')
+    // The actions line up with the title, not with the middle of the two
+    // lines: a button floating half a title down reads as belonging to the
+    // description.
+    expect(owner).toContain('flex items-start justify-between gap-2 mb-6')
   })
 
   it('那两个文件确实还在用共享组件', () => {
     for (const rel of PANELS) {
       const source = SOURCES.find((entry) => entry.rel === rel)
       expect(source, `找不到 ${rel}`).toBeDefined()
-      expect(source!.text, `${rel} 没有用共享面板`).toContain('<SettingsPanel ')
+      expect(source!.text, `${rel} 没有用共享面板`).toMatch(/<SettingsPanel[\s>]/)
     }
   })
 })

@@ -31,10 +31,8 @@ const isTest = (rel: string) => rel.includes('.test.')
 /**
  * The owner of the shape.
  *
- * And the two places that draw a heading of their own and say why: the
- * settings card, whose title belongs to the card, and the Git settings
- * panel, whose heading is a *card* header - a strip with a rule under it -
- * rather than a heading on the page.
+ * And the one place that draws a heading of its own and says why: the
+ * settings card, whose title belongs to the card.
  */
 const OWNER = 'components/ui/section-header.tsx'
 
@@ -42,10 +40,6 @@ const NOT_A_SECTION: ReadonlyArray<readonly [string, string]> = [
   [
     'features/settings/SettingsPanel.tsx',
     '卡片自己的标题，它属于卡片而不是页面的一节',
-  ],
-  [
-    'features/settings/GitSettings.tsx',
-    '卡片自己的标题条（下面有一条分隔线），不是页面的一节',
   ],
 ]
 
