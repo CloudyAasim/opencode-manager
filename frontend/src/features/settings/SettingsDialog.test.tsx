@@ -124,6 +124,23 @@ describe('SettingsDialog', () => {
     restoreMatchMedia()
   })
 
+  it('says its name as the page heading in both layouts', () => {
+    // One name, one level, and the desktop bar and the phone bar say it the
+    // same way. They used to be a heading at two levels and two sizes - 18px
+    // on a desktop, 20px on a phone - for the same word.
+    render(
+      <MemoryRouter>
+        <SettingsDialog variant="page" />
+      </MemoryRouter>
+    )
+
+    const headings = screen.getAllByRole('heading', { level: 1, name: 'Settings' })
+    expect(
+      headings,
+      'one of the two bars does not say the name as a page heading',
+    ).toHaveLength(2)
+  })
+
   it('keeps the raw config editor out of the OpenCode section for a non-admin', () => {
     render(
       <MemoryRouter initialEntries={['/?settings=open&settingsTab=opencode']}>

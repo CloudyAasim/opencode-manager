@@ -144,9 +144,9 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
               {(displayPath === '/' || !repoName) && repoName && (
-                <h1 className="text-sm font-semibold text-foreground shrink-0 truncate max-w-[150px]">
+                <h2 className="text-sm font-semibold text-foreground shrink-0 truncate max-w-[150px]">
                   {repoName}
-                </h1>
+                </h2>
               )}
               <PathDisplay
                 path={allowNavigateAboveBase ? currentPath : displayPath}

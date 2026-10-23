@@ -135,14 +135,14 @@ function HeaderEditableTitle({ value, onChange, subtitle, subtitleRepeatsProject
               }
             }}
             onKeyDown={handleKeyDown}
-            className="field-text font-semibold bg-background border border-border rounded-l px-2 py-1 outline-none w-full truncate focus:border-primary sm:max-w-[250px] h-7"
+            className="text-xl leading-7 font-semibold bg-background border border-border rounded-l px-2 py-0 outline-none w-full truncate focus:border-primary sm:max-w-[250px] h-8"
             autoFocus
           />
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7 rounded-l-none border border-l-0 border-border hover:bg-accent flex-shrink-0 mt-0"
+            className="h-8 w-8 rounded-l-none border border-l-0 border-border hover:bg-accent flex-shrink-0 mt-0"
             onClick={() => setEditTitle("")}
             aria-label={t('common.cancel')}
             title={t('common.cancel')}
@@ -153,7 +153,7 @@ function HeaderEditableTitle({ value, onChange, subtitle, subtitleRepeatsProject
       ) : (
         <div className="min-w-0">
           <h1
-            className="text-base font-semibold text-foreground truncate cursor-pointer hover:opacity-80 transition-opacity"
+            className="text-xl font-semibold text-foreground truncate cursor-pointer hover:opacity-80 transition-opacity"
             onClick={handleTitleClick}
           >
             {value}

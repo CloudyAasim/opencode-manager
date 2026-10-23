@@ -22,6 +22,7 @@ import { RowActionsMenuContext } from '@/components/ui/settings-list'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Settings2, Keyboard, Code, ChevronLeft, Key, GitBranch, User, Users, History, Volume2, Bell, X, ScrollText, Bot, Server, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Header } from '@/components/ui/header'
 import { useSettingsDialog, isSettingsContentTab, type SettingsContentTab } from '@/hooks/useSettingsDialog'
 import { useOptionalAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/lib/i18n'
@@ -187,20 +188,22 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
   const content = (
     <>
          <div className="hidden sm:flex sm:h-full sm:min-h-0 sm:flex-col">
-           <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-background px-4">
-             <h2 className="text-lg font-semibold text-foreground">{t('settings.title')}</h2>
+           <Header>
+             <Header.Title>{t('settings.title')}</Header.Title>
              {variant !== 'page' && (
-               <Button
-                 variant="ghost"
-                 size="icon"
-                 onClick={close}
-                 aria-label={t('common.close')}
-                 className="text-muted-foreground hover:text-foreground"
-               >
-                 <X className="w-4 h-4" />
-               </Button>
+               <Header.Actions>
+                 <Button
+                   variant="ghost"
+                   size="icon"
+                   onClick={close}
+                   aria-label={t('common.close')}
+                   className="text-muted-foreground hover:text-foreground"
+                 >
+                   <X className="w-4 h-4" />
+                 </Button>
+               </Header.Actions>
              )}
-           </div>
+           </Header>
           <Tabs
             defaultValue="account"
             value={activeTab}
@@ -236,8 +239,8 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
         </div>
 
         <div className="sm:hidden flex flex-col h-full min-h-0">
-           <div className="flex-shrink-0 bg-background/80 backdrop-blur-xl border-b border-border px-3 py-3 flex items-center justify-between">
-             <div className="flex items-center gap-2 flex-1">
+           <Header>
+             <div className="flex items-center gap-2 flex-1 min-w-0">
                 {mobileView !== 'menu' && (
                   <Button
                     variant="ghost"
@@ -248,22 +251,24 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                     <ChevronLeft className="w-6 h-6" />
                   </Button>
                 )}
-               <h2 className="text-xl font-semibold text-foreground">
+               <Header.Title className="items-center">
                  {mobileView === 'menu' ? t('settings.title') : menuItems.find(item => item.id === mobileView)?.label}
-               </h2>
+               </Header.Title>
              </div>
                {variant !== 'page' && (
-                 <Button
-                   variant="ghost"
-                   size="icon"
-                   onClick={close}
-                   aria-label={t('common.close')}
-                   className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex-shrink-0"
-                 >
+                 <Header.Actions>
+                   <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={close}
+                     aria-label={t('common.close')}
+                     className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex-shrink-0"
+                   >
                   <X className="w-6 h-6" />
                  </Button>
+                 </Header.Actions>
                )}
-             </div>
+             </Header>
 
              <div className={`@container flex-1 min-h-0 p-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] ${mobileView === 'logs' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
              {mobileView === 'menu' && (

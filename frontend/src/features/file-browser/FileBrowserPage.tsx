@@ -3,6 +3,7 @@ import { FileBrowserView, type FileBrowserHandle } from './FileBrowserView'
 import { useFileBrowserController } from './useFileBrowserController'
 import { getRepoRelativeDisplayPath } from '@/lib/display-path'
 import { Button } from '@/components/ui/button'
+import { Header } from '@/components/ui/header'
 import { PathDisplay } from '@/components/ui/path-display'
 import { DownloadDialog } from '@/components/ui/download-dialog'
 import { downloadDirectoryAsZip } from '@/api/files'
@@ -130,39 +131,41 @@ function FileBrowserHeader({ repoName, path, workspaceRoot, repoId, basePath }: 
   }
 
   return (
-    <header className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-3 py-2">
-      {repoName && (
-        <h1 className="text-sm font-semibold text-foreground shrink-0 truncate max-w-[120px] sm:max-w-[160px]">
-          {repoName}
-        </h1>
-      )}
-      <PathDisplay path={path} root={workspaceRoot} maxSegments={4} className="truncate flex-1 min-w-0" />
+    <Header>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {repoName && (
+          <Header.Title className="max-w-[120px] sm:max-w-[160px]">{repoName}</Header.Title>
+        )}
+        <PathDisplay path={path} root={workspaceRoot} maxSegments={4} className="truncate flex-1 min-w-0" />
+      </div>
       {(repoId != null || basePath) && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              aria-label={t('repo.download.label')}
-              title={t('repo.download.label')}
-            >
-              <Download className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setDownloadDialog({ type: 'directory' })}>
-              <Download className="w-4 h-4 mr-2" />
-              {t('repo.download.currentDirectory')}
-            </DropdownMenuItem>
-            {repoId != null && (
-              <DropdownMenuItem onClick={() => setDownloadDialog({ type: 'repository' })}>
+        <Header.Actions>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                aria-label={t('repo.download.label')}
+                title={t('repo.download.label')}
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setDownloadDialog({ type: 'directory' })}>
                 <Download className="w-4 h-4 mr-2" />
-                {t('repo.download.entireRepository')}
+                {t('repo.download.currentDirectory')}
               </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {repoId != null && (
+                <DropdownMenuItem onClick={() => setDownloadDialog({ type: 'repository' })}>
+                  <Download className="w-4 h-4 mr-2" />
+                  {t('repo.download.entireRepository')}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </Header.Actions>
       )}
       <DownloadDialog
         open={downloadDialog !== null}
@@ -176,6 +179,6 @@ function FileBrowserHeader({ repoName, path, workspaceRoot, repoId, basePath }: 
           ? path.split('/').pop() || t('repo.download.directoryFallback')
           : repoName || t('repo.download.repositoryFallback')}
       />
-    </header>
+    </Header>
   )
 }

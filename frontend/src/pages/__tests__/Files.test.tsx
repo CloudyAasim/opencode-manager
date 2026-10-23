@@ -119,6 +119,20 @@ describe('Files page', () => {
     expect(screen.queryByRole('button', { name: /back|返回/i })).not.toBeInTheDocument()
   })
 
+  it('says its name as the page heading', async () => {
+    // The page's name is said by the shared title bar, and it is said at the
+    // size every page's name is said at. It used to be a 14px label beside
+    // the path - a chip in a location bar, drawn as the page's heading.
+    render(<Files />, { wrapper })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('heading', { level: 1, name: 'Files' }),
+        'the files page does not say its name as a page heading',
+      ).not.toBeNull()
+    })
+  })
+
   it('opens a full-screen preview for a picked file on narrow viewports', async () => {
     useMobileMock.mockReturnValue(true)
     render(<Files />, { wrapper })

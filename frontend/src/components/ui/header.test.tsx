@@ -1,10 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { TerminalSquare } from 'lucide-react'
 import { Header } from './header'
 
 const useMobile = vi.fn(() => false)
+
+/**
+ * The one size class on an element.
+ *
+ * A colour class is not a size: `text-foreground` says what colour the text
+ * is, not how big it is. So the size is looked for by name.
+ */
+const sizeOf = (element: Element): string | undefined =>
+  element.className
+    .split(/\s+/)
+    .find((token) => /^text-(2xs|xs|sm|base|lg|xl|[2-9]xl)$/.test(token))
 
 vi.mock('@/hooks/useMobile', () => ({
   useMobile: () => useMobile(),
@@ -81,6 +92,73 @@ describe('Header.EditableTitle', () => {  beforeEach(() => {
     )
 
     expect(screen.getByText('Assistant')).toBeInTheDocument()
+  })
+
+  it('is the page heading', () => {
+    // The name of the page, and the one thing on the screen that says what
+    // the page is.
+    render(
+      <MemoryRouter>
+        <Header>
+          <Header.EditableTitle value="Morning sync" onChange={() => {}} />
+        </Header>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Morning sync' })).toBeInTheDocument()
+  })
+})
+
+/**
+ * Two ways of saying the same name.
+ *
+ * The plain title and the one that can be renamed are the same thing - the
+ * name of a page - so they are the same size. They were not: 20px and 16px,
+ * which left the session page's name a size smaller than every other page's.
+ */
+describe('the two titles', () => {
+  beforeEach(() => {
+    useMobile.mockReturnValue(false)
+  })
+
+  it('are the same size', () => {
+    render(
+      <MemoryRouter>
+        <Header>
+          <Header.Title>Terminal</Header.Title>
+          <Header.EditableTitle value="Morning sync" onChange={() => {}} />
+        </Header>
+      </MemoryRouter>,
+    )
+
+    const plain = screen.getByRole('heading', { level: 1, name: 'Terminal' })
+    const editable = screen.getByRole('heading', { level: 1, name: 'Morning sync' })
+
+    expect(
+      sizeOf(editable),
+      'the title that can be renamed is not the size of the one that cannot',
+    ).toBe(sizeOf(plain))
+  })
+
+  it('keep their size while the name is being changed', () => {
+    // The editor takes the place of the title it replaces. A different size
+    // there would make the name jump the moment you start renaming it.
+    render(
+      <MemoryRouter>
+        <Header>
+          <Header.EditableTitle value="Morning sync" onChange={() => {}} />
+        </Header>
+      </MemoryRouter>,
+    )
+
+    const title = screen.getByRole('heading', { level: 1, name: 'Morning sync' })
+    const size = sizeOf(title)
+    fireEvent.click(title)
+
+    expect(
+      sizeOf(screen.getByRole('textbox')),
+      'the editor is a different size from the title it replaces',
+    ).toBe(size)
   })
 })
 
