@@ -64,7 +64,8 @@ describe('FileBrowserSheet', () => {
     ).toBe(false)
   })
 
-  it('does not render when isOpen is false and shouldRender is false', () => {    const { container } = render(
+  it('does not render when isOpen is false and shouldRender is false', () => {
+    const { container } = render(
       <FileBrowserSheet
         isOpen={false}
         onClose={mockOnClose}
