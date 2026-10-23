@@ -12,6 +12,11 @@ import { buildImportGraph, relativeTo } from './import-graph'
  * its button to the middle of the two lines and the rest to the top; one
  * described its subject in `text-xs` and the others in `text-sm`.
  *
+ * The terminal page has since moved to the shared page header, so the shape
+ * is now the settings pages' alone - and what is left of it is a section
+ * heading, which is what the component draws. The page's own title is
+ * `page-title.test.ts`'s business.
+ *
  * The settings panels had a second problem: `SettingsPanel` already draws the
  * title, and the panel drew it *again* inside itself, so the screen said
  * "Shortcuts" twice.

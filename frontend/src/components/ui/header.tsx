@@ -32,15 +32,23 @@ function HeaderBackButton({ to, className }: { to?: string; className?: string }
 
 interface HeaderTitleProps {
   children: ReactNode;
+  icon?: ReactNode;
+  description?: ReactNode;
   className?: string;
 }
 
-function HeaderTitle({ children, className }: HeaderTitleProps) {
+function HeaderTitle({ children, icon, description, className }: HeaderTitleProps) {
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <h1 className="text-xl font-semibold text-foreground truncate">
-        {children}
-      </h1>
+    <div className={cn("flex min-w-0 items-start gap-2", className)}>
+      {icon ? <span className="mt-1 shrink-0 text-muted-foreground">{icon}</span> : null}
+      <div className="min-w-0">
+        <h1 className="text-xl font-semibold text-foreground truncate">
+          {children}
+        </h1>
+        {description ? (
+          <p className="truncate text-xs text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
     </div>
   );
 }
