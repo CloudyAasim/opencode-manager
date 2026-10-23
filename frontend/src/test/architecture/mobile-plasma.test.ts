@@ -106,6 +106,17 @@ function hasUtility(list: string, prefix: string): boolean {
 }
 
 /**
+ * Whether a class list carries this exact utility, variant prefix included.
+ *
+ * `hasUtility` strips the variant, because most rules are about the shape a
+ * utility draws rather than the breakpoint it draws it at. A rule about "on a
+ * narrow screen" needs the opposite: the breakpoint is the whole point.
+ */
+function hasRawUtility(list: string, token: string): boolean {
+  return list.split(/\s+/).some((entry) => entry === token)
+}
+
+/**
  * The panel of an overlay.
  *
  * A panel is the thing with a radius and a surface of its own. The scrim
@@ -290,6 +301,72 @@ describe('移动端也是 Plasma', () => {
         ].join('\n'),
       ).toEqual([])
     }
+  })
+
+  it('手机上不重复说一遍项目名', () => {
+    // The shell's project switcher names the project you are in. On a phone
+    // the two headers are stacked, so a page that repeated the name said it
+    // twice within sixty pixels - and the repeat sat close enough to the
+    // title to be read as part of it.
+    //
+    // The decision lives in the header component (`subtitleRepeatsProject`),
+    // so the rule is checked where it is made: the call site has to say that
+    // the subtitle is a repeat, or the header cannot know to drop it.
+    const sessionDetail = sourceOf('pages/SessionDetail.tsx')
+    expect(
+      /subtitleRepeatsProject/.test(sessionDetail),
+      '会话页没有告诉标题栏"这个副标题是重复的项目名"，手机上就会说两遍',
+    ).toBe(true)
+  })
+
+  it('窄屏上页面标题栏不再画自己那条线', () => {
+    // The rule under the page header is the *window's* separator on a
+    // desktop. On a phone the header is not a window's title bar: it sits
+    // directly under the shell's bar, which already draws a rule, and two
+    // rules sixty pixels apart read as two toolbars.
+    const header = classListsOf(sourceOf('components/ui/page-header.tsx'))
+      .find((list) => hasUtility(list, 'sticky'))
+    expect(header, '认不出页面标题栏').toBeDefined()
+
+    expect(
+      hasRawUtility(header!, 'max-sm:border-b-0'),
+      '页面标题栏在窄屏上仍然画着那条线：手机上会变成两条工具栏',
+    ).toBe(true)
+  })
+
+  it('标题在手机上不会比在桌面上更小', () => {
+    // The title of a page is the same sentence on both, so it is the same
+    // size. It used to be `text-xs sm:text-base` - the phone got a 12px
+    // title and the desktop a 16px one, which is the wrong way round.
+    const sizes: Record<string, number> = {
+      'text-xs': 12,
+      'text-sm': 14,
+      'text-base': 16,
+      'text-lg': 18,
+      'text-xl': 20,
+      'text-2xl': 24,
+    }
+
+    const offenders: string[] = []
+    for (const rel of ['components/ui/header.tsx', 'components/ui/page-header.tsx']) {
+      for (const list of classListsOf(sourceOf(rel))) {
+        const base = list.split(/\s+/).find((token) => sizes[utilityOf(token)] !== undefined)
+        const wide = list.split(/\s+/).find((token) => token.startsWith('sm:') && sizes[utilityOf(token)] !== undefined)
+        if (!base || !wide) continue
+        if (sizes[utilityOf(base)]! < sizes[utilityOf(wide)]!) {
+          offenders.push(`${rel}: ${list}`)
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        '这些标题在手机上比在桌面上更小：',
+        ...offenders,
+        '同一句话在两种屏幕上应当一样大——手机上更小的是反过来的。',
+      ].join('\n'),
+    ).toEqual([])
   })
 
   it('手机上的入口是够得着的', () => {

@@ -49,10 +49,22 @@ interface HeaderEditableTitleProps {
   value: string;
   onChange: (value: string) => void;
   subtitle?: React.ReactNode;
+  /**
+   * Whether the subtitle is the name of the project this page is in.
+   *
+   * The shell's project switcher already says that, and on a phone the two
+   * are stacked - the name appeared twice within sixty pixels, with the
+   * switcher's a hair away from the title. So on a narrow screen the repeat
+   * goes and the switcher is the one place that says it.
+   *
+   * The assistant is the exception: its label is not a project the switcher
+   * can show, so it stays. That is what this flag is for.
+   */
+  subtitleRepeatsProject?: boolean;
   className?: string;
 }
 
-function HeaderEditableTitle({ value, onChange, subtitle, className }: HeaderEditableTitleProps) {
+function HeaderEditableTitle({ value, onChange, subtitle, subtitleRepeatsProject, className }: HeaderEditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(value);
   const isMobile = useMobile();
@@ -132,14 +144,17 @@ function HeaderEditableTitle({ value, onChange, subtitle, className }: HeaderEdi
         </form>
       ) : (
         <div className="min-w-0">
-          <h1 
-            className="text-xs sm:text-base font-semibold text-foreground truncate cursor-pointer hover:opacity-80 transition-opacity"
+          <h1
+            className="text-base font-semibold text-foreground truncate cursor-pointer hover:opacity-80 transition-opacity"
             onClick={handleTitleClick}
           >
             {value}
           </h1>
-          {subtitle && (
-            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+          {subtitle && !(isMobile && subtitleRepeatsProject) && (
+            // 12px is the floor. It used to be 10px on a phone, which is
+            // smaller than the label under it on a desktop and too small to
+            // read on the device it was aimed at.
+            <p className="text-xs text-muted-foreground truncate">
               {typeof subtitle === 'string' ? subtitle : subtitle}
             </p>
           )}

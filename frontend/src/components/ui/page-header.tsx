@@ -25,7 +25,15 @@ export const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
           // The inset belongs to `framework/shell/TopBar.tsx`, which is the
           // one that starts at y=0. There is a gate for this:
           // `test/architecture/safe-area-top.test.ts`.
-          "sticky top-0 z-10 border-b border-border/60 bg-surface-glass backdrop-blur-xl",
+          //
+          // The rule under the header is the *window's* own separator on a
+          // desktop - the header is the title bar of the floating window, and
+          // the rule tells it apart from the content below. On a phone the
+          // header is not a window's title bar: it sits directly under the
+          // shell's bar, which already has a rule of its own, and two rules
+          // sixty pixels apart read as two toolbars. So on a narrow screen the
+          // lower one goes and the glass does the separating instead.
+          "sticky top-0 z-10 border-b border-border/60 bg-surface-glass backdrop-blur-xl max-sm:border-b-0",
           className
         )}
         {...props}

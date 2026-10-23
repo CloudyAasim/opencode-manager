@@ -820,6 +820,7 @@ export function SessionDetail() {
               value={session?.title || t('session.card.untitled')}
               onChange={handleSessionTitleUpdate}
               subtitle={<span className="text-primary">{workspaceDisplayName}</span>}
+              subtitleRepeatsProject={!isAssistantSession}
             />
           </div>
           <Header.Actions className="gap-2 sm:gap-3">
