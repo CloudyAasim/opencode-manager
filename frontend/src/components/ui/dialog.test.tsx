@@ -487,3 +487,51 @@ describe('keyboardAware', () => {
     expect(content.style.paddingBottom).toBe('')
   })
 });
+
+/**
+ * The title bar of a dialog.
+ *
+ * Thirty-odd dialogs draw it, and they all draw it with these two parts. So
+ * these two parts decide what a dialog's title bar looks like - and a title
+ * bar that is centred on a phone and left-aligned on a desktop is two title
+ * bars, not one.
+ */
+describe("DialogHeader", () => {
+  it("is aligned the same way on every screen", () => {
+    // The phone is not an older design. It used to be `text-center
+    // sm:text-left`: on a phone the title and the line under it were
+    // centred, on a desktop they were not.
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogHeader data-testid="dialog-header">
+            <DialogTitle>Test Dialog</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+
+    const header = screen.getByTestId("dialog-header");
+    expect(header.className).toContain("text-left");
+    expect(header.className).not.toContain("text-center");
+  });
+
+  it("gives the title one size", () => {
+    // One size on every screen, and it is the shared one. A title that was
+    // 18px on a phone and 20px on a desktop was smaller on the smaller
+    // screen.
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Test Dialog</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+
+    const title = screen.getByRole("heading", { level: 2, name: "Test Dialog" });
+    expect(title.className).toContain("text-lg");
+    expect(title.className).not.toMatch(/text-(xs|sm|base|xl|2xl)/);
+  });
+});

@@ -147,7 +147,16 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-1.5 text-center sm:text-left",
+      // Left-aligned on every screen. It used to be `text-center sm:text-left`:
+      // on a phone the title and the line under it were centred while on a
+      // desktop they were not, so the same dialog was laid out two ways - and
+      // the phone is the same design, not an older one.
+      //
+      // There is no `space-y` here either: the distance between the title and
+      // the line under it belongs to the line under it (`DialogDescription`),
+      // so that both ways of drawing a dialog's title bar - the plain header
+      // and the `DialogTitleBar` - have the same distance.
+      "flex flex-col text-left",
       className
     )}
     {...props}
@@ -190,7 +199,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("mt-1.5 text-sm text-muted-foreground", className)}
     {...props}
   />
 ))

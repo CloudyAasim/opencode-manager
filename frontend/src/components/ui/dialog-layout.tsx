@@ -40,7 +40,7 @@ export function DialogTitleBar({
   return (
     <DialogHeader
       className={cn(
-        'p-4 sm:p-6 border-b flex flex-row items-center justify-between gap-3 space-y-0',
+        'p-4 sm:p-6 border-b flex flex-row items-center justify-between gap-3',
         className,
       )}
     >

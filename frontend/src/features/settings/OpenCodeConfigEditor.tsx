@@ -197,7 +197,6 @@ export function OpenCodeConfigEditor({
         >
           <DialogTitleBar
             title={t('settingsPanels.configEditor.editTitle', { name: draftSource.name })}
-            titleClassName="text-lg font-semibold sm:text-xl"
           />
 
           <details
