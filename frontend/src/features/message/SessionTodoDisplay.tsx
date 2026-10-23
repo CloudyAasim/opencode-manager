@@ -59,7 +59,7 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
     return (
       <div className="mb-1 last:mb-0">
         {hasMultipleGroups && (
-          <div className="text-[9px] font-medium text-muted-foreground mb-0.5 ml-4 uppercase tracking-wider opacity-70">
+          <div className="text-2xs font-medium text-muted-foreground mb-0.5 ml-4 uppercase tracking-wider opacity-70">
             {label} ({items.length})
           </div>
         )}

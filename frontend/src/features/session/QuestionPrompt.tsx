@@ -388,7 +388,7 @@ function QuestionStep({
                 </div>
               </div>
               {option.description && (
-                <p className="text-[10px] sm:text-xs text-foreground/70 mt-0.5 sm:mt-1 ml-5 sm:ml-7">
+                <p className="text-xs text-foreground/70 mt-0.5 sm:mt-1 ml-5 sm:ml-7">
                   {option.description}
                 </p>
               )}
@@ -436,7 +436,7 @@ function QuestionStep({
               value={customInput}
               onChange={(e) => onCustomInputChange(e.target.value)}
               placeholder={t('session.question.customPlaceholder')}
-              className="min-h-[60px] sm:min-h-[80px] text-[16px] sm:text-xs md:text-sm resize-none border-blue-500/30 focus:border-blue-500"
+              className="min-h-[60px] sm:min-h-[80px] field-text resize-none border-blue-500/30 focus:border-blue-500"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
@@ -451,7 +451,7 @@ function QuestionStep({
         )}
 
         {!expandedOther && isCustomSelected && (
-          <div className="ml-5 sm:ml-7 text-[10px] sm:text-xs text-muted-foreground">
+          <div className="ml-5 sm:ml-7 text-xs text-muted-foreground">
             {confirmedCustom}
           </div>
         )}
@@ -489,7 +489,7 @@ function ConfirmStep({ questions, answers, onEditQuestion }: ConfirmStepProps) {
             >
               <div className="flex items-start justify-between gap-1.5 sm:gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{q.header}</p>
+                  <p className="text-xs text-muted-foreground truncate">{q.header}</p>
                   <p className={cn(
                     "text-xs sm:text-sm font-semibold mt-0.5",
                     hasAnswer ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"

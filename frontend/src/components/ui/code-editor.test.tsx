@@ -28,7 +28,7 @@ describe('CodeEditor', () => {
     const { container } = render(<CodeEditor value={'a'} onChange={vi.fn()} ariaLabel="config" />)
     const textarea = screen.getByLabelText('config')
     const mirror = container.querySelector('[data-editor-mirror]') as HTMLElement
-    for (const token of ['font-mono', 'text-[16px]', 'min-[769px]:text-sm', 'leading-6', '[tab-size:2]', 'whitespace-pre-wrap', '[overflow-wrap:anywhere]', 'py-2', 'pr-3', 'pl-10', '[scrollbar-gutter:stable]']) {
+    for (const token of ['font-mono', 'field-text', 'leading-6', '[tab-size:2]', 'whitespace-pre-wrap', '[overflow-wrap:anywhere]', 'py-2', 'pr-3', 'pl-10', '[scrollbar-gutter:stable]']) {
       expect(textarea.className).toContain(token)
       expect(mirror.className).toContain(token)
     }

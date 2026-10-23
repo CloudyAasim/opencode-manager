@@ -75,8 +75,7 @@ describe('AgentsMdEditor', () => {
   it('uses a 16px editor font on mobile', async () => {
     render(<AgentsMdEditor />, { wrapper: createWrapper() })
     const textarea = await screen.findByLabelText('AGENTS.md content')
-    expect(textarea.className).toContain('text-[16px]')
-    expect(textarea.className).toContain('min-[769px]:text-sm')
+    expect(textarea.className).toContain('field-text')
     expect(textarea.className).not.toContain('text-xs')
   })
 

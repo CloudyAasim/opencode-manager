@@ -1286,7 +1286,7 @@ return (
             ? t('message.prompt.enterBashCommand')
             : t('message.prompt.sendMessage')
         }
-        className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 text-[16px] text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed md:text-sm rounded-lg [field-sizing:content] ${
+        className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 field-text text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed md:text-sm rounded-lg [field-sizing:content] ${
           isBashMode
             ? 'border-purple-500/50 bg-purple-500/5 focus:bg-purple-500/10'
             : isDragging ? 'border-blue-500/50 border-dashed bg-blue-500/5' : ''
@@ -1358,7 +1358,7 @@ return (
                     >
                       <span className="truncate w-full text-left">{displayModelName || t('message.actions.selectModel')}</span>
 {hasVariants && currentVariant && (
-                        <span className="text-[10px] text-warning truncate w-full text-center capitalize">{currentVariant}</span>
+                        <span className="text-xs truncate w-full text-center capitalize">{currentVariant}</span>
                       )}
                    </button>
                  </ModelQuickSelect>

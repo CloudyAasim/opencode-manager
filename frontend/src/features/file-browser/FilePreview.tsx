@@ -275,7 +275,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            className={`flex-1 w-full min-w-0 max-w-full text-[16px] bg-muted text-foreground p-2 rounded font-mono resize-none focus:outline-none focus:ring-0 border-none block ${
+            className={`flex-1 w-full min-w-0 max-w-full field-text bg-muted text-foreground p-2 rounded font-mono resize-none focus:outline-none focus:ring-0 border-none block ${
               lineWrap
                 ? 'whitespace-pre-wrap [overflow-wrap:anywhere]'
                 : 'whitespace-pre overflow-x-auto'

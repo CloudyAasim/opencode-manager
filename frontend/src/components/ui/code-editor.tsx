@@ -23,7 +23,7 @@ interface CodeEditorProps {
 }
 
 const SURFACE_CLASS =
-  'font-mono text-[16px] min-[769px]:text-sm leading-6 [tab-size:2] whitespace-pre-wrap [overflow-wrap:anywhere] py-2 pr-3 pl-10 [scrollbar-gutter:stable]'
+  'font-mono field-text leading-6 [tab-size:2] whitespace-pre-wrap [overflow-wrap:anywhere] py-2 pr-3 pl-10 [scrollbar-gutter:stable]'
 
 interface RowHighlight {
   start: number

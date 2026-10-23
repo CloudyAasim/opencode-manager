@@ -90,7 +90,7 @@ export const EditableUserMessage = memo(function EditableUserMessage({
         onChange={(e) => setEditedContent(e.target.value)}
         onKeyDown={handleKeyDown}
         onFocus={() => setIsEditingMessage(true)}
-        className="w-full p-3 rounded-lg bg-background border border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[60px] text-[16px] md:text-sm"
+        className="w-full p-3 rounded-lg bg-background border border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[60px] field-text"
         placeholder={t('message.editing.placeholder')}
         disabled={refreshMessage.isPending}
       />

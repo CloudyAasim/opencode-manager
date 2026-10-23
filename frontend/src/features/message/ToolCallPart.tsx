@@ -222,7 +222,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
         {isCompleted && <span className="text-green-600 text-sm font-medium">✓</span>}
         {isError && <span className="text-red-600 text-sm font-medium">✗</span>}
         <span className="font-medium text-foreground truncate">{description}</span>
-        <span className="text-[11px] font-medium text-primary shrink-0">{t('message.parts.subAgent')}</span>
+        <span className="text-2xs font-medium text-primary shrink-0">{t('message.parts.subAgent')}</span>
         {sessionId && <ExternalLink className="w-3 h-3 shrink-0 text-blue-600 dark:text-blue-400" />}
       </div>
     )

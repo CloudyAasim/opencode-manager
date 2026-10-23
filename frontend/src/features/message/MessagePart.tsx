@@ -183,7 +183,7 @@ export const MessagePart = memo(function MessagePart({ part, role, allParts, par
         <div className="my-1 w-full rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-1.5 text-left text-xs text-muted-foreground shadow-sm shadow-blue-500/5">
           <div className="flex items-center gap-2 min-w-0">
             <span className="truncate">{label}</span>
-            <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{t('message.parts.subAgent')}</span>
+            <span className="ml-auto shrink-0 text-2xs text-muted-foreground">{t('message.parts.subAgent')}</span>
           </div>
         </div>
       )

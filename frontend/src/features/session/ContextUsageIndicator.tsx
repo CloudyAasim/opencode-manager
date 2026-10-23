@@ -81,7 +81,7 @@ export function ContextUsageIndicator({ opcodeUrl, sessionID, directory, isConne
   if (!isRoomy) {
     return (
       <span
-        className={`shrink-0 rounded-full border border-border bg-card px-1.5 py-0.5 text-[11px] font-medium tabular-nums ${getUsageTextColor(usagePercentage || 0)}`}
+        className={`shrink-0 rounded-full border border-border bg-card px-1.5 py-0.5 text-2xs font-medium tabular-nums ${getUsageTextColor(usagePercentage || 0)}`}
         title={tooltip}
         aria-label={tooltip}
       >
@@ -95,8 +95,8 @@ export function ContextUsageIndicator({ opcodeUrl, sessionID, directory, isConne
       className="flex items-center gap-1.5 rounded-full border border-border bg-card px-2 py-0.5"
       title={tooltip}
     >
-      <span className="text-[11px] text-muted-foreground">{t('session.contextUsage.label')}</span>
-      <span className={`text-[11px] font-medium whitespace-nowrap ${getUsageTextColor(usagePercentage || 0)}`}>
+      <span className="text-2xs text-muted-foreground">{t('session.contextUsage.label')}</span>
+      <span className={`text-2xs font-medium whitespace-nowrap ${getUsageTextColor(usagePercentage || 0)}`}>
         {contextLimit ? `${percent}%` : tokenText}
       </span>
     </div>

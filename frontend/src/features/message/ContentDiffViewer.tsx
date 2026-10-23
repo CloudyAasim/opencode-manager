@@ -124,7 +124,7 @@ export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
               )}
             >
               {!isMobile && (
-                <div className="flex-shrink-0 w-14 flex text-muted-foreground/50 text-[10px]">
+                <div className="flex-shrink-0 w-14 flex text-muted-foreground/50 text-2xs">
                   <span className="w-7 px-1 text-right">
                     {line.oldLineNumber || ''}
                   </span>

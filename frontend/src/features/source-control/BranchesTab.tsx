@@ -221,10 +221,10 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                   )}
                   <span className="flex-1 text-sm truncate">{branch.name}</span>
                   {(isCheckedOutElsewhere || (isCurrent && isRepoWorktree)) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-worktree/20 text-worktree">{t('misc.branches.worktreeBadge')}</span>
+                    <span className="text-2xs px-1.5 py-0.5 rounded bg-worktree/20 text-worktree">{t('misc.branches.worktreeBadge')}</span>
                   )}
                   {branch.type === 'local' && !branch.upstream && !branch.isWorktree && !(isCurrent && isRepoWorktree) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t('misc.branches.localBadge')}</span>
+                    <span className="text-2xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t('misc.branches.localBadge')}</span>
                   )}
                   {isCurrent && <Check className={`w-4 h-4 ${GIT_UI_COLORS.current}`} />}
                 </button>

@@ -155,7 +155,7 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
               )}
               {t('misc.changesTab.commit')} {stagedFiles.length > 0 && t('misc.changesTab.stagedCount', { n: stagedFiles.length })}
             </Button>
-            <p className="text-[10px] text-muted-foreground text-center">
+            <p className="text-2xs text-muted-foreground text-center">
               {t('misc.changesTab.commitShortcut', { modifier: navigator.platform.includes('Mac') ? '⌘' : 'Ctrl' })}
             </p>
           </div>

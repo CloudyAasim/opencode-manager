@@ -60,7 +60,11 @@ const STATE_OPENING = new RegExp(
   `<(${STATE_TAGS})\\b[^>]*className="([^"]*)"[^>]*>`,
   'g',
 )
-const INLINE_LABEL = /text-xs|text-\[10px\]|text-\[11px\]|capitalize/
+// A small label is not a state. `text-2xs` is the micro step of the type
+// scale (10px); it used to be spelled `text-[10px]`, and the rule was
+// written against that spelling, so the sweep to the scale made a centred
+// hint look like a hand-drawn state.
+const INLINE_LABEL = /text-xs|text-2xs|capitalize/
 const SAYS_SOMETHING = /t\(\s*['"][a-zA-Z]/
 
 function handRolledStates(text: string): string[] {

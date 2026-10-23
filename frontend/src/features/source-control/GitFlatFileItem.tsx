@@ -65,7 +65,7 @@ export function GitFlatFileItem({ file, isSelected, onSelect, onStage, onUnstage
         )}
       </div>
       {file.staged && (
-        <span className={cn('text-[10px] px-1.5 py-0.5 rounded flex-shrink-0', GIT_UI_COLORS.stagedBadge)}>
+        <span className={cn('text-2xs px-1.5 py-0.5 rounded flex-shrink-0', GIT_UI_COLORS.stagedBadge)}>
           {t('misc.fileItem.staged')}
         </span>
       )}

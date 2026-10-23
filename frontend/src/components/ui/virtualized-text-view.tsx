@@ -112,7 +112,7 @@ const VirtualizedLine = memo(function VirtualizedLine({
           type="text"
           value={content}
           onChange={(e) => onLineChange(lineNum, e.target.value)}
-          className={`flex-1 bg-transparent outline-none pl-2 text-[16px] md:text-sm ${
+          className={`flex-1 bg-transparent outline-none pl-2 field-text ${
             isEdited ? 'bg-highlight/10' : ''
           } ${
             lineWrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'

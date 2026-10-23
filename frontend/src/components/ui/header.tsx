@@ -127,7 +127,7 @@ function HeaderEditableTitle({ value, onChange, subtitle, subtitleRepeatsProject
               }
             }}
             onKeyDown={handleKeyDown}
-            className="text-[16px] sm:text-base font-semibold bg-background border border-border rounded-l px-2 py-1 outline-none w-full truncate focus:border-primary sm:max-w-[250px] h-7"
+            className="field-text font-semibold bg-background border border-border rounded-l px-2 py-1 outline-none w-full truncate focus:border-primary sm:max-w-[250px] h-7"
             autoFocus
           />
           <Button

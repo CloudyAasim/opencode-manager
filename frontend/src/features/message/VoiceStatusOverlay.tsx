@@ -63,7 +63,7 @@ export function VoiceStatusOverlay({ show, label, state }: VoiceStatusOverlayPro
           ) : (
             <>
               <ArrowUp className="h-8 w-8 animate-bounce" />
-              <div className="flex flex-col items-center text-[9px] font-bold uppercase leading-none tracking-tight">
+              <div className="flex flex-col items-center text-2xs font-bold uppercase leading-none tracking-tight">
                 {actionWords.map((word) => (
                   <span key={word}>{word}</span>
                 ))}

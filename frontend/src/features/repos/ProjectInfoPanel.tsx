@@ -83,7 +83,7 @@ export function ProjectInfoPanel({ repoId, name, directory, branch }: ProjectInf
               {commits.map((commit) => (
                 <li key={commit.hash} className="rounded border border-border p-2">
                   <div className="truncate">{commit.message.split('\n')[0]}</div>
-                  <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">{commit.hash.slice(0, 7)}</div>
+                  <div className="mt-0.5 font-mono text-2xs text-muted-foreground">{commit.hash.slice(0, 7)}</div>
                 </li>
               ))}
             </ul>

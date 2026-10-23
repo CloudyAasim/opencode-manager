@@ -129,6 +129,21 @@
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
 
+  /* The type scale.
+   *
+   * Tailwind's own scale starts at 12px, which is the smallest thing anybody
+   * is asked to read here. Below that the repository had four more sizes -
+   * 9, 10, 11 and 13 pixels - written out as `text-[Npx]` in twenty-nine
+   * files, so the same kind of thing (a badge, a counter, a hash, a line of
+   * description) was drawn at three different sizes depending on who wrote it,
+   * and the same badge on two screens was two sizes.
+   *
+   * One micro step below the scale: 10px, for the things that are
+   * deliberately small - a badge, a counter, the gutter of a diff, a hash.
+   * Nothing below it. 9px is not a size a label can be.
+   */
+  --text-2xs: 0.625rem;
+
   /* Breeze's elevation is soft: a dark line under a surface, not a heavy
    * drop shadow. The old one cast a 35% black shadow, which is what a
    * near-black interface needs and a light one does not. */
@@ -506,6 +521,25 @@ body {
 @utility pb-safe {
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/**
+ * A text field.
+ *
+ * On a phone the browser zooms in on a focused field whose text is smaller
+ * than 16px, and it does not zoom back out when the field loses focus. That
+ * rule was written out as `text-[16px] md:text-sm` in fourteen places, which
+ * means fourteen chances to get it wrong - and two of them had it wrong, one
+ * of them shrinking the text on a tablet.
+ *
+ * So the rule lives here once: 16px on a phone, 14px from `md` up.
+ */
+@utility field-text {
+  font-size: 1rem;
+
+  @media (width >= 768px) {
+    font-size: 0.875rem;
+  }
 }
 
 /* Prevent iOS zoom on all input elements */

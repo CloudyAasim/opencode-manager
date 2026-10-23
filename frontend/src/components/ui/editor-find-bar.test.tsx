@@ -57,6 +57,6 @@ describe('EditorFindBar', () => {
 
   it('uses a 16px input on mobile to prevent iOS zoom', () => {
     render(<EditorFindBar {...baseProps} />)
-    expect(screen.getByRole('textbox', { name: 'Find in content' }).className).toContain('text-[16px]')
+    expect(screen.getByRole('textbox', { name: 'Find in content' }).className).toContain('field-text')
   })
 })
