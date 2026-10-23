@@ -237,7 +237,8 @@ export function KeyboardShortcuts() {
   if (isMobile) {
     return (
       <SettingsPanel title={t('settingsPanels.shortcuts.title')}>
-        <h2 className="text-lg font-semibold text-foreground mb-4">{t('settingsPanels.shortcuts.title')}</h2>
+        {/* The panel already carries the title. It used to be drawn a second
+            time here, so the screen said "Shortcuts" twice. */}
         <p className="text-sm text-muted-foreground">
           {t('settingsPanels.shortcuts.mobileUnavailable')}
         </p>
@@ -247,7 +248,8 @@ export function KeyboardShortcuts() {
 
   return (
       <SettingsPanel title={t('settingsPanels.shortcuts.title')}>
-      <h2 className="text-lg font-semibold text-foreground mb-6">{t('settingsPanels.shortcuts.title')}</h2>
+      {/* The panel already carries the title. It used to be drawn a second
+          time here, so the screen said "Shortcuts" twice. */}
 
       <div className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-border">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">

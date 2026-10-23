@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDestructiveDialog } from '@/components/ui/confirm-destructive-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SectionHeader } from '@/components/ui/section-header'
 
 const KNOWN_ERROR_CODES = new Set([
   'EMAIL_EXISTS',
@@ -135,20 +136,20 @@ export function UsersSettings() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">{t('settings.users.title')}</h2>
-          <p className="text-sm text-muted-foreground">{t('settings.users.description')}</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => usersQuery.refetch()} disabled={usersQuery.isFetching}>
-          {usersQuery.isFetching ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
-          )}
-          {t('settings.users.refresh')}
-        </Button>
-      </div>
+      <SectionHeader
+        title={t('settings.users.title')}
+        description={t('settings.users.description')}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => usersQuery.refetch()} disabled={usersQuery.isFetching}>
+            {usersQuery.isFetching ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            {t('settings.users.refresh')}
+          </Button>
+        }
+      />
 
       {error && (
         <Alert variant="destructive">

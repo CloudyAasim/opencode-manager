@@ -6,6 +6,7 @@ import { useI18n } from '@/lib/i18n'
 import { useAuth } from '@/hooks/useAuth'
 import { TerminalView } from '@/features/terminal/TerminalView'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { SectionHeader } from '@/components/ui/section-header'
 
 export function TerminalPage() {
   const { t } = useI18n()
@@ -36,13 +37,12 @@ export function TerminalPage() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <TerminalSquare className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">{t('terminal.title')}</h1>
-            <p className="text-xs text-muted-foreground">{t('terminal.description')}</p>
-          </div>
-        </div>
+        <SectionHeader
+          level={1}
+          icon={<TerminalSquare className="h-5 w-5" />}
+          title={t('terminal.title')}
+          description={t('terminal.description')}
+        />
         {config?.enabled && config.available && !config.adminsOnly && (
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {/* `shell` and `cwd` are only sent to an admin, so a non-admin sees

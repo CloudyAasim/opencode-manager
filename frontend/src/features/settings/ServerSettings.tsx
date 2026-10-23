@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { SectionHeader } from '@/components/ui/section-header'
 import { useI18n } from '@/lib/i18n'
 import { normalizeServerUrl } from '@opencode-manager/shared/utils'
 import {
@@ -136,14 +137,10 @@ export function ServerSettings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">
-          {t('settingsPanels.connection.title')}
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t('settingsPanels.connection.description')}
-        </p>
-      </div>
+      <SectionHeader
+        title={t('settingsPanels.connection.title')}
+        description={t('settingsPanels.connection.description')}
+      />
 
       {behindProxy && (
         <Alert>

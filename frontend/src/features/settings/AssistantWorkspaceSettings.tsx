@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDestructiveDialog } from '@/components/ui/confirm-destructive-dialog'
+import { SectionHeader } from '@/components/ui/section-header'
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { DialogTitleBar } from '@/components/ui/dialog-layout'
 import { Textarea } from '@/components/ui/textarea'
@@ -114,36 +115,36 @@ export function AssistantWorkspaceSettings() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-foreground">{t('settings.assistantWorkspace.title')}</h2>
-          <p className="text-sm text-muted-foreground">{t('settings.assistantWorkspace.description')}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => contentsQuery.refetch()}
-            disabled={contentsQuery.isFetching}
-          >
-            {contentsQuery.isFetching ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            {t('settings.assistantWorkspace.refresh')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive"
-            onClick={() => setResetOpen(true)}
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            {t('settings.assistantWorkspace.reset')}
-          </Button>
-        </div>
-      </div>
+      <SectionHeader
+        title={t('settings.assistantWorkspace.title')}
+        description={t('settings.assistantWorkspace.description')}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => contentsQuery.refetch()}
+              disabled={contentsQuery.isFetching}
+            >
+              {contentsQuery.isFetching ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {t('settings.assistantWorkspace.refresh')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive"
+              onClick={() => setResetOpen(true)}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('settings.assistantWorkspace.reset')}
+            </Button>
+          </>
+        }
+      />
 
       <Alert>
         <AlertTriangle className="h-4 w-4" />

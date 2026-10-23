@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDestructiveDialog } from '@/components/ui/confirm-destructive-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SectionHeader } from '@/components/ui/section-header'
 
 type StatusFilter = 'all' | 'active' | 'ended'
 
@@ -132,28 +133,26 @@ export function AuditSettings() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">{t('settings.audit.title')}</h2>
-          <p className="text-sm text-muted-foreground">
-            {t('settings.audit.description')} · {t('settings.audit.total', { count: total })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => auditQuery.refetch()} disabled={auditQuery.isFetching}>
-            {auditQuery.isFetching ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            {t('settings.audit.refresh')}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setPruneOpen(true)}>
-            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-            {t('settings.audit.prune')}
-          </Button>
-        </div>
-      </div>
+      <SectionHeader
+        title={t('settings.audit.title')}
+        description={`${t('settings.audit.description')} · ${t('settings.audit.total', { count: total })}`}
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => auditQuery.refetch()} disabled={auditQuery.isFetching}>
+              {auditQuery.isFetching ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {t('settings.audit.refresh')}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPruneOpen(true)}>
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              {t('settings.audit.prune')}
+            </Button>
+          </>
+        }
+      />
 
       {error && (
         <Alert variant="destructive">

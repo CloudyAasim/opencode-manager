@@ -6,6 +6,7 @@ import { useI18n, SUPPORTED_LOCALES, LOCALE_LABELS, type SupportedLocale } from 
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { SectionHeader } from '@/components/ui/section-header'
 
 export function GeneralSettings() {
   const { preferences, isLoading, updateSettings, isUpdating } = useSettings()
@@ -20,21 +21,23 @@ export function GeneralSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-foreground">{t('settings.general.title')}</h2>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <span>OpenCode Manager</span>
-          {isVersionLoading ? (
-            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-          ) : versionInfo?.currentVersion ? (
-            <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded">
-              {versionInfo.currentVersion}
-            </span>
-          ) : (
-            <span>{t('common.unknown')}</span>
-          )}
-        </div>
-      </div>
+      <SectionHeader
+        title={t('settings.general.title')}
+        actions={
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>OpenCode Manager</span>
+            {isVersionLoading ? (
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+            ) : versionInfo?.currentVersion ? (
+              <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded">
+                {versionInfo.currentVersion}
+              </span>
+            ) : (
+              <span>{t('common.unknown')}</span>
+            )}
+          </div>
+        }
+      />
 
       <div className="divide-y divide-border">
         <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
