@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { Hono } from 'hono'
 import { Database } from 'bun:sqlite'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { migrate } from '../db/migration-runner'
 import { allMigrations } from '../db/migrations'
 import { createRepoRoutes } from './repos'
@@ -9,10 +11,25 @@ import { createStubOpenCodeClient } from '../../test/helpers/stub-opencode-clien
 import type { GitAuthService } from '../services/git-auth'
 import type { OpenCodeClient } from '../services/opencode/client'
 import type { Repo } from '@opencode-manager/shared/types'
-import { getReposPath } from '@opencode-manager/shared/config/env'
+import { getReposPath, getUserWorkspacePath } from '@opencode-manager/shared/config/env'
 import path from 'path'
 
+/**
+ * A workspace of this process's own.
+ *
+ * The paths under the workspace are what the access scope measures against,
+ * and the scope is resolved from the session, so the test has to point the
+ * workspace somewhere it can write. A temporary directory keeps the suite
+ * from leaving directories in a real workspace.
+ */
+let workspaceRoot = ''
+let previousWorkspacePath: string | undefined
+
 beforeEach(() => {
+  workspaceRoot = mkdtempSync(path.join(tmpdir(), 'ocm-repos-'))
+  previousWorkspacePath = process.env.WORKSPACE_PATH
+  process.env.WORKSPACE_PATH = workspaceRoot
+
   mock.module('../services/project-id-resolver', () => ({
     resolveProjectId: (() => null) as any,
     isGitMainCheckout: (() => Promise.resolve(false)) as any,
@@ -21,6 +38,12 @@ beforeEach(() => {
 
 afterEach(() => {
   mock.restore()
+  if (previousWorkspacePath === undefined) {
+    delete process.env.WORKSPACE_PATH
+  } else {
+    process.env.WORKSPACE_PATH = previousWorkspacePath
+  }
+  rmSync(workspaceRoot, { recursive: true, force: true })
 })
 
 const stubGitAuthService = {
@@ -135,13 +158,20 @@ describe('GET /api/repos/:id/siblings', () => {
     }))
 
     createRepo(db, { localPath: 'repo-a', defaultBranch: 'main', cloneStatus: 'ready', clonedAt: Date.now(), isLocal: true })
+    // Inside the caller's own tenant. The sibling list is measured against the
+    // caller's tenant scope - the administrator's project surface is narrowed
+    // like anybody else's - so a worktree directory outside it is not a
+    // sibling of their project. The directory has to exist: the canonicaliser
+    // resolves symlinks and a missing one throws.
+    const workspaceDir = path.join(getUserWorkspacePath('admin'), 'plugin-workspace')
+    mkdirSync(workspaceDir, { recursive: true })
     app = asAdmin(db, createStubOpenCodeClient({
       getJson: mock(async () => ([{
         id: 'wrk_test',
         type: 'worktree',
         name: 'plugin-workspace',
         branch: 'plugin-branch',
-        directory: '/tmp/plugin-workspace',
+        directory: workspaceDir,
         projectID: 'commit-A',
       }])) as any,
     }))
@@ -164,6 +194,8 @@ describe('GET /api/repos/:id/siblings', () => {
     }))
 
     createRepo(db, { localPath: 'repo-a', defaultBranch: 'main', cloneStatus: 'ready', clonedAt: Date.now(), isLocal: true })
+    const duplicateDir = path.join(getUserWorkspacePath('admin'), 'duplicate-workspace')
+    mkdirSync(duplicateDir, { recursive: true })
     app = asAdmin(db, createStubOpenCodeClient({
       getJson: mock(async () => ([
         {
@@ -171,7 +203,7 @@ describe('GET /api/repos/:id/siblings', () => {
           type: 'worktree',
           name: 'duplicate-workspace',
           branch: 'duplicate-branch',
-          directory: '/tmp/duplicate-workspace',
+          directory: duplicateDir,
           projectID: 'commit-A',
         },
         {
@@ -179,7 +211,7 @@ describe('GET /api/repos/:id/siblings', () => {
           type: 'worktree',
           name: 'duplicate-workspace',
           branch: 'duplicate-branch',
-          directory: '/tmp/duplicate-workspace/',
+          directory: `${duplicateDir}/`,
           projectID: 'commit-A',
         },
       ])) as any,
@@ -219,10 +251,19 @@ describe('GET /api/repos/:id/siblings', () => {
   })
 
   it('excludes a workspace that is a git main checkout so the main repo cannot be deleted', async () => {
+    // Both directories are inside the caller's tenant on purpose: the scope
+    // check happens before the git check, so a directory outside the scope
+    // would be dropped by the wrong rule and this case would stop testing
+    // what it says it tests.
+    const mainCheckout = path.join(getUserWorkspacePath('admin'), 'main-repo')
+    const featureWorktree = path.join(getUserWorkspacePath('admin'), 'worktrees', 'feature-x')
+    mkdirSync(mainCheckout, { recursive: true })
+    mkdirSync(featureWorktree, { recursive: true })
+
     mock.module('../services/project-id-resolver', () => ({
       resolveProjectId: (() => Promise.resolve('commit-A')) as any,
       isGitMainCheckout: ((dir: string) =>
-        Promise.resolve(dir === '/Users/dev/main-repo')) as any,
+        Promise.resolve(dir === mainCheckout)) as any,
     }))
 
     createRepo(db, { localPath: 'repo-wt', defaultBranch: 'main', cloneStatus: 'ready', clonedAt: Date.now(), isLocal: true })
@@ -233,7 +274,7 @@ describe('GET /api/repos/:id/siblings', () => {
           type: 'worktree',
           name: 'main-checkout',
           branch: 'dev',
-          directory: '/Users/dev/main-repo',
+          directory: mainCheckout,
           projectID: 'commit-A',
         },
         {
@@ -241,7 +282,7 @@ describe('GET /api/repos/:id/siblings', () => {
           type: 'worktree',
           name: 'feature',
           branch: 'feature/x',
-          directory: '/Users/dev/worktrees/feature-x',
+          directory: featureWorktree,
           projectID: 'commit-A',
         },
       ])) as any,

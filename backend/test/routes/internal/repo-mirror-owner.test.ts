@@ -119,8 +119,11 @@ describe('a mirrored repository belongs to the person mirroring it', () => {
 
     expect(canAccessRepo(db, repoId, asOwner)).toBe(true)
     expect(canAccessRepo(db, repoId, asStranger)).toBe(false)
-    // The admin path is unchanged: an owner is not a lockout for the operator.
-    expect(canAccessRepo(db, repoId, asAdmin)).toBe(true)
+    // The administrator is not an exception. They run the server; they do not
+    // open somebody else's working copy. An owner is not a lockout for the
+    // operator either - the operator cannot reach it at all, and that is the
+    // point.
+    expect(canAccessRepo(db, repoId, asAdmin)).toBe(false)
   })
 
   it('gives two people mirroring the same name two repositories', async () => {

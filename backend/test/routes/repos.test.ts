@@ -1,7 +1,9 @@
 import { Hono } from 'hono'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { Database } from 'bun:sqlite'
 import { createStubOpenCodeClient } from '../helpers/stub-opencode-client'
+
+const defaultPrepare = () => ({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() })
 
 const mockDb = {
   // auth/ownership.ts reads repo ownership through `db.prepare(...).get(...)`,
@@ -9,7 +11,7 @@ const mockDb = {
   // guard threw a TypeError and answered 500 — the guard had no working
   // coverage at all, which is how the 403/404 existence split survived every
   // green run.
-  prepare: vi.fn(() => ({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() })),
+  prepare: vi.fn(defaultPrepare),
   exec: vi.fn(),
   close: vi.fn(),
   transaction: vi.fn(),
@@ -432,6 +434,24 @@ describe('Repo Routes', () => {
   })
 
   describe('POST /', () => {
+    /**
+     * The repository the route just created belongs to the person who made
+     * it, and the guard reads the owner through `db.prepare`. The default
+     * mock carries no ownership information, so a case that expects the
+     * creation to be allowed says who owns the row.
+     */
+    const mockOwnedByCaller = () => {
+      vi.mocked(mockDb.prepare).mockReturnValue({
+        get: () => ({ user_id: 'u-1' }),
+        all: () => [],
+        run: () => undefined,
+      } as never)
+    }
+
+    afterEach(() => {
+      vi.mocked(mockDb.prepare).mockImplementation(defaultPrepare as never)
+    })
+
     it('should return 400 when neither repoUrl nor localPath is provided', async () => {
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
       const res = await app.request('/', {
@@ -448,9 +468,12 @@ describe('Repo Routes', () => {
     it('should create a local repo through initLocalRepo', async () => {
       const repo = createMockRepo()
       vi.mocked(repoService.initLocalRepo).mockResolvedValue(repo)
+      mockOwnedByCaller()
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/', {
+      // A session, because a project without an owner is a project everybody
+      // can see: the route refuses a request it cannot place on a person.
+      const res = await asSession(app).request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ localPath: 'repos/test-repo', branch: 'main' }),
@@ -459,15 +482,16 @@ describe('Repo Routes', () => {
       expect(res.status).toBe(200)
       const body = await res.json() as Repo
       expect(body.id).toBe(1)
-      expect(repoService.initLocalRepo).toHaveBeenCalledWith(mockDb, mockGitAuthService, 'repos/test-repo', 'main', null)
+      expect(repoService.initLocalRepo).toHaveBeenCalledWith(mockDb, mockGitAuthService, 'repos/test-repo', 'main', 'u-1')
     })
 
     it('should clone a remote repo through cloneRepo', async () => {
       const repo = createMockRepo({ repoUrl: 'https://github.com/test/remote' })
       vi.mocked(repoService.cloneRepo).mockResolvedValue(repo)
+      mockOwnedByCaller()
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/', {
+      const res = await asSession(app).request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoUrl: 'https://github.com/test/remote', directoryName: 'remote' }),
@@ -482,7 +506,7 @@ describe('Repo Routes', () => {
         useWorktree: undefined,
         skipSSHVerification: undefined,
         baseBranch: undefined,
-        userId: null,
+        userId: 'u-1',
       })
     })
 
@@ -490,7 +514,7 @@ describe('Repo Routes', () => {
       vi.mocked(repoService.initLocalRepo).mockRejectedValue(new Error('init failed'))
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/', {
+      const res = await asSession(app).request('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ localPath: 'repos/test-repo' }),
@@ -525,6 +549,24 @@ describe('Repo Routes', () => {
 
       expect(res.status).toBe(401)
       expect(repoService.discoverLocalRepos).not.toHaveBeenCalled()
+    })
+
+    it('refuses creation rather than registering an ownerless repository', async () => {
+      // A row with no owner is not a neutral "shared" state: `user_id IS NULL`
+      // is how the Assistant is stored, so a project that lands without an
+      // owner comes back into every account's list - and every account's
+      // delete button - at once. Refused before anything is written.
+      const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
+
+      const res = await app.request('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ localPath: 'repos/test-repo' }),
+      })
+
+      expect(res.status).toBe(401)
+      expect(repoService.initLocalRepo).not.toHaveBeenCalled()
+      expect(repoService.cloneRepo).not.toHaveBeenCalled()
     })
 
     it('refuses reordering rather than writing into the shared namespace', async () => {
@@ -637,7 +679,7 @@ describe('Repo Routes', () => {
         listOrder.push('reconcile')
         return { registeredCount: 1, existingCount: 0, skipped: false, errors: [] }
       })
-      await app.request('/', { method: 'GET' })
+      await asSession(app).request('/', { method: 'GET' })
       expect(listOrder).toEqual(['reconcile', 'listRepos'])
     })
 
@@ -661,7 +703,7 @@ describe('Repo Routes', () => {
       })
 
       const app = createRepoRoutes(mockDb, mockGitAuthService, mockScheduleService, createStubOpenCodeClient())
-      const res = await app.request('/', { method: 'GET' })
+      const res = await asSession(app).request('/', { method: 'GET' })
 
       expect(res.status).toBe(500)
       const body = await res.json() as { error: string }

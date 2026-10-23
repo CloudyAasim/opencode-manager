@@ -63,9 +63,11 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
       const jobs = scheduleService.listAllJobsWithRepos()
       const principal = principalOf(c)
       if (!principal) return c.json({ error: 'Unauthorized' }, 401)
-      if (principal.role === 'admin') {
-        return c.json({ jobs })
-      }
+      // Narrowed for everybody. A schedule belongs to the project it runs
+      // against, and a project belongs to an account - so the administrator's
+      // list is their own projects' schedules, not every account's. The
+      // shortcut that skipped the narrowing for administrators answered with
+      // the other tenants' job names and their repositories' paths.
       const allowed = new Set(accessibleRepoIds(database, principal))
       return c.json({ jobs: jobs.filter((job) => allowed.has(job.repoId)) })
     } catch (error) {
@@ -98,9 +100,12 @@ export function createScheduleRoutes(scheduleService: ScheduleService, database:
       // filtered after, so a non-admin's page was cut from everyone's runs:
       // short pages, and past the global offset an empty answer while their own
       // rows were still unread.
-      const repoIds = principal.role === 'admin'
-        ? undefined
-        : accessibleRepoIds(database, principal)
+      //
+      // The scope is the same population for every role. A run row carries the
+      // session id the agent ran in, so an unnarrowed list hands the reader
+      // every tenant's session ids - the value the identity scheme is built
+      // on.
+      const repoIds = accessibleRepoIds(database, principal)
 
       const runs = scheduleService.listAllRuns({ limit, offset, status, repoId, repoIds, jobId, triggerSource })
       return c.json({ runs })

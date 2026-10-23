@@ -1049,10 +1049,17 @@ describe('repo service real git', () => {
         clonedAt: Date.now(),
       })
       const projectId = (await resolveOpenCodeProjectId(repoA))!
-      const extraDir = path.join(workspaceRoot, uniqueName('sibling-ws-extra'))
-      const duplicateDir = path.join(workspaceRoot, uniqueName('sibling-ws-duplicate'))
-      const activeWorktree = path.join(workspaceRoot, uniqueName('sibling-ws-active'))
-      const activeWorkspace = path.join(workspaceRoot, uniqueName('sibling-ws-active-dir'))
+      // Inside the caller's own tenant. The administrator's project surface is
+      // narrowed to their account like anybody else's, so a worktree
+      // directory outside it is not a sibling of their project - and this test
+      // is about the *other* exclusions (duplicates, the target itself, the
+      // repositories root, schedule worktrees), so the directories it wants to
+      // keep have to be somewhere the caller may reach.
+      const siblingRoot = getUserWorkspacePath('admin')
+      const extraDir = path.join(siblingRoot, uniqueName('sibling-ws-extra'))
+      const duplicateDir = path.join(siblingRoot, uniqueName('sibling-ws-duplicate'))
+      const activeWorktree = path.join(siblingRoot, uniqueName('sibling-ws-active'))
+      const activeWorkspace = path.join(siblingRoot, uniqueName('sibling-ws-active-dir'))
       mkdirSync(extraDir, { recursive: true })
       mkdirSync(duplicateDir, { recursive: true })
       mkdirSync(activeWorktree, { recursive: true })
@@ -1205,12 +1212,45 @@ describe('repo service real git', () => {
       expect(asAlice.filter((repo) => repo.workspaceId).map((repo) => repo.workspaceId)).toEqual(['ws-own'])
       expect(JSON.stringify(asAlice)).not.toContain(foreignWorktree)
 
-      // An admin keeps the unfiltered view. Without this, "only one came back"
-      // would also be satisfied by the client never being asked properly.
-      const asAdmin = await getSiblingRepos(db, mine.id, ADMIN, {}, client) as SiblingRepo[]
+      // The administrator is narrowed the same way. They run the server, and
+      // they keep the whole workspace in the file browser - but the project
+      // surface is theirs, and a worktree directory inside somebody else's
+      // workspace is not a sibling of their project.
+      //
+      // Their own worktree comes back, so "only one came back" cannot be
+      // satisfied by the client never being asked properly.
+      const adminRepoPath = path.join(getUserReposPath('admin'), uniqueName('ws-scope-admin-repo'))
+      cloneOrigin(origin, adminRepoPath)
+      const adminRepo = createRepo(db, {
+        isLocal: true,
+        localPath: path.basename(adminRepoPath),
+        sourcePath: adminRepoPath,
+        branch: 'main',
+        defaultBranch: 'main',
+        cloneStatus: 'ready',
+        clonedAt: Date.now(),
+        userId: 'admin-1',
+      })
+      const adminWorktree = path.join(getUserWorkspacePath('admin'), uniqueName('ws-scope-admin'))
+      mkdirSync(adminWorktree, { recursive: true })
+      const adminClient = {
+        getJson: async () => [
+          { id: 'ws-admin', type: 'worktree', name: 'admin', branch: 'feature', directory: adminWorktree, projectID: projectId },
+          { id: 'ws-foreign', type: 'worktree', name: 'foreign', branch: 'main', directory: foreignWorktree, projectID: projectId },
+        ],
+      } as unknown as OpenCodeClient
 
-      expect(asAdmin.filter((repo) => repo.workspaceId).map((repo) => repo.workspaceId).sort())
-        .toEqual(['ws-foreign', 'ws-own'])
+      const asAdmin = await getSiblingRepos(db, adminRepo.id, ADMIN, {}, adminClient) as SiblingRepo[]
+
+      expect(asAdmin.filter((repo) => repo.workspaceId).map((repo) => repo.workspaceId)).toEqual(['ws-admin'])
+      expect(JSON.stringify(asAdmin)).not.toContain(foreignWorktree)
+
+      // And the administrator cannot ask about somebody else's project at all:
+      // the target is filtered the same way, so the answer is empty rather
+      // than a neighbour that happens to share its project.
+      const adminAskingAboutAlice = await getSiblingRepos(db, mine.id, ADMIN, {}, adminClient) as SiblingRepo[]
+
+      expect(adminAskingAboutAlice).toEqual([])
     })
   })
 })

@@ -208,7 +208,8 @@ export async function discoverLocalRepos(
 export async function relinkReposFromSessionDirectories(
   database: Database,
   gitAuthService: GitAuthService,
-  directories: string[]
+  directories: string[],
+  userId?: string | null,
 ): Promise<{
   repos: Repo[]
   relinkedCount: number
@@ -250,7 +251,12 @@ export async function relinkReposFromSessionDirectories(
 
   for (const repoRoot of Array.from(uniqueRepoRoots).sort((left, right) => left.localeCompare(right))) {
     try {
-      const result = await registerExistingLocalRepo(database, gitAuthService, repoRoot)
+      // The owner is the person the relink runs for. Without it the row lands
+      // with `user_id IS NULL`, and a null owner is not a neutral "shared"
+      // state - it is a row every account can see, delete and browse. The
+      // imported sessions belong to whoever imported them, so that is who the
+      // projects belong to.
+      const result = await registerExistingLocalRepo(database, gitAuthService, repoRoot, undefined, undefined, userId)
       repos.push(result.repo)
       if (result.existed) {
         existingCount += 1

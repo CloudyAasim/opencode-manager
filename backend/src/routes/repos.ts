@@ -93,7 +93,15 @@ export function createRepoRoutes(
       logger.info(`Creating repo - URL: ${repoUrl}, Provider: ${provider || 'auto-detect'}`)
 
       const principal = currentPrincipal(c)
-      const ownerId = principal?.id ?? null
+      // Refused before anything is written, the same way `/discover` refuses.
+      // A row with no owner is not a neutral "shared" state: `user_id IS NULL`
+      // is how the Assistant is stored, so a project that lands without an
+      // owner comes back into every account's list at once - and every
+      // account can delete it.
+      if (principal === null) {
+        return c.json({ error: 'Unauthorized' }, 401)
+      }
+      const ownerId = principal.id
 
       let repo
       if (localPath) {
@@ -113,7 +121,7 @@ export function createRepoRoutes(
         )
       }
 
-      if (principal !== null && !canAccessRepo(database, repo.id, principal)) {
+      if (!canAccessRepo(database, repo.id, principal)) {
         return c.json({ error: 'Forbidden' }, 403)
       }
 
@@ -168,6 +176,12 @@ export function createRepoRoutes(
 app.get('/', async (c) => {
     try {
       const principal = currentPrincipal(c)
+      // Before anything is read. A list that cannot be attributed has no tenant
+      // to be filtered against, and reading it as "the default account" is how
+      // a request ends up answered with somebody else's projects.
+      if (principal === null) {
+        return c.json({ error: 'Unauthorized' }, 401)
+      }
       const settingsService = new SettingsService(database)
 
       // Before the read, not after: a repository that the assistant or the user
@@ -178,11 +192,8 @@ app.get('/', async (c) => {
         logger.warn('Failed to reconcile the projects directory:', error)
       })
 
-      const settings = settingsService.getSettings(principal?.id)
+      const settings = settingsService.getSettings(principal.id)
       const allRepos = listRepos(database, settings.preferences.repoOrder)
-      if (principal === null) {
-        return c.json({ error: 'Unauthorized' }, 401)
-      }
       const repos = allRepos.filter((repo) => canAccessRepoOwner(repo.userId ?? null, principal))
 
       const reposWithCurrentBranch = await Promise.all(

@@ -121,12 +121,17 @@ describe('internal routes narrowed by session owner', () => {
     expect(res.status).toBe(401)
   })
 
-  it('lets an administrator see every repository', async () => {
+  it('narrows an administrator to their own repositories', async () => {
+    // The administrator runs the server; they do not open other accounts'
+    // projects. The plugin's repository list is the agent's view of what it
+    // may touch, and it is the caller's own tenant - the same population the
+    // web API answers with.
     addUser('u-root', 'root', 'admin')
+    addRepo(44, 'admin-project', 'u-root')
     recordSession('ses_root', 'u-root', 'admin')
     const res = await app.request('/api/internal/repos', { headers: asSession('ses_root') })
     const body = await res.json() as { repos: { id: number }[] }
-    expect(body.repos.map((r) => r.id).sort()).toEqual([11, 22])
+    expect(body.repos.map((r) => r.id)).toEqual([44])
   })
 
   // --- GET /opencode-workspaces -------------------------------------------
@@ -281,11 +286,30 @@ describe('internal routes narrowed by session owner', () => {
     expect(body.jobs.map((j) => j.id)).toEqual([1])
   })
 
-  it('lets an administrator drive any repository schedule', async () => {
+  it('refuses an administrator another tenant repository schedule', async () => {
+    // The same rule as everywhere else in the project family: a working copy
+    // inside somebody else's directory is that person's work, and the role
+    // does not open it.
     addUser('u-root', 'root', 'admin')
     recordSession('ses_root', 'u-root', 'admin')
     const res = await app.request('/api/internal/repos/22/schedules', { headers: asSession('ses_root') })
+    expect(res.status).toBe(403)
+  })
+
+  it('still serves an administrator their own repository schedule', async () => {
+    const now = Date.now()
+    addUser('u-root', 'root', 'admin')
+    addRepo(44, 'admin-project', 'u-root')
+    db.prepare(
+      `INSERT INTO schedule_jobs (id, repo_id, name, enabled, schedule_mode, prompt, created_at, updated_at)
+       VALUES (4, 44, 'admin job', 1, 'interval', 'p', ?, ?)`,
+    ).run(now, now)
+    recordSession('ses_root', 'u-root', 'admin')
+
+    const res = await app.request('/api/internal/repos/44/schedules', { headers: asSession('ses_root') })
     expect(res.status).toBe(200)
+    const body = await res.json() as { jobs: { id: number }[] }
+    expect(body.jobs.map((j) => j.id)).toEqual([4])
   })
 
   it('refuses any repository schedule to a request that names no session', async () => {

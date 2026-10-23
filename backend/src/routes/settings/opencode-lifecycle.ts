@@ -70,7 +70,16 @@ export function createOpenCodeLifecycleRoutes(ctx: SettingsRouteContext) {
       let relinkedRepos
       if (result.stateImported) {
         const importedSessions = await getImportedSessionDirectories(result.workspaceStatePath)
-        relinkedRepos = await relinkReposFromSessionDirectories(db, gitAuthService, importedSessions.directories)
+        // The importer owns what they imported. Leaving the owner off made the
+        // rows land with `user_id IS NULL`, and a null owner is a row every
+        // account can see - so one person's import put their projects into
+        // everybody's project list, including the top bar's switcher.
+        relinkedRepos = await relinkReposFromSessionDirectories(
+          db,
+          gitAuthService,
+          importedSessions.directories,
+          ctx.currentPrincipal(c)?.id ?? null,
+        )
       } else {
         relinkedRepos = {
           repos: [],

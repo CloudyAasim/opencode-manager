@@ -49,9 +49,17 @@ import { allMigrations } from '../../src/db/migrations'
  * question - who owns this repository - and a shared row answers it, so this
  * is the smallest thing that lets the suite keep the subject it was written
  * about. The ownership cases below use a real database instead.
+ *
+ * `all` answers the cross-repository narrowing: repository 42 is the one this
+ * suite mounts under, and it is a shared row, so it is reachable by every
+ * role. The narrowing itself is tested in the ownership block, against a real
+ * database with a real second tenant.
  */
 const testDb = {
-  prepare: () => ({ get: () => ({ user_id: null }) }),
+  prepare: () => ({
+    get: () => ({ user_id: null }),
+    all: () => [{ id: 42 }],
+  }),
 } as unknown as Database
 
 /**
@@ -264,8 +272,8 @@ describe('Schedule Routes', () => {
 
   it('lists all schedules across all repos', async () => {
     scheduleService.listAllJobsWithRepos.mockReturnValue([
-      { id: 1, name: 'Job 1', repoName: 'Repo A', repoPath: '/path/a', repoUrl: 'https://repo-a' },
-      { id: 2, name: 'Job 2', repoName: 'Repo B', repoPath: '/path/b', repoUrl: 'https://repo-b' },
+      { id: 1, name: 'Job 1', repoId: 42, repoName: 'Repo A', repoPath: '/path/a', repoUrl: 'https://repo-a' },
+      { id: 2, name: 'Job 2', repoId: 42, repoName: 'Repo B', repoPath: '/path/b', repoUrl: 'https://repo-b' },
     ])
 
     const response = await app.request('/repos/42/schedules/all')
@@ -307,6 +315,7 @@ describe('Schedule Routes', () => {
       offset: 5,
       status: 'failed',
       repoId: 42,
+      repoIds: [42],
       jobId: 7,
       triggerSource: 'manual',
     })
@@ -363,6 +372,7 @@ describe('Schedule Routes - repository ownership', () => {
     addRepo(11, 'u-alice')
     addRepo(22, 'u-bob')
     addRepo(33, null)
+    addRepo(44, 'u-root')
     alice = mount({ id: 'u-alice', role: 'user' })
     bob = mount({ id: 'u-bob', role: 'user' })
     admin = mount({ id: 'u-root', role: 'admin' })
@@ -478,12 +488,23 @@ describe('Schedule Routes - repository ownership', () => {
     expect(response.status).toBe(403)
   })
 
-  it('lets an administrator drive any repository', async () => {
+  it('lets an administrator drive their own repository', async () => {
     scheduleService.listJobs.mockReturnValue([])
 
-    const response = await admin.request('/repos/22/schedules')
+    const response = await admin.request('/repos/44/schedules')
 
     expect(response.status).toBe(200)
+  })
+
+  it('refuses an administrator another tenant repository', async () => {
+    // The administrator manages the server - accounts, the audit log, the
+    // OpenCode process. A working copy inside somebody else's directory is
+    // that person's work, so the role does not open it. It used to, and the
+    // answer it gave was every account's schedules.
+    const response = await admin.request('/repos/22/schedules')
+
+    expect(response.status).toBe(403)
+    expect(scheduleService.listJobs).not.toHaveBeenCalled()
   })
 
   it('refuses a request with no subject at all', async () => {
@@ -531,24 +552,31 @@ describe('Schedule Routes - repository ownership', () => {
     expect(body.runs.map((r) => r.sessionId)).toEqual(['ses_alice'])
   })
 
-  it('passes no repo narrowing for an administrator', async () => {
+  it('narrows an administrator the same way it narrows everybody else', async () => {
+    // The run list carries the session id the agent ran in. Handing the
+    // administrator every row handed them every tenant's session ids, which
+    // is the value the identity scheme is built on.
     scheduleService.listAllRuns.mockReturnValue([])
 
-    await admin.request('/repos/11/schedules/all/runs')
+    await admin.request('/repos/44/schedules/all/runs')
 
     const options = scheduleService.listAllRuns.mock.calls.at(-1)?.[0] as { repoIds?: number[] }
-    expect(options.repoIds, '管理员不受仓库收窄，否则他看不到别人的运行记录').toBeUndefined()
+    // The administrator's own repository (44) and the shared one (33). Alice's
+    // (11) and Bob's (22) are not in the set the query is narrowed by.
+    expect([...(options.repoIds ?? [])].sort((a, b) => a - b)).toEqual([33, 44])
   })
 
-  it('leaves the cross-repository lists untouched for an administrator', async () => {
+  it('narrows the administrator cross-repository list to what they own', async () => {
     scheduleService.listAllJobsWithRepos.mockReturnValue([
       { id: 1, repoId: 11 },
       { id: 2, repoId: 22 },
+      { id: 3, repoId: 33 },
+      { id: 4, repoId: 44 },
     ])
 
-    const response = await admin.request('/repos/11/schedules/all')
-    const body = await response.json() as { jobs: unknown[] }
+    const response = await admin.request('/repos/44/schedules/all')
+    const body = await response.json() as { jobs: Array<{ id: number }> }
 
-    expect(body.jobs).toHaveLength(2)
+    expect(body.jobs.map((job) => job.id).sort((a, b) => a - b)).toEqual([3, 4])
   })
 })

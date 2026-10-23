@@ -45,9 +45,22 @@ describe('ownership helpers', () => {
     expect(canAccessOwner('alice', bob)).toBe(false)
   })
 
-  it('lets administrators access every repo', () => {
-    expect(canAccessRepo(db, 1, admin)).toBe(true)
-    expect(canAccessRepo(db, 2, admin)).toBe(true)
+  it('scopes administrators to their own and shared repos', () => {
+    // The administrator manages the server: accounts, the audit log, the
+    // OpenCode process, the workspace on disk. A project inside somebody
+    // else's directory is that person's work, and the role does not open it.
+    //
+    // It used to: `canAccessRepoOwner` answered "yes" for an administrator
+    // whatever the owner was, and the top bar's project switcher is built from
+    // the project list - so every account's projects were in the
+    // administrator's dropdown, two accounts with a checkout of the same name
+    // producing two identical entries.
+    insertRepo(db, 4, 'root')
+
+    expect(canAccessRepo(db, 4, admin)).toBe(true)
+    expect(canAccessRepo(db, 1, admin)).toBe(false)
+    expect(canAccessRepo(db, 2, admin)).toBe(false)
+    expect(canAccessRepo(db, 3, admin)).toBe(true)
     expect(canAccessRepo(db, 999, admin)).toBe(false)
   })
 
@@ -64,11 +77,20 @@ describe('ownership helpers', () => {
     expect(canAccessRepoOwner(null, alice)).toBe(true)
     expect(canAccessRepoOwner(null, admin)).toBe(true)
     expect(canAccessRepoOwner('alice', null)).toBe(false)
+    // The administrator is not an exception here. `canAccessOwner` - the
+    // shared-library rule used by the prompt templates - still is, and the two
+    // functions used to be written identically, which is how the exception
+    // leaked from one into the other.
+    expect(canAccessRepoOwner('alice', admin)).toBe(false)
+    expect(canAccessOwner('alice', admin)).toBe(true)
   })
 
   it('lists accessible repo ids', () => {
+    insertRepo(db, 4, 'root')
+
     expect(accessibleRepoIds(db, alice).sort()).toEqual([0, 1, 3])
-    expect(accessibleRepoIds(db, admin).sort()).toEqual([0, 1, 2, 3])
+    // One population for every role: their own projects and the shared ones.
+    expect(accessibleRepoIds(db, admin).sort()).toEqual([0, 3, 4])
     expect(accessibleRepoIds(db, null)).toEqual([])
   })
 

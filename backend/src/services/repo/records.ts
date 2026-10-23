@@ -13,7 +13,7 @@ import { SettingsService } from '../settings'
 import type { OpenCodeClient } from '../opencode/client'
 import { canonicalPathSync } from '../../utils/fs-safe'
 import { getCurrentBranch } from './branch'
-import { canAccessRepoOwner, principalIsAdmin, resolveAccessRoots, type Principal } from '../../auth/ownership'
+import { canAccessRepoOwner, resolveTenantAccessRoots, type Principal } from '../../auth/ownership'
 import { isWithinRoots } from '../../auth/access-scope'
 
 export function createRepoRow(
@@ -135,10 +135,13 @@ export async function getSiblingRepos(
     // A worktree row has no owner to check, so its directory is the only thing
     // that can be checked. OpenCode reports every workspace under the project,
     // across tenants, and each one becomes a `fullPath` in the response - the
-    // same field the sidebar renders and the browser is then handed. `null`
-    // rather than an empty array so "admin" and "nothing matched" stay distinct:
-    // an empty list would silently mean "no filtering" if it were the sentinel.
-    const scopeRoots = principalIsAdmin(principal) ? null : resolveAccessRoots(database, principal)
+    // same field the sidebar renders and the browser is then handed.
+    //
+    // The caller's *tenant* roots, not their server-wide ones: an
+    // administrator's project list is their own, so another account's
+    // worktree directory is not a sibling of theirs. The administrator keeps
+    // the whole workspace in the file browser, which is the server-side reach.
+    const scopeRoots = resolveTenantAccessRoots(database, principal)
 
     const candidates = workspaces.filter((workspace) => {
       if (workspace.projectID !== targetProjectId) return false
