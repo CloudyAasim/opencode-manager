@@ -270,6 +270,7 @@ export const repo = {
   fileBrowser: {
     selectFileToPreview: '选择文件以预览',
     selectFileToPreviewHint: '在文件树里选一个文件，它会在这里打开。',
+    loadFailed: '这个文件夹打不开',
     noFiles: '此目录中没有文件',
     noFilesHint: '这个目录是空的。',
     refresh: '刷新',

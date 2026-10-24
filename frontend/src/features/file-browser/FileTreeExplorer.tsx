@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, memo } from 'react'
-import { ChevronDown, ChevronRight, File, Folder, FolderOpen, RefreshCw } from 'lucide-react'
+import { ChevronDown, ChevronRight, File, Folder, FolderOpen, RefreshCw, AlertCircle } from 'lucide-react'
 import { PanelMessage } from '@/components/ui/panel-message'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { getFileApiUrl } from '@/api/files'
 import type { FileInfo } from '@/types/files'
 import { cn } from '@/lib/utils'
@@ -161,11 +162,16 @@ export const FileTreeExplorer = memo(function FileTreeExplorer({
 
       <div data-testid="file-tree-scroller" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">
         {error ? (
-          <div className="px-3 py-6 text-center text-sm text-destructive">{error}</div>
+          <PanelMessage
+            icon={<AlertCircle />}
+            tone="error"
+            title={t('repo.fileBrowser.loadFailed')}
+            detail={error}
+            size="sm"
+            className="px-3"
+          />
         ) : loading && children === null ? (
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <RefreshCw className="h-5 w-5 animate-spin" />
-          </div>
+          <PanelLoading className="py-8" size="sm" />
         ) : children && children.length > 0 ? (
           children.map((child, index) => (
             <TreeNode

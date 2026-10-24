@@ -7,6 +7,7 @@ import { PromptInput, type PromptInputHandle } from "@/features/message/PromptIn
 import { FloatingTTSButton } from '@/features/message/FloatingTTSButton'
 import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare, FileText, Command as CommandIcon } from "lucide-react";
 import { PanelMessage } from '@/components/ui/panel-message';
+import { PanelLoading } from '@/components/ui/panel-loading';
 import { Header } from "@/components/ui/header";
 import { SessionList } from "@/features/session/SessionList";
 import { getSessionListPath } from '@/lib/navigation'
@@ -739,12 +740,11 @@ export function SessionDetail() {
 
   if (!isAssistantSession && repoLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 animate-spin rounded-full border-2 border-muted border-t-foreground" />
-          <span className="text-muted-foreground">{t('session.route.loadingRepository')}</span>
-        </div>
-      </div>
+      <PanelLoading
+        className="min-h-screen bg-background"
+        size="lg"
+        label={t('session.route.loadingRepository')}
+      />
     );
   }
 

@@ -6,7 +6,9 @@ import { FileOperations } from './FileOperations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { RefreshCw, Upload, FolderOpen } from 'lucide-react'
+import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
+import { RefreshCw, Upload, FolderOpen, FileText } from 'lucide-react'
 import { useMobile } from '@/hooks/useMobile'
 import { useFileBrowserController, type FileBrowserController } from './useFileBrowserController'
 import { STORAGE_KEYS } from '@/lib/storage-keys'
@@ -151,9 +153,7 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
 
           <div ref={setList} data-testid="file-list-scroller" className="flex-1 min-h-0 overflow-y-auto">
             {controller.loading && !controller.files ? (
-              <div className="flex items-center justify-center h-64">
-                <RefreshCw className="w-6 h-6 animate-spin" />
-              </div>
+              <PanelLoading className="h-64" size="md" />
             ) : (
               <FileTree
                 files={visibleFiles}
@@ -186,9 +186,13 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
                 file={controller.selectedFile}
               />
             ) : (
-              <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                {t('repo.fileBrowser.selectFile')}
-              </div>
+              <PanelMessage
+                icon={<FileText />}
+                title={t('repo.fileBrowser.selectFileToPreview')}
+                detail={t('repo.fileBrowser.selectFileToPreviewHint')}
+                size="sm"
+                className="flex-1"
+              />
             )}
           </div>
         )

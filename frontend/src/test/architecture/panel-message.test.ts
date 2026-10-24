@@ -110,8 +110,14 @@ const NOT_A_STATE: ReadonlyArray<readonly [string, string]> = [
 ]
 
 // A centred box whose first child is a spinner.
+//
+// It used to look for `<Loader2`, which is one of the ways a spinner is written
+// here. The other two - a `<RefreshCw className="animate-spin" />` and a div
+// with a `border-t-transparent` ring - went past it, and every one of them is
+// the same thing drawn out by hand. So the rule asks the question directly: is
+// the first thing in this centred box something that spins?
 const HAND_ROLLED_SPINNER =
-  /<div className="[^"]*\bitems-center\b[^"]*\bjustify-center\b[^"]*"[^>]*>\s*<Loader2/
+  /<(?:div|p)\b[^>]*className="[^"]*\bitems-center\b[^"]*\bjustify-center\b[^"]*"[^>]*>\s*<(?:[A-Z][A-Za-z0-9]*|div)\b[^>]*className="[^"]*\banimate-spin\b/
 
 /**
  * The props of every `<PanelMessage ... />`, found by matching braces.
@@ -260,6 +266,25 @@ describe('面板的三态各只有一个组件', () => {
         '用 <PanelLoading />，外层间距用 className 传。',
       ].join('\n'),
     ).toEqual([])
+  })
+
+  it('量法认得出转圈的另外两种写法', () => {
+    // A detector that only knows the shape it was written against is a
+    // detector that has never seen the others.
+    const shapes = [
+      `<div className="flex items-center justify-center h-64"><RefreshCw className="w-6 h-6 animate-spin" /></div>`,
+      `<div className="flex items-center justify-center h-32"><div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" /></div>`,
+    ]
+    for (const shape of shapes) {
+      expect(HAND_ROLLED_SPINNER.test(shape), `认不出这一种：${shape.slice(0, 60)}`).toBe(true)
+    }
+    // A button that is busy is not a panel that is loading.
+    expect(
+      HAND_ROLLED_SPINNER.test(
+        `<Button className="inline-flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /></Button>`,
+      ),
+      '把按钮自己的忙碌状态当成了面板在加载',
+    ).toBe(false)
   })
 
   it('类名里没有拼不出来的东西', () => {

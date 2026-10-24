@@ -5,6 +5,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import { Maximize2, X, AlertCircle } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import type { components } from '@/api/opencode-types'
 import { useTheme } from '@/hooks/useTheme'
 import { useI18n } from '@/lib/i18n'
@@ -111,9 +112,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
 
   if (!svg) {
     return (
-      <div className="my-4 p-4 bg-accent rounded-lg border border-border flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
-      </div>
+      <PanelLoading className="my-4 p-4 bg-accent rounded-lg border border-border" size="sm" />
     )
   }
 

@@ -1,4 +1,4 @@
-import { useI18n } from '@/lib/i18n'
+import { PanelLoading } from '@/components/ui/panel-loading'
 
 /**
  * What is on screen while a page's code is still travelling.
@@ -13,15 +13,7 @@ import { useI18n } from '@/lib/i18n'
  * on its way.
  */
 export function RouteLoading() {
-  const { t } = useI18n()
   return (
-    <div
-      role="status"
-      aria-label={t('ui.panelLoading.label')}
-      data-testid="route-loading"
-      className="flex min-h-[60vh] items-center justify-center"
-    >
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-    </div>
+    <PanelLoading className="min-h-[60vh]" size="md" data-testid="route-loading" />
   )
 }

@@ -270,6 +270,7 @@ export const repo = {
   fileBrowser: {
     selectFileToPreview: 'Select a file to preview',
     selectFileToPreviewHint: 'Pick a file from the tree and it opens here.',
+    loadFailed: 'Failed to load this folder',
     noFiles: 'No files in this directory',
     noFilesHint: 'This directory is empty.',
     refresh: 'Refresh',

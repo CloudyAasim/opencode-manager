@@ -1,3 +1,4 @@
+import type { ComponentPropsWithoutRef } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -8,16 +9,21 @@ import { cn } from '@/lib/utils'
 // to collapse them from.
 const SIZES = { sm: 'w-5 h-5', md: 'h-6 w-6', lg: 'h-8 w-8' } as const
 
-interface PanelLoadingProps {
+interface PanelLoadingProps extends ComponentPropsWithoutRef<'div'> {
   size?: keyof typeof SIZES
-  className?: string
   label?: string
 }
 
-export function PanelLoading({ size = 'lg', className, label }: PanelLoadingProps) {
+export function PanelLoading({
+  size = 'lg',
+  className,
+  label,
+  ...props
+}: PanelLoadingProps) {
   const { t } = useI18n()
   return (
     <div
+      {...props}
       role="status"
       aria-label={label ?? t('ui.panelLoading.label')}
       className={cn('flex items-center justify-center py-12', className)}

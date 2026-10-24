@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Download, X, Edit3, Save, X as XIcon, WrapText, Eye, Code, FileText } from 'lucide-react'
 import { PanelMessage } from '@/components/ui/panel-message'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import type { FileInfo } from '@/types/files'
 import { getFileApiUrl } from '@/api/files'
 import { saveFileFromUrl } from '@/lib/download'
@@ -255,9 +256,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
                   </Button>
                 </div>
               ) : isLoadingAllContent || !fullContentLoaded ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="w-6 h-6 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
-                </div>
+                <PanelLoading className="h-32" size="md" />
               ) : fullContent ? (
                 <MarkdownRenderer content={fullContent} onContentChange={handleFullMarkdownContentChange} />
               ) : null}
