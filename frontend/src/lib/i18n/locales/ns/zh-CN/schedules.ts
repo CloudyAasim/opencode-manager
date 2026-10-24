@@ -97,7 +97,8 @@ export const schedules = {
 
   },
   runs: {
-    selectRun: '选择一个运行以查看日志和输出。',
+    selectRunTitle: '选一个运行',
+    selectRunHint: '查看它的日志和输出。',
     log: '日志',
     assistantOutput: '助手输出',
     details: '详情',

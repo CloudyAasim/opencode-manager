@@ -118,6 +118,7 @@ export const ui = {
     errorLoadingFile: 'Error loading file: {{message}}',
     loading: 'Loading...',
     noContent: 'No content',
+    noContentHint: 'There is nothing to show here.',
     saving: 'Saving...',
     saveChanges: 'Save Changes (Ctrl+S)',
   },

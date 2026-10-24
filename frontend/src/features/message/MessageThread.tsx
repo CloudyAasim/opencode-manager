@@ -1,5 +1,6 @@
 import { memo, useMemo, useState, useCallback, useEffect, type RefObject } from 'react'
-import { Pencil } from 'lucide-react'
+import { Pencil, MessageSquare } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { MessagePart } from './MessagePart'
 import { VirtualMessageList } from './VirtualMessageList'
 import { UserMessageActionButtons } from './UserMessageActionButtons'
@@ -427,9 +428,13 @@ export const MessageThread = memo(function MessageThread({
   
   if (!messages || messages.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        {t('message.thread.noMessages')}
-      </div>
+      <PanelMessage
+        icon={<MessageSquare />}
+        title={t('message.thread.noMessagesTitle')}
+        detail={t('message.thread.noMessagesHint')}
+        size="sm"
+        className="h-full"
+      />
     )
   }
 

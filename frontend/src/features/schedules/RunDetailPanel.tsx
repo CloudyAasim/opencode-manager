@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScheduleRunMarkdown } from '@/features/schedules/ScheduleRunMarkdown'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ScrollText } from 'lucide-react'
 import type { ScheduleRun } from '@opencode-manager/shared/types'
 import { useI18n } from '@/lib/i18n'
 
@@ -26,7 +27,15 @@ export function RunDetailPanel({ repoId, activeRun, selectedRunLoading, onCancel
   }
 
   if (!activeRun) {
-    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">{t('schedules.runs.selectRun')}</div>
+    return (
+      <PanelMessage
+        icon={<ScrollText />}
+        title={t('schedules.runs.selectRunTitle')}
+        detail={t('schedules.runs.selectRunHint')}
+        size="sm"
+        className="h-full"
+      />
+    )
   }
 
   return (

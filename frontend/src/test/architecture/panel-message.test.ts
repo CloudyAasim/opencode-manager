@@ -66,14 +66,30 @@ const STATE_OPENING = new RegExp(
 // hint look like a hand-drawn state.
 const INLINE_LABEL = /text-xs|text-2xs|capitalize/
 const SAYS_SOMETHING = /t\(\s*['"][a-zA-Z]/
+// A state says it in the state's own colours: dimmed when it is empty, red
+// when it went wrong. A shell that holds the shared message is neither - the
+// message inside it brings its own colours, and the shell is a centring box
+// with nothing of its own to say.
+const STATE_COLOUR = /\btext-muted-foreground\b|\btext-destructive\b/
+
+// "居中"在这里有两种写法：`text-center`（文字居中）和 `items-center
+// justify-center`（盒子里的东西居中）。两种都是居中，规则只认一种，就等于放过
+// 另一种——而这一轮要收拾的那些状态，几乎都写的是第二种。
+const CENTRED = /\btext-center\b/
+const CENTRED_BOX = /\bitems-center\b/
+const CENTRED_BOX_VERTICAL = /\bjustify-center\b/
 
 function handRolledStates(text: string): string[] {
   const found: string[] = []
   for (const match of text.matchAll(STATE_OPENING)) {
     const [, tag, classes] = match
     if (tag === 'li') continue
-    if (!/\btext-center\b/.test(classes)) continue
+    const centred =
+      CENTRED.test(classes) ||
+      (CENTRED_BOX.test(classes) && CENTRED_BOX_VERTICAL.test(classes))
+    if (!centred) continue
     if (INLINE_LABEL.test(classes)) continue
+    if (!STATE_COLOUR.test(classes)) continue
     const body = text.slice(match.index, match.index + 700)
     if (!SAYS_SOMETHING.test(body)) continue
     found.push(`${match.index}:${classes.replace(/\s+/g, ' ').trim().slice(0, 60)}`)
@@ -180,20 +196,30 @@ describe('面板的三态各只有一个组件', () => {
   })
 
   it('量法认得出真实的手抄形态', () => {
-    // The four shapes the hand-rolled states actually came in, written out
-    // here. A detector that only knows the shape it was written against is a
-    // detector that has never seen the others.
+    // The shapes the hand-rolled states actually came in, written out here. A
+    // detector that only knows the shape it was written against is a detector
+    // that has never seen the others.
     const shapes = [
       `<div className="text-center text-muted-foreground py-8">{t('repo.fileBrowser.noFiles')}</div>`,
       `<p className="py-6 text-center text-sm text-destructive">{t('settings.audit.loadFailed')}</p>`,
-      `<div className="rounded-lg border border-dashed border-border p-4 text-center"><p>{t('settingsPanels.git.noCredentials')}</p></div>`,
-      `<CardContent className="flex flex-col items-center gap-4 p-8 text-center"><p>{t('schedules.global.noRunsFound')}</p></CardContent>`,
+      `<div className="rounded-lg border border-dashed border-border p-4 text-center text-muted-foreground"><p>{t('settingsPanels.git.noCredentials')}</p></div>`,
+      `<CardContent className="flex flex-col items-center gap-4 p-8 text-center text-muted-foreground"><p>{t('schedules.global.noRunsFound')}</p></CardContent>`,
+      // The other way of saying "centred": the box centres what is in it.
+      `<div className="flex items-center justify-center h-full text-muted-foreground">{t('message.thread.noMessages')}</div>`,
     ]
     for (const shape of shapes) {
       expect(handRolledStates(shape).length, `认不出这一种：${shape.slice(0, 50)}`).toBe(1)
     }
     // A label that is merely centred is not a state.
     expect(handRolledStates(`<p className="text-xs text-muted-foreground text-center">{t('x.y')}</p>`).length).toBe(0)
+    // A shell that holds the shared message is not a state either: it is a
+    // centring box, and the message inside it brings its own colours.
+    expect(
+      handRolledStates(
+        `<div className="flex min-h-full items-center justify-center"><Card className="max-w-md"><PanelMessage icon={<History />} title={t('schedules.global.noRunsFound')} detail={t('schedules.global.noRunsFoundHint')} /></Card></div>`,
+      ).length,
+      '把包着共享消息的壳当成了手画的状态',
+    ).toBe(0)
   })
 
   it('没有人再自己画"空 / 出错"那一块', () => {

@@ -249,12 +249,17 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
           {showMarkdownPreview && (
             <>
               {isMarkdownTooLarge ? (
-                <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
-                  <span>{t('repo.fileBrowser.fileTooLargeForMarkdown')}</span>
-                  <Button variant="outline" size="sm" onClick={() => setMarkdownPreview(false)}>
-                    {t('repo.fileBrowser.viewRaw')}
-                  </Button>
-                </div>
+                <PanelMessage
+                  icon={<FileText />}
+                  title={t('repo.fileBrowser.fileTooLargeForMarkdown')}
+                  action={
+                    <Button variant="outline" size="sm" onClick={() => setMarkdownPreview(false)}>
+                      {t('repo.fileBrowser.viewRaw')}
+                    </Button>
+                  }
+                  size="sm"
+                  className="h-32"
+                />
               ) : isLoadingAllContent || !fullContentLoaded ? (
                 <PanelLoading className="h-32" size="md" />
               ) : fullContent ? (

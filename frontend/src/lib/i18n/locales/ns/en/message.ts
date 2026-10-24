@@ -34,7 +34,8 @@ export const message = {
     agent: 'Agent',
   },
   thread: {
-    noMessages: 'No messages yet. Start a conversation below.',
+    noMessagesTitle: 'No messages yet',
+    noMessagesHint: 'Start a conversation below.',
     queued: 'QUEUED',
   },
   editing: {

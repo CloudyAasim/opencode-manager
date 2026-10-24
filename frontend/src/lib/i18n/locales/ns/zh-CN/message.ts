@@ -34,7 +34,8 @@ export const message = {
     agent: '智能体',
   },
   thread: {
-    noMessages: '暂无消息。在下方开始对话。',
+    noMessagesTitle: '还没有消息',
+    noMessagesHint: '在下方开始对话。',
     queued: '已排队',
   },
   editing: {

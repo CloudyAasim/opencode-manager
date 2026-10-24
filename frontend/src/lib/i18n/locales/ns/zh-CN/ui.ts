@@ -118,6 +118,7 @@ export const ui = {
     errorLoadingFile: '加载文件出错：{{message}}',
     loading: '加载中…',
     noContent: '无内容',
+    noContentHint: '这里没有内容。',
     saving: '保存中…',
     saveChanges: '保存更改 (Ctrl+S)',
   },

@@ -1,5 +1,6 @@
 import { useFileDiff, useCommitFileDiff } from "@/api/git";
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import {
   FileText,
   FilePlus,
@@ -243,18 +244,23 @@ export function FileDiffView({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-8 text-muted-foreground">
-        <FileText className="w-8 h-8 mb-2 opacity-50" />
-        <p className="text-sm">{t('repo.fileBrowser.diff.loadFailed')}</p>
-        <p className="text-xs mt-1">{error.message}</p>
-        {onBack && (
-          <Button variant="ghost" size="sm" onClick={onBack} className="mt-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            {t('repo.back')}
-          </Button>
-        )}
-      </div>
-    );
+      <PanelMessage
+        icon={<FileText />}
+        tone="error"
+        title={t('repo.fileBrowser.diff.loadFailed')}
+        detail={error.message}
+        action={
+          onBack ? (
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              {t('repo.back')}
+            </Button>
+          ) : undefined
+        }
+        size="sm"
+        className="h-full"
+      />
+    )
   }
 
   if (!diffData) {
@@ -353,13 +359,21 @@ export function FileDiffView({
 
       <div className="flex min-w-0 flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         {diffData.isBinary ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20">
-            <p className="text-sm">{t('repo.fileBrowser.diff.binary')}</p>
-          </div>
+          <PanelMessage
+            icon={<FileText />}
+            title={t('repo.fileBrowser.diff.binary')}
+            detail={t('repo.fileBrowser.diff.binaryHint')}
+            size="sm"
+            className="h-full"
+          />
         ) : !diffData.diff ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20">
-            <p className="text-sm">{t('repo.fileBrowser.diff.noChanges')}</p>
-          </div>
+          <PanelMessage
+            icon={<FileText />}
+            title={t('repo.fileBrowser.diff.noChanges')}
+            detail={t('repo.fileBrowser.diff.noChangesHint')}
+            size="sm"
+            className="h-full"
+          />
         ) : (
           <div className="border-t border-border/30">
             {diffLines.map((line, index) => (

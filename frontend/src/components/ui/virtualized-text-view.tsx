@@ -1,7 +1,10 @@
 import { useRef, useCallback, useEffect, useState, useMemo, forwardRef, useImperativeHandle, memo } from 'react'
+import { FileText } from 'lucide-react'
 import { useVirtualizedContent } from '@/hooks/useVirtualizedContent'
 import { useMobile } from '@/hooks/useMobile'
 import { GPU_ACCELERATED_STYLE } from '@/lib/utils'
+import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useI18n } from '@/lib/i18n'
 
 interface VirtualizedTextViewProps {
@@ -449,9 +452,17 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
         ))}
         
         {visibleLines.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background">
-            {isLoading ? t('ui.virtualizedTextView.loading') : t('ui.virtualizedTextView.noContent')}
-          </div>
+          isLoading ? (
+            <PanelLoading className="absolute inset-0 bg-background" size="sm" />
+          ) : (
+            <PanelMessage
+              icon={<FileText />}
+              title={t('ui.virtualizedTextView.noContent')}
+              detail={t('ui.virtualizedTextView.noContentHint')}
+              size="sm"
+              className="absolute inset-0 bg-background"
+            />
+          )
         )}
         
         {isLoading && visibleLines.length > 0 && (

@@ -102,7 +102,8 @@ export const schedules = {
 
   },
   runs: {
-    selectRun: 'Select a run to inspect logs and output.',
+    selectRunTitle: 'Select a run',
+    selectRunHint: 'Inspect its logs and output.',
     log: 'Log',
     assistantOutput: 'Assistant Output',
     details: 'Details',
