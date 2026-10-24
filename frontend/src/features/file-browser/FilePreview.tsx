@@ -399,9 +399,9 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               {isMarkdownFile && viewMode !== 'edit' && (
                 <Button 
                   variant="outline" 
-                  size="sm" 
+                  size="icon-xs" 
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMarkdownPreview(!markdownPreview) }} 
-                  className={`h-7 w-7 p-0 ${markdownPreview ? 'bg-primary text-primary-foreground' : ''}`}
+                  className={`${markdownPreview ? 'bg-primary text-primary-foreground' : ''}`}
                   title={markdownPreview ? t('repo.fileBrowser.showRawMarkdown') : t('repo.fileBrowser.previewRenderedMarkdown')}
                 >
                   {markdownPreview ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
@@ -411,9 +411,9 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               {isTextFile && !markdownPreview && (
                 <Button 
                   variant="outline" 
-                  size="sm" 
+                  size="icon-xs" 
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLineWrap(!lineWrap) }} 
-                  className={`h-7 w-7 p-0 ${lineWrap ? 'bg-primary text-primary-foreground' : ''}`}
+                  className={`${lineWrap ? 'bg-primary text-primary-foreground' : ''}`}
                   title={lineWrap ? t('repo.fileBrowser.disableLineWrap') : t('repo.fileBrowser.enableLineWrap')}
                 >
                   <WrapText className="w-3 h-3" />
@@ -421,31 +421,31 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               )}
               
               {isTextFile && viewMode !== 'edit' && (
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEdit() }} className="h-7 w-7 p-0">
+                <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEdit() }}>
                   <Edit3 className="w-3 h-3" />
                 </Button>
               )}
               
               {showSaveButton && (
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (shouldVirtualize) { handleVirtualizedSaveClick(); } else { handleSave(); } }} disabled={isSaving || (shouldVirtualize && !hasVirtualizedChanges)} className="border-success bg-success text-success hover:bg-success h-7 w-7 p-0">
+                <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (shouldVirtualize) { handleVirtualizedSaveClick(); } else { handleSave(); } }} disabled={isSaving || (shouldVirtualize && !hasVirtualizedChanges)} className="border-success bg-success text-success hover:bg-success">
                   <Save className="w-3 h-3" />
                 </Button>
               )}
               
               {showCancelButton && (
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCancel() }} className="border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20 h-7 w-7 p-0">
+                <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCancel() }} className="border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20">
                   <XIcon className="w-3 h-3" />
                 </Button>
               )}
               
               {viewMode !== 'edit' && (
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDownload() }} className="h-7 w-7 p-0">
+                <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDownload() }}>
                   <Download className="w-3 h-3" />
                 </Button>
               )}
               
               {viewMode !== 'edit' && isMobileModal && onCloseModal && (
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onCloseModal() }} className="border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20 h-7 w-7 p-0">
+                <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onCloseModal() }} className="border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20">
                   <X className="w-3 h-3" />
                 </Button>
               )}

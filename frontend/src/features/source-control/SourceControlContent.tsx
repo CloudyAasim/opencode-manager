@@ -128,11 +128,10 @@ export function SourceControlContent({
         </div>
         <div className="flex items-center gap-1">
           <Button
-            size="sm"
+            size="icon-xs"
             variant="ghost"
             onClick={() => handleGitAction(() => git.fetch.mutateAsync())}
             disabled={git.fetch.isPending}
-            className="h-7 w-7 p-0"
             title={t('misc.sourceControl.fetchFromRemote')}
           >
             {git.fetch.isPending ? (
@@ -142,11 +141,10 @@ export function SourceControlContent({
             )}
           </Button>
           <Button
-            size="sm"
+            size="icon-xs"
             variant="ghost"
             onClick={() => handleGitAction(() => git.pull.mutateAsync())}
             disabled={git.pull.isPending}
-            className="h-7 w-7 p-0"
             title={t('misc.sourceControl.pull')}
           >
             {git.pull.isPending ? (
@@ -156,11 +154,10 @@ export function SourceControlContent({
             )}
           </Button>
           <Button
-            size="sm"
+            size="icon-xs"
             variant="ghost"
             onClick={() => handleGitAction(() => git.push.mutateAsync(undefined))}
             disabled={git.push.isPending}
-            className="h-7 w-7 p-0"
             title={t('misc.sourceControl.push')}
           >
             {git.push.isPending ? (

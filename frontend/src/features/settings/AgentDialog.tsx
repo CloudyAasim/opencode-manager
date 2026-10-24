@@ -515,13 +515,13 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
         </DialogLayout>
 
         <DialogFooter className="border-t gap-2">
-          <Button variant="outline" onClick={() => handleOpenChange(false)} className="h-11 flex-1 sm:h-9 sm:flex-none">
+          <Button variant="outline" onClick={() => handleOpenChange(false)} size="touch" className="flex-1 sm:flex-none">
             {t('settingsPanels.agentDialog.cancel')}
           </Button>
           <Button
             onClick={() => form.handleSubmit(handleSubmit)()}
             disabled={!form.formState.isValid}
-            className="h-11 flex-1 sm:h-9 sm:flex-none"
+            size="touch" className="flex-1 sm:flex-none"
           >
             {editingAgent ? t('settingsPanels.agentDialog.update') : t('settingsPanels.agentDialog.create')}
           </Button>

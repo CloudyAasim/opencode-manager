@@ -261,7 +261,7 @@ export function RepoSchedulesView() {
               <Plus className="w-4 h-4 mr-2" />
               {t('schedules.page.newSchedule')}
             </Button>
-            <Button onClick={openNewJob} size="sm" className="sm:hidden h-10 w-10 p-0">
+            <Button onClick={openNewJob} size="icon-lg" className="sm:hidden">
               <Plus className="w-5 h-5" />
             </Button>
           </Header.Actions>

@@ -141,8 +141,8 @@ function HeaderEditableTitle({ value, onChange, subtitle, subtitleRepeatsProject
           <Button
             type="button"
             variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-l-none border border-l-0 border-border hover:bg-accent flex-shrink-0 mt-0"
+            size="icon-sm"
+            className="rounded-l-none border border-l-0 border-border hover:bg-accent flex-shrink-0 mt-0"
             onClick={() => setEditTitle("")}
             aria-label={t('common.cancel')}
             title={t('common.cancel')}
@@ -183,10 +183,10 @@ function HeaderSettingsButton() {
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="icon-sm"
       onClick={() => navigate('/settings')}
       aria-label={t('ui.header.settings')}
-      className="text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 h-8 w-8"
+      className="text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200"
     >
       <Settings className="w-4 h-4" />
     </Button>

@@ -44,12 +44,12 @@ export function PendingActionBadge({
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="icon-sm"
       onClick={onClick}
       aria-label={t('ui.pendingActionBadge.title', { count, label })}
       title={t('ui.pendingActionBadge.title', { count, label })}
       className={cn(
-        'relative h-8 w-8 transition-all duration-200',
+        'relative transition-all duration-200',
         styles.bg,
         styles.hover,
         styles.text,

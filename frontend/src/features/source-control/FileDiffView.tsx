@@ -276,9 +276,9 @@ export function FileDiffView({
         {onBack && (
           <Button
             variant="ghost"
-            size="sm"
+            size="icon-xs"
             onClick={onBack}
-            className="h-7 w-7 p-0 mr-1"
+            className="mr-1"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -341,8 +341,8 @@ export function FileDiffView({
           {onClose && (
             <Button
               variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 flex-shrink-0"
+              size="icon-2xs"
+              className="flex-shrink-0"
               onClick={onClose}
             >
               <X className="w-4 h-4" />

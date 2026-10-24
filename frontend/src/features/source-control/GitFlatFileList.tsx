@@ -121,8 +121,8 @@ export function GitFlatFileList({
             {onDiscard && (
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-diff-remove hover:opacity-80"
+                size="2xs"
+                className="px-2 text-diff-remove hover:opacity-80"
                 onClick={handleDiscardAll}
               >
                 {t('misc.fileList.discardAll')}
@@ -130,8 +130,8 @@ export function GitFlatFileList({
             )}
             <Button
               variant="ghost"
-              size="sm"
-              className="h-6 px-2"
+              size="2xs"
+              className="px-2"
               onClick={staged ? handleUnstageAll : handleStageAll}
             >
               {staged ? (

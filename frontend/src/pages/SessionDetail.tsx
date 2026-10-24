@@ -797,9 +797,9 @@ export function SessionDetail() {
             {session?.parentID && (
               <Button
                 variant="ghost"
-                size="sm"
+                size="xs"
                 onClick={handleParentSessionClick}
-                className="text-muted-foreground hover:text-foreground hover:bg-accent h-7 px-2 gap-1"
+                className="text-muted-foreground hover:text-foreground hover:bg-accent px-2 gap-1"
                 title={t('session.header.backToParent')}
               >
                 <CornerUpLeft className="w-3.5 h-3.5" />
@@ -808,11 +808,11 @@ export function SessionDetail() {
             )}
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={() => setRailOpen((open) => !open)}
               aria-label={t('navigation.sessions')}
               title={t('navigation.sessions')}
-              className={cn('h-8 w-8 shrink-0', railOpen && 'bg-accent text-foreground')}
+              className={cn('shrink-0 bg-accent text-foreground', railOpen && 'bg-accent text-foreground')}
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
@@ -840,11 +840,11 @@ export function SessionDetail() {
             />
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={() => setRightPanelOpen((open) => !open)}
               aria-label={t('navigation.detail')}
               title={t('navigation.detail')}
-              className={cn('h-8 w-8', rightPanelOpen && 'bg-accent text-foreground')}
+              className={cn('bg-accent text-foreground', rightPanelOpen && 'bg-accent text-foreground')}
             >
               <PanelRight className="h-4 w-4" />
             </Button>
@@ -929,18 +929,17 @@ export function SessionDetail() {
                   would push the message list around. The targets are 36px on a
                   phone instead of the 28px they use with a mouse. */}
               <div className="mb-1.5 flex items-center gap-1 overflow-x-auto scrollbar-thin">
-                <Button variant="ghost" size="sm" className="h-9 shrink-0 gap-1 px-2 sm:h-7" onClick={() => navigate('/files')}>
+                <Button variant="ghost"  className="shrink-0 gap-1 px-2 sm:h-7" onClick={() => navigate('/files')}>
                   <Folder className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t('navigation.files')}</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-9 shrink-0 gap-1 px-2 sm:h-7" onClick={() => setSkillsDialogOpen(true)}>
+                <Button variant="ghost"  className="shrink-0 gap-1 px-2 sm:h-7" onClick={() => setSkillsDialogOpen(true)}>
                   <Sparkles className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t('navigation.skills')}</span>
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="h-9 shrink-0 gap-1 px-2 sm:h-7"
+                  className="shrink-0 gap-1 px-2 sm:h-7"
                   onClick={() => setCommandsPanelOpen((open) => !open)}
                   aria-label={t('navigation.commands')}
                   title={t('navigation.commands')}
@@ -952,8 +951,7 @@ export function SessionDetail() {
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="h-9 shrink-0 gap-1 px-2 sm:h-7"
+                  className="shrink-0 gap-1 px-2 sm:h-7"
                   onClick={() => setFilesBrowserOpen(true)}
                   aria-label={t('navigation.mentionFile')}
                   title={t('navigation.mentionFile')}
@@ -964,7 +962,7 @@ export function SessionDetail() {
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-9 shrink-0 gap-1 px-2 sm:h-7" aria-label={t('navigation.more')}>
+                    <Button variant="ghost"  className="shrink-0 gap-1 px-2 sm:h-7" aria-label={t('navigation.more')}>
                       <Plus className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline">{t('navigation.more')}</span>
                     </Button>
@@ -987,9 +985,9 @@ export function SessionDetail() {
                 {hasPromptContent && !isSessionActive && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    
                     onClick={handleClearPrompt}
-                    className="h-9 shrink-0 gap-1 px-2 sm:h-7 text-destructive hover:bg-destructive/10"
+                    className="shrink-0 gap-1 px-2 sm:h-7 text-destructive hover:bg-destructive/10"
                     aria-label={t('session.header.clear')}
                   >
                     <X className="h-3.5 w-3.5" />
@@ -1013,8 +1011,8 @@ export function SessionDetail() {
                     />
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
+                      size="icon-xs"
+                      className="shrink-0"
                       onClick={closeCommandsPanel}
                       aria-label={t('navigation.close')}
                     >

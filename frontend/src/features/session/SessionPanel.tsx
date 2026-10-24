@@ -186,8 +186,8 @@ export function SessionPanel({
               >
                 <Button
                   variant={id === active?.id ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={cn('h-7 gap-1 px-2', visibleIds.length > 1 && 'rounded-r-none')}
+                  size="xs"
+                  className={cn('gap-1 px-2 rounded-r-none', visibleIds.length > 1 && 'rounded-r-none')}
                   onClick={() => setActiveId(id)}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -211,8 +211,8 @@ export function SessionPanel({
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0"
+                  size="icon-xs"
+                  className="shrink-0"
                   aria-label={t('navigation.add')}
                   title={t('navigation.add')}
                 >
@@ -236,8 +236,8 @@ export function SessionPanel({
           )}
           <Button
             variant="ghost"
-            size="icon"
-            className="ml-auto h-7 w-7 shrink-0"
+            size="icon-xs"
+            className="ml-auto shrink-0"
             onClick={() => onOpenChange(false)}
             aria-label={t('navigation.close')}
           >

@@ -70,8 +70,7 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className="h-6 w-6"
+          size="icon-2xs"
           onClick={(e) => { e.stopPropagation(); onEdit(template) }}
           aria-label={t('common.edit')}
           title={t('common.edit')}
@@ -81,8 +80,8 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-destructive hover:text-destructive"
+          size="icon-2xs"
+          className="text-destructive hover:text-destructive"
           onClick={(e) => { e.stopPropagation(); onDelete(template.id) }}
           aria-label={t('common.delete')}
           title={t('common.delete')}
@@ -115,8 +114,8 @@ export function PromptTab({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="h-7 gap-1"
+              size="xs"
+              className="gap-1"
               onClick={onNewTemplate}
             >
               <Plus className="h-3 w-3" />

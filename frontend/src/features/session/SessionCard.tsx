@@ -203,19 +203,19 @@ export const SessionCard = ({
                           className="h-7 min-w-0 flex-1 rounded border border-border bg-background px-2 text-base text-foreground outline-none focus:ring-1 focus:ring-primary"
                         />
                         <Button
-                          size="icon"
+                          size="icon-xs"
                           variant="ghost"
                           aria-label={t('common.save')}
-                          className="h-7 w-7 shrink-0 p-0"
+                          className="shrink-0"
                           onClick={(e) => { e.stopPropagation(); commitRename() }}
                         >
                           <Check className="w-4 h-4" />
                         </Button>
                         <Button
-                          size="icon"
+                          size="icon-xs"
                           variant="ghost"
                           aria-label={t('common.cancel')}
-                          className="h-7 w-7 shrink-0 p-0"
+                          className="shrink-0"
                           onClick={(e) => { e.stopPropagation(); setIsRenaming(false) }}
                         >
                           <X className="w-4 h-4" />
@@ -244,9 +244,9 @@ export const SessionCard = ({
                     <DropdownMenuTrigger asChild>
                       <Button
                         aria-label={t('session.card.actionsAria')}
-                        size="sm"
+                        size="icon-xs"
                         variant="ghost"
-                        className="h-7 w-7 p-0 shrink-0"
+                        className="shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <MoreVertical className="w-4 h-4" />

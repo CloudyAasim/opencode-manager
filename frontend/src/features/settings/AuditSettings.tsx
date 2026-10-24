@@ -195,7 +195,7 @@ export function AuditSettings() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={applyEmailFilter} className="h-9 sm:h-10">{t('common.confirm')}</Button>
+        <Button onClick={applyEmailFilter} className="sm:h-10">{t('common.confirm')}</Button>
       </div>
 
       <Card className="border-0 shadow-none">

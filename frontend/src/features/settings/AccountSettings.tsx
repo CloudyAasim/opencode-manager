@@ -171,7 +171,7 @@ export function AccountSettings() {
                   <CardTitle>{t('settingsPanels.account.profile')}</CardTitle>
                 </div>
                 {!editingProfile && (
-                  <Button variant="ghost" size="sm" onClick={() => setEditingProfile(true)} className="h-8">
+                  <Button variant="ghost" size="sm" onClick={() => setEditingProfile(true)}>
                     <Edit2 className="h-3.5 w-3.5" />
                   </Button>
                 )}
@@ -188,7 +188,7 @@ export function AccountSettings() {
                     <Label>{t('settingsPanels.account.email')}</Label>
                     <Input value={user.email} disabled className="h-9 sm:h-10" />
                   </div>
-                  <Button variant="outline" onClick={() => setEditingProfile(false)} className="h-9 sm:h-10">
+                  <Button variant="outline" onClick={() => setEditingProfile(false)} className="sm:h-10">
                     {t('settingsPanels.account.done')}
                   </Button>
                 </div>
@@ -220,7 +220,7 @@ export function AccountSettings() {
                 <Button
                   variant="outline"
                   onClick={() => setShowChangePassword(true)}
-                  className="h-9 sm:h-10"
+                  className="sm:h-10"
                 >
                   <Lock className="mr-2 h-4 w-4" />
                   {t('settingsPanels.account.changePassword')}
@@ -253,7 +253,7 @@ export function AccountSettings() {
                     <Button
                       onClick={handleChangePassword}
                       disabled={changePasswordMutation.isPending || !currentPassword || !newPassword}
-                      className="h-9 sm:h-10"
+                      className="sm:h-10"
                     >
                       {changePasswordMutation.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -265,7 +265,7 @@ export function AccountSettings() {
                     <Button
                       variant="ghost"
                       onClick={() => setShowChangePassword(false)}
-                      className="h-9 sm:h-10"
+                      className="sm:h-10"
                     >
                       {t('settingsPanels.account.cancel')}
                     </Button>
@@ -296,7 +296,7 @@ export function AccountSettings() {
                 <Button
                   onClick={handleAddPasskey}
                   disabled={addPasskeyMutation.isPending}
-                  className="h-9 sm:h-10 whitespace-nowrap"
+                  className="sm:h-10 whitespace-nowrap"
                 >
                   {addPasskeyMutation.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -324,8 +324,8 @@ export function AccountSettings() {
                       </div>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 ml-2 flex-shrink-0"
+                        size="icon-sm"
+                        className="ml-2 flex-shrink-0"
                         onClick={() => handleDeletePasskey(pk.id)}
                         disabled={deletePasskeyMutation.isPending}
                         aria-label={t('common.delete')}
@@ -361,7 +361,7 @@ export function AccountSettings() {
             <p className="text-xs text-muted-foreground">{t('settingsPanels.account.signOutDescription')}</p>
           </div>
         </div>
-        <Button variant="destructive" onClick={logout} className="h-9 shrink-0 sm:h-10">
+        <Button variant="destructive" onClick={logout} className="shrink-0 sm:h-10">
           <LogOut className="mr-2 h-4 w-4" />
           {t('settingsPanels.account.signOut')}
         </Button>

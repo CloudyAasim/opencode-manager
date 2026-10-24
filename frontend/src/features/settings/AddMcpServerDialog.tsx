@@ -295,8 +295,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    className='h-6'
+                    size="2xs"
                     onClick={handleAddEnvironmentVar}
                   >
                     +

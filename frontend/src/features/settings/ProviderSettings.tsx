@@ -330,21 +330,20 @@ export function ProviderSettings() {
                               {t('settingsPanels.provider.connected')}
                             </Badge>
                             <Button
-                              size="sm"
+                              size="icon-sm"
                               variant="ghost"
                               onClick={() => handleEditApiKey(provider)}
                               aria-label={t('settingsPanels.provider.editApiKeyFor', { name: provider.name || provider.id })}
-                              className="h-8 w-8 p-0"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             <Button
-                              size="sm"
+                              size="icon-sm"
                               variant="ghost"
                               onClick={() => handleDeleteCredential(provider.id)}
                               disabled={deleteCredentialMutation.isPending}
                               aria-label={t('settingsPanels.provider.removeCredentialsFor', { name: provider.name || provider.id })}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -410,10 +409,10 @@ export function ProviderSettings() {
                           )}
                         </div>
                         <Button
-                          size="sm"
+                          size="xs"
                           variant="ghost"
                           onClick={() => handleAddApiKey(provider)}
-                          className="h-7 px-2"
+                          className="px-2"
                         >
                           <Key className="h-3.5 w-3.5 mr-1" />
                           {t('settingsPanels.provider.addKey')}

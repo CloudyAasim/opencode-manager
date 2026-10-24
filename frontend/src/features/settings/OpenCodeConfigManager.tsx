@@ -263,8 +263,8 @@ export function OpenCodeConfigManager() {
               )}
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-11 sm:h-8"
+                size="touch"
+                className="sm:h-8"
                 onClick={() => setIsEditDialogOpen(true)}
               >
                 <Edit className="h-3.5 w-3.5 mr-1" />
@@ -272,8 +272,8 @@ export function OpenCodeConfigManager() {
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-11 sm:h-8"
+                size="touch"
+                className="sm:h-8"
                 onClick={() => downloadConfig(config)}
               >
                 <Download className="h-3.5 w-3.5 mr-1" />

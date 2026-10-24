@@ -125,8 +125,8 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               }}
             />
             <Button
-              size="sm"
-              className="h-10 md:h-8"
+              size="lg"
+              className="md:h-8"
               onClick={handleCreateBranch}
               disabled={!newBranchName.trim() || git.createBranch.isPending}
             >
@@ -137,9 +137,9 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               )}
             </Button>
             <Button
-              size="sm"
+              size="lg"
               variant="ghost"
-              className="h-10 md:h-8"
+              className="md:h-8"
               onClick={() => {
                 setIsCreating(false)
                 setNewBranchName('')
@@ -159,9 +159,9 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               />
             )}
             <Button
-              size="sm"
+              size="lg"
               variant="outline"
-              className="h-10 md:h-8 flex-shrink-0"
+              className="md:h-8 flex-shrink-0"
               onClick={() => setIsCreating(true)}
               title={t('misc.branches.createBranch')}
             >
@@ -170,9 +170,9 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
             </Button>
             {repoUrl && (
               <Button
-                size="sm"
+                size="lg"
                 variant="outline"
-                className="h-10 md:h-8 flex-shrink-0"
+                className="md:h-8 flex-shrink-0"
                 onClick={() => setWorktreeDialogOpen(true)}
                 title={t('misc.branches.createWorktreeTitle')}
               >

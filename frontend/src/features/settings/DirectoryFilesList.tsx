@@ -93,7 +93,6 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
       <Dialog open={!!editingFile} onOpenChange={(open) => !open && setEditingFile(null)}>
         <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
           <DialogTitleBar title={editingFile?.relativePath} titleClassName="break-all pr-8" />
-
           <div className="flex min-h-0 flex-1 flex-col">
             <Textarea
               value={content}
@@ -105,13 +104,13 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
           </div>
 
           <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
-            <Button variant="outline" onClick={() => setEditingFile(null)} className="h-11 flex-1 sm:h-9 sm:flex-none">
+            <Button variant="outline" onClick={() => setEditingFile(null)} size="touch" className="flex-1 sm:flex-none">
               {t('settingsPanels.directoryFiles.cancel')}
             </Button>
             <Button
               onClick={() => updateMutation.mutate()}
               disabled={isLoadingContent || updateMutation.isPending}
-              className="h-11 flex-1 sm:h-9 sm:flex-none"
+              size="touch" className="flex-1 sm:flex-none"
             >
               {updateMutation.isPending ? t('settingsPanels.directoryFiles.saving') : t('settingsPanels.directoryFiles.save')}
             </Button>

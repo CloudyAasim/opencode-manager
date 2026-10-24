@@ -230,7 +230,7 @@ export function UsersSettings() {
             </div>
           </div>
           <div className="mt-3 flex justify-end">
-            <Button onClick={handleCreate} disabled={!canSubmit || isSubmitting} className="h-9 sm:h-10">
+            <Button onClick={handleCreate} disabled={!canSubmit || isSubmitting} className="sm:h-10">
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -322,7 +322,6 @@ export function UsersSettings() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8"
                       onClick={() => {
                         clearNotices()
                         setResetTarget(managedUser)
@@ -335,8 +334,7 @@ export function UsersSettings() {
 
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
+                      size="icon-sm"
                       onClick={() => {
                         clearNotices()
                         setDeleteTarget(managedUser)

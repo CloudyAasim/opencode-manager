@@ -268,7 +268,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
         </div>
         <div className="flex items-center gap-2">
           {status === 'connecting' && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-          <Button variant="outline" size="sm" className="h-8" onClick={handleReconnect}>
+          <Button variant="outline" size="sm" onClick={handleReconnect}>
             <PlugZap className="mr-2 h-3.5 w-3.5" />
             {t('terminal.reconnect')}
           </Button>

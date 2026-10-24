@@ -124,7 +124,7 @@ export function PermissionRequestDialog({
             onClick={() => handleResponse('reject')}
             disabled={isLoading}
             className={cn(
-              "w-full sm:flex-1 h-9 sm:h-10",
+              "w-full sm:flex-1 sm:h-10 reject opacity-70",
               loadingAction === 'reject' && "opacity-70"
             )}
           >
@@ -135,7 +135,7 @@ export function PermissionRequestDialog({
             onClick={() => handleResponse('always')}
             disabled={isLoading}
             className={cn(
-              "w-full sm:flex-1 h-9 sm:h-10",
+              "w-full sm:flex-1 sm:h-10 always opacity-70",
               loadingAction === 'always' && "opacity-70"
             )}
           >
@@ -146,7 +146,7 @@ export function PermissionRequestDialog({
             onClick={() => handleResponse('once')}
             disabled={isLoading}
             className={cn(
-              "w-full sm:flex-1 h-9 sm:h-10",
+              "w-full sm:flex-1 sm:h-10 once opacity-70",
               loadingAction === 'once' && "opacity-70"
             )}
           >

@@ -77,13 +77,13 @@ export function RenameRepoDialog({
               type="button"
               variant="outline"
               onClick={handleCancel}
-              className="flex-1 h-10"
+              size="lg" className="flex-1"
             >
               {t('repo.cancel')}
             </Button>
             <Button
               type="submit"
-              className="flex-1 h-10"
+              size="lg" className="flex-1"
             >
               <Check className="w-4 h-4 mr-2" />
               {t('repo.save')}

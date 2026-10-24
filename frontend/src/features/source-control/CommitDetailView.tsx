@@ -73,9 +73,9 @@ export function CommitDetailView({ repoId, commitHash, onBack, onFileSelect, sel
         <div className="flex items-start gap-2">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon-xs"
             onClick={onBack}
-            className="h-7 w-7 p-0 flex-shrink-0 mt-0.5"
+            className="flex-shrink-0 mt-0.5"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>

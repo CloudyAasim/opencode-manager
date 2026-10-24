@@ -324,8 +324,7 @@ export function GitSettings() {
                               <Button
                                 type="button"
                                 variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0"
+                                size="icon-xs"
                                 onClick={(e) => handleEditClick(e, gitCredentials.indexOf(cred))}
                                 disabled={isSaving}
                                 title={t('settingsPanels.git.edit')}
@@ -335,8 +334,8 @@ export function GitSettings() {
                               <Button
                                 type="button"
                                 variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                size="icon-xs"
+                                className="text-destructive hover:text-destructive"
                                 onClick={(e) => handleDeleteClick(e, gitCredentials.indexOf(cred))}
                                 disabled={isSaving}
                                 title={t('settingsPanels.git.delete')}

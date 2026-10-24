@@ -118,8 +118,7 @@ export function WorkspaceManager({
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
-                className="h-7"
+                size="xs"
                 onClick={() => {
                   onOpenChange(false)
                   onCreateWorkspace()
@@ -133,8 +132,8 @@ export function WorkspaceManager({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    className="h-7 text-destructive hover:text-destructive"
+                    size="xs"
+                    className="text-destructive hover:text-destructive"
                     disabled={selectedCount === 0 || isDeleting}
                     onClick={() => setConfirmOpen(true)}
                   >
@@ -144,8 +143,7 @@ export function WorkspaceManager({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    className="h-7"
+                    size="xs"
                     onClick={() => {
                       setSelected(new Set())
                       setManageMode(false)
@@ -158,8 +156,7 @@ export function WorkspaceManager({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="h-7"
+                  size="xs"
                   onClick={() => setManageMode(true)}
                 >
                   {t('repo.manage')}

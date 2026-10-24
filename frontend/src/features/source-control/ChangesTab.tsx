@@ -146,7 +146,7 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
             <Button
               onClick={handleCommit}
               disabled={!canCommit}
-              className="w-full h-9"
+              className="w-full"
             >
               {git.commit.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />

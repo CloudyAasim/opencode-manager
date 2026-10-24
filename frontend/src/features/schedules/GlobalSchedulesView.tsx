@@ -325,9 +325,9 @@ export function GlobalSchedulesView() {
             </Button>
             <Button
               onClick={() => { openNewJob(); setSelectedRepoId(undefined) }}
-              size="sm"
+              size="icon-lg"
               aria-label={t('schedules.global.newSchedule')}
-              className="sm:hidden h-10 w-10 p-0"
+              className="sm:hidden"
             >
               <Plus className="w-5 h-5" />
             </Button>
@@ -363,7 +363,7 @@ export function GlobalSchedulesView() {
               />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" aria-label={t('schedules.global.filters')} className="sm:hidden h-8 w-8 shrink-0 relative">
+                  <Button variant="outline" size="icon-sm" aria-label={t('schedules.global.filters')} className="sm:hidden shrink-0 relative">
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     {(statusFilter !== 'all' || scheduleModeFilter !== 'all') && (
                       <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
@@ -458,7 +458,7 @@ export function GlobalSchedulesView() {
                       variant={statusFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setStatusFilter(opt.value as StatusFilter)}
-                      className="h-8 px-3"
+                      className="px-3"
                     >
                       {opt.label}
                     </Button>
@@ -474,7 +474,7 @@ export function GlobalSchedulesView() {
                       variant={scheduleModeFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setScheduleModeFilter(opt.value as ScheduleModeFilter)}
-                      className="h-8 px-3"
+                      className="px-3"
                     >
                       {opt.label}
                     </Button>
@@ -490,7 +490,7 @@ export function GlobalSchedulesView() {
                       variant={sortOption === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setSortOption(opt.value as SortOption)}
-                      className="h-8 px-3"
+                      className="px-3"
                     >
                       {opt.label}
                     </Button>
@@ -597,7 +597,7 @@ export function GlobalSchedulesView() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1 h-8"
+                          className="flex-1"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleRunNow(job)
@@ -609,8 +609,7 @@ export function GlobalSchedulesView() {
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          size="icon-sm"
                           aria-label={job.enabled ? t('schedules.global.pauseSchedule') : t('schedules.global.enableSchedule')}
                           onClick={(e) => {
                             e.stopPropagation()
@@ -625,8 +624,7 @@ export function GlobalSchedulesView() {
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          size="icon-sm"
                           aria-label={t('schedules.global.editSchedule')}
                           onClick={(e) => {
                             e.stopPropagation()
@@ -637,8 +635,8 @@ export function GlobalSchedulesView() {
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          size="icon-sm"
+                          className="text-destructive hover:text-destructive"
                           aria-label={t('schedules.global.deleteSchedule')}
                             onClick={(e) => {
                               e.stopPropagation()
@@ -669,7 +667,7 @@ export function GlobalSchedulesView() {
               />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" aria-label={t('schedules.global.filters')} className="sm:hidden h-8 w-8 shrink-0 relative">
+                  <Button variant="outline" size="icon-sm" aria-label={t('schedules.global.filters')} className="sm:hidden shrink-0 relative">
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     {(runStatusFilter !== 'all' || runTriggerFilter !== 'all' || runSortOption !== 'startedAt') && (
                       <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
@@ -764,7 +762,7 @@ export function GlobalSchedulesView() {
                       variant={runStatusFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunStatusFilter(opt.value)}
-                      className="h-8 px-3"
+                      className="px-3"
                     >
                       {opt.label}
                     </Button>
@@ -780,7 +778,7 @@ export function GlobalSchedulesView() {
                       variant={runTriggerFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunTriggerFilter(opt.value)}
-                      className="h-8 px-3"
+                      className="px-3"
                     >
                       {opt.label}
                     </Button>
@@ -796,7 +794,7 @@ export function GlobalSchedulesView() {
                       variant={runSortOption === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunSortOption(opt.value as 'startedAt' | 'jobName' | 'duration')}
-                      className="h-8 px-3"
+                      className="px-3"
                     >
                       {opt.label}
                     </Button>

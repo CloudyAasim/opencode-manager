@@ -124,9 +124,8 @@ export function RepoRowActions({
           <DropdownMenuTrigger asChild>
             <Button
               aria-label={t('repo.actions.repositoryActions')}
-              size="sm"
+              size="icon-sm"
               variant="ghost"
-              className="h-8 w-8 p-0"
               title={t('repo.actions.repositoryActions')}
               onClick={(e) => e.stopPropagation()}
             >
@@ -225,10 +224,9 @@ export function RepoRowActions({
             <TooltipTrigger asChild>
               <Button
                 aria-label={t('repo.actions.renameRepository')}
-                size="sm"
+                size="icon-sm"
                 variant="ghost"
                 onClick={() => handleRenameOpen(true)}
-                className="h-8 w-8 p-0"
                 title={t('repo.actions.renameRepository')}
               >
                 <Pencil className="w-4 h-4" />
@@ -241,11 +239,10 @@ export function RepoRowActions({
             <TooltipTrigger asChild>
               <Button
                 aria-label={t('repo.actions.sourceControl')}
-                size="sm"
+                size="icon-sm"
                 variant="ghost"
                 onClick={() => handleSourceControlOpen(true)}
                 disabled={!isReady}
-                className="h-8 w-8 p-0"
                 title={t('repo.actions.sourceControl')}
               >
                 <GitBranch className="w-4 h-4" />
@@ -259,10 +256,9 @@ export function RepoRowActions({
               <TooltipTrigger asChild>
                 <Button
                   aria-label={t('repo.actions.createWorktree')}
-                  size="sm"
+                  size="icon-sm"
                   variant="ghost"
                   onClick={() => handleWorktreeDialogOpen(true)}
-                  className="h-8 w-8 p-0"
                   title={t('repo.actions.createWorktree')}
                 >
                   <GitBranchPlus className="w-4 h-4" />
@@ -276,11 +272,10 @@ export function RepoRowActions({
             <TooltipTrigger asChild>
               <Button
                   aria-label={t('repo.actions.resetPermissions')}
-                  size="sm"
+                  size="icon-sm"
                   variant="ghost"
                   onClick={() => setShowResetPermissions(true)}
                   disabled={!isReady}
-                  className="h-8 w-8 p-0"
                   title={t('repo.actions.resetPermissions')}
                 >
                   <ShieldAlert className="w-4 h-4" />
@@ -293,11 +288,10 @@ export function RepoRowActions({
             <TooltipTrigger asChild>
               <Button
                 aria-label={t('repo.actions.downloadRepository')}
-                size="sm"
+                size="icon-sm"
                 variant="ghost"
                 onClick={() => handleDownloadDialogOpen(true)}
                 disabled={!isReady}
-                className="h-8 w-8 p-0"
                 title={t('repo.actions.downloadRepository')}
               >
                 <Download className="w-4 h-4" />
@@ -310,11 +304,11 @@ export function RepoRowActions({
             <TooltipTrigger asChild>
               <Button
                 aria-label={deleteLabel}
-                size="sm"
+                size="icon-sm"
                 variant="ghost"
                 onClick={() => onDelete(repo.id)}
                 disabled={isDeleting}
-                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 title={deleteLabel}
               >
                 {isDeleting ? (

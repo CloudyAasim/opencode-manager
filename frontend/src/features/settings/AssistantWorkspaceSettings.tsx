@@ -210,7 +210,7 @@ export function AssistantWorkspaceSettings() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 shrink-0"
+                      className="shrink-0"
                       aria-label={t('settings.assistantWorkspace.editFor', { name: entry.name })}
                       onClick={() => {
                         setEditing(entry)
@@ -223,7 +223,7 @@ export function AssistantWorkspaceSettings() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 shrink-0"
+                    className="shrink-0"
                     aria-label={t('settings.assistantWorkspace.deleteFor', { name: entry.name })}
                     onClick={() => setPendingDelete(entry)}
                   >
@@ -256,13 +256,13 @@ export function AssistantWorkspaceSettings() {
             />
           </div>
           <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
-            <Button variant="outline" onClick={() => setEditing(null)} className="h-11 flex-1 sm:h-9 sm:flex-none">
+            <Button variant="outline" onClick={() => setEditing(null)} size="touch" className="flex-1 sm:flex-none">
               {t('common.cancel')}
             </Button>
             <Button
               onClick={() => saveMutation.mutate(draft ?? fileContent)}
               disabled={fileQuery.isLoading || fileQuery.isError || saveMutation.isPending}
-              className="h-11 flex-1 sm:h-9 sm:flex-none"
+              size="touch" className="flex-1 sm:flex-none"
             >
               {saveMutation.isPending
                 ? t('settings.assistantWorkspace.saving')

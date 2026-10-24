@@ -143,7 +143,7 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
                   total: controller.uploadProgress.total,
                 })}
               </span>
-              <Button variant="ghost" size="sm" className="h-6 px-2" onClick={controller.cancelUpload}>
+              <Button variant="ghost" size="2xs" className="px-2" onClick={controller.cancelUpload}>
                 {t('repo.fileBrowser.cancel')}
               </Button>
             </div>

@@ -184,8 +184,8 @@ export const FileTree = memo(function FileTree({
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
-              className={cn('w-6 h-6 p-0 shrink-0', isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}
+              size="icon-2xs"
+              className={cn('shrink-0 opacity-100 opacity-0 group-hover:opacity-100', isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}
               aria-label={t('repo.fileBrowser.actions.more')}
             >
               <MoreVertical className="w-3 h-3" />
@@ -287,8 +287,8 @@ export const FileTree = memo(function FileTree({
           {row.expandable ? (
             <Button
               variant="ghost"
-              size="sm"
-              className="w-4 h-4 p-0 shrink-0"
+              size="icon-2xs"
+              className="shrink-0"
               aria-label={expandedLabel(expandedOf(expandedPaths, file.path))}
               onClick={(e) => {
                 e.stopPropagation()

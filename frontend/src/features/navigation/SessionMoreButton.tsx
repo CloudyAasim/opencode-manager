@@ -19,9 +19,9 @@ export function SessionMoreButton() {
   return (
     <Button
       variant="outline"
-      size="sm"
+      size="icon-lg"
       onClick={() => open('project')}
-      className="md:hidden h-10 w-10 p-0 text-foreground border-border hover:bg-accent"
+      className="md:hidden text-foreground border-border hover:bg-accent"
       aria-label={t('navigation.projectMore')}
     >
       <MoreVertical className="w-5 h-5" />

@@ -62,8 +62,7 @@ export function EditorFindBar({
       <Button
         type="button"
         variant="ghost"
-        size="icon-lg"
-        className="md:size-8"
+        size="icon-touch"
         aria-label={t('ui.editorFindBar.previousMatch')}
         disabled={noMatches}
         onClick={onPrev}
@@ -73,8 +72,7 @@ export function EditorFindBar({
       <Button
         type="button"
         variant="ghost"
-        size="icon-lg"
-        className="md:size-8"
+        size="icon-touch"
         aria-label={t('ui.editorFindBar.nextMatch')}
         disabled={noMatches}
         onClick={onNext}

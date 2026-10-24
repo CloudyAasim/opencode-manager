@@ -48,9 +48,9 @@ export function SourceControlPanel({
           {isMobile && (
             <Button
               variant="ghost"
-              size="sm"
+              size="icon-lg"
               onClick={onClose}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 p-0"
+              className="absolute right-2 top-1/2 -translate-y-1/2"
             >
               <X className="h-6 w-6" />
             </Button>

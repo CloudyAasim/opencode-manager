@@ -151,7 +151,7 @@ export function SSHHostKeyDialog({
             variant="outline"
             onClick={() => handleResponse('reject')}
             disabled={isLoading || isExpired}
-            className="w-full sm:flex-1 h-9 sm:h-10"
+            className="w-full sm:flex-1 sm:h-10"
           >
             {isLoading ? t('misc.ssh.processing') : t('misc.ssh.reject')}
           </Button>
@@ -159,7 +159,7 @@ export function SSHHostKeyDialog({
             variant={request.isKeyChanged ? 'destructive' : 'default'}
             onClick={() => handleResponse('accept')}
             disabled={isLoading || isExpired}
-            className="w-full sm:flex-1 h-9 sm:h-10"
+            className="w-full sm:flex-1 sm:h-10"
           >
             {isLoading ? t('misc.ssh.processing') : t('misc.ssh.accept')}
           </Button>

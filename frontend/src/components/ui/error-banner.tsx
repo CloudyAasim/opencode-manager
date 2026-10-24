@@ -42,8 +42,8 @@ export function ErrorBanner({
           {onDismiss && (
             <Button
               variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 flex-shrink-0 text-muted-foreground"
+              size="icon-xs"
+              className="flex-shrink-0 text-muted-foreground"
               onClick={onDismiss}
             >
               <X className="w-3.5 h-3.5" />

@@ -82,8 +82,8 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="h-7 gap-1"
+            size="xs"
+            className="gap-1"
             onClick={onNew}
           >
             <Plus className="h-3 w-3" />
@@ -92,8 +92,8 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="h-7 gap-1"
+            size="xs"
+            className="gap-1"
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="h-3 w-3" />
