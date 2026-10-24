@@ -179,13 +179,13 @@ export function AuditSettings() {
               if (event.key === 'Enter') applyEmailFilter()
             }}
             placeholder={t('settings.audit.filterEmailPlaceholder')}
-            className="h-9 sm:h-10 md:text-sm"
+            className="h-9 sm:h-10"
           />
         </div>
         <div className="space-y-1.5 sm:w-40">
           <Label htmlFor="audit-status">{t('settings.audit.status')}</Label>
           <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
-            <SelectTrigger id="audit-status" className="h-9 sm:h-10 md:text-sm">
+            <SelectTrigger id="audit-status" className="h-9 sm:h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -61,6 +61,154 @@ const STRING_CAN_PRECEDE = new Set([
   '`',
 ])
 
+/**
+ * From a tag to the `>` that ends it.
+ *
+ * Two things can sit inside a tag without ending it: a quoted string, and a
+ * brace - an arrow function in a handler (`onChange={(e) => set(e.target.value)}`)
+ * has a `>` in it, and a scanner that stops at the first `>` reads half a tag
+ * and misses the class name that comes after it.
+ */
+export function tagAt(text: string, start: number): string {
+  let quote: string | null = null
+  let depth = 0
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index]!
+    if (quote) {
+      if (char === quote) quote = null
+      continue
+    }
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '{') {
+      depth += 1
+      continue
+    }
+    if (char === '}') {
+      depth -= 1
+      continue
+    }
+    if (char === '>' && depth === 0) return text.slice(start, index + 1)
+  }
+  return text.slice(start)
+}
+
+/**
+ * An attribute's value.
+ *
+ * A quoted value ends at its quote; a braced one ends at the brace that closes
+ * it - `{cn("…", x)}` holds quotes of its own, and a scanner that stops at the
+ * first `}` reads half the attribute.
+ */
+export function attributeValue(
+  text: string,
+  start: number,
+): { quoted: boolean; text: string } | null {
+  const first = text[start]
+  if (first === '"' || first === "'" || first === '`') {
+    const end = text.indexOf(first, start + 1)
+    if (end < 0) return null
+    return { quoted: true, text: text.slice(start + 1, end) }
+  }
+  if (first === '{') {
+    let depth = 0
+    for (let index = start; index < text.length; index += 1) {
+      const char = text[index]
+      if (char === '{') {
+        depth += 1
+        continue
+      }
+      if (char === '}') {
+        depth -= 1
+        if (depth === 0) return { quoted: false, text: text.slice(start + 1, index) }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * The class names a computed `className` asks for.
+ *
+ * Two things live in there: quoted strings, which are class names outright,
+ * and bare names, which are names of constants somewhere else in the file -
+ * `className={cn('…', SURFACE_CLASS)}` asks for the words inside the quotes
+ * *and* for whatever `SURFACE_CLASS` was given. Only the caller knows where
+ * that constant was given its value, so `resolve` is asked for it.
+ */
+function classNamesOfExpression(
+  expression: string,
+  resolve?: (identifier: string) => string | undefined,
+): string {
+  const parts: string[] = []
+  let index = 0
+  while (index < expression.length) {
+    const char = expression[index]!
+    if (char === '"' || char === "'" || char === '`') {
+      const end = expression.indexOf(char, index + 1)
+      if (end < 0) break
+      parts.push(expression.slice(index + 1, end))
+      index = end + 1
+      continue
+    }
+    if (/[A-Za-z_$]/.test(char)) {
+      let end = index
+      while (end < expression.length && /[\w$]/.test(expression[end]!)) end += 1
+      const resolved = resolve?.(expression.slice(index, end))
+      if (resolved !== undefined) parts.push(resolved)
+      index = end
+      continue
+    }
+    index += 1
+  }
+  return parts.join(' ').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * The class names a piece of markup asks for.
+ *
+ * `className="…"` is literal. `className={…}` is computed, and the class names
+ * in it are the quoted strings - `className={cn("flex h-9 …", className)}` asks
+ * for the words inside the quotes, not for the word `cn`.
+ */
+export function classListOfAttrs(
+  text: string,
+  resolve?: (identifier: string) => string | undefined,
+): string {
+  const at = /\bclassName\s*=/.exec(text)
+  if (!at) return ''
+  const equals = text.indexOf('=', at.index)
+  const value = attributeValue(text, equals + 1)
+  if (!value) return ''
+  if (value.quoted) return value.text.replace(/\s+/g, ' ').trim()
+  return classNamesOfExpression(value.text, resolve)
+}
+
+/**
+ * The class names a set of tags brings.
+ *
+ * `className="…"` and `className={…}` both count, and the expression's own
+ * quoted strings are read as class names - a rule about class lists is about
+ * what the component asked for, however it asked for it.
+ */
+export function classListOfTag(
+  text: string,
+  tag: string,
+  resolve?: (identifier: string) => string | undefined,
+): string[] {
+  const found: string[] = []
+  const matcher = new RegExp(`<${tag}\\b`, 'g')
+  let match: RegExpExecArray | null
+  while ((match = matcher.exec(text)) !== null) {
+    const opening = tagAt(text, match.index)
+    const attrs = opening.slice(tag.length + 1, opening.endsWith('>') ? -1 : undefined)
+    found.push(classListOfAttrs(attrs, resolve))
+  }
+  return found
+}
+
 function isStringStart(text: string, index: number): boolean {
   let before = index - 1
   while (before >= 0 && /\s/.test(text[before]!)) before -= 1

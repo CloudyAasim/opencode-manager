@@ -161,7 +161,7 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
                         {...field}
                         placeholder={t('settingsPanels.skillDialog.bodyPlaceholder')}
                         rows={10}
-                        className="font-mono md:text-sm"
+                        className="font-mono"
                       />
                     </FormControl>
                     <FormMessage />

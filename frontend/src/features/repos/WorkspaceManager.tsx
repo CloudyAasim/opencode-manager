@@ -174,7 +174,7 @@ export function WorkspaceManager({
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder={t('repo.workspaceManager.searchPlaceholder')}
-                className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+                className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 field-text outline-none placeholder:text-muted-foreground focus:border-primary"
               />
             </div>
 

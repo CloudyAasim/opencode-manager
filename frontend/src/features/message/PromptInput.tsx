@@ -1286,7 +1286,7 @@ return (
             ? t('message.prompt.enterBashCommand')
             : t('message.prompt.sendMessage')
         }
-        className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 field-text text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed md:text-sm rounded-lg [field-sizing:content] ${
+        className={`w-full bg-muted/50 pl-2 md:pl-3 pr-3 py-2 field-text text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/70 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg [field-sizing:content] ${
           isBashMode
             ? 'border-worktree bg-worktree focus:bg-worktree'
             : isDragging ? 'border-primary border-dashed bg-primary' : ''

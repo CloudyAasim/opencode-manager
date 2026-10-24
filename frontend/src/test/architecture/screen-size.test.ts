@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { stripComments, stringLiterals } from './source-text'
+import { stripComments, stringLiterals, classListOfTag } from './source-text'
 
 /**
  * 屏幕之间没有第二副字。
@@ -39,6 +39,8 @@ const SOURCES = graph.files.map((file) => ({
 const SHARED = {
   card: 'components/ui/card.tsx',
   label: 'components/ui/label.tsx',
+  /** 共享的那些零件都在这个文件夹里。 */
+  folder: 'components/ui/',
 }
 
 /** 一档字号是多少像素。 */
@@ -119,47 +121,6 @@ const sourceOf = (rel: string): string => {
   const found = SOURCES.find((source) => source.rel === rel)
   expect(found, `找不到 ${rel}`).toBeDefined()
   return found!.text
-}
-
-/**
- * 从 `<Tag` 到那个 `>`。
- *
- * 引号里的 `>` 不算：类名里可以有 `[&>svg]` 这样的选择器。
- */
-function tagAt(text: string, start: number): string {
-  let quote: string | null = null
-  for (let index = start; index < text.length; index += 1) {
-    const char = text[index]!
-    if (quote) {
-      if (char === quote) quote = null
-      continue
-    }
-    if (char === '"' || char === "'" || char === '`') {
-      quote = char
-      continue
-    }
-    if (char === '>') return text.slice(start, index + 1)
-  }
-  return text.slice(start)
-}
-
-/** 一个标签自己带的类名。 */
-function classListOfTag(text: string, tag: string): string[] {
-  const found: string[] = []
-  const matcher = new RegExp(`<${tag}\\b`, 'g')
-  let match: RegExpExecArray | null
-  while ((match = matcher.exec(text)) !== null) {
-    const opening = tagAt(text, match.index)
-    const attrs = opening.slice(tag.length + 1, opening.endsWith('>') ? -1 : undefined)
-    const literal = /className="([^"]*)"/.exec(attrs)?.[1]
-    const expression = /className=\{([^}]*)\}/.exec(attrs)?.[1]
-    found.push(
-      (literal ?? expression ?? '')
-        .replace(/\s+/g, ' ')
-        .trim(),
-    )
-  }
-  return found
 }
 
 /**
@@ -256,9 +217,14 @@ describe('屏幕之间没有第二副字', () => {
   it('字段的名字是共享的那个样子', () => {
     // 登录/注册页的字段名是灰的，应用里的不是。它们在应用外壳之外，但字段名
     // 是同一个零件——同一个零件就不该有两种颜色。
+    //
+    // 共享的那些零件可以自己拼装它：表单的字段名出错的时候变红（`FormLabel`
+    // 里那一句 `error && "text-destructive"`）是**状态**，不是另一副样子，而且
+    // 它写在共享的零件里，只有一处。零件之外的地方就没有这种自由了。
     const offenders: string[] = []
     for (const source of SOURCES) {
       if (source.rel === SHARED.label) continue
+      if (source.rel.startsWith(SHARED.folder)) continue
       for (const list of classListOfTag(source.text, 'Label')) {
         const colours = list
           .split(/\s+/)

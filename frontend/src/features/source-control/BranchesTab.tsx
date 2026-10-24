@@ -114,7 +114,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               placeholder={t('misc.branches.newBranchPlaceholder')}
               value={newBranchName}
               onChange={(e) => setNewBranchName(e.target.value)}
-              className="h-10 md:h-8 md:text-sm"
+              className="h-10 md:h-8"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreateBranch()
@@ -155,7 +155,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                 placeholder={t('misc.branches.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 md:h-8 md:text-sm flex-1 min-w-0"
+                className="h-10 md:h-8 flex-1 min-w-0"
               />
             )}
             <Button

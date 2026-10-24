@@ -136,7 +136,7 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
               placeholder={t('misc.changesTab.commitPlaceholder')}
               value={commitMessage}
               onChange={(e) => setCommitMessage(e.target.value)}
-              className="min-h-[80px] md:text-sm resize-none"
+              className="min-h-[80px] resize-none"
               onKeyDown={(e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canCommit) {
                   handleCommit()

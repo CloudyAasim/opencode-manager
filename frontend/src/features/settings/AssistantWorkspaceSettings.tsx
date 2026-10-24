@@ -252,7 +252,7 @@ export function AssistantWorkspaceSettings() {
               onChange={(e) => setDraft(e.target.value)}
               disabled={fileQuery.isLoading}
               aria-label={editing?.name}
-              className="h-full min-h-0 flex-1 field-sizing-fixed resize-none font-mono md:text-sm"
+              className="h-full min-h-0 flex-1 field-sizing-fixed resize-none font-mono"
             />
           </div>
           <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">

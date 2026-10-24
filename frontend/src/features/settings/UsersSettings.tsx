@@ -181,7 +181,7 @@ export function UsersSettings() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t('settings.users.namePlaceholder')}
-                className="h-9 sm:h-10 md:text-sm"
+                className="h-9 sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
@@ -191,7 +191,7 @@ export function UsersSettings() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder={t('settings.users.usernamePlaceholder')}
-                className="h-9 sm:h-10 md:text-sm"
+                className="h-9 sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
@@ -202,7 +202,7 @@ export function UsersSettings() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t('settings.users.emailPlaceholder')}
-                className="h-9 sm:h-10 md:text-sm"
+                className="h-9 sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
@@ -213,13 +213,13 @@ export function UsersSettings() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('settings.users.passwordPlaceholder')}
-                className="h-9 sm:h-10 md:text-sm"
+                className="h-9 sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-user-role">{t('settings.users.role')}</Label>
               <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                <SelectTrigger id="new-user-role" className="h-9 sm:h-10 md:text-sm">
+                <SelectTrigger id="new-user-role" className="h-9 sm:h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -310,7 +310,7 @@ export function UsersSettings() {
                       onValueChange={(value) => roleMutation.mutate({ id: managedUser.id, role: value as UserRole })}
                       disabled={rowBusy}
                     >
-                      <SelectTrigger className="h-8 w-36 text-xs" aria-label={t('settings.users.role')}>
+                      <SelectTrigger className="h-8 w-36" aria-label={t('settings.users.role')}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -373,7 +373,7 @@ export function UsersSettings() {
               value={resetPasswordValue}
               onChange={(e) => setResetPasswordValue(e.target.value)}
               placeholder={t('settings.users.passwordPlaceholder')}
-              className="h-9 sm:h-10 md:text-sm"
+              className="h-9 sm:h-10"
             />
           </div>
           <DialogFooter className="gap-2">

@@ -1009,7 +1009,7 @@ export function SessionDetail() {
                       onChange={(event) => setCommandQuery(event.target.value)}
                       placeholder={t('navigation.commands')}
                       aria-label={t('navigation.commands')}
-                      className="h-8 w-full min-w-0 bg-transparent text-sm outline-none"
+                      className="h-8 w-full min-w-0 bg-transparent field-text outline-none"
                     />
                     <Button
                       variant="ghost"

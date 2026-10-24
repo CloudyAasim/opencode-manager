@@ -67,7 +67,7 @@ export function EditSessionTitleDialog({ isOpen, currentTitle, onClose, onSave }
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="text-base font-semibold bg-background border border-border rounded px-3 py-2.5 pr-10 outline-none w-full focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="text-xl font-semibold bg-background border border-border rounded px-3 py-2.5 pr-10 outline-none w-full focus:border-primary focus:ring-2 focus:ring-primary/20"
               autoFocus
             />
             {editTitle && (

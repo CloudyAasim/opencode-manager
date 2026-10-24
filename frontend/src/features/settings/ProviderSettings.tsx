@@ -384,7 +384,7 @@ export function ProviderSettings() {
                   placeholder={t('settingsPanels.provider.searchPlaceholder')}
                   value={availableSearch}
                   onChange={(e) => setAvailableSearch(e.target.value)}
-                  className="pl-9 md:text-sm"
+                  className="pl-9"
                   autoComplete="off"
                 />
               </div>

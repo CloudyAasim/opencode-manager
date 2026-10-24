@@ -100,7 +100,7 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
               onChange={(e) => setContent(e.target.value)}
               disabled={isLoadingContent}
               aria-label={editingFile?.relativePath ?? t('settingsPanels.directoryFiles.fileContent')}
-              className="h-full min-h-0 flex-1 field-sizing-fixed resize-none font-mono md:text-sm"
+              className="h-full min-h-0 flex-1 field-sizing-fixed resize-none font-mono"
             />
           </div>
 

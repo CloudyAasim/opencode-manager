@@ -315,7 +315,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                     onChange={(e) => setFormData({ ...formData, sshPrivateKey: e.target.value })}
                     disabled={isSaving}
                     rows={10}
-                    className="font-mono text-sm"
+                    className="font-mono"
                   />
                   <p className="text-xs text-muted-foreground">
                     {t('settingsPanels.gitCredential.pastePrivateKey')}

@@ -208,7 +208,7 @@ export function GeneralTab({
                   onBashDenyPatternsChange(patterns)
                 }}
                 placeholder="rm -rf *"
-                className="font-mono text-xs min-h-[100px]"
+                className="font-mono min-h-[100px]"
               />
             </div>
           </div>

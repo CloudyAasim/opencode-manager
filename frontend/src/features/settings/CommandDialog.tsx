@@ -156,7 +156,7 @@ export function CommandDialog({
                         {...field}
                         placeholder={t("settingsPanels.commandDialog.templatePlaceholder")}
                         rows={8}
-                        className="font-mono md:text-sm"
+                        className="font-mono"
                       />
                     </FormControl>
                     <FormDescription>

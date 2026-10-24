@@ -330,7 +330,6 @@ export function McpOAuthDialog({
                     onChange={(e) => setAuthCode(e.target.value)}
                     placeholder={t('settingsPanels.mcpOAuth.pasteCodePlaceholder')}
                     disabled={loading}
-                    className="text-sm"
                   />
                   <Button
                     onClick={handleCompleteManualAuth}
@@ -431,7 +430,6 @@ function ManualCodeEntry({
               onChange={(e) => setAuthCode(e.target.value)}
               placeholder={t('settingsPanels.mcpOAuth.pasteCodePlaceholder')}
               disabled={loading}
-              className="text-sm"
             />
             <Button
               onClick={onSubmit}

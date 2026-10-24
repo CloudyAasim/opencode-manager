@@ -227,7 +227,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
                         {...field}
                         placeholder={t('settingsPanels.agentDialog.promptPlaceholder')}
                         rows={6}
-                        className="font-mono md:text-sm"
+                        className="font-mono"
                       />
                     </FormControl>
                     <FormMessage />

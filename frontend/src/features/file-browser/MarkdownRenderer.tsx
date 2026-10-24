@@ -72,7 +72,15 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
         )
       }
 
-      return <input type={type} checked={checked} disabled={disabled} {...rest} />
+      return (
+        <input
+          type={type}
+          checked={checked}
+          disabled={disabled}
+          className="field-text"
+          {...rest}
+        />
+      )
     },
   }
 

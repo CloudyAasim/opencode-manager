@@ -707,7 +707,7 @@ export function OpenCodeModelDialog({
                   <FormItem>
                     <FormLabel>{t('settingsPanels.modelDialog.optionsJson')}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} className="min-h-[120px] font-mono text-xs" placeholder={`{
+                      <Textarea {...field} className="min-h-[120px] font-mono" placeholder={`{
   "temperature": 1
 }`} />
                     </FormControl>
@@ -719,7 +719,7 @@ export function OpenCodeModelDialog({
                   <FormItem>
                     <FormLabel>{t('settingsPanels.modelDialog.headersJson')}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} className="min-h-[120px] font-mono text-xs" placeholder={`{
+                      <Textarea {...field} className="min-h-[120px] font-mono" placeholder={`{
   "Authorization": "Bearer ..."
 }`} />
                     </FormControl>
@@ -731,7 +731,7 @@ export function OpenCodeModelDialog({
                   <FormItem>
                     <FormLabel>{t('settingsPanels.modelDialog.capabilitiesJson')}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} className="min-h-[120px] font-mono text-xs" placeholder={`{
+                      <Textarea {...field} className="min-h-[120px] font-mono" placeholder={`{
   "reasoning": true
 }`} />
                     </FormControl>
@@ -743,7 +743,7 @@ export function OpenCodeModelDialog({
                   <FormItem>
                     <FormLabel>{t('settingsPanels.modelDialog.costJson')}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} className="min-h-[120px] font-mono text-xs" placeholder={`{
+                      <Textarea {...field} className="min-h-[120px] font-mono" placeholder={`{
   "input": 0.1,
   "output": 0.2
 }`} />
@@ -756,7 +756,7 @@ export function OpenCodeModelDialog({
                   <FormItem>
                     <FormLabel>{t('settingsPanels.modelDialog.variantsJson')}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} className="min-h-[120px] font-mono text-xs" placeholder={`{
+                      <Textarea {...field} className="min-h-[120px] font-mono" placeholder={`{
   "fast": {}
 }`} />
                     </FormControl>
@@ -769,7 +769,7 @@ export function OpenCodeModelDialog({
                 <FormItem>
                   <FormLabel>{t('settingsPanels.modelDialog.advancedFieldsJson')}</FormLabel>
                   <FormControl>
-                    <Textarea {...field} className="min-h-[120px] font-mono text-xs" placeholder={t('settingsPanels.modelDialog.advancedFieldsPlaceholder')} />
+                    <Textarea {...field} className="min-h-[120px] font-mono" placeholder={t('settingsPanels.modelDialog.advancedFieldsPlaceholder')} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -436,7 +436,7 @@ function QuestionStep({
               value={customInput}
               onChange={(e) => onCustomInputChange(e.target.value)}
               placeholder={t('session.question.customPlaceholder')}
-              className="min-h-[60px] sm:min-h-[80px] field-text resize-none border-primary focus:border-primary"
+              className="min-h-[60px] sm:min-h-[80px] resize-none border-primary focus:border-primary"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()

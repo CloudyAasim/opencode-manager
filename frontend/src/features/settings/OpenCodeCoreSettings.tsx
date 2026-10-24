@@ -181,7 +181,7 @@ export function OpenCodeCoreSettings() {
               onChange={(event) => setModel(event.target.value)}
               placeholder="anthropic/claude-sonnet-4-5"
               autoComplete="off"
-              className="font-mono text-sm"
+              className="font-mono"
             />
           </div>
           <div className="space-y-1.5">
@@ -192,7 +192,7 @@ export function OpenCodeCoreSettings() {
               onChange={(event) => setSmallModel(event.target.value)}
               placeholder="anthropic/claude-haiku-4-5"
               autoComplete="off"
-              className="font-mono text-sm"
+              className="font-mono"
             />
           </div>
           <Button
@@ -223,7 +223,7 @@ export function OpenCodeCoreSettings() {
               onChange={(event) => setDefaultAgent(event.target.value)}
               placeholder="build"
               autoComplete="off"
-              className="font-mono text-sm"
+              className="font-mono"
             />
           </div>
           <Button
@@ -248,7 +248,7 @@ export function OpenCodeCoreSettings() {
               value={enabledProviders}
               onChange={(event) => setEnabledProviders(event.target.value)}
               rows={3}
-              className="font-mono text-sm"
+              className="font-mono"
             />
           </div>
           <div className="space-y-1.5">
@@ -258,7 +258,7 @@ export function OpenCodeCoreSettings() {
               value={disabledProviders}
               onChange={(event) => setDisabledProviders(event.target.value)}
               rows={3}
-              className="font-mono text-sm"
+              className="font-mono"
             />
           </div>
           <Button
@@ -372,7 +372,7 @@ export function OpenCodeCoreSettings() {
             value={instructions}
             onChange={(event) => setInstructions(event.target.value)}
             rows={4}
-            className="font-mono text-sm"
+            className="font-mono"
           />
           <Button
             onClick={() =>

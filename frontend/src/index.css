@@ -533,32 +533,18 @@ body {
  * of them shrinking the text on a tablet.
  *
  * So the rule lives here once: 16px on a phone, 14px from `md` up.
+ *
+ * It used to live here twice. A global rule in this stylesheet - `input,
+ * textarea, select { font-size: 16px !important }` under `max-width: 768px` -
+ * reached past this one into every field that never asked for it, and stayed
+ * on at exactly 768px, where this rule has already stepped down to 14px. A
+ * rule that two places write is a rule with two versions.
  */
 @utility field-text {
   font-size: 1rem;
 
   @media (width >= 768px) {
     font-size: 0.875rem;
-  }
-}
-
-/* Prevent iOS zoom on all input elements */
-@media (max-width: 768px) {
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="number"],
-  input[type="search"],
-  input[type="tel"],
-  input[type="url"],
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
-  
-  /* ContentEditable elements */
-  [contenteditable="true"] {
-    font-size: 16px !important;
   }
 }
 

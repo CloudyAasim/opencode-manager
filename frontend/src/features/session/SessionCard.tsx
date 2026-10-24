@@ -200,7 +200,7 @@ export const SessionCard = ({
                             if (e.key === 'Enter') commitRename()
                             if (e.key === 'Escape') setIsRenaming(false)
                           }}
-                          className="h-7 min-w-0 flex-1 rounded border border-border bg-background px-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
+                          className="h-7 min-w-0 flex-1 rounded border border-border bg-background px-2 text-base text-foreground outline-none focus:ring-1 focus:ring-primary"
                         />
                         <Button
                           size="icon"

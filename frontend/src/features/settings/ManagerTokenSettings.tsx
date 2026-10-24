@@ -67,7 +67,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
             type={showToken ? 'text' : 'password'}
             value={isLoading ? t('settingsPanels.managerToken.loading') : token ?? ''}
             readOnly
-            className="flex-1 font-mono text-xs pr-9"
+            className="flex-1 font-mono pr-9"
             autoComplete="new-password"
             name="manager-token-input"
           />
