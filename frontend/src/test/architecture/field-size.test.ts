@@ -334,7 +334,15 @@ describe('输入框里的字由共享那一份说了算', () => {
     expect(SOURCES.length, '源文件少得可疑，这道门禁多半跑在空集上').toBeGreaterThan(300)
 
     // 找得到文本框——不然这道门禁在空集上跑，永远是绿的。
-    expect(FIELDS.length, '一个文本框都没找到，这道门禁多半跑在空集上').toBeGreaterThan(15)
+    // 这个数会变少 ✗：应用正把原生的输入框换成共享的那一副 ✗，
+    // 所以要紧的不是"多少个"，而是"它看见的是不是那些该看的" ✗。
+    expect(FIELDS.length, '一个文本框都没找到，这道门禁多半跑在空集上').toBeGreaterThan(5)
+    for (const owner of ['components/ui/input.tsx', 'components/ui/textarea.tsx']) {
+      expect(
+        FIELDS.some((field) => field.rel === owner),
+        `连共享的那一副 ${owner} 都没有，这道门禁读错了地方`,
+      ).toBe(true)
+    }
     expect(
       FIELDS.some((field) => field.rel === 'components/ui/input.tsx'),
       '连共享的输入框都没有，这道门禁读错了地方',

@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { DialogTitleBar } from '@/components/ui/dialog-layout'
+import { Input } from '@/components/ui/input'
 import { GitBranch, Plus, Search, Trash2 } from 'lucide-react'
 import { PanelMessage } from '@/components/ui/panel-message'
 import { workspaceLabel, type RepoSibling } from '@/api/repos'
@@ -167,11 +168,12 @@ export function WorkspaceManager({
 
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
+              <Input
+                size="lg"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder={t('repo.workspaceManager.searchPlaceholder')}
-                className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 field-text outline-none placeholder:text-muted-foreground focus:border-primary"
+                className="pl-9"
               />
             </div>
 

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { Check, ChevronDown, SearchX, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { Input } from '@/components/ui/input'
 import { PanelMessage } from '@/components/ui/panel-message'
 
 export interface MultiSelectOption {
@@ -171,18 +172,15 @@ export function MultiSelect({
       {isOpen && (
         <div className="absolute z-[150] mt-1 w-full bg-surface-glass backdrop-blur-md border border-border rounded-md shadow-lg">
           <div className="p-2 border-b border-border">
-            <input
+            <Input
               ref={inputRef}
+              size="sm"
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               onKeyDown={handleInputKeyDown}
               placeholder={resolvedSearchPlaceholder}
-              className={cn(
-                'flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 field-text shadow-sm transition-colors',
-                'placeholder:text-muted-foreground',
-                'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
-              )}
+              className="bg-transparent"
             />
           </div>
           <div className="max-h-52 overflow-y-auto" role="listbox">
