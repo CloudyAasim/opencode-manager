@@ -173,7 +173,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col pb-safe sm:pb-6">
+      <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
         <DialogLayout title={editingAgent ? t('settingsPanels.agentDialog.editTitle') : t('settingsPanels.agentDialog.createTitle')}>
           <Form {...form}>
             <div className="space-y-4">

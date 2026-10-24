@@ -52,7 +52,7 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent mobileFullscreen className="grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 sm:max-w-[560px] sm:max-h-[80vh]">
+      <DialogContent mobileFullscreen className="grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 sm:gap-4 sm:max-w-[560px] sm:max-h-[80vh]">
         <DialogHeader className="h-fit">
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>

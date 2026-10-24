@@ -423,7 +423,7 @@ function ManualCodeEntry({
           <p className="text-xs text-muted-foreground">
             {t('settingsPanels.mcpOAuth.manualDescription', { code: t('settingsPanels.mcpOAuth.codeParam') })}
           </p>
-          <Label htmlFor="auth-code" className="text-xs">{t('settingsPanels.mcpOAuth.authCode')}</Label>
+          <Label htmlFor="auth-code">{t('settingsPanels.mcpOAuth.authCode')}</Label>
           <div className="flex gap-2">
             <Input
               id="auth-code"

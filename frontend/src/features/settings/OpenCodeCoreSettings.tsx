@@ -294,7 +294,7 @@ export function OpenCodeCoreSettings() {
           <div className="grid gap-3 sm:grid-cols-2">
             {PERMISSION_TOOLS.map((tool) => (
               <div key={tool} className="flex items-center justify-between gap-3">
-                <Label htmlFor={`core-permission-${tool}`} className="font-mono text-xs">
+                <Label htmlFor={`core-permission-${tool}`} className="font-mono">
                   {tool}
                 </Label>
                 <Select

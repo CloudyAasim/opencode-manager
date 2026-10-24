@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { listRepos, createRepo, discoverRepos } from '@/api/repos'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DirectoryPickerDialog } from './DirectoryPickerDialog'
@@ -143,7 +144,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent mobileFullscreen mobileSwipeToClose className="content-start gap-0 sm:max-w-[500px] sm:max-h-[80vh] sm:h-auto sm:top-[50%] sm:translate-y-[-50%] bg-card border-border">
+      <DialogContent mobileFullscreen mobileSwipeToClose className="content-start gap-0 sm:gap-4 sm:max-w-[500px] sm:max-h-[80vh] sm:h-auto sm:top-[50%] sm:translate-y-[-50%] bg-card border-border">
         <DialogHeader className="h-fit">
           <DialogTitle>
             {t('repo.addRepository')}
@@ -151,7 +152,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">{t('repo.addDialog.type')}</label>
+            <Label>{t('repo.addDialog.type')}</Label>
             <Tabs value={repoType} onValueChange={(value) => setRepoType(value as 'remote' | 'local' | 'folder')}>
               <TabsList className="grid w-full grid-cols-3 bg-muted">
                 <TabsTrigger value="remote">{t('repo.addDialog.remote')}</TabsTrigger>
@@ -163,7 +164,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
 
           {repoType === 'remote' ? (
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">{t('repo.addDialog.repositoryUrl')}</label>
+              <Label>{t('repo.addDialog.repositoryUrl')}</Label>
               <Input
                 placeholder={t('repo.addDialog.repositoryUrlPlaceholder')}
                 value={repoUrl}
@@ -177,7 +178,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
             </div>
           ) : repoType === 'local' ? (
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">{t('repo.addDialog.localPath')}</label>
+              <Label>{t('repo.addDialog.localPath')}</Label>
               <div className="flex gap-2">
                 <Input
                   placeholder={t('repo.addDialog.localPathPlaceholder')}
@@ -203,7 +204,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">{t('repo.addDialog.folderPath')}</label>
+              <Label>{t('repo.addDialog.folderPath')}</Label>
               <div className="flex gap-2">
                 <Input
                   placeholder={t('repo.addDialog.folderPathPlaceholder')}
@@ -231,7 +232,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
 
           {showDirectoryName && (
             <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">{t('repo.addDialog.directoryName')}</label>
+              <Label>{t('repo.addDialog.directoryName')}</Label>
               <Input
                 placeholder={t('repo.addDialog.directoryNamePlaceholder')}
                 value={directoryName}
@@ -261,7 +262,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
           )}
           
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">{t('repo.addDialog.branchOptional')}</label>
+            <Label>{t('repo.addDialog.branchOptional')}</Label>
             <Input
               placeholder={t('repo.addDialog.branchPlaceholder')}
               value={branch}
@@ -290,9 +291,9 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                 className="mt-1 h-5 w-5 rounded border-border bg-muted text-primary focus:ring-primary"
               />
               <div className="flex-1">
-                <label htmlFor="skip-ssh-verification" className="cursor-pointer text-sm text-foreground">
+                <Label htmlFor="skip-ssh-verification" className="cursor-pointer">
                   {t('repo.addDialog.skipSshVerification')}
-                </label>
+                </Label>
                 <p className="text-xs text-muted-foreground">
                   {t('repo.addDialog.skipSshVerificationHint')}
                 </p>

@@ -170,7 +170,7 @@ export function AuditSettings() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1.5">
-          <Label htmlFor="audit-email" className="text-xs sm:text-sm">{t('settings.audit.filterEmail')}</Label>
+          <Label htmlFor="audit-email">{t('settings.audit.filterEmail')}</Label>
           <Input
             id="audit-email"
             value={emailInput}
@@ -183,7 +183,7 @@ export function AuditSettings() {
           />
         </div>
         <div className="space-y-1.5 sm:w-40">
-          <Label htmlFor="audit-status" className="text-xs sm:text-sm">{t('settings.audit.status')}</Label>
+          <Label htmlFor="audit-status">{t('settings.audit.status')}</Label>
           <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
             <SelectTrigger id="audit-status" className="h-9 sm:h-10 md:text-sm">
               <SelectValue />
@@ -204,7 +204,7 @@ export function AuditSettings() {
             <History className="h-4 w-4 sm:h-5 sm:w-5" />
             {t('settings.audit.title')}
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">{t('settings.audit.description')}</CardDescription>
+          <CardDescription>{t('settings.audit.description')}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {auditQuery.isLoading ? (
@@ -279,7 +279,7 @@ export function AuditSettings() {
             <FileCog className="h-4 w-4 sm:h-5 sm:w-5" />
             {t('settings.audit.configTitle')}
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
+          <CardDescription>
             {t('settings.audit.configDescription')} · {t('settings.audit.total', { count: configTotal })}
           </CardDescription>
         </CardHeader>

@@ -90,8 +90,15 @@ const DialogContent = React.forwardRef<
     return undefined
   }, [shouldEnableMobileSwipe, swipeBind, swipeContainer])
   
+  // The notch is *added to* the dialog's margin, not instead of it.
+  //
+  // It used to be `paddingTop: env(safe-area-inset-top, 0px)` - the top
+  // padding was replaced by the notch, so on a desktop (no notch) the dialog's
+  // content sat flush against the top edge while its sides and bottom kept the
+  // frame's margin. The margin is the frame's `--dialog-margin`: 16px on a
+  // phone, 24px on a desktop.
   const baseStyle = isMobileFullscreenMode
-    ? { paddingTop: 'env(safe-area-inset-top, 0px)' }
+    ? { paddingTop: 'calc(env(safe-area-inset-top, 0px) + var(--dialog-margin, 0px))' }
     : undefined
 
   const mergedStyle = {
@@ -113,7 +120,7 @@ const DialogContent = React.forwardRef<
           fullscreen
             ? "inset-0 w-full h-full max-w-none max-h-none p-0 rounded-none"
             : mobileFullscreen
-              ? "inset-0 w-full h-full max-w-none max-h-none p-4 rounded-none sm:inset-auto sm:left-[50%] sm:bottom-auto sm:w-[90%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:top-[8%] sm:p-6"
+              ? "inset-0 w-full h-full max-w-none max-h-none p-4 rounded-none [--dialog-margin:1rem] sm:[--dialog-margin:1.5rem] sm:inset-auto sm:left-[50%] sm:bottom-auto sm:w-[90%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:top-[8%] sm:p-6"
               : "left-[50%] top-[50%] w-[90%] max-w-lg translate-x-[-50%] translate-y-[-50%] p-4 sm:p-6 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl",
           className
         )}
@@ -126,10 +133,10 @@ const DialogContent = React.forwardRef<
         )}
         {!hideCloseButton && !fullscreen && (
           <DialogPrimitive.Close 
-            className="absolute right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            className="absolute right-4 top-4 sm:right-6 sm:top-6 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
             style={mobileFullscreen ? {
-              top: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
-            } : { top: '1rem' }}
+              top: 'calc(env(safe-area-inset-top, 0px) + var(--dialog-margin, 1rem))',
+            } : undefined}
           >
             <X className="h-4 w-4" />
             <span className="sr-only">{t('ui.dialog.close')}</span>
@@ -176,7 +183,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-row sm:flex-row sm:justify-end sm:space-x-2 gap-2",
+      "flex flex-row sm:flex-row sm:justify-end gap-2",
       className
     )}
     {...props}

@@ -107,7 +107,7 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent mobileFullscreen className="sm:max-w-2xl sm:max-h-[85vh] gap-0 flex flex-col pb-safe sm:pb-6">
+      <DialogContent mobileFullscreen className="sm:max-w-2xl sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
         <DialogLayout title={editingSkill ? t('settingsPanels.skillDialog.editTitle') : t('settingsPanels.skillDialog.createTitle')}>
           <Form {...form}>
             <div className="space-y-4">

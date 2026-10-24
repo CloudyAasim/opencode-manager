@@ -110,7 +110,7 @@ export function NotificationSettings() {
             <div className="divide-y divide-border">
               <div className="flex items-start justify-between gap-4 py-3">
                 <div className="min-w-0 space-y-0.5">
-                  <Label htmlFor="notificationsEnabled" className="text-base">
+                  <Label htmlFor="notificationsEnabled">
                     {t("settingsPanels.notifications.enableLabel")}
                   </Label>
                   <p className="text-sm text-muted-foreground">
@@ -137,7 +137,7 @@ export function NotificationSettings() {
 
                   <div className="flex items-start justify-between gap-4 py-3">
                     <div className="min-w-0 space-y-0.5">
-                      <Label htmlFor="notifPermission" className="text-base">
+                      <Label htmlFor="notifPermission">
                         {t("settingsPanels.notifications.permissionRequests")}
                       </Label>
                       <p className="text-sm text-muted-foreground">
@@ -155,7 +155,7 @@ export function NotificationSettings() {
 
                   <div className="flex items-start justify-between gap-4 py-3">
                     <div className="min-w-0 space-y-0.5">
-                      <Label htmlFor="notifQuestion" className="text-base">
+                      <Label htmlFor="notifQuestion">
                         {t("settingsPanels.notifications.agentQuestions")}
                       </Label>
                       <p className="text-sm text-muted-foreground">
@@ -173,7 +173,7 @@ export function NotificationSettings() {
 
                   <div className="flex items-start justify-between gap-4 py-3">
                     <div className="min-w-0 space-y-0.5">
-                      <Label htmlFor="notifError" className="text-base">
+                      <Label htmlFor="notifError">
                         {t("settingsPanels.notifications.sessionErrors")}
                       </Label>
                       <p className="text-sm text-muted-foreground">
@@ -191,7 +191,7 @@ export function NotificationSettings() {
 
                   <div className="flex items-start justify-between gap-4 py-3">
                     <div className="min-w-0 space-y-0.5">
-                      <Label htmlFor="notifIdle" className="text-base">
+                      <Label htmlFor="notifIdle">
                         {t("settingsPanels.notifications.sessionCompletion")}
                       </Label>
                       <p className="text-sm text-muted-foreground">

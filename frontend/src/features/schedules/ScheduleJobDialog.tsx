@@ -311,7 +311,7 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
       <DialogContent
         overlayClassName="bg-black/80"
         mobileFullscreen
-        className="flex h-dvh max-h-dvh w-full max-w-4xl flex-col gap-0 overflow-hidden border-border bg-background shadow-lg sm:h-[min(85vh,760px)] sm:max-h-[85vh] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
+        className="flex h-dvh max-h-dvh w-full max-w-4xl flex-col gap-0 sm:gap-4 overflow-hidden border-border bg-background shadow-lg sm:h-[min(85vh,760px)] sm:max-h-[85vh] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
       >
         <DialogTitleBar
           title={job ? t('schedules.scheduleDialog.editTitle') : t('schedules.scheduleDialog.newTitle')}

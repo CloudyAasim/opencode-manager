@@ -177,7 +177,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 flex flex-col">
+      <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col">
         <DialogLayout title={t('settingsPanels.addMcpServer.title')}>
           <div className="space-y-4">
             <div className="space-y-1.5">

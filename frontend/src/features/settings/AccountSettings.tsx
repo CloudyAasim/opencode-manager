@@ -180,11 +180,11 @@ export function AccountSettings() {
               {editingProfile ? (
                 <div className="space-y-3 sm:space-y-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm">{t('settingsPanels.account.name')}</Label>
+                    <Label>{t('settingsPanels.account.name')}</Label>
                     <Input value={user.name} disabled className="h-9 sm:h-10 md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm">{t('settingsPanels.account.email')}</Label>
+                    <Label>{t('settingsPanels.account.email')}</Label>
                     <Input value={user.email} disabled className="h-9 sm:h-10 md:text-sm" />
                   </div>
                   <Button variant="outline" onClick={() => setEditingProfile(false)} className="h-9 sm:h-10">
@@ -212,7 +212,7 @@ export function AccountSettings() {
                 <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
                 {t('settingsPanels.account.changePassword')}
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">{t('settingsPanels.account.changePasswordDescription')}</CardDescription>
+              <CardDescription>{t('settingsPanels.account.changePasswordDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               {!showChangePassword ? (
@@ -227,7 +227,7 @@ export function AccountSettings() {
               ) : (
                 <div className="space-y-3 sm:space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="current-password" className="text-xs sm:text-sm">{t('settingsPanels.account.currentPassword')}</Label>
+                    <Label htmlFor="current-password">{t('settingsPanels.account.currentPassword')}</Label>
                     <Input
                       id="current-password"
                       type="password"
@@ -238,7 +238,7 @@ export function AccountSettings() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="new-password" className="text-xs sm:text-sm">{t('settingsPanels.account.newPassword')}</Label>
+                    <Label htmlFor="new-password">{t('settingsPanels.account.newPassword')}</Label>
                     <Input
                       id="new-password"
                       type="password"
@@ -282,7 +282,7 @@ export function AccountSettings() {
                 <KeyRound className="h-4 w-4 sm:h-5 sm:w-5" />
                 {t('settingsPanels.account.passkeys')}
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">{t('settingsPanels.account.passkeysDescription')}</CardDescription>
+              <CardDescription>{t('settingsPanels.account.passkeysDescription')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex flex-col sm:flex-row gap-2">

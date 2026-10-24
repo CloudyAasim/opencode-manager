@@ -175,7 +175,7 @@ export function UsersSettings() {
         <CardContent>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-1.5">
-              <Label htmlFor="new-user-name" className="text-xs sm:text-sm">{t('settings.users.name')}</Label>
+              <Label htmlFor="new-user-name">{t('settings.users.name')}</Label>
               <Input
                 id="new-user-name"
                 value={name}
@@ -185,7 +185,7 @@ export function UsersSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="new-user-username" className="text-xs sm:text-sm">{t('settings.users.username')}</Label>
+              <Label htmlFor="new-user-username">{t('settings.users.username')}</Label>
               <Input
                 id="new-user-username"
                 value={username}
@@ -195,7 +195,7 @@ export function UsersSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="new-user-email" className="text-xs sm:text-sm">{t('settings.users.email')}</Label>
+              <Label htmlFor="new-user-email">{t('settings.users.email')}</Label>
               <Input
                 id="new-user-email"
                 type="email"
@@ -206,7 +206,7 @@ export function UsersSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="new-user-password" className="text-xs sm:text-sm">{t('settings.users.password')}</Label>
+              <Label htmlFor="new-user-password">{t('settings.users.password')}</Label>
               <Input
                 id="new-user-password"
                 type="password"
@@ -217,7 +217,7 @@ export function UsersSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="new-user-role" className="text-xs sm:text-sm">{t('settings.users.role')}</Label>
+              <Label htmlFor="new-user-role">{t('settings.users.role')}</Label>
               <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
                 <SelectTrigger id="new-user-role" className="h-9 sm:h-10 md:text-sm">
                   <SelectValue />
@@ -366,7 +366,7 @@ export function UsersSettings() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="reset-password" className="text-xs sm:text-sm">{t('settings.users.newPassword')}</Label>
+            <Label htmlFor="reset-password">{t('settings.users.newPassword')}</Label>
             <Input
               id="reset-password"
               type="password"

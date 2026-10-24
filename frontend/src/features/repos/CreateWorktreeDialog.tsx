@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertCircle, GitBranch, Loader2 } from 'lucide-react'
 import { createRepo, listBranches } from '@/api/repos'
@@ -117,7 +118,7 @@ export function CreateWorktreeDialog({
           ) : (
             <>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">{t('repo.worktreeCreation.newBranchName')}</label>
+                <Label>{t('repo.worktreeCreation.newBranchName')}</Label>
                 <Input
                   placeholder={t('repo.worktreeCreation.newBranchPlaceholder')}
                   value={branchName}
@@ -130,7 +131,7 @@ export function CreateWorktreeDialog({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">{t('repo.worktreeCreation.baseBranch')}</label>
+                <Label>{t('repo.worktreeCreation.baseBranch')}</Label>
                 <Select value={baseBranch} onValueChange={setBaseBranch} disabled={branchesLoading}>
                   <SelectTrigger className="bg-background border-border text-foreground">
                     <SelectValue placeholder={branchesLoading ? t('repo.worktreeCreation.loadingBranches') : t('repo.worktreeCreation.selectBaseBranch')} />
