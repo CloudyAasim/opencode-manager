@@ -41,6 +41,7 @@ export const misc = {
     connected: 'Connected',
     available: 'Available',
     noModelsFound: 'No models found',
+    noModelsFoundHint: 'Try another search, or connect a provider first.',
     noProvidersFound: 'No providers found',
     noProvidersFoundHint: 'Add a provider in Settings to pick a model.',
     selectModel: 'Select model',

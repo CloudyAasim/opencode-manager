@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
-import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2, KeyRound } from 'lucide-react'
+import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2, KeyRound, Plug, SearchX } from 'lucide-react'
 import { PanelMessage } from '@/components/ui/panel-message'
 import { providerCredentialsApi, getProviders } from '@/api/providers'
 import type { Provider } from '@/api/providers'
@@ -304,9 +304,13 @@ export function ProviderSettings() {
           {connectedExpanded && (
             <div className="pl-6 space-y-2">
               {apiKeyProviders.connected.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-2">
-                  {t('settingsPanels.provider.noProvidersConfigured')}
-                </p>
+                <PanelMessage
+                  size="sm"
+                  icon={<Plug />}
+                  title={t('settingsPanels.provider.noProvidersConfigured')}
+                  detail={t('settingsPanels.provider.noProvidersConfiguredHint')}
+                  className="py-2"
+                />
               ) : (
                 apiKeyProviders.connected.map((provider) => {
                   const modelCount = Object.keys(provider.models || {}).length
@@ -390,9 +394,17 @@ export function ProviderSettings() {
 
               <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pt-4 pb-1 pr-1 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
                 {filteredAvailableProviders.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-2">
-                    {availableSearch ? t('settingsPanels.provider.noProvidersMatch') : t('settingsPanels.provider.noAvailableProviders')}
-                  </p>
+                  <PanelMessage
+                    size="sm"
+                    icon={<SearchX />}
+                    title={
+                      availableSearch
+                        ? t('settingsPanels.provider.noProvidersMatch')
+                        : t('settingsPanels.provider.noAvailableProviders')
+                    }
+                    detail={t('settingsPanels.provider.noProvidersHint')}
+                    className="py-2"
+                  />
                 ) : (
                   filteredAvailableProviders.map((provider, index) => {
                     const modelCount = Object.keys(provider.models || {}).length

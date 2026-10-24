@@ -13,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CalendarClock, Plus, ArrowLeft, Play, Pencil, Trash2, Pause, PlayCircle, Clock3, History, SlidersHorizontal } from 'lucide-react'
+import { CalendarClock, Plus, ArrowLeft, Play, Pencil, Trash2, Pause, PlayCircle, Clock3, History, SlidersHorizontal, AlertCircle } from 'lucide-react'
 import { PanelMessage } from '@/components/ui/panel-message'
 
 import { useScheduleUrlState } from '@/hooks/useScheduleUrlState'
@@ -294,14 +294,20 @@ export function GlobalSchedulesView() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-destructive">{t('schedules.global.failedToLoad')}</p>
-            <Button variant="outline" onClick={() => navigate('/')} className="mt-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              {t('schedules.global.backToHome')}
-            </Button>
-          </CardContent>
+        <Card className="max-w-md border-dashed border-border/70">
+          <PanelMessage
+            tone="error"
+            icon={<AlertCircle />}
+            title={t('schedules.global.failedToLoad')}
+            detail={t('common.loadFailedHint')}
+            action={
+              <Button variant="outline" onClick={() => navigate('/')}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                {t('schedules.global.backToHome')}
+              </Button>
+            }
+            className="p-8"
+          />
         </Card>
       </div>
     )

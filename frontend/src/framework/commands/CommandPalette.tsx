@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { SearchX } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { useI18n } from '@/lib/i18n'
 import { useLayer } from '@/framework/layer/useLayer'
 import { useCommandList } from './commandRegistry'
@@ -105,8 +107,14 @@ export function CommandPalette() {
             </li>
           ))}
           {entries.length === 0 && (
-            <li className="px-2 py-6 text-center text-sm text-muted-foreground">
-              {t('shell.commands.empty')}
+            <li>
+              <PanelMessage
+                size="sm"
+                icon={<SearchX />}
+                title={t('shell.commands.empty')}
+                detail={t('shell.commands.emptyHint')}
+                className="py-4"
+              />
             </li>
           )}
         </ul>

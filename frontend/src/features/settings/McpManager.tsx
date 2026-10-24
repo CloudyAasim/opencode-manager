@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { SettingsList } from '@/components/ui/settings-list'
-import { Plus, Loader2, RefreshCw, Plug } from 'lucide-react'
+import { Plus, RefreshCw, Plug } from 'lucide-react'
 import { PanelMessage } from '@/components/ui/panel-message'
+import { PanelLoading } from '@/components/ui/panel-loading'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { AddMcpServerDialog } from './AddMcpServerDialog'
 import { McpServerCard } from './McpServerCard'
@@ -193,10 +194,15 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
       {isAnyOperationPending && (
         <div className="absolute inset-0 -m-4 bg-background/90 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="flex flex-col items-center gap-3 bg-card border border-border rounded-lg p-6 shadow-lg">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              {togglingServerId ? t('settingsPanels.mcpManager.updating') : t('settingsPanels.mcpManager.processing')}
-            </span>
+            <PanelLoading
+              size="lg"
+              className="py-0"
+              label={
+                togglingServerId
+                  ? t('settingsPanels.mcpManager.updating')
+                  : t('settingsPanels.mcpManager.processing')
+              }
+            />
             <span className="text-xs text-muted-foreground">
               {t('settingsPanels.mcpManager.pleaseWait')}
             </span>

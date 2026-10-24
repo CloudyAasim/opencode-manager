@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { browseDirectory } from '@/api/filesystem'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { AlertCircle, Folder, FolderGit2, ChevronUp } from 'lucide-react'
+import { AlertCircle, Folder, FolderGit2, FolderOpen, ChevronUp } from 'lucide-react'
 import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
 
@@ -90,9 +90,15 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
                 </li>
               )}
               {data?.entries.length === 0 && (
-                <li className="px-3 py-4 text-center text-sm text-muted-foreground">
-                {t('repo.directoryPicker.noSubfolders')}
-              </li>
+                <li>
+                  <PanelMessage
+                    size="sm"
+                    icon={<FolderOpen />}
+                    title={t('repo.directoryPicker.noSubfolders')}
+                    detail={t('repo.directoryPicker.noSubfoldersHint')}
+                    className="py-3"
+                  />
+                </li>
               )}
               {data?.entries.map((entry) => (
                 <li key={entry.path}>

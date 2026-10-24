@@ -344,11 +344,13 @@ export const settingsPanels = {
     disconnect: 'Disconnect',
     apiKeys: 'API Keys',
     apiKeysDescription: 'Manage API keys for AI providers.',
-    noProvidersConfigured:
-      'No providers configured. Add an API key below to get started.',
+    noProvidersConfigured: 'No providers configured',
+    noProvidersConfiguredHint:
+      'Add an API key below and its models will show up here.',
     availableProviders: 'Available Providers',
     searchPlaceholder: 'Search providers...',
     noProvidersMatch: 'No providers match your search.',
+    noProvidersHint: 'Add a provider below, or clear the search.',
     noAvailableProviders: 'No available providers.',
     addKey: 'Add Key',
     editApiKeyFor: 'Edit API key for {{name}}',
@@ -889,6 +891,7 @@ export const settingsPanels = {
     submit: 'Submit',
     success: 'Authentication successful',
     somethingWrong: 'Something went wrong',
+    somethingWrongHint: 'The service did not answer. Try again.',
     cancel: 'Cancel',
     pasteManually: 'Paste authorization code manually',
     manualDescription:

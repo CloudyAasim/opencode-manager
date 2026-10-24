@@ -27,7 +27,7 @@ const zeroInboundRel = zeroInbound.map((file) => relativeTo(graph, file))
  * Listed one by one rather than by directory. Exempting all of `test/` as a
  * prefix also exempts a file that is not a test at all - which is exactly how
  * this rule was first written, and a probe planted at
- * `test/architecture/__p54orphan.ts` stayed green. There are only four
+ * `test/architecture/__p54orphan.ts` stayed green. There are only a handful of
  * non-test files under `test/`, so they can be named.
  */
 const EXEMPT: Record<string, string> = {

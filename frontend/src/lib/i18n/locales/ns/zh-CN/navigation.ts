@@ -21,6 +21,7 @@ export const navigation = {
   commands: '命令',
   mentionFile: '引用文件',
   commandsEmpty: '没有匹配的命令',
+  commandsEmptyHint: '这个会话里没有可运行的命令。',
   managerVersion: 'Manager v{{version}}',
   searchProjects: '搜索项目…',
   repo: '项目',

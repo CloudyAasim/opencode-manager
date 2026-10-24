@@ -236,6 +236,19 @@ export function RepoList() {
     return t('repo.list.emptyFiltered')
   }, [searchQuery, filterMode, t])
 
+  const emptyHint = useMemo(() => {
+    if (searchQuery) {
+      return t('repo.list.emptyFilteredHint')
+    }
+    if (filterMode === 'attention') {
+      return t('repo.list.emptyAttentionHint')
+    }
+    if (filterMode === 'recent') {
+      return t('repo.list.emptyRecentHint')
+    }
+    return t('repo.list.emptyHint')
+  }, [searchQuery, filterMode, t])
+
   const attentionCount = useMemo(() => {
     return countAttentionItems(viewModels)
   }, [viewModels])
@@ -477,12 +490,11 @@ export function RepoList() {
               switch (true) {
                 case sortedViewModels.length === 0:
                   return (
-                    <div className="text-center p-12">
-                      <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">
-                        {emptyMessage}
-                      </p>
-                    </div>
+                    <PanelMessage
+                      icon={<Search />}
+                      title={emptyMessage}
+                      detail={emptyHint}
+                    />
                   )
 
                 case isDragEnabled:

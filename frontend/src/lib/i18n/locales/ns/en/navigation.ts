@@ -21,6 +21,7 @@ export const navigation = {
   commands: 'Commands',
   mentionFile: 'Mention File',
   commandsEmpty: 'No matching command',
+  commandsEmptyHint: 'This session has no command to run.',
   managerVersion: 'Manager v{{version}}',
   searchProjects: 'Search projects...',
   repo: 'Project',

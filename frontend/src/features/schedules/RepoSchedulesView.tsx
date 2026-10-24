@@ -25,7 +25,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { useI18n } from '@/lib/i18n'
-import { CalendarClock, Plus } from 'lucide-react'
+import { CalendarClock, Plus, FolderX } from 'lucide-react'
+import { PanelMessage } from '@/components/ui/panel-message'
 
 export function RepoSchedulesView() {
   const { t } = useI18n()
@@ -139,9 +140,15 @@ export function RepoSchedulesView() {
   if (!scheduleTarget || repoId === undefined) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <p className="text-muted-foreground">
-          {repoId === 0 ? t('schedules.page.assistantNotFound') : t('schedules.page.repositoryNotFound')}
-        </p>
+        <PanelMessage
+          icon={<FolderX />}
+          title={
+            repoId === 0
+              ? t('schedules.page.assistantNotFound')
+              : t('schedules.page.repositoryNotFound')
+          }
+          detail={t('schedules.page.notFoundHint')}
+        />
       </div>
     )
   }

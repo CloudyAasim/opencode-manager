@@ -7,6 +7,7 @@ export const shell = {
     repoItem: '项目',
     placeholder: '搜索命令',
     empty: '没有匹配的命令',
+    emptyHint: '这个页面没有可运行的命令。',
     group: {
       navigate: '跳转',
       repo: '项目',

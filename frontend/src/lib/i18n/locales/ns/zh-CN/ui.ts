@@ -65,6 +65,7 @@ export const ui = {
     placeholder: '请选择…',
     searchPlaceholder: '搜索…',
     noOptionsFound: '未找到选项',
+    noOptionsHint: '换个关键字试试，或者清空搜索看看全部选项。',
     removeOption: '移除 {{label}}',
   },
   panelLoading: {

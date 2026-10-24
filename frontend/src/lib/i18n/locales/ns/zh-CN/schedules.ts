@@ -273,6 +273,7 @@ export const schedules = {
   page: {
     assistantNotFound: '未找到助手',
     repositoryNotFound: '未找到项目',
+    notFoundHint: '换一个项目，或者先把它添加进来。',
     newSchedule: '新建计划',
     noSchedulesYet: '暂无计划',
     noSchedulesHint: '为此项目创建计划，以自动执行周期性智能体工作，然后在此查看运行、日志和会话。',

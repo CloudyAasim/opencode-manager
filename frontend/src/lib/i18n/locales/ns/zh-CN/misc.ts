@@ -41,6 +41,7 @@ export const misc = {
     connected: '已连接',
     available: '可用',
     noModelsFound: '未找到模型',
+    noModelsFoundHint: '换个关键字试试，或者先连上一个提供商。',
     noProvidersFound: '未找到提供商',
     noProvidersFoundHint: '在设置里添加一个提供商才能选模型。',
     selectModel: '选择模型',

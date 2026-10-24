@@ -279,6 +279,7 @@ export const schedules = {
   page: {
     assistantNotFound: 'Assistant not found',
     repositoryNotFound: 'Repository not found',
+    notFoundHint: 'Pick another project, or add it first.',
     newSchedule: 'New Schedule',
     noSchedulesYet: 'No schedules yet',
     noSchedulesHint:

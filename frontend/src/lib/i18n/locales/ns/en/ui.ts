@@ -65,6 +65,7 @@ export const ui = {
     placeholder: 'Select...',
     searchPlaceholder: 'Search...',
     noOptionsFound: 'No options found',
+    noOptionsHint: 'Try another search, or clear it to see every option.',
     removeOption: 'Remove {{label}}',
   },
   panelLoading: {

@@ -56,6 +56,7 @@ interface VirtualizedListProps<T> {
   renderItem: (item: T) => React.ReactNode
   getKey: (item: T) => string
   emptyLabel: string
+  emptyHint: string
   className?: string
   resetKey?: string
   overscan?: number
@@ -107,6 +108,7 @@ function VirtualizedList<T>({
   renderItem,
   getKey,
   emptyLabel,
+  emptyHint,
   className,
   resetKey,
   overscan = VIRTUAL_LIST_OVERSCAN,
@@ -163,7 +165,13 @@ function VirtualizedList<T>({
       className={['h-full overflow-y-auto', className].filter(Boolean).join(' ')}
     >
       {items.length === 0 ? (
-        <div className="py-10 text-center text-sm text-muted-foreground">{emptyLabel}</div>
+        <PanelMessage
+          size="sm"
+          icon={<Search />}
+          title={emptyLabel}
+          detail={emptyHint}
+          className="py-6"
+        />
       ) : (
         <div className="relative" style={{ height: items.length * itemHeight }}>
           {visibleItems.map((item, index) => (
@@ -697,6 +705,7 @@ export function ModelQuickSelect({
                   renderItem={(item) => renderModelOption(item)}
                   getKey={(item) => item.key}
                   emptyLabel={t('misc.modelQuickSelect.noModelsFound')}
+                  emptyHint={t('misc.modelQuickSelect.noModelsFoundHint')}
                   className="px-4 pb-4 pt-2"
                   resetKey={`${selectedProviderId ?? 'all'}:${deferredSearchQuery}`}
                 />
@@ -711,6 +720,7 @@ export function ModelQuickSelect({
                     renderItem={(item) => renderModelOption(item)}
                     getKey={(item) => item.key}
                     emptyLabel={t('misc.modelQuickSelect.noModelsFound')}
+                    emptyHint={t('misc.modelQuickSelect.noModelsFoundHint')}
                     className="px-4 pb-4"
                     resetKey={`${selectedProviderId}:${deferredSearchQuery}`}
                   />

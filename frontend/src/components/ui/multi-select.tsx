@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
-import { Check, ChevronDown, X } from 'lucide-react'
+import { Check, ChevronDown, SearchX, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { PanelMessage } from '@/components/ui/panel-message'
 
 export interface MultiSelectOption {
   value: string
@@ -186,7 +187,13 @@ export function MultiSelect({
           </div>
           <div className="max-h-52 overflow-y-auto" role="listbox">
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-center text-sm text-muted-foreground">{resolvedEmptyMessage}</div>
+              <PanelMessage
+                size="sm"
+                icon={<SearchX />}
+                title={resolvedEmptyMessage}
+                detail={t('ui.multiSelect.noOptionsHint')}
+                className="py-4"
+              />
             ) : (
               filteredOptions.map((option, index) => {
                 const isSelected = value.includes(option.value)

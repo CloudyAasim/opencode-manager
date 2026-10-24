@@ -5,7 +5,7 @@ import { getRepo } from "@/api/repos";
 import { MessageThread } from "@/features/message/MessageThread";
 import { PromptInput, type PromptInputHandle } from "@/features/message/PromptInput";
 import { FloatingTTSButton } from '@/features/message/FloatingTTSButton'
-import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare, FileText, Command as CommandIcon } from "lucide-react";
+import { X, CornerUpLeft, PanelLeft, PanelRight, Plus, Folder, GitPullRequest, CalendarClock, Plug, Sparkles, Info, TerminalSquare, FileText, Command as CommandIcon, SearchX } from "lucide-react";
 import { PanelMessage } from '@/components/ui/panel-message';
 import { PanelLoading } from '@/components/ui/panel-loading';
 import { Header } from "@/components/ui/header";
@@ -1021,9 +1021,13 @@ export function SessionDetail() {
                   </div>
                   <div className="max-h-56 overflow-y-auto p-1">
                     {commandList.length === 0 ? (
-                      <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-                        {t('navigation.commandsEmpty')}
-                      </p>
+                      <PanelMessage
+                        size="sm"
+                        icon={<SearchX />}
+                        title={t('navigation.commandsEmpty')}
+                        detail={t('navigation.commandsEmptyHint')}
+                        className="py-2"
+                      />
                     ) : (
                       commandList.map((command) => (
                         <button

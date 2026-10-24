@@ -1,7 +1,7 @@
 import { createContext, Fragment, useContext, type ReactNode } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { PanelMessage } from '@/components/ui/panel-message'
-import { MoreHorizontal, AlertCircle } from 'lucide-react'
+import { MoreHorizontal, AlertCircle, Inbox } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DESKTOP_MEDIA_QUERY, useMediaQuery } from '@/hooks/useMediaQuery'
 import {
@@ -88,11 +88,14 @@ export function SettingsList({
 
   if (isEmpty) {
     return (
-      <div className="h-auto max-h-40 min-h-24 rounded-lg border border-dashed border-border bg-card/50 p-6 text-center text-muted-foreground [[data-opencode-settings]_&]:rounded-none [[data-opencode-settings]_&]:border-0 [[data-opencode-settings]_&]:bg-transparent">
-        <p className="text-sm font-medium text-foreground">{emptyTitle}</p>
-        {emptyHint && <p className="text-xs mt-1">{emptyHint}</p>}
-        {emptyAction && <div className="mt-3 flex items-center justify-center gap-2">{emptyAction}</div>}
-      </div>
+      <PanelMessage
+        size="sm"
+        icon={<Inbox />}
+        title={emptyTitle}
+        detail={emptyHint}
+        action={emptyAction}
+        className="h-auto max-h-40 min-h-24 rounded-lg border border-dashed border-border bg-card/50 [[data-opencode-settings]_&]:rounded-none [[data-opencode-settings]_&]:border-0 [[data-opencode-settings]_&]:bg-transparent"
+      />
     )
   }
 

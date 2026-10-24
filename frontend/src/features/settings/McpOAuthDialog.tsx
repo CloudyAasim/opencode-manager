@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -362,10 +363,14 @@ export function McpOAuthDialog({
           )}
 
           {step === 'error' && !error && (
-            <div className="flex flex-col items-center justify-center py-6 gap-2">
-              <XCircle className="h-8 w-8 text-destructive" />
-              <p className="text-sm text-muted-foreground">{t('settingsPanels.mcpOAuth.somethingWrong')}</p>
-            </div>
+            <PanelMessage
+              tone="error"
+              size="sm"
+              icon={<XCircle />}
+              title={t('settingsPanels.mcpOAuth.somethingWrong')}
+              detail={t('settingsPanels.mcpOAuth.somethingWrongHint')}
+              className="py-6"
+            />
           )}
         </div>
 

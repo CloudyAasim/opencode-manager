@@ -349,3 +349,261 @@ export function stringLiterals(text: string): string[] {
   }
   return literals
 }
+
+/**
+ * Reading the shape of a JSX tree out of source text.
+ *
+ * A rule about "a block that says something" has to know what is inside that
+ * block, and where the block sits - a message at the top of a list is a state,
+ * the same words under a label are a caption. Reading that out of source text
+ * with a regular expression is not possible: the markup nests, and the tags
+ * that open it are not written the same way every time.
+ *
+ * So this is a small parser. It walks the text, remembers every element it
+ * opens, and closes them the way the source closes them. It is deliberately
+ * forgiving: anything it cannot make sense of is simply not an element, and
+ * the rules built on top of it ask structural questions rather than counting
+ * tags.
+ */
+
+export interface JsxElement {
+  /** The tag as written: `div`, `PanelMessage`, `CardContent`. */
+  name: string
+  /** The class names the element asked for, however it asked for them. */
+  classes: string
+  /** The whole opening tag, so that attributes like `role` can be read. */
+  opening: string
+  /** Where the element starts in the text. */
+  start: number
+  /** Where the content starts - just after the opening tag. */
+  contentStart: number
+  /** Where the closing tag starts; -1 when the element was never closed. */
+  end: number
+  /** The elements directly inside this one. */
+  children: JsxElement[]
+  /** The element directly around this one. */
+  parent: JsxElement | null
+}
+
+/**
+ * What may stand in front of a tag.
+ *
+ * `<` also shows up in comparisons - `a < b` - and in a generic type. Those
+ * are not tags, and a parser that treats them as tags loses its place in the
+ * tree from that point on. A real tag is written after whitespace, an opening
+ * bracket, a brace, an arrow or the end of an expression.
+ */
+const MAY_PRECEDE_A_TAG = /[\s(,{[=>;}]/
+
+/**
+ * Every element in the text, with the shape it is written in.
+ *
+ * The close of an element is found by name: the source closes what it opens.
+ * A tag whose name never comes back is left open, and the rules that ask
+ * about its content then see nothing - which is the honest answer for
+ * markup this parser does not understand.
+ */
+export function elementTree(text: string): JsxElement[] {
+  const all: JsxElement[] = []
+  const open: JsxElement[] = []
+  const matcher = /<(\/?)([A-Za-z][\w]*(?:\.[A-Za-z][\w]*)*)\b/g
+  let match: RegExpExecArray | null
+
+  while ((match = matcher.exec(text)) !== null) {
+    const before = match.index === 0 ? ' ' : text[match.index - 1]!
+    if (!MAY_PRECEDE_A_TAG.test(before)) continue
+
+    const name = match[2]!
+
+    if (match[1] === '/') {
+      // The source closes what it opens: find the element this close belongs
+      // to and close it.
+      for (let index = open.length - 1; index >= 0; index -= 1) {
+        const element = open[index]!
+        if (element.name !== name) continue
+        element.end = match.index
+        open.length = index
+        break
+      }
+      continue
+    }
+
+    const opening = tagAt(text, match.index)
+    const attributes = opening.slice(name.length + 1, opening.endsWith('>') ? -1 : undefined)
+    const element: JsxElement = {
+      name,
+      classes: classListOfAttrs(attributes),
+      opening,
+      start: match.index,
+      contentStart: match.index + opening.length,
+      end: -1,
+      children: [],
+      parent: open.length ? open[open.length - 1]! : null,
+    }
+
+    if (element.parent) element.parent.children.push(element)
+
+    all.push(element)
+
+    if (!/\/\s*>$/.test(opening)) open.push(element)
+  }
+
+  return all
+}
+
+/** An element and everything inside it. */
+export function familyOf(element: JsxElement): JsxElement[] {
+  const family: JsxElement[] = []
+  const pending = [...element.children]
+  while (pending.length > 0) {
+    const child = pending.shift()!
+    family.push(child)
+    pending.push(...child.children)
+  }
+  return family
+}
+
+/** The text between an element's tags. */
+export function contentOf(text: string, element: JsxElement): string {
+  if (element.end < 0) return ''
+  return text.slice(element.contentStart, element.end)
+}
+
+/**
+ * Whether the text is one expression and nothing else.
+ *
+ * `{name}` is one expression. `{name} and {other}` is two. The difference
+ * matters: a block that holds one thing is a message, a block that holds a
+ * sentence and a value is something else.
+ */
+export function isSingleExpression(content: string): boolean {
+  const trimmed = content.trim()
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return false
+  let depth = 0
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const char = trimmed[index]
+    if (char === '{') depth += 1
+    else if (char === '}') {
+      depth -= 1
+      if (depth === 0) return index === trimmed.length - 1
+    }
+  }
+  return false
+}
+
+/** The expression inside `{…}`, when the content is exactly one expression. */
+export function expressionIn(content: string): string | null {
+  if (!isSingleExpression(content)) return null
+  return content.trim().slice(1, -1).trim()
+}
+
+/**
+ * A decision: the two sides of a ternary, and the right hand side of `&&`.
+ *
+ * These are the places where the code chooses between showing something and
+ * showing something else. A block that occupies one of these places is
+ * standing in for content that is not there - which is what a state is.
+ */
+export interface DecisionGroup {
+  /** `?` for the "then" side, `:` for the "else" side, `&&` for a guard. */
+  keyword: '?' | ':' | '&&'
+  /** Where the group's parenthesis opens. */
+  open: number
+  /** Where the group's parenthesis closes. */
+  close: number
+  /** Where the group's content starts. */
+  contentStart: number
+  /** Where the group's content ends. */
+  contentEnd: number
+}
+
+function groupAt(text: string, open: number): { close: number } | null {
+  let depth = 0
+  let quote: string | null = null
+  for (let index = open; index < text.length; index += 1) {
+    const char = text[index]!
+    if (quote) {
+      if (char === quote) quote = null
+      continue
+    }
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '(') depth += 1
+    else if (char === ')') {
+      depth -= 1
+      if (depth === 0) return { close: index }
+    }
+  }
+  return null
+}
+
+export function decisionGroups(text: string): DecisionGroup[] {
+  const groups: DecisionGroup[] = []
+  const matcher = /\?|&&/g
+  let match: RegExpExecArray | null
+
+  while ((match = matcher.exec(text)) !== null) {
+    if (match[0] === '?' && text[match.index - 1] === '?') continue
+    const keyword = match[0] as '?' | '&&'
+    let cursor = match.index + keyword.length
+    while (cursor < text.length && /\s/.test(text[cursor]!)) cursor += 1
+    if (text[cursor] !== '(') continue
+
+    const found = groupAt(text, cursor)
+    if (!found) continue
+    groups.push({
+      keyword,
+      open: cursor,
+      close: found.close,
+      contentStart: cursor + 1,
+      contentEnd: found.close,
+    })
+
+    if (keyword !== '?') continue
+    // The other side of the ternary.
+    let other = found.close + 1
+    while (other < text.length && /\s/.test(text[other]!)) other += 1
+    if (text[other] !== ':') continue
+    other += 1
+    while (other < text.length && /\s/.test(text[other]!)) other += 1
+    if (text[other] !== '(') continue
+    const elseFound = groupAt(text, other)
+    if (!elseFound) continue
+    groups.push({
+      keyword: ':',
+      open: other,
+      close: elseFound.close,
+      contentStart: other + 1,
+      contentEnd: elseFound.close,
+    })
+  }
+
+  return groups
+}
+
+/**
+ * The elements that sit directly inside a group.
+ *
+ * A group holds the markup of one branch. The elements at the top of it are
+ * the ones the branch draws; anything deeper belongs to those.
+ */
+export function elementsIn(tree: JsxElement[], group: DecisionGroup): JsxElement[] {
+  const inside = tree.filter(
+    (element) =>
+      element.start >= group.contentStart && element.end <= group.contentEnd && element.end > 0,
+  )
+  return inside.filter(
+    (element) =>
+      !element.parent ||
+      element.parent.start < group.contentStart ||
+      element.parent.end > group.contentEnd,
+  )
+}
+
+/** The attribute `role` of an element, when it has one. */
+export function roleOf(element: JsxElement): string | null {
+  const match = /\brole="([^"]*)"/.exec(element.opening)
+  return match ? match[1]! : null
+}

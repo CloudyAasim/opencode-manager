@@ -7,6 +7,7 @@ export const shell = {
     repoItem: 'Project',
     placeholder: 'Search commands',
     empty: 'No matching command',
+    emptyHint: 'This page has no command to run.',
     group: {
       navigate: 'Go to',
       repo: 'Project',
