@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, classListOfTag, stripComments, tagAt } from './source-text'
+import { classListOfTag, firstClassListOf, stripComments, tagAt } from './source-text'
 
 /**
  * 输入框里的字，由共享那一份说了算。
@@ -248,9 +248,11 @@ function partsOf(): Part[] {
     while ((match = declarations.exec(source.text)) !== null) {
       const name = match[1]!
       const rest = source.text.slice(match.index)
-      const next = /(?:\n\s*)(?:export\s+)?(?:const|function)\s+[A-Z]/.exec(rest.slice(1))
+      // 下一个**顶层**的声明。函数里面写的 `const Comp = …` 不是顶层——
+      // 拿它当界，零件的那一段代码就被截断在它自己身上了。
+      const next = /\n(?:export\s+)?(?:const|function)\s+[A-Z]/.exec(rest.slice(1))
       const body = next ? rest.slice(0, next.index + 1) : rest.slice(0, 2000)
-      const list = classListOfAttrs(body, resolve)
+      const list = firstClassListOf(body, resolve)
       if (!list.split(/\s+/).includes(FIELD_TEXT)) continue
       parts.push({ name, rel: source.rel, list })
     }

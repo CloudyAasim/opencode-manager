@@ -304,7 +304,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
           <Button 
             type="submit" 
             disabled={(!repoUrl && repoType === 'remote') || (!localPath && repoType === 'local') || (!folderPath && repoType === 'folder') || mutation.isPending || (showDirectoryName && (!!directoryNameError || !!directoryCollision))}
-            className="w-full min-h-[48px] bg-primary hover:bg-primary-hover text-primary-foreground text-base font-medium"
+            className="w-full min-h-[48px]"
           >
             {mutation.isPending ? (
               <>

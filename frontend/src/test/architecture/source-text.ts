@@ -167,6 +167,50 @@ function classNamesOfExpression(
 }
 
 /**
+ * Where an attribute of its own begins.
+ *
+ * Only the tag's *own* attributes count. An attribute can hold a piece of
+ * markup - `actions={<div className="text-sm">…</div>}` - and the class name
+ * in there belongs to that div, not to the tag being asked about. So the scan
+ * keeps track of the braces and the quotes: an attribute name is one that
+ * stands at the top level, outside both.
+ */
+function ownAttributeAt(text: string, name: string): number | null {
+  let depth = 0
+  let quote: string | null = null
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]!
+    if (quote) {
+      if (char === quote) quote = null
+      continue
+    }
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '{') {
+      depth += 1
+      continue
+    }
+    if (char === '}') {
+      depth -= 1
+      continue
+    }
+    if (depth !== 0) continue
+    if (!text.startsWith(name, index)) continue
+    const before = text[index - 1]
+    if (before && /[\w$]/.test(before)) continue
+    const after = text[index + name.length]
+    if (after && /[\w$]/.test(after)) continue
+    let cursor = index + name.length
+    while (cursor < text.length && /\s/.test(text[cursor]!)) cursor += 1
+    if (text[cursor] !== '=') continue
+    return index
+  }
+  return null
+}
+
+/**
  * The class names a piece of markup asks for.
  *
  * `className="…"` is literal. `className={…}` is computed, and the class names
@@ -177,9 +221,9 @@ export function classListOfAttrs(
   text: string,
   resolve?: (identifier: string) => string | undefined,
 ): string {
-  const at = /\bclassName\s*=/.exec(text)
-  if (!at) return ''
-  const equals = text.indexOf('=', at.index)
+  const at = ownAttributeAt(text, 'className')
+  if (at === null) return ''
+  const equals = text.indexOf('=', at)
   const value = attributeValue(text, equals + 1)
   if (!value) return ''
   if (value.quoted) return value.text.replace(/\s+/g, ' ').trim()
@@ -207,6 +251,30 @@ export function classListOfTag(
     found.push(classListOfAttrs(attrs, resolve))
   }
   return found
+}
+
+/**
+ * The class names the first tag of a piece of code asks for.
+ *
+ * A shared part is a function, and its class names are not on a tag - they
+ * are on the element it draws. So the element is looked for, rather than the
+ * first `className` in the whole piece of code: the braces of the function
+ * itself would bury the element inside them.
+ */
+export function firstClassListOf(
+  text: string,
+  resolve?: (identifier: string) => string | undefined,
+): string {
+  const matcher = /<[A-Za-z][\w.]*/g
+  let match: RegExpExecArray | null
+  while ((match = matcher.exec(text)) !== null) {
+    const opening = tagAt(text, match.index)
+    const tagName = /<([A-Za-z][\w.]*)/.exec(opening)?.[1] ?? ''
+    const attrs = opening.slice(tagName.length + 1, opening.endsWith('>') ? -1 : undefined)
+    const list = classListOfAttrs(attrs, resolve)
+    if (list) return list
+  }
+  return ''
 }
 
 function isStringStart(text: string, index: number): boolean {

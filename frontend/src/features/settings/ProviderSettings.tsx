@@ -325,7 +325,7 @@ export function ProviderSettings() {
                             )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Badge variant="default" className="bg-success hover:bg-success shrink-0 text-xs">
+                            <Badge variant="default" className="bg-success hover:bg-success shrink-0">
                               <Check className="h-3 w-3 mr-1" />
                               {t('settingsPanels.provider.connected')}
                             </Badge>

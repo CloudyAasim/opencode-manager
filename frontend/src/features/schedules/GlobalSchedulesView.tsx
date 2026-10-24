@@ -338,13 +338,13 @@ export function GlobalSchedulesView() {
       <Tabs value={scheduleTab} onValueChange={(v) => setScheduleTab(v as ScheduleTab)} className="flex-1 min-h-0 flex flex-col overflow-hidden">
         <div className="border-b border-border px-4">
           <TabsList className="h-auto gap-0 rounded-none border-0 bg-transparent p-0">
-            <TabsTrigger value="jobs" className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <TabsTrigger value="jobs" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
               {t('schedules.global.jobsTab')}
             </TabsTrigger>
-            <TabsTrigger value="runs" className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <TabsTrigger value="runs" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
               {t('schedules.global.runsTab')}
             </TabsTrigger>
-            <TabsTrigger value="prompts" className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <TabsTrigger value="prompts" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
               {t('schedules.global.promptsTab')}
             </TabsTrigger>
           </TabsList>
@@ -378,7 +378,7 @@ export function GlobalSchedulesView() {
                       setRepoFilter('all')
                       setSortOption('nextRun')
                     }}
-                    className="text-xs text-muted-foreground"
+                    className="text-muted-foreground"
                   >
                     {t('schedules.global.clearAllFilters')}
                   </DropdownMenuItem>
@@ -458,7 +458,7 @@ export function GlobalSchedulesView() {
                       variant={statusFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setStatusFilter(opt.value as StatusFilter)}
-                      className="h-8 px-3 text-xs"
+                      className="h-8 px-3"
                     >
                       {opt.label}
                     </Button>
@@ -474,7 +474,7 @@ export function GlobalSchedulesView() {
                       variant={scheduleModeFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setScheduleModeFilter(opt.value as ScheduleModeFilter)}
-                      className="h-8 px-3 text-xs"
+                      className="h-8 px-3"
                     >
                       {opt.label}
                     </Button>
@@ -490,7 +490,7 @@ export function GlobalSchedulesView() {
                       variant={sortOption === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setSortOption(opt.value as SortOption)}
-                      className="h-8 px-3 text-xs"
+                      className="h-8 px-3"
                     >
                       {opt.label}
                     </Button>
@@ -597,7 +597,7 @@ export function GlobalSchedulesView() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1 h-8 text-xs"
+                          className="flex-1 h-8"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleRunNow(job)
@@ -684,7 +684,7 @@ export function GlobalSchedulesView() {
                       setRunRepoFilter('all')
                       setRunSortOption('startedAt')
                     }}
-                    className="text-xs text-muted-foreground"
+                    className="text-muted-foreground"
                   >
                     {t('schedules.global.clearAllFilters')}
                   </DropdownMenuItem>
@@ -764,7 +764,7 @@ export function GlobalSchedulesView() {
                       variant={runStatusFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunStatusFilter(opt.value)}
-                      className="h-8 px-3 text-xs"
+                      className="h-8 px-3"
                     >
                       {opt.label}
                     </Button>
@@ -780,7 +780,7 @@ export function GlobalSchedulesView() {
                       variant={runTriggerFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunTriggerFilter(opt.value)}
-                      className="h-8 px-3 text-xs"
+                      className="h-8 px-3"
                     >
                       {opt.label}
                     </Button>
@@ -796,7 +796,7 @@ export function GlobalSchedulesView() {
                       variant={runSortOption === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunSortOption(opt.value as 'startedAt' | 'jobName' | 'duration')}
-                      className="h-8 px-3 text-xs"
+                      className="h-8 px-3"
                     >
                       {opt.label}
                     </Button>

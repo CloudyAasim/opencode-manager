@@ -182,7 +182,7 @@ export function OAuthAuthorizeDialog({
                     <span className="truncate">{isLoading && selectedMethodIndex === index ? t('settingsPanels.oauthAuthorize.authorizing') : method.label}</span>
                   </Button>
                   {isBrowserLocal && (
-                    <Badge variant="secondary" className="text-xs shrink-0">
+                    <Badge variant="secondary" className="shrink-0">
                       {t('settingsPanels.oauthAuthorize.localhostOnly')}
                     </Badge>
                   )}

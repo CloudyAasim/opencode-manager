@@ -107,7 +107,7 @@ export function SSHHostKeyDialog({
         <div className="space-y-4">
           {request.isKeyChanged && (
             <Alert variant="destructive">
-              <AlertDescription className="text-sm">
+              <AlertDescription>
                 <strong>{t('misc.ssh.securityWarningLabel')}</strong>{' '}
                 {t('misc.ssh.securityWarningText')}
               </AlertDescription>
@@ -151,7 +151,7 @@ export function SSHHostKeyDialog({
             variant="outline"
             onClick={() => handleResponse('reject')}
             disabled={isLoading || isExpired}
-            className="w-full sm:flex-1 text-sm h-9 sm:h-10"
+            className="w-full sm:flex-1 h-9 sm:h-10"
           >
             {isLoading ? t('misc.ssh.processing') : t('misc.ssh.reject')}
           </Button>
@@ -159,7 +159,7 @@ export function SSHHostKeyDialog({
             variant={request.isKeyChanged ? 'destructive' : 'default'}
             onClick={() => handleResponse('accept')}
             disabled={isLoading || isExpired}
-            className="w-full sm:flex-1 text-sm h-9 sm:h-10"
+            className="w-full sm:flex-1 h-9 sm:h-10"
           >
             {isLoading ? t('misc.ssh.processing') : t('misc.ssh.accept')}
           </Button>

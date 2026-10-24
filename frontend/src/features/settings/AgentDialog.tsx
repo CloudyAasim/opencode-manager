@@ -424,7 +424,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
                     name="editPermission"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">{t('settingsPanels.agentDialog.edit')}</FormLabel>
+                        <FormLabel>{t('settingsPanels.agentDialog.edit')}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -447,7 +447,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
                     name="bashPermission"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">{t('settingsPanels.agentDialog.bash')}</FormLabel>
+                        <FormLabel>{t('settingsPanels.agentDialog.bash')}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -470,7 +470,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
                     name="webfetchPermission"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">{t('settingsPanels.agentDialog.webFetch')}</FormLabel>
+                        <FormLabel>{t('settingsPanels.agentDialog.webFetch')}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -496,7 +496,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">{t('settingsPanels.agentDialog.disableAgent')}</FormLabel>
+                      <FormLabel>{t('settingsPanels.agentDialog.disableAgent')}</FormLabel>
                       <FormDescription>
                         {t('settingsPanels.agentDialog.disableAgentDescription')}
                       </FormDescription>

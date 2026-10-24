@@ -64,20 +64,20 @@ function ChangedKeys({ entry }: { entry: OpenCodeConfigAuditEntry }) {
   return (
     <span className="flex flex-wrap items-center gap-1">
       {otherKeys.map((key) => (
-        <Badge key={key} variant="outline" className="font-mono text-2xs">{key}</Badge>
+        <Badge key={key} variant="outline" className="font-mono">{key}</Badge>
       ))}
       {added.map((id) => (
-        <Badge key={`+${id}`} className="bg-success hover:bg-success font-mono text-2xs">
+        <Badge key={`+${id}`} className="bg-success hover:bg-success font-mono">
           {t('settings.audit.configProviderAdded', { ids: id })}
         </Badge>
       ))}
       {removed.map((id) => (
-        <Badge key={`-${id}`} variant="destructive" className="font-mono text-2xs">
+        <Badge key={`-${id}`} variant="destructive" className="font-mono">
           {t('settings.audit.configProviderRemoved', { ids: id })}
         </Badge>
       ))}
       {touchedProviderOnly && (
-        <Badge variant="outline" className="font-mono text-2xs">provider</Badge>
+        <Badge variant="outline" className="font-mono">provider</Badge>
       )}
       {entry.changedKeys.length === 0 && (
         <span className="text-muted-foreground">{t('settings.audit.configNoChanges')}</span>

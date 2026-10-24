@@ -296,14 +296,14 @@ export const SessionList = ({
             <span className="text-sm font-medium text-foreground shrink-0">
               {t('session.list.selected', { count: selectedSessions.size })}
             </span>
-            <Button variant="ghost" onClick={toggleSelectAll} className="shrink-0 h-9 text-xs" size="sm">
+            <Button variant="ghost" onClick={toggleSelectAll} className="shrink-0 h-9" size="sm">
               {allVisibleSelected ? t('session.list.unselectAll') : t('session.list.selectAll')}
             </Button>
             <Button
               variant="ghost"
               onClick={handleBulkDelete}
               disabled={selectedSessions.size === 0}
-              className="shrink-0 h-9 text-xs text-destructive hover:text-destructive"
+              className="shrink-0 h-9 text-destructive hover:text-destructive"
               size="sm"
             >
               <Trash2 className="w-3 h-3 mr-1" />

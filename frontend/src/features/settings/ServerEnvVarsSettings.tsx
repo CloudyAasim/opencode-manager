@@ -83,7 +83,7 @@ export function ServerEnvVarsSettings() {
       onToggle={() => setIsOpen((value) => !value)}
       contentClassName="space-y-3"
       meta={
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="outline">
           {enabledDefaultCount + (preferences?.serverEnvVars ?? []).length}
         </Badge>
       }

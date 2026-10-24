@@ -159,7 +159,7 @@ export function AssistantWorkspaceSettings() {
               {formatBytes(totalSizeBytes)}{truncated ? '+' : ''}
             </Badge>
           </CardTitle>
-          <CardDescription className="break-all text-sm">
+          <CardDescription className="break-all">
             {contentsQuery.data?.directory ? toDisplayPath(contentsQuery.data.directory) : '—'}
           </CardDescription>
         </CardHeader>

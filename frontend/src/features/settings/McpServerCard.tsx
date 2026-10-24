@@ -26,32 +26,32 @@ interface McpServerCardProps {
 function getStatusBadge(status: McpStatus, t: Translate) {
   switch (status.status) {
     case 'connected':
-      return <Badge variant="default" className="text-xs bg-success">{t('settingsPanels.mcpServerCard.connected')}</Badge>
+      return <Badge variant="default" className="bg-success">{t('settingsPanels.mcpServerCard.connected')}</Badge>
     case 'disabled':
-      return <Badge variant="secondary" className="text-xs">{t('settingsPanels.mcpServerCard.disabled')}</Badge>
+      return <Badge variant="secondary">{t('settingsPanels.mcpServerCard.disabled')}</Badge>
     case 'failed':
       return (
-        <Badge variant="destructive" className="text-xs flex items-center gap-1">
+        <Badge variant="destructive" className="flex items-center gap-1">
           <AlertCircle className="h-3 w-3" />
           {t('settingsPanels.mcpServerCard.failed')}
         </Badge>
       )
     case 'needs_auth':
       return (
-        <Badge variant="outline" className="text-xs flex items-center gap-1 border-warning text-warning">
+        <Badge variant="outline" className="flex items-center gap-1 border-warning text-warning">
           <Key className="h-3 w-3" />
           {t('settingsPanels.mcpServerCard.authRequired')}
         </Badge>
       )
     case 'needs_client_registration':
       return (
-        <Badge variant="outline" className="text-xs flex items-center gap-1 border-warning text-primary">
+        <Badge variant="outline" className="flex items-center gap-1 border-warning text-primary">
           <AlertCircle className="h-3 w-3" />
           {t('settingsPanels.mcpServerCard.registrationRequired')}
         </Badge>
       )
     default:
-      return <Badge variant="outline" className="text-xs">{t('settingsPanels.mcpServerCard.unknown')}</Badge>
+      return <Badge variant="outline">{t('settingsPanels.mcpServerCard.unknown')}</Badge>
   }
 }
 
@@ -127,7 +127,7 @@ export function McpServerCard({
             </span>
           )}
           {status ? getStatusBadge(status, t) : (
-            <Badge variant="outline" className="text-xs">{t('settingsPanels.mcpServerCard.loading')}</Badge>
+            <Badge variant="outline">{t('settingsPanels.mcpServerCard.loading')}</Badge>
           )}
         </>
       }

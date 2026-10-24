@@ -37,10 +37,10 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
   const content = (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className="border-transparent bg-warning text-2xs uppercase tracking-wide text-white">
+        <Badge className="border-transparent bg-warning uppercase tracking-wide text-white">
           {template.category}
         </Badge>
-        <Badge className="border-transparent bg-muted text-2xs uppercase tracking-wide text-white">
+        <Badge className="border-transparent bg-muted uppercase tracking-wide text-white">
           {template.cadenceHint}
         </Badge>
       </div>
@@ -116,7 +116,7 @@ export function PromptTab({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1 text-xs"
+              className="h-7 gap-1"
               onClick={onNewTemplate}
             >
               <Plus className="h-3 w-3" />

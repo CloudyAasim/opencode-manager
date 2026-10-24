@@ -238,7 +238,7 @@ export function TTSSettings() {
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border p-4">
                 <div className="space-y-0.5">
-                  <FormLabel className="text-base">{t('settingsPanels.tts.enable')}</FormLabel>
+                  <FormLabel>{t('settingsPanels.tts.enable')}</FormLabel>
                   <FormDescription>
                     {t('settingsPanels.tts.enableDescription')}
                   </FormDescription>
@@ -260,7 +260,7 @@ export function TTSSettings() {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">{t('settingsPanels.tts.autoPlay')}</FormLabel>
+                    <FormLabel>{t('settingsPanels.tts.autoPlay')}</FormLabel>
                     <FormDescription>
                       {t('settingsPanels.tts.autoPlayDescription')}
                     </FormDescription>

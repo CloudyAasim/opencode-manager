@@ -271,7 +271,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
           size="sm"
           onClick={handleReject}
           disabled={isSubmitting}
-          className="flex-1 h-8 sm:h-10 text-sm bg-muted hover:bg-muted/80 text-foreground"
+          className="flex-1 h-8 sm:h-10 bg-muted hover:bg-muted/80 text-foreground"
         >
           {t('session.question.dismiss')}
         </Button>
@@ -281,7 +281,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               size="sm"
               onClick={handleSubmit}
               disabled={isSubmitting || !allQuestionsAnswered}
-              className="flex-1 h-8 sm:h-10 text-sm bg-success hover:bg-success text-white"
+              className="flex-1 h-8 sm:h-10 bg-success hover:bg-success text-white"
             >
               {isSubmitting ? (
                 <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
@@ -294,7 +294,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               size="sm"
               onClick={handleNext}
               disabled={isSubmitting || (expandedOther === currentIndex && !customInputs[currentIndex]?.trim())}
-              className="flex-1 h-8 sm:h-10 text-sm bg-success hover:bg-success text-white"
+              className="flex-1 h-8 sm:h-10 bg-success hover:bg-success text-white"
             >
               {expandedOther === currentIndex ? t('session.question.confirm') : t('session.question.next')}
             </Button>

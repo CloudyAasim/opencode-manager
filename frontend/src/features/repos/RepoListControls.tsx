@@ -92,7 +92,7 @@ export function RepoListControls({
           <Button
             variant="ghost"
             onClick={onSelectAll}
-            className="shrink-0 h-9 text-xs"
+            className="shrink-0 h-9"
             size="sm"
           >
             {allVisibleSelected ? t("repo.list.unselectAll") : t("repo.list.selectAll")}
@@ -100,7 +100,7 @@ export function RepoListControls({
           <Button
             variant="ghost"
             onClick={onDelete}
-            className="shrink-0 h-9 text-xs text-destructive hover:text-destructive"
+            className="shrink-0 h-9 text-destructive hover:text-destructive"
             size="sm"
           >
             <Trash2 className="w-3 h-3 mr-1" />

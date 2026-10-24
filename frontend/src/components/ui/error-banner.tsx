@@ -37,7 +37,7 @@ export function ErrorBanner({
             {title && (
               <AlertTitle className="mb-1 font-medium leading-none tracking-tight text-foreground">{title}</AlertTitle>
             )}
-            <AlertDescription className="text-sm text-muted-foreground">{summary}</AlertDescription>
+            <AlertDescription className="text-muted-foreground">{summary}</AlertDescription>
           </div>
           {onDismiss && (
             <Button

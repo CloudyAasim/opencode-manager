@@ -248,7 +248,7 @@ export function UsersSettings() {
             <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
             {t('settings.users.memberCount', { count: users.length })}
           </CardTitle>
-          <CardDescription className="text-sm">{t('settings.users.description')}</CardDescription>
+          <CardDescription>{t('settings.users.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {usersQuery.isLoading ? (

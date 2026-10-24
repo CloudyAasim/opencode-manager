@@ -296,7 +296,7 @@ export function McpOAuthDialog({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-xs text-muted-foreground"
+                  className="w-full text-muted-foreground"
                   onClick={handleOpenAuthPage}
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />
