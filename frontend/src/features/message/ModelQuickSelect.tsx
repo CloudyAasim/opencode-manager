@@ -591,7 +591,7 @@ export function ModelQuickSelect({
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder={selectedProviderId ? t('misc.modelQuickSelect.searchModels') : t('misc.modelQuickSelect.searchProviders')}
-                  className="h-9 border-border bg-muted/50 pl-9 text-foreground placeholder:text-muted-foreground"
+                  className="border-border bg-muted/50 pl-9 text-foreground placeholder:text-muted-foreground"
                   autoComplete="off"
                   name="model-search"
                 />

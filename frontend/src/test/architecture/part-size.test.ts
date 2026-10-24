@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfTag, firstClassListOf, stripComments } from './source-text'
+import { classListOfTag, constValue as sharedConstValue, firstClassListOf, stripComments } from './source-text'
 
 /**
  * 共享零件的字号，只有共享那一份说了算。
@@ -99,28 +99,8 @@ interface Part {
  * 那个调用（`const buttonVariants = cva('…', {…})`）。两种都要找得到——按钮的
  * 字号就写在第二种里面。
  */
-function constValue(text: string, identifier: string): string | undefined {
-  const match = new RegExp(`\\bconst\\s+${identifier}\\s*=`).exec(text)
-  if (!match) return undefined
-  const rest = text.slice(match.index + match[0].length)
-
-  const quoted = /^\s*(['"`])([\s\S]*?)\1/.exec(rest)
-  if (quoted) return quoted[2]
-
-  const open = rest.indexOf('(')
-  if (open < 0) return undefined
-  let depth = 0
-  let end = open
-  for (; end < rest.length; end += 1) {
-    if (rest[end] === '(') depth += 1
-    else if (rest[end] === ')') {
-      depth -= 1
-      if (depth === 0) break
-    }
-  }
-  const first = /(['"`])([\s\S]*?)\1/.exec(rest.slice(open + 1, end))
-  return first?.[2]
-}
+const constValue = (text: string, identifier: string): string | undefined =>
+  sharedConstValue(text, identifier)
 
 /** 共享的零件：`components/ui` 里导出的组件。 */
 function partsOf(): Part[] {

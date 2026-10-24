@@ -130,6 +130,36 @@ export function attributeValue(
 }
 
 /**
+ * A constant's value, wherever it is written.
+ *
+ * Two spellings: a plain string (`const SURFACE_CLASS = '…'`) and a call that
+ * wraps one (`const buttonVariants = cva('…', {…})`). Both have to be found -
+ * the size of a button lives in the second one.
+ */
+export function constValue(text: string, identifier: string): string | undefined {
+  const match = new RegExp(`\\bconst\\s+${identifier}\\s*=`).exec(text)
+  if (!match) return undefined
+  const rest = text.slice(match.index + match[0].length)
+
+  const quoted = /^\s*(['"`])([\s\S]*?)\1/.exec(rest)
+  if (quoted) return quoted[2]
+
+  const open = rest.indexOf('(')
+  if (open < 0) return undefined
+  let depth = 0
+  let end = open
+  for (; end < rest.length; end += 1) {
+    if (rest[end] === '(') depth += 1
+    else if (rest[end] === ')') {
+      depth -= 1
+      if (depth === 0) break
+    }
+  }
+  const first = /(['"`])([\s\S]*?)\1/.exec(rest.slice(open + 1, end))
+  return first?.[2]
+}
+
+/**
  * The class names a computed `className` asks for.
  *
  * Two things live in there: quoted strings, which are class names outright,

@@ -130,7 +130,7 @@ export function RepoListControls({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t("repo.list.searchPlaceholder")}
-            className="pl-9 h-9"
+            className="pl-9"
             autoComplete="off"
             name="repo-search"
           />

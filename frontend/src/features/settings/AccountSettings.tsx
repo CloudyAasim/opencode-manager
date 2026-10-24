@@ -182,11 +182,11 @@ export function AccountSettings() {
                 <div className="space-y-3 sm:space-y-4">
                   <div className="space-y-1.5">
                     <Label>{t('settingsPanels.account.name')}</Label>
-                    <Input value={user.name} disabled className="h-9 sm:h-10" />
+                    <Input value={user.name} disabled className="sm:h-10" />
                   </div>
                   <div className="space-y-1.5">
                     <Label>{t('settingsPanels.account.email')}</Label>
-                    <Input value={user.email} disabled className="h-9 sm:h-10" />
+                    <Input value={user.email} disabled className="sm:h-10" />
                   </div>
                   <Button variant="outline" onClick={() => setEditingProfile(false)} className="sm:h-10">
                     {t('settingsPanels.account.done')}
@@ -235,7 +235,7 @@ export function AccountSettings() {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder={t('settingsPanels.account.currentPasswordPlaceholder')}
-                      className="h-9 sm:h-10"
+                      className="sm:h-10"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -246,7 +246,7 @@ export function AccountSettings() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder={t('settingsPanels.account.newPasswordPlaceholder')}
-                      className="h-9 sm:h-10"
+                      className="sm:h-10"
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -291,7 +291,7 @@ export function AccountSettings() {
                   placeholder={t('settingsPanels.account.passkeyNamePlaceholder')}
                   value={passkeyName}
                   onChange={(e) => setPasskeyName(e.target.value)}
-                  className="h-9 sm:h-10"
+                  className="sm:h-10"
                 />
                 <Button
                   onClick={handleAddPasskey}

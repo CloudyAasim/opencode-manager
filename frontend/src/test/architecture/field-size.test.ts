@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfTag, firstClassListOf, stripComments, tagAt } from './source-text'
+import { classListOfTag, constValue, firstClassListOf, stripComments, tagAt } from './source-text'
 
 /**
  * 输入框里的字，由共享那一份说了算。
@@ -165,12 +165,7 @@ const FIELD_SELECTOR = /(^|[\s,>+~])((input|textarea|select)\b)|contenteditable/
 
 /** 一个常量在这份文件里的值。 */
 function constResolver(text: string): (identifier: string) => string | undefined {
-  return (identifier: string): string | undefined => {
-    const double = new RegExp(`\\b${identifier}\\s*=\\s*"([^"]*)"`).exec(text)
-    if (double) return double[1]
-    const single = new RegExp(`\\b${identifier}\\s*=\\s*'([^']*)'`).exec(text)
-    return single?.[1]
-  }
+  return (identifier: string): string | undefined => constValue(text, identifier)
 }
 
 /** 原生的输入框：会显示字、也能被输入的那种。 */

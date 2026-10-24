@@ -329,7 +329,7 @@ export const SessionList = ({
                 placeholder={t('session.list.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9"
+                className="pl-9"
                 autoComplete="off"
                 name="session-search"
               />

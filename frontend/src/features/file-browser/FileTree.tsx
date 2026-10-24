@@ -233,7 +233,7 @@ export const FileTree = memo(function FileTree({
             style={{ paddingLeft: `${row.level * 16 + 8}px` }}
           >
             {row.expandable && <div className="w-4 shrink-0" />}
-            <Input
+            <Input size="xs"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onBlur={submitRename}
@@ -241,7 +241,6 @@ export const FileTree = memo(function FileTree({
                 if (e.key === 'Enter') submitRename()
                 if (e.key === 'Escape') setEditingPath(null)
               }}
-              className="h-7"
               autoFocus
             />
           </div>
@@ -255,7 +254,7 @@ export const FileTree = memo(function FileTree({
             style={{ paddingLeft: `${row.level * 16 + 8}px` }}
           >
             {row.expandable && <div className="w-4 shrink-0" />}
-            <Input
+            <Input size="xs"
               value={copyName}
               onChange={(e) => setCopyName(e.target.value)}
               onBlur={submitCopy}
@@ -263,7 +262,6 @@ export const FileTree = memo(function FileTree({
                 if (e.key === 'Enter') submitCopy()
                 if (e.key === 'Escape') setCopyingPath(null)
               }}
-              className="h-7"
               placeholder={t('repo.fileBrowser.actions.copyName')}
               autoFocus
             />

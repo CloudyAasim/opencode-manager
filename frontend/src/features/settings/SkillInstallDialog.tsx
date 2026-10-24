@@ -161,7 +161,7 @@ export function SkillInstallDialog({ open, onOpenChange, onInstalled }: SkillIns
                   <Input
                     type="file"
                     accept=".md,text/markdown"
-                    {...{ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>}
+                    {...{ webkitdirectory: '', directory: '' } as Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>}
                     onChange={handleFileChange}
                   />
                 </div>

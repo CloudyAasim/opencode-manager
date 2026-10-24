@@ -110,11 +110,11 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
       <div className="p-3 border-b border-border flex-shrink-0">
         {isCreating ? (
           <div className="flex items-center gap-2">
-            <Input
+            <Input size="lg"
               placeholder={t('misc.branches.newBranchPlaceholder')}
               value={newBranchName}
               onChange={(e) => setNewBranchName(e.target.value)}
-              className="h-10 md:h-8"
+              className="md:h-8"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreateBranch()
@@ -151,11 +151,11 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
         ) : (
           <div className="flex items-center gap-2">
             {hasBranches && (
-              <Input
+              <Input size="lg"
                 placeholder={t('misc.branches.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 md:h-8 flex-1 min-w-0"
+                className="md:h-8 flex-1 min-w-0"
               />
             )}
             <Button
