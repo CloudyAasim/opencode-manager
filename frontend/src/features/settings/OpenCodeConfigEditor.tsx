@@ -281,7 +281,7 @@ export function OpenCodeConfigEditor({
 
           {editError && (
             <div className="max-h-40 shrink-0 space-y-2 overflow-y-auto border-t bg-background p-3">
-              <p className="break-words text-xs text-destructive sm:text-sm">
+              <p className="break-words text-sm text-destructive">
                 {editError}
                 {editErrorLine != null && (
                   <button
@@ -294,7 +294,7 @@ export function OpenCodeConfigEditor({
                 )}
               </p>
               {validationIssues.length > 0 && (
-                <ul className="max-h-28 space-y-1 pl-4 text-xs text-destructive list-disc sm:text-sm">
+                <ul className="max-h-28 space-y-1 pl-4 text-sm text-destructive list-disc">
                   {validationIssues.map((issue) => (
                     <li key={getIssueText(issue)}>
                       {issue.line != null ? (

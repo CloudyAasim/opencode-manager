@@ -213,7 +213,7 @@ export function ServerSettings() {
           so the ones used before are the point of this list, not a nicety. */}
       {recent.length > 0 && (
         <div className="space-y-2">
-          <Label className="flex items-center gap-1.5 text-muted-foreground">
+          <Label className="flex items-center gap-1.5">
             <History className="h-3.5 w-3.5" />
             {t('settingsPanels.connection.recent')}
           </Label>

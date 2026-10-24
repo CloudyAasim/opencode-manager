@@ -576,7 +576,7 @@ export function OpenCodeConfigManager() {
               ) : (
                 <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               )}
-              <span className="text-xs sm:text-sm">{t('settingsPanels.configManager.importFromHost')}</span>
+              <span className="text-sm">{t('settingsPanels.configManager.importFromHost')}</span>
             </Button>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-border p-3">

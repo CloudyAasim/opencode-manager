@@ -169,7 +169,7 @@ export function OpenCodeCoreSettings() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('settingsPanels.coreConfig.modelsTitle')}</CardTitle>
+          <CardTitle>{t('settingsPanels.coreConfig.modelsTitle')}</CardTitle>
           <CardDescription>{t('settingsPanels.coreConfig.modelsDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -211,7 +211,7 @@ export function OpenCodeCoreSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('settingsPanels.coreConfig.agentTitle')}</CardTitle>
+          <CardTitle>{t('settingsPanels.coreConfig.agentTitle')}</CardTitle>
           <CardDescription>{t('settingsPanels.coreConfig.agentDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -237,7 +237,7 @@ export function OpenCodeCoreSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('settingsPanels.coreConfig.providersTitle')}</CardTitle>
+          <CardTitle>{t('settingsPanels.coreConfig.providersTitle')}</CardTitle>
           <CardDescription>{t('settingsPanels.coreConfig.providersDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -287,7 +287,7 @@ export function OpenCodeCoreSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('settingsPanels.coreConfig.permissionTitle')}</CardTitle>
+          <CardTitle>{t('settingsPanels.coreConfig.permissionTitle')}</CardTitle>
           <CardDescription>{t('settingsPanels.coreConfig.permissionDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -326,7 +326,7 @@ export function OpenCodeCoreSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('settingsPanels.coreConfig.compactionTitle')}</CardTitle>
+          <CardTitle>{t('settingsPanels.coreConfig.compactionTitle')}</CardTitle>
           <CardDescription>{t('settingsPanels.coreConfig.compactionDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -363,7 +363,7 @@ export function OpenCodeCoreSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('settingsPanels.coreConfig.instructionsTitle')}</CardTitle>
+          <CardTitle>{t('settingsPanels.coreConfig.instructionsTitle')}</CardTitle>
           <CardDescription>{t('settingsPanels.coreConfig.instructionsDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

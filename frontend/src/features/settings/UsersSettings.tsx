@@ -167,7 +167,7 @@ export function UsersSettings() {
 
       <Card className="border-0 shadow-none">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" />
             {t('settings.users.createUser')}
           </CardTitle>
@@ -244,11 +244,11 @@ export function UsersSettings() {
 
       <Card className="border-0 shadow-none">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
             {t('settings.users.memberCount', { count: users.length })}
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">{t('settings.users.description')}</CardDescription>
+          <CardDescription className="text-sm">{t('settings.users.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {usersQuery.isLoading ? (

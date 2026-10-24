@@ -315,11 +315,11 @@ export function ProviderSettings() {
                       <CardHeader className="p-3">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="text-sm truncate">
+                            <CardTitle className="truncate">
                               {provider.name || provider.id}
                             </CardTitle>
                             {modelCount > 0 && (
-                              <CardDescription className="text-xs">
+                              <CardDescription>
                                 {t('settingsPanels.provider.models', { count: modelCount })}
                               </CardDescription>
                             )}

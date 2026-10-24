@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { PanelMessage } from '@/components/ui/panel-message'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Loader2, User, KeyRound, LogOut, Plus, Trash2, AlertCircle, CheckCircle, Lock } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -167,7 +168,7 @@ export function AccountSettings() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <CardTitle className="text-base sm:text-lg">{t('settingsPanels.account.profile')}</CardTitle>
+                  <CardTitle>{t('settingsPanels.account.profile')}</CardTitle>
                 </div>
                 {!editingProfile && (
                   <Button variant="ghost" size="sm" onClick={() => setEditingProfile(true)} className="h-8">
@@ -194,11 +195,11 @@ export function AccountSettings() {
               ) : (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4">
-                    <span className="text-xs sm:text-sm text-muted-foreground sm:w-20">{t('settingsPanels.account.name')}</span>
+                    <span className="text-sm text-muted-foreground sm:w-20">{t('settingsPanels.account.name')}</span>
                     <span className="text-sm font-medium truncate">{user.name}</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4">
-                    <span className="text-xs sm:text-sm text-muted-foreground sm:w-20">{t('settingsPanels.account.email')}</span>
+                    <span className="text-sm text-muted-foreground sm:w-20">{t('settingsPanels.account.email')}</span>
                     <span className="text-sm truncate">{user.email}</span>
                   </div>
                 </div>
@@ -208,7 +209,7 @@ export function AccountSettings() {
 
           <Card className="border-0 shadow-none">
             <CardHeader className="pb-2 sm:pb-4">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <CardTitle className="flex items-center gap-2">
                 <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
                 {t('settingsPanels.account.changePassword')}
               </CardTitle>
@@ -278,7 +279,7 @@ export function AccountSettings() {
         <div className="min-w-0 @min-[1000px]:col-span-2">
           <Card className="border-0 shadow-none">
             <CardHeader className="pb-2 sm:pb-4">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <CardTitle className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4 sm:h-5 sm:w-5" />
                 {t('settingsPanels.account.passkeys')}
               </CardTitle>
@@ -340,9 +341,12 @@ export function AccountSettings() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs sm:text-sm text-muted-foreground text-center py-3">
-                  {t('settingsPanels.account.noPasskeys')}
-                </p>
+                <PanelMessage
+                  size="sm"
+                  icon={<KeyRound />}
+                  title={t('settingsPanels.account.noPasskeys')}
+                  detail={t('settingsPanels.account.noPasskeysHint')}
+                />
               )}
             </CardContent>
           </Card>

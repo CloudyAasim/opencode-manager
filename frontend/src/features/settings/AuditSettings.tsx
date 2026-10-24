@@ -200,7 +200,7 @@ export function AuditSettings() {
 
       <Card className="border-0 shadow-none">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <CardTitle className="flex items-center gap-2">
             <History className="h-4 w-4 sm:h-5 sm:w-5" />
             {t('settings.audit.title')}
           </CardTitle>
@@ -275,7 +275,7 @@ export function AuditSettings() {
 
       <Card className="border-0 shadow-none">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <CardTitle className="flex items-center gap-2">
             <FileCog className="h-4 w-4 sm:h-5 sm:w-5" />
             {t('settings.audit.configTitle')}
           </CardTitle>

@@ -86,7 +86,7 @@ export function PermissionRequestDialog({
           
           {details.primary && (
             <div className="bg-muted/50 border rounded-md p-2 sm:p-3 max-h-32 overflow-y-auto overflow-x-hidden">
-              <pre className="text-xs sm:text-sm font-mono whitespace-pre-wrap break-all w-full">
+              <pre className="text-sm font-mono whitespace-pre-wrap break-all w-full">
                 {details.primary}
               </pre>
             </div>

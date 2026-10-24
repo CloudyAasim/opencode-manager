@@ -68,7 +68,7 @@ export function AuthInput({ className, ...props }: ComponentProps<typeof Input>)
 export function AuthField({ id, label, error, children }: AuthFieldProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="text-sm text-muted-foreground">
+      <Label htmlFor={id}>
         {label}
       </Label>
       {children}

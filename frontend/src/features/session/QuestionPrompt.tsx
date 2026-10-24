@@ -218,7 +218,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
       <div className="flex items-center px-3 py-2 sm:px-4 sm:py-2.5 border-b border-primary/40 bg-primary/10">
         <button
           onClick={() => isMinimized ? setIsMinimized(false) : handleMinimize()}
-          className="flex items-center gap-1.5 flex-1 text-left text-xs sm:text-sm font-semibold text-primary dark:text-white"
+          className="flex items-center gap-1.5 flex-1 text-left text-sm font-semibold text-primary dark:text-white"
         >
           {isMinimized
             ? <ChevronUp className="w-3 h-3 opacity-60 flex-shrink-0" />
@@ -271,7 +271,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
           size="sm"
           onClick={handleReject}
           disabled={isSubmitting}
-          className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-muted hover:bg-muted/80 text-foreground"
+          className="flex-1 h-8 sm:h-10 text-sm bg-muted hover:bg-muted/80 text-foreground"
         >
           {t('session.question.dismiss')}
         </Button>
@@ -281,7 +281,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               size="sm"
               onClick={handleSubmit}
               disabled={isSubmitting || !allQuestionsAnswered}
-              className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-success hover:bg-success text-white"
+              className="flex-1 h-8 sm:h-10 text-sm bg-success hover:bg-success text-white"
             >
               {isSubmitting ? (
                 <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
@@ -294,7 +294,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               size="sm"
               onClick={handleNext}
               disabled={isSubmitting || (expandedOther === currentIndex && !customInputs[currentIndex]?.trim())}
-              className="flex-1 h-8 sm:h-10 text-xs sm:text-sm bg-success hover:bg-success text-white"
+              className="flex-1 h-8 sm:h-10 text-sm bg-success hover:bg-success text-white"
             >
               {expandedOther === currentIndex ? t('session.question.confirm') : t('session.question.next')}
             </Button>
@@ -348,7 +348,7 @@ function QuestionStep({
 
   return (
     <div className="space-y-2 sm:space-y-3">
-      <p className="text-xs sm:text-sm font-semibold text-foreground">
+      <p className="text-sm font-semibold text-foreground">
         {question.question}
         {isMultiSelect && (
           <span className="text-foreground/60 font-normal ml-1">{t('session.question.selectAllThatApply')}</span>
@@ -380,7 +380,7 @@ function QuestionStep({
                     {isSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />}
                   </div>
                   <span className={cn(
-                    "text-xs sm:text-sm font-semibold",
+                    "text-sm font-semibold",
                     isSelected ? "text-primary" : "text-foreground"
                   )}>
                     {option.label}
@@ -421,7 +421,7 @@ function QuestionStep({
               {isCustomSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />}
             </div>
             <span className={cn(
-              "text-xs sm:text-sm font-semibold",
+              "text-sm font-semibold",
               expandedOther || isCustomSelected ? "text-primary" : "text-foreground"
             )}>
               {t('session.question.other')}
@@ -470,7 +470,7 @@ function ConfirmStep({ questions, answers, onEditQuestion }: ConfirmStepProps) {
   const { t } = useI18n()
   return (
     <div className="space-y-2 sm:space-y-3">
-      <p className="text-xs sm:text-sm font-semibold text-foreground">{t('session.question.reviewAnswers')}</p>
+      <p className="text-sm font-semibold text-foreground">{t('session.question.reviewAnswers')}</p>
       
       <div className="space-y-1.5 sm:space-y-2">
         {questions.map((q, i) => {
@@ -491,7 +491,7 @@ function ConfirmStep({ questions, answers, onEditQuestion }: ConfirmStepProps) {
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-muted-foreground truncate">{q.header}</p>
                   <p className={cn(
-                    "text-xs sm:text-sm font-semibold mt-0.5",
+                    "text-sm font-semibold mt-0.5",
                     hasAnswer ? "text-success" : "text-destructive"
                   )}>
                     {hasAnswer ? answer.join(', ') : t('session.question.notAnswered')}

@@ -121,7 +121,7 @@ export function JobDetailTab({
 
             <Card className="border-border/60 bg-background/60 shadow-none">
               <CardHeader>
-                <CardTitle className="text-base">{t('schedules.jobDetail.executionSettings')}</CardTitle>
+                <CardTitle>{t('schedules.jobDetail.executionSettings')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div>

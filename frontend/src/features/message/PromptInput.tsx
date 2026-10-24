@@ -1344,7 +1344,7 @@ return (
                 isBashMode={isBashMode}
               />
               {isSessionActive ? (
-              <div className="px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg text-xs md:text-sm font-medium text-muted-foreground max-w-[120px] md:max-w-[180px]">
+              <div className="px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg text-sm font-medium text-muted-foreground max-w-[120px] md:max-w-[180px]">
                 <SessionStatusIndicator sessionID={sessionID} showLabel />
               </div>
             ) : (
@@ -1354,7 +1354,7 @@ return (
                     directory={directory}
                   >
 <button
-                      className="px-2.5 py-0.5 md:px-3 min-h-[36px] min-w-0 rounded-lg text-xs md:text-sm font-medium border bg-muted border-border text-muted-foreground hover:bg-muted-foreground/10 hover:border-foreground/30 transition-colors cursor-pointer flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center overflow-hidden"
+                      className="px-2.5 py-0.5 md:px-3 min-h-[36px] min-w-0 rounded-lg text-sm font-medium border bg-muted border-border text-muted-foreground hover:bg-muted-foreground/10 hover:border-foreground/30 transition-colors cursor-pointer flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center overflow-hidden"
                     >
                       <span className="truncate w-full text-left">{displayModelName || t('message.actions.selectModel')}</span>
 {hasVariants && currentVariant && (

@@ -73,7 +73,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             ) : (
               <ArrowUpCircle className="h-3 w-3 sm:h-4 sm:w-4" />
             )}
-            <span className="text-xs sm:text-sm">{t('settingsPanels.serverHealth.update')}</span>
+            <span className="text-sm">{t('settingsPanels.serverHealth.update')}</span>
           </Button>
           <Button
             variant="secondary"
@@ -87,7 +87,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             ) : (
               <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
             )}
-            <span className="text-xs sm:text-sm">{t('settingsPanels.serverHealth.restart')}</span>
+            <span className="text-sm">{t('settingsPanels.serverHealth.restart')}</span>
           </Button>
           <Button
             variant="secondary"
@@ -96,7 +96,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             onClick={onOpenVersionDialog}
           >
             <History className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm">{t('settingsPanels.serverHealth.versions')}</span>
+            <span className="text-sm">{t('settingsPanels.serverHealth.versions')}</span>
           </Button>
         </div>
       </div>

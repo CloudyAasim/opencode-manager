@@ -153,13 +153,13 @@ export function AssistantWorkspaceSettings() {
 
       <Card className="border-0 shadow-none">
         <CardHeader className="pb-3">
-          <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             {t('settings.assistantWorkspace.contents')}
             <Badge variant="secondary">
               {formatBytes(totalSizeBytes)}{truncated ? '+' : ''}
             </Badge>
           </CardTitle>
-          <CardDescription className="break-all text-xs sm:text-sm">
+          <CardDescription className="break-all text-sm">
             {contentsQuery.data?.directory ? toDisplayPath(contentsQuery.data.directory) : '—'}
           </CardDescription>
         </CardHeader>
