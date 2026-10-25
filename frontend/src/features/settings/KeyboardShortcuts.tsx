@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { SettingsPanel } from '@/features/settings/SettingsPanel'
 import { PanelLoading } from '@/components/ui/panel-loading'
+import { Button } from '@/components/ui/button'
 import { useSettings } from '@/hooks/useSettings'
 import { useMobile } from '@/hooks/useMobile'
 import { X } from 'lucide-react'
@@ -260,12 +261,14 @@ export function KeyboardShortcuts() {
         {recordingLeader ? (
           <RecordingInput value={currentKeys} onStop={stopRecording} />
         ) : (
-          <button
+          <Button
+            variant="keycap"
+            size="sm"
             onClick={startRecordingLeader}
-            className="px-3 py-1.5 bg-primary/20 border border-primary/50 hover:border-primary rounded text-sm text-foreground font-mono transition-colors"
+            className="font-mono"
           >
             {normalizeShortcut(leaderKey)}
-          </button>
+          </Button>
         )}
       </div>
 

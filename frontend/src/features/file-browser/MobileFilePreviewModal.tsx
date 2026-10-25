@@ -2,6 +2,7 @@ import { memo, useCallback, useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { FilePreview } from "./FilePreview";
 import { FullscreenSheet } from "@/components/ui/fullscreen-sheet";
+import { Button } from "@/components/ui/button";
 import type { FileInfo } from "@/types/files";
 import { GPU_ACCELERATED_STYLE, MODAL_TRANSITION_MS } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -99,14 +100,16 @@ export const MobileFilePreviewModal = memo(function MobileFilePreviewModal({
           header owns the button, and when one is not, this does.
         */}
         {!showFilePreviewHeader && (
-          <button
+          <Button
             type="button"
+            variant="glass"
+            size="icon-sm"
             onClick={handleClose}
             aria-label={t('ui.filePreview.close')}
-            className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-10 inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background/90 text-muted-foreground backdrop-blur-sm hover:text-foreground"
+            className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-10 text-muted-foreground"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         )}
       </FullscreenSheet>
     </div>

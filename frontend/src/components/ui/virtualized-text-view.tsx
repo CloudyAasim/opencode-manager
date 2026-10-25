@@ -5,6 +5,7 @@ import { useMobile } from '@/hooks/useMobile'
 import { GPU_ACCELERATED_STYLE } from '@/lib/utils'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { PanelMessage } from '@/components/ui/panel-message'
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
 
 interface VirtualizedTextViewProps {
@@ -474,13 +475,15 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
       
       {hasUnsavedChanges && (
         <div className="sticky bottom-2 right-2 flex justify-end pointer-events-none">
-          <button
+          <Button
+            variant="default"
+            size="xs"
             onClick={handleSave}
             disabled={isSaving}
-            className="pointer-events-auto px-3 py-1 bg-primary text-primary-foreground rounded text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
+            className="pointer-events-auto"
           >
             {isSaving ? t('ui.virtualizedTextView.saving') : t('ui.virtualizedTextView.saveChanges')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

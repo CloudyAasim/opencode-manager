@@ -21,6 +21,20 @@ const buttonVariants = cva(
           "border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20",
         outline:
           "border border-border bg-card hover:bg-accent hover:text-accent-foreground",
+        // A quiet chip with a hairline border - the ones in a toolbar and in
+        // the model picker. It used to be written at the call sites, one chip
+        // at a time, and each of them named its own shade of the same idea.
+        muted: "border border-border bg-muted/50 hover:bg-muted",
+        // Floating on top of glass: the close key over a sheet.
+        glass:
+          "border border-border bg-background/90 backdrop-blur-sm hover:text-foreground",
+        // Outlined in the accent colour: the key that jumps to the latest.
+        accent:
+          "border border-primary/40 bg-muted text-primary ring-1 ring-primary shadow-md backdrop-blur-md",
+        // The key that stops a run, floating above the input.
+        stop: "bg-destructive text-destructive-foreground border border-destructive shadow-md shadow-destructive ring-1 ring-destructive hover:bg-destructive/90",
+        // A keycap: what a shortcut looks like.
+        keycap: "bg-primary/20 border border-primary/50 text-foreground hover:border-primary",
         // A toggle that is on. It used to be written at the call site as
         // `bg-primary text-primary-foreground`, on top of the outline face -
         // and the outline's own hover won, so the button greyed out under the
@@ -60,6 +74,10 @@ const buttonVariants = cva(
         "icon-sm": "size-8",
         icon: "size-9",
         "icon-lg": "size-10",
+        // A round one. The radius belongs to the size, the way it does for
+        // every other step of the ladder - a round key is a shape of the same
+        // kind as a small one.
+        "icon-circle": "size-9 rounded-full",
         // A finger has to find this one too: bigger on a phone, back to the
         // ordinary size on a desktop.
         "icon-touch": "size-10 md:size-8",

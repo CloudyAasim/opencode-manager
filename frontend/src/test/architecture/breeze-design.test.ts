@@ -188,14 +188,6 @@ const NOT_A_PANEL = new Map<string, { reason: string; count: number }>([
     'features/file-browser/FileBrowserView.tsx',
     { reason: '这是拖放区的虚线框，不是浮层', count: 1 },
   ],
-  [
-    'features/file-browser/MobileFilePreviewModal.tsx',
-    { reason: '这是浮在预览上的一个图标按钮', count: 1 },
-  ],
-  [
-    'features/message/PromptInput.tsx',
-    { reason: '这是发送按钮，红色是危险色，不是浮层', count: 1 },
-  ],
   ['pages/SessionDetail.tsx', { reason: '这是浮在会话标题上的一个徽章', count: 1 }],
 ])
 

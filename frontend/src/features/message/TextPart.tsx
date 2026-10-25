@@ -5,6 +5,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import { Maximize2, X, AlertCircle } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
+import { Button } from '@/components/ui/button'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import type { components } from '@/api/opencode-types'
 import { useTheme } from '@/hooks/useTheme'
@@ -144,13 +145,15 @@ function MermaidBlock({ code }: MermaidBlockProps) {
             className="relative bg-card border border-border rounded-lg p-6 max-w-[95vw] max-h-[95vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
+            <Button
+              variant="glass"
+              size="icon-sm"
               onClick={() => setIsExpanded(false)}
-              className="absolute top-3 right-3 p-2 rounded-lg bg-accent hover:bg-accent/80 text-muted-foreground hover:text-foreground"
+              className="absolute top-3 right-3 text-muted-foreground"
               title={t('message.actions.close')}
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
             <div 
               className="mermaid-expanded"
               dangerouslySetInnerHTML={{ __html: svg }}

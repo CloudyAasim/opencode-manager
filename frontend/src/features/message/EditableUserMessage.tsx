@@ -4,6 +4,7 @@ import { useRefreshMessage } from '@/hooks/useRemoveMessage'
 import { useUIState } from '@/stores/uiStateStore'
 import { useMobile } from '@/hooks/useMobile'
 import { useSessionAgent } from '@/hooks/useSessionAgent'
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
 
 interface EditableUserMessageProps {
@@ -101,19 +102,23 @@ export const EditableUserMessage = memo(function EditableUserMessage({
         </span>
         
         <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-2'}`}>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onCancel}
             disabled={refreshMessage.isPending}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-sm border border-muted-foreground/40 bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:border-muted-foreground/60 transition-colors disabled:opacity-50"
+            className="gap-1"
           >
             <X className="w-4 h-4" />
             {t('message.actions.cancel')}
-          </button>
-          
-          <button
+          </Button>
+
+          <Button
+            variant="default"
+            size="sm"
             onClick={handleSubmit}
             disabled={!editedContent.trim() || refreshMessage.isPending}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="gap-1"
           >
             {refreshMessage.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -121,7 +126,7 @@ export const EditableUserMessage = memo(function EditableUserMessage({
               <Send className="w-4 h-4" />
             )}
             {t('message.actions.resend')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

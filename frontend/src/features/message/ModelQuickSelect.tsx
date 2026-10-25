@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
 import { useShortcutAction } from '@/framework/commands/shortcutRegistry'
 import type { Model, Provider } from '@/api/providers'
@@ -585,14 +586,16 @@ export function ModelQuickSelect({
         <div className={`flex items-center justify-between gap-2 px-4 ${showAllModels ? 'pb-2 pt-2' : 'pb-3 pt-0'}`}>
           {showAllModels ? (
             <>
-              <button
+              <Button
                 type="button"
+                variant="muted"
+                size="icon-circle"
                 onClick={handleMoreModelsBack}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted"
+                className="shrink-0 text-foreground"
                 aria-label={t('misc.modelQuickSelect.backToQuickModels')}
               >
                 <ChevronLeft className="h-5 w-5" />
-              </button>
+              </Button>
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -607,14 +610,16 @@ export function ModelQuickSelect({
             </>
           ) : (
             <>
-              <button
+              <Button
                 type="button"
+                variant="muted"
+                size="icon-circle"
                 onClick={() => handleOpenChange(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted"
+                className="text-foreground"
                 aria-label={t('misc.modelQuickSelect.closeSelector')}
               >
                 <X className="h-5 w-5" />
-              </button>
+              </Button>
               <div className="min-w-0 flex-1 px-3 text-center">
                 <h2 className="truncate text-lg font-semibold tracking-tight leading-none">
                   {selectedModelLabel}
@@ -627,15 +632,17 @@ export function ModelQuickSelect({
               {hasVariants && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button
+                    <Button
                       type="button"
+                      variant="muted"
+                      size="default"
                       disabled={!model && !hasVariants}
-                      className="flex h-9 w-24 items-center justify-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 text-sm font-medium capitalize text-foreground/80 hover:bg-muted disabled:opacity-30"
+                      className="w-24 gap-1 px-1.5 capitalize text-foreground/80"
                       aria-label={t('misc.modelQuickSelect.currentVariant', { variant: selectedVariantLabel })}
                     >
                       <span className="truncate">{selectedVariantLabel}</span>
                       <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    </button>
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="z-[350] min-w-56">
                     {renderVariantMenuItems()}

@@ -22,6 +22,7 @@ import { usePermissions } from '@/contexts/EventContext'
 import { ArrowDown, Upload, X, Mic, MicOff } from 'lucide-react'
 
 import { SquareFill } from '@/components/ui/square-fill'
+import { Button } from '@/components/ui/button'
 
 import { CommandSuggestions } from './CommandSuggestions'
 import { MentionSuggestions, type MentionItem } from './MentionSuggestions'
@@ -1263,13 +1264,15 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
 return (
     <div className={`relative backdrop-blur-md bg-background opacity-95 border border-border dark:border-white/30 rounded-xl p-2 md:p-3 mb-4 md:mb-1 w-full transition-all ${hasPendingPermissionForSession ? 'border-warning ring-1 ring-warning' : ''}`}>
       {showStopButton && (
-        <button
+        <Button
+          variant="stop"
+          size="lg"
           onClick={handleStop}
-          className="absolute bottom-full right-0 mb-2 md:hidden z-50 p-3 rounded-xl transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-destructive to-destructive hover:from-destructive hover:to-destructive text-destructive-foreground border border-destructive shadow-lg shadow-destructive"
+          className="absolute bottom-full right-0 mb-2 md:hidden z-50 transition-all duration-200 active:scale-95 hover:scale-105"
           title={t('message.actions.stop')}
         >
           <SquareFill className="w-5 h-5" />
-        </button>
+        </Button>
       )}
 
       <textarea
@@ -1318,16 +1321,18 @@ return (
         <div className="flex gap-1.5 md:gap-2 items-center min-w-0">
           {showMobileScrollButton ? (
             <>
-              <button
+              <Button
                 type="button"
+                variant="accent"
+                size="default"
                 onClick={onScrollToBottom}
-                className="flex items-center gap-1.5 px-3 min-h-[36px] rounded-lg text-xs font-medium border bg-muted hover:bg-muted text-primary hover:text-primary border-primary/40 shadow-md backdrop-blur-md transition-all duration-200 active:scale-95 ring-1 ring-primary"
+                className="gap-1.5 transition-all duration-200 active:scale-95"
                 title={t('message.actions.scrollToBottom')}
                 aria-label={t('message.actions.scrollToBottom')}
               >
                 <ArrowDown className="w-4 h-4" />
                 <span>{t('message.actions.latest')}</span>
-              </button>
+              </Button>
               {isSessionActive && (
                 <div className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground max-w-[120px]">
                   <SessionStatusIndicator sessionID={sessionID} showLabel />
@@ -1353,14 +1358,16 @@ return (
                     opcodeUrl={opcodeUrl}
                     directory={directory}
                   >
-<button
-                      className="px-2.5 py-0.5 md:px-3 min-h-[36px] min-w-0 rounded-lg text-sm font-medium border bg-muted border-border text-muted-foreground hover:bg-muted-foreground/10 hover:border-foreground/30 transition-colors cursor-pointer flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center overflow-hidden"
+<Button
+                      variant="muted"
+                      size="default"
+                      className="px-2.5 py-0.5 md:px-3 min-w-0 font-medium text-muted-foreground hover:border-foreground/30 transition-colors flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center overflow-hidden"
                     >
                       <span className="truncate w-full text-left">{displayModelName || t('message.actions.selectModel')}</span>
 {hasVariants && currentVariant && (
                         <span className="text-xs truncate w-full text-center capitalize">{currentVariant}</span>
                       )}
-                   </button>
+                   </Button>
                  </ModelQuickSelect>
                 )
               )}
@@ -1369,22 +1376,26 @@ return (
         </div>
 <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
             {!isMobile && (
-              <button
+              <Button
+                variant="accent"
+                size="icon-lg"
                 onClick={onScrollToBottom}
-                className={`p-2 rounded-lg bg-muted hover:bg-muted text-primary hover:text-primary transition-all duration-200 active:scale-95 hover:scale-105 shadow-md border border-primary/40 backdrop-blur-md ring-1 ring-primary ${showScrollButton ? 'visible' : 'invisible'}`}
+                className={`transition-all duration-200 active:scale-95 hover:scale-105 ${showScrollButton ? 'visible' : 'invisible'}`}
                 title={t('message.actions.scrollToBottom')}
               >
                 <ArrowDown className="w-6 h-6" />
-              </button>
+              </Button>
             )}
 {showStopButton && (
-            <button
+            <Button
+              variant="stop"
+              size="sm"
               onClick={handleStop}
-              className="hidden md:block p-1.5 px-5 md:p-2 md:px-6 rounded-lg transition-all duration-200 active:scale-95 hover:scale-105 bg-gradient-to-br from-destructive to-destructive hover:from-destructive hover:to-destructive text-destructive-foreground border border-destructive hover:border-destructive/40 shadow-md shadow-destructive hover:shadow-destructive ring-1 ring-destructive hover:ring-destructive"
+              className="hidden md:block p-1.5 px-5 md:p-2 md:px-6 transition-all duration-200 active:scale-95 hover:scale-105"
               title={t('message.actions.stop')}
             >
               <SquareFill className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
+            </Button>
 )}
           <input
             ref={fileInputRef}
@@ -1393,14 +1404,16 @@ return (
             className="hidden"
             onChange={handleFileInputChange}
           />
-          <button
+          <Button
             type="button"
+            variant="muted"
+            size="icon-lg"
             onClick={() => fileInputRef.current?.click()}
-            className="hidden md:block p-2 rounded-lg bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95 hover:scale-105 shadow-md border border-border"
+            className="hidden md:block text-muted-foreground transition-all duration-200 active:scale-95 hover:scale-105"
             title={t('message.actions.uploadImageOrPdf')}
           >
             <Upload className="w-5 h-5" />
-          </button>
+          </Button>
           {sttEnabled && sttSupported && (
             renderVoiceButton('desktop')
           )}

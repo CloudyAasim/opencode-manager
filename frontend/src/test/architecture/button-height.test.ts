@@ -64,6 +64,10 @@ const LADDER: Record<string, { phone: number; desktop: number | null }> = {
   'icon-sm': { phone: 32, desktop: null },
   icon: { phone: 36, desktop: null },
   'icon-lg': { phone: 40, desktop: null },
+  // A round one. The radius belongs to the size, the way it does for every
+  // other step of the ladder - a round key is a shape of the same kind as a
+  // small one.
+  'icon-circle': { phone: 36, desktop: null },
   'icon-touch': { phone: 40, desktop: 32 },
 }
 

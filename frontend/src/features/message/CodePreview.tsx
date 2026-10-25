@@ -1,5 +1,6 @@
 import React from 'react'
 import { CopyButton } from '@/components/ui/copy-button'
+import { Button } from '@/components/ui/button'
 import { useMobile } from '@/hooks/useMobile'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
@@ -92,21 +93,25 @@ export function CodePreview({ fileName, content }: CodePreviewProps) {
       </div>
 
       {isLargeFile && !showMore && (
-        <button
+        <Button
+          variant="muted"
+          size="xs"
           onClick={() => setShowMore(true)}
-          className="mx-3 my-2 px-3 py-1.5 bg-muted hover:bg-muted/70 border border-border/50 rounded text-xs text-muted-foreground"
+          className="mx-3 my-2 text-muted-foreground"
         >
           {t('message.files.showMoreLines', { lines: totalLines - INITIAL_CODE_LINES })}
-        </button>
+        </Button>
       )}
 
       {isLargeFile && showMore && (
-        <button
+        <Button
+          variant="muted"
+          size="xs"
           onClick={() => setShowMore(false)}
-          className="mx-3 my-2 px-3 py-1.5 bg-muted hover:bg-muted/70 border border-border/50 rounded text-xs text-muted-foreground"
+          className="mx-3 my-2 text-muted-foreground"
         >
           {t('message.actions.showLess')}
-        </button>
+        </Button>
       )}
     </div>
   )
