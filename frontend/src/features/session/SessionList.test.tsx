@@ -102,7 +102,13 @@ describe('SessionList', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {
-      expect(deleteSessionMock).toHaveBeenCalledWith([
+      expect(deleteSessionMock).toHaveBeenCalledTimes(1)
+      // The three directories are fetched in parallel, so the order they come
+      // back in is not the order they were asked for. What matters is that
+      // each one was picked on its own - the same id under three directories
+      // is three sessions, not one.
+      const deleted = deleteSessionMock.mock.calls[0]![0] as Array<{ directory: string }>
+      expect([...deleted].sort((a, b) => a.directory.localeCompare(b.directory))).toEqual([
         { id: 'ses_same', directory: '/w/a', workspaceID: 'wrk_a' },
         { id: 'ses_same', directory: '/w/b', workspaceID: 'wrk_b' },
         { id: 'ses_same', directory: '/w/c', workspaceID: 'wrk_c' },
