@@ -183,7 +183,7 @@ export function ProviderSettings() {
           </div>
 
         {oauthProviders.length === 0 ? (
-          <Card className="bg-card border-border">
+          <Card>
             <CardContent className="pt-6">
               <PanelMessage
   size="sm"
@@ -315,7 +315,7 @@ export function ProviderSettings() {
                 apiKeyProviders.connected.map((provider) => {
                   const modelCount = Object.keys(provider.models || {}).length
                   return (
-                    <Card key={provider.id} className="bg-card border-border">
+                    <Card key={provider.id}>
                       <CardHeader className="p-3">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex-1 min-w-0">

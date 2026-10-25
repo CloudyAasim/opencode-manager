@@ -278,7 +278,7 @@ export function RepoSchedulesView() {
       <div className="flex flex-1 min-h-0 flex-col overflow-hidden px-2 md:px-6">
         {!hasJobs ? (
           <div className="flex min-h-0 flex-1 h-full items-start">
-            <Card className="max-w-3xl border-dashed border-border/70">
+            <Card variant="dashed" className="max-w-3xl">
               <CardContent className="flex flex-col items-start gap-4 p-8 sm:p-10">
                 <div className="rounded-full border border-border bg-muted/40 p-3">
                   <CalendarClock className="h-6 w-6 text-muted-foreground" />

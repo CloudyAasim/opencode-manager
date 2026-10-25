@@ -163,7 +163,7 @@ export function AccountSettings() {
 
       <div className="grid grid-cols-1 gap-4 sm:gap-6 @min-[1000px]:grid-cols-3 @min-[1000px]:items-start">
         <div className="min-w-0 space-y-4 sm:space-y-6">
-          <Card className="border-0 shadow-none">
+          <Card variant="flat">
             <CardHeader className="pb-3 sm:pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -207,7 +207,7 @@ export function AccountSettings() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-none">
+          <Card variant="flat">
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2">
                 <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -272,7 +272,7 @@ export function AccountSettings() {
         </div>
 
         <div className="min-w-0 @min-[1000px]:col-span-2">
-          <Card className="border-0 shadow-none">
+          <Card variant="flat">
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4 sm:h-5 sm:w-5" />

@@ -119,7 +119,7 @@ export function JobDetailTab({
               )}
             </div>
 
-            <Card className="border-border/60 bg-background/60 shadow-none">
+            <Card variant="muted">
               <CardHeader>
                 <CardTitle>{t('schedules.jobDetail.executionSettings')}</CardTitle>
               </CardHeader>

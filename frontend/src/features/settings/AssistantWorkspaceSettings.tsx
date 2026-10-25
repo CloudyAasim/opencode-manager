@@ -151,7 +151,7 @@ export function AssistantWorkspaceSettings() {
         <AlertDescription>{t('settings.assistantWorkspace.projectsHint')}</AlertDescription>
       </Alert>
 
-      <Card className="border-0 shadow-none">
+      <Card variant="flat">
         <CardHeader className="pb-3">
           <CardTitle className="flex flex-wrap items-center gap-2">
             {t('settings.assistantWorkspace.contents')}

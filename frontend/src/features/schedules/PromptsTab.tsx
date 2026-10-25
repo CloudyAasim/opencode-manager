@@ -115,7 +115,7 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
           <PanelLoading size="md" />
         ) : templates.length === 0 ? (
           <div className="flex min-h-full items-center justify-center">
-            <Card className="max-w-md border-dashed border-border/70">
+            <Card variant="dashed" className="max-w-md">
               <PanelMessage
                 icon={<FileText />}
                 title={t('schedules.promptTemplates.emptyTitle')}

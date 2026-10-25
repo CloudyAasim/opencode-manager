@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, stripComments, tagAt, variantsOf } from './source-text'
+import { classListOfAttrs, ownListOf, stripComments, tagAt, variantsOf } from './source-text'
 
 /**
  * 共享零件的脸，各有各副。
@@ -21,10 +21,15 @@ import { classListOfAttrs, stripComments, tagAt, variantsOf } from './source-tex
  * - 一个提示框写 `border-primary bg-primary` ✗——底下是主色 ✗，
  *   字却还是页面的颜色 ✗。
  *
+ * **卡片**也是 ✗：它本来只有一副脸 ✗，而"别的样子" ✗——嵌在面板里的 ✓、
+ * 空着的 ✓、推后一步的 ✓、只是个框的 ✓——**每一句都被说了好几遍** ✗
+ * （不要边不要影 ✗ 说了八遍 ✗，虚线边 ✗ 说了六遍 ✗）。
+ *
  * 所以这一轮：
  *
  * - **它们有了名字** ✓：徽章多了 `success` ✓、`warning` ✓、`outline-warning` ✓，
- *   警告多了 `success` ✓、`primary` ✓——和尺寸的那道楼梯一样 ✓，
+ *   警告多了 `success` ✓、`primary` ✓，卡片多了 `flat` ✓、`dashed` ✓、
+ *   `muted` ✓、`transparent` ✓——和尺寸的那道楼梯一样 ✓，
  *   每一副写明自己的脸 ✓。
  * - **一副脸里，字和底不许是同一个颜色** ✓。
  * - **调用点不许自己写脸** ✓（和按钮 ✗、字段 ✗ 一样 ✓）。
@@ -39,10 +44,11 @@ const SOURCES = graph.files.map((file) => ({
   text: stripComments(fs.readFileSync(file, 'utf8')),
 }))
 
-/** 这一轮管的两个零件 ✓，和它们各自的文件 ✓。 */
+/** 这一轮管的那几个零件 ✓，和它们各自的文件 ✓。 */
 const PARTS: Record<string, string> = {
   Badge: 'components/ui/badge.tsx',
   Alert: 'components/ui/alert.tsx',
+  Card: 'components/ui/card.tsx',
 }
 
 /** 所有的"有档的"零件 ✓——颜色那一道规矩管的是全部 ✓。 */
@@ -96,6 +102,11 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'border-border',
     '错误横幅是**一张卡片** ✗，不是普通警告 ✗',
   ],
+  [
+    'features/session/SessionCard.tsx',
+    'rounded-none',
+    '这一张**开着** ✗，它没有圆角 ✓',
+  ],
 ]
 
 /** 这一处被点名了吗 ✗。 */
@@ -146,6 +157,7 @@ describe('共享零件的脸，各有各副', () => {
     }
     expect(variantsOfPart(PARTS.Badge!).has('success'), '徽章没有成功那一副').toBe(true)
     expect(variantsOfPart(PARTS.Alert!).has('success'), '警告没有成功那一副').toBe(true)
+    expect(variantsOfPart(PARTS.Card!).has('flat'), '卡片没有"嵌在面板里"那一副').toBe(true)
 
     // 找得到调用点 ✓。
     expect(CALL_SITES.length, '一个徽章或警告的调用点都没找到，这道门禁多半跑在空集上').toBeGreaterThan(10)
@@ -161,9 +173,15 @@ describe('共享零件的脸，各有各副', () => {
     // `bg-success` 是 `#27ae60` ✗，`text-success` **也是** ✗——
     // 字和它自己的底一个颜色 ✗，**看不见** ✗。
     // 半透明的底 ✗（`bg-destructive/10` ✓）不算 ✗：那底子几乎透明 ✗，字看得见 ✓。
+    // **底子**也要看 ✓：卡片那一副的脸 ✗，就写在它的底子上 ✗。
     const offenders: string[] = []
     for (const [part, rel] of Object.entries(WITH_VARIANTS)) {
-      for (const [name, list] of variantsOfPart(rel)) {
+      const source = SOURCES.find((candidate) => candidate.rel === rel)
+      const faces: Array<readonly [string, string]> = [
+        ['底子', ownListOf(source?.text ?? '')],
+        ...variantsOfPart(rel).entries(),
+      ]
+      for (const [name, list] of faces) {
         const tokens = list.split(/\s+/).filter(Boolean)
         const background = tokens.find((token) => /^bg-[a-z-]+$/.test(token))?.slice(3)
         const text = tokens.find((token) => /^text-[a-z-]+$/.test(token))?.slice(5)

@@ -79,7 +79,7 @@ export function LogsViewer() {
     .join('\n')
 
   return (
-    <Card className="flex h-full min-h-0 flex-col border-0 bg-transparent shadow-none">
+    <Card variant="transparent" className="flex h-full min-h-0 flex-col">
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3 p-0">
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Select value={level} onValueChange={(value) => setLevel(value as LevelFilter)}>

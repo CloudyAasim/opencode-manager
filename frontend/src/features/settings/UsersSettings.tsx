@@ -165,7 +165,7 @@ export function UsersSettings() {
         </Alert>
       )}
 
-      <Card className="border-0 shadow-none">
+      <Card variant="flat">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -238,7 +238,7 @@ export function UsersSettings() {
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-none">
+      <Card variant="flat">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />

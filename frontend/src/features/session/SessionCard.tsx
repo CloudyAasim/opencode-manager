@@ -121,19 +121,14 @@ export const SessionCard = ({
       </div>
       <div ref={cardRef} style={swipeStyles} className={isDragging ? 'opacity-40' : undefined}>
         <Card
+          variant={isSelected ? 'selected' : isActive ? 'active' : 'default'}
           className={`p-2 cursor-pointer transition-all overflow-hidden ${
             isDragging ? 'ring-2 ring-primary' : ''
           } ${
             isOpen
               ? "rounded-none"
               : "rounded-r-lg"
-          } ${
-            isSelected
-              ? "border-primary shadow-lg shadow-primary bg-accent"
-              : isActive
-                ? "bg-accent border-border"
-                : "bg-card border-border hover:bg-accent hover:border-border"
-          } hover:shadow-lg`}
+          } ${isSelected || isActive ? '' : 'hover:bg-accent hover:border-border'} hover:shadow-lg`}
           onClick={() => {
             if (!isOpen) {
               if (manageMode) {

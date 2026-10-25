@@ -186,7 +186,7 @@ export const SessionList = ({
       return (
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-4 min-h-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
           <Card
-            className="p-6 cursor-pointer hover:bg-accent hover:border-border transition-all border-dashed"
+            variant="dashed" className="p-6 cursor-pointer hover:bg-accent hover:border-border transition-all"
             onClick={() => createSession.mutate({ agent: undefined })}
           >
             <div className="flex flex-col items-center justify-center gap-2 text-center">
