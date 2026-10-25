@@ -336,7 +336,6 @@ export function TTSSettings() {
                         <FormControl>
                           <Input
                             placeholder="https://api.openai.com"
-                            className="bg-background"
                             {...field}
                             onChange={(e) => {
                               field.onChange(e)
@@ -361,7 +360,6 @@ export function TTSSettings() {
                           <Input
                             type="password"
                             placeholder="sk-..."
-                            className="bg-background"
                             {...field}
                             onChange={(e) => {
                               field.onChange(e)

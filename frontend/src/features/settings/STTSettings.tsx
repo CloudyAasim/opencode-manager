@@ -288,7 +288,6 @@ export function STTSettings() {
                           <Input
                             type="password"
                             placeholder={t('settingsPanels.stt.apiKeyPlaceholder')}
-                            className="bg-background"
                             {...field}
                             onChange={(e) => {
                               field.onChange(e)

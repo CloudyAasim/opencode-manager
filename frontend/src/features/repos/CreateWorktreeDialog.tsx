@@ -133,7 +133,7 @@ export function CreateWorktreeDialog({
               <div className="space-y-1.5">
                 <Label>{t('repo.worktreeCreation.baseBranch')}</Label>
                 <Select value={baseBranch} onValueChange={setBaseBranch} disabled={branchesLoading}>
-                  <SelectTrigger className="bg-background border-border text-foreground">
+                  <SelectTrigger className="text-foreground">
                     <SelectValue placeholder={branchesLoading ? t('repo.worktreeCreation.loadingBranches') : t('repo.worktreeCreation.selectBaseBranch')} />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border">

@@ -534,7 +534,7 @@ export function OpenCodeModelDialog({
                     <FormLabel>{t('settingsPanels.modelDialog.provider')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={isEditing}>
                       <FormControl>
-                        <SelectTrigger className={isEditing ? 'bg-muted' : ''}>
+                        <SelectTrigger>
                           <SelectValue placeholder={t('settingsPanels.modelDialog.selectProvider')} />
                         </SelectTrigger>
                       </FormControl>

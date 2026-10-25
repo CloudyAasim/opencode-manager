@@ -170,7 +170,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                 value={repoUrl}
                 onChange={(e) => handleRepoUrlChange(e.target.value)}
                 disabled={mutation.isPending}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                className="text-foreground placeholder:text-muted-foreground"
               />
               <p className="text-xs text-muted-foreground">
                 {t('repo.addDialog.repositoryUrlHint')}
@@ -185,7 +185,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                   value={localPath}
                   onChange={(e) => setLocalPath(e.target.value)}
                   disabled={mutation.isPending}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  className="text-foreground placeholder:text-muted-foreground"
                 />
                 <Button
                   type="button"
@@ -211,7 +211,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                   value={folderPath}
                   onChange={(e) => setFolderPath(e.target.value)}
                   disabled={mutation.isPending}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  className="text-foreground placeholder:text-muted-foreground"
                 />
                 <Button
                   type="button"
@@ -238,7 +238,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                 value={directoryName}
                 onChange={(e) => handleDirectoryNameChange(e.target.value)}
                 disabled={mutation.isPending}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                className="text-foreground placeholder:text-muted-foreground"
               />
               {directoryNameError ? (
                 <p className="text-xs text-warning">
@@ -268,7 +268,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
               value={branch}
               onChange={(e) => setBranch(e.target.value)}
               disabled={mutation.isPending || repoType === 'folder'}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+              className="text-foreground placeholder:text-muted-foreground"
             />
             <p className="text-xs text-muted-foreground">
               {repoType === 'folder' 

@@ -122,7 +122,6 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
                         {...field}
                         placeholder={t('settingsPanels.skillDialog.namePlaceholder')}
                         disabled={!!editingSkill}
-                        className={editingSkill ? 'bg-muted' : ''}
                       />
                     </FormControl>
                     <FormDescription>
@@ -177,7 +176,7 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
                     <FormLabel>{t('settingsPanels.skillDialog.scope')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={!!editingSkill}>
                       <FormControl>
-                        <SelectTrigger className={editingSkill ? 'bg-muted' : ''}>
+                        <SelectTrigger>
                           <SelectValue placeholder={t('settingsPanels.skillDialog.selectScope')} />
                         </SelectTrigger>
                       </FormControl>

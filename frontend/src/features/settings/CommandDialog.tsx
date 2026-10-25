@@ -117,7 +117,6 @@ export function CommandDialog({
                         {...field}
                         placeholder={t("settingsPanels.commandDialog.namePlaceholder")}
                         disabled={!!editingCommand}
-                        className={editingCommand ? "bg-muted" : ""}
                       />
                     </FormControl>
                     <FormDescription>

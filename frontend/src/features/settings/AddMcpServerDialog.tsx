@@ -187,7 +187,6 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                 value={serverId}
                 onChange={(e) => setServerId(e.target.value)}
                 placeholder={t('settingsPanels.addMcpServer.serverIdPlaceholder')}
-                className="bg-background border-border"
               />
               <p className="text-xs text-muted-foreground">
                 {t('settingsPanels.addMcpServer.serverIdHint')}
@@ -197,7 +196,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
             <div className="space-y-1.5">
               <Label htmlFor="serverType">{t('settingsPanels.addMcpServer.serverType')}</Label>
               <Select value={serverType} onValueChange={(value: 'local' | 'remote') => setServerType(value)}>
-                <SelectTrigger className="bg-background border-border">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -215,7 +214,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                   value={command}
                   onChange={(e) => setCommand(e.target.value)}
                   placeholder={t('settingsPanels.addMcpServer.commandPlaceholder')}
-                  className="bg-background border-border font-mono"
+                  className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
                   {t('settingsPanels.addMcpServer.commandHint')}
@@ -229,7 +228,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder={t('settingsPanels.addMcpServer.serverUrlPlaceholder')}
-                  className="bg-background border-border font-mono"
+                  className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
                   {t('settingsPanels.addMcpServer.serverUrlHint')}
@@ -259,7 +258,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                         value={oauthClientId}
                         onChange={(e) => setOauthClientId(e.target.value)}
                         placeholder={t('settingsPanels.addMcpServer.optional')}
-                        className="bg-background border-border font-mono"
+                        className="font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -270,7 +269,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                         value={oauthClientSecret}
                         onChange={(e) => setOauthClientSecret(e.target.value)}
                         placeholder={t('settingsPanels.addMcpServer.optional')}
-                        className="bg-background border-border font-mono"
+                        className="font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -280,7 +279,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                         value={oauthScope}
                         onChange={(e) => setOauthScope(e.target.value)}
                         placeholder={t('settingsPanels.addMcpServer.scopePlaceholder')}
-                        className="bg-background border-border font-mono"
+                        className="font-mono"
                       />
                     </div>
                   </div>
@@ -307,13 +306,13 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                       value={env.key}
                       onChange={(e) => handleUpdateEnvironmentVar(index, 'key', e.target.value)}
                       placeholder={t('settingsPanels.addMcpServer.apiKeyPlaceholder')}
-                      className="bg-background border-border font-mono"
+                      className="font-mono"
                     />
                     <Input
                       value={env.value}
                       onChange={(e) => handleUpdateEnvironmentVar(index, 'value', e.target.value)}
                       placeholder={t('settingsPanels.addMcpServer.valuePlaceholder')}
-                      className="bg-background border-border font-mono"
+                      className="font-mono"
                     />
                     {environment.length > 1 && (
                       <Button
@@ -342,7 +341,6 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
                 value={timeout}
                 onChange={(e) => setTimeout(e.target.value)}
                 placeholder={t('settingsPanels.addMcpServer.timeoutPlaceholder')}
-                className="bg-background border-border"
               />
               <p className="text-xs text-muted-foreground">
                 {t('settingsPanels.addMcpServer.timeoutHint')}

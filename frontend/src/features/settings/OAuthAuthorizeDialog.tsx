@@ -199,7 +199,6 @@ export function OAuthAuthorizeDialog({
                             value={methodInputs[prompt.key] || ''}
                             onChange={(e) => handlePromptChange(index, prompt.key, e.target.value)}
                             placeholder={prompt.placeholder}
-                            className="bg-background border-border"
                             disabled={isLoading}
                           />
                         </div>
@@ -211,7 +210,7 @@ export function OAuthAuthorizeDialog({
                             onValueChange={(value) => handlePromptChange(index, prompt.key, value)}
                             disabled={isLoading}
                           >
-                            <SelectTrigger className="bg-background border-border">
+                            <SelectTrigger>
                               <SelectValue placeholder={t('settingsPanels.oauthAuthorize.selectOption')} />
                             </SelectTrigger>
                             <SelectContent>

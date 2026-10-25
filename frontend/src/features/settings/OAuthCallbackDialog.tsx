@@ -151,7 +151,6 @@ export function OAuthCallbackDialog({
                   value={authCode}
                   onChange={(e) => setAuthCode(e.target.value)}
                   placeholder={t('settingsPanels.oauthCallback.authCodePlaceholder')}
-                  className="bg-background border-border"
                   disabled={isLoading}
                 />
               </div>

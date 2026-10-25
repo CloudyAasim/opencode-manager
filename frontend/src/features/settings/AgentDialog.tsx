@@ -188,7 +188,6 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
                         {...field}
                         placeholder={t('settingsPanels.agentDialog.namePlaceholder')}
                         disabled={!!editingAgent}
-                        className={editingAgent ? 'bg-muted' : ''}
                       />
                     </FormControl>
                     <FormDescription>
