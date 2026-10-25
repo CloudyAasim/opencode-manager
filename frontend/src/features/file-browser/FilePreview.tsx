@@ -431,13 +431,13 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               )}
               
               {showSaveButton && (
-                <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (shouldVirtualize) { handleVirtualizedSaveClick(); } else { handleSave(); } }} disabled={isSaving || (shouldVirtualize && !hasVirtualizedChanges)} className="border-success bg-success text-success hover:bg-success">
+                <Button variant="success" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (shouldVirtualize) { handleVirtualizedSaveClick(); } else { handleSave(); } }} disabled={isSaving || (shouldVirtualize && !hasVirtualizedChanges)}>
                   <Save className="w-3 h-3" />
                 </Button>
               )}
               
               {showCancelButton && (
-                <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCancel() }} className="border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20">
+                <Button variant="outline-destructive" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCancel() }}>
                   <XIcon className="w-3 h-3" />
                 </Button>
               )}
@@ -449,7 +449,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               )}
               
               {viewMode !== 'edit' && isMobileModal && onCloseModal && (
-                <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onCloseModal() }} className="border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20">
+                <Button variant="outline-destructive" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onCloseModal() }}>
                   <X className="w-3 h-3" />
                 </Button>
               )}

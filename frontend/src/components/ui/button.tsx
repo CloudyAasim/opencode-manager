@@ -13,6 +13,12 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary-hover",
         destructive:
           "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/30",
+        // The affirmative one, and the destructive one with an outline. They
+        // used to be written at the call sites, one button at a time - and
+        // every one of them was a slightly different shade of the same idea.
+        success: "bg-success text-white",
+        "outline-destructive":
+          "border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20",
         outline:
           "border border-border bg-card hover:bg-accent hover:text-accent-foreground",
         secondary:

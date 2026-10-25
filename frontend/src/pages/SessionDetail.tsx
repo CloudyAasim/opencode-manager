@@ -55,7 +55,6 @@ import type { MessageWithParts } from "@/api/types";
 import { getMessagesContentVersion } from "./sessionContentVersion";
 import { showToast } from "@/lib/toast";
 import { getRepoDisplayName } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 import { RepoOverlays } from "@/features/repos/RepoOverlays";
 import { createOpenCodeClient } from "@/api/opencode";
 import { usePermissions, useQuestions, useSSEHealth } from "@/contexts/EventContext";
@@ -812,7 +811,7 @@ export function SessionDetail() {
               onClick={() => setRailOpen((open) => !open)}
               aria-label={t('navigation.sessions')}
               title={t('navigation.sessions')}
-              className={cn('shrink-0 bg-accent text-foreground', railOpen && 'bg-accent text-foreground')}
+              className="shrink-0 bg-accent text-foreground"
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
@@ -844,7 +843,7 @@ export function SessionDetail() {
               onClick={() => setRightPanelOpen((open) => !open)}
               aria-label={t('navigation.detail')}
               title={t('navigation.detail')}
-              className={cn('bg-accent text-foreground', rightPanelOpen && 'bg-accent text-foreground')}
+              className="bg-accent text-foreground"
             >
               <PanelRight className="h-4 w-4" />
             </Button>

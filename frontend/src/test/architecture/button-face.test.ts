@@ -22,6 +22,16 @@ import { classListOfAttrs, stripComments, tagAt, variantsOf } from './source-tex
  * 改了一处 ✗，另一处不动 ✗，按钮就变了样 ✗。
  *
  * 所以这一轮：**调用点不许重复它那一档说过的话** ✓。
+ *
+ * 而那一轮之后还剩下一件事 ✗：**有的按钮画的是另一张脸** ✗——
+ * 绿色的 ✗、危险色描边的 ✗、灰色的 ✗，一个一个写在调用点上 ✗，
+ * 每一种还都写着**不止一种写法** ✗（绿的有白字 ✗、有绿图标 ✗）。
+ *
+ * 于是它们**有了名字** ✓：`success` ✓、`outline-destructive` ✓、
+ * `secondary` ✓——和尺寸的那道楼梯一样 ✓，每一档写明自己的脸 ✓。
+ *
+ * 所以这一轮的第二件事：**调用点不许自己写脸上那几类** ✓——
+ * **带前缀的那一句不算** ✓，那是**状态** ✗（`hover:bg-muted` ✓ 是悬停时变灰 ✓）。
  */
 
 const FRONTEND_SRC = path.resolve(__dirname, '../..')
@@ -41,6 +51,52 @@ const VARIANTS = variantsOf(
   SOURCES.find((source) => source.rel === SHARED_BUTTON)?.text ?? '',
   'variant',
 )
+
+/**
+ * 脸上那几类 ✓。
+ *
+ * **没有前缀的** ✓才是脸本身 ✓——带前缀的那一句 ✗ 是**状态** ✗
+ * （`hover:bg-muted` ✓ 是悬停时变灰 ✓），不是另一张脸 ✗。
+ */
+const FACE_TOKEN = /^(?:rounded|bg|border|shadow)(?:-|$)/
+
+/**
+ * **哪一边**的那些 ✗ 是在改**形状** ✓，不是另一张脸 ✗。
+ *
+ * `rounded-l-none` ✓ 是"只有右边是圆的" ✓，`border-l-0` ✓ 是"左边不要边框" ✓——
+ * 它们说的还是**这一副脸** ✓，只是它的边 ✗。
+ */
+const SHAPE_TOKEN = /^(?:rounded|border)-(?:[lrtybxy]{1,2})(?:-|$)/
+
+/**
+ * 一次性的那几处，各有理由。
+ *
+ * - 会话页头部那两个键 ✗：**一直亮着** ✗（打开与否都是这一副脸 ✗）。
+ * - 标题栏里那个和输入框**连在一起**的键 ✗：它要一道边框 ✓，
+ *   也只要那一道 ✓。
+ */
+const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
+  [
+    'pages/SessionDetail.tsx',
+    'bg-accent',
+    '这一栏**一直亮着** ✗（打开与否都是这一副脸 ✗）',
+  ],
+  [
+    'components/ui/header.tsx',
+    'border',
+    '这个键和输入框**连在一起** ✗：它要一道边框 ✓',
+  ],
+  [
+    'components/ui/header.tsx',
+    'border-border',
+    '这个键和输入框**连在一起** ✗：边框就是那一道 ✓',
+  ],
+]
+
+/** 这一处被点名了吗 ✗。 */
+function excused(rel: string, token: string): boolean {
+  return EXCEPTIONS.some(([file, marked]) => file === rel && marked === token)
+}
 
 /** 那一档说过的每一个词 ✓。 */
 function saidBy(variant: string): Set<string> {
@@ -105,6 +161,11 @@ describe('按钮的脸，是它那一档的事', () => {
       'text-primary-foreground',
     ].filter((token) => saidBy('default').has(token))
     expect(repeated.length, '认不出"同一句话说了两遍"').toBe(3)
+
+    // 认得脸上那几类 ✓——以及"带前缀的那一句是状态，不是脸" ✓。
+    expect(FACE_TOKEN.test('bg-muted'), '认不出一个背景').toBe(true)
+    expect(FACE_TOKEN.test('border-border'), '认不出一道边框').toBe(true)
+    expect(FACE_TOKEN.test('hover:bg-muted'), '把一个状态当成了脸').toBe(false)
   })
 
   it('调用点不许重复它那一档说过的话', () => {
@@ -127,5 +188,44 @@ describe('按钮的脸，是它那一档的事', () => {
         '按钮的脸是它那一档的事：要哪一副脸，就说哪一档（`variant="outline"`）。',
       ].join('\n'),
     ).toEqual([])
+  })
+
+  it('调用点不许自己写脸上那几类', () => {
+    // 脸只有一副 ✓。调用点自己写一个背景 ✗、一道边框 ✗、一个圆角 ✗、
+    // 一道阴影 ✗，就是**另一张脸** ✗。
+    // **带前缀的那一句不算** ✓——那是**状态** ✗（`hover:bg-muted` ✓ 是悬停时变灰 ✓）。
+    // **哪一边的那一句也不算** ✓——那是**形状** ✗（`rounded-l-none` ✓）。
+    const offenders: string[] = []
+    for (const site of CALL_SITES) {
+      for (const token of site.list.split(/\s+/)) {
+        if (!token) continue
+        if (!FACE_TOKEN.test(token)) continue
+        if (SHAPE_TOKEN.test(token)) continue
+        if (excused(site.rel, token)) continue
+        offenders.push(`${site.rel}:${site.line}（${site.variant}）  ${token}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些地方自己写了一张脸：${offenders.length} 处`,
+        ...offenders,
+        '要哪一副脸，就说哪一档（`variant="success"`、`variant="outline-destructive"`）。',
+        '状态不是脸——`hover:` 那一类不算；形状也不是脸——`rounded-l-none` 那一类不算。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('被点名的那些，理由都写清楚了，而且都还在', () => {
+    for (const [rel, token, reason] of EXCEPTIONS) {
+      expect(reason.trim().length, `${rel} 的 ${token} 没有写为什么它不一样`).toBeGreaterThan(0)
+      const source = SOURCES.find((candidate) => candidate.rel === rel)
+      expect(source, `例外里的 ${rel} 已经不存在了`).toBeDefined()
+      expect(
+        source!.text.includes(token),
+        `例外里的 ${rel} 已经不再写 ${token} 了`,
+      ).toBe(true)
+    }
   })
 })
