@@ -176,50 +176,46 @@ export function UsersSettings() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-1.5">
               <Label htmlFor="new-user-name">{t('settings.users.name')}</Label>
-              <Input
+              <Input size="wide"
                 id="new-user-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t('settings.users.namePlaceholder')}
-                className="sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-user-username">{t('settings.users.username')}</Label>
-              <Input
+              <Input size="wide"
                 id="new-user-username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder={t('settings.users.usernamePlaceholder')}
-                className="sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-user-email">{t('settings.users.email')}</Label>
-              <Input
+              <Input size="wide"
                 id="new-user-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t('settings.users.emailPlaceholder')}
-                className="sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-user-password">{t('settings.users.password')}</Label>
-              <Input
+              <Input size="wide"
                 id="new-user-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('settings.users.passwordPlaceholder')}
-                className="sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-user-role">{t('settings.users.role')}</Label>
               <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                <SelectTrigger id="new-user-role" className="sm:h-10">
+                <SelectTrigger size="wide" id="new-user-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -230,7 +226,7 @@ export function UsersSettings() {
             </div>
           </div>
           <div className="mt-3 flex justify-end">
-            <Button onClick={handleCreate} disabled={!canSubmit || isSubmitting} className="sm:h-10">
+            <Button size="wide" onClick={handleCreate} disabled={!canSubmit || isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -365,13 +361,12 @@ export function UsersSettings() {
           </DialogHeader>
           <div className="space-y-1.5">
             <Label htmlFor="reset-password">{t('settings.users.newPassword')}</Label>
-            <Input
+            <Input size="wide"
               id="reset-password"
               type="password"
               value={resetPasswordValue}
               onChange={(e) => setResetPasswordValue(e.target.value)}
               placeholder={t('settings.users.passwordPlaceholder')}
-              className="sm:h-10"
             />
           </div>
           <DialogFooter className="gap-2">

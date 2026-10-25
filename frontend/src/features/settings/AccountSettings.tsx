@@ -182,13 +182,13 @@ export function AccountSettings() {
                 <div className="space-y-3 sm:space-y-4">
                   <div className="space-y-1.5">
                     <Label>{t('settingsPanels.account.name')}</Label>
-                    <Input value={user.name} disabled className="sm:h-10" />
+                    <Input size="wide" value={user.name} disabled />
                   </div>
                   <div className="space-y-1.5">
                     <Label>{t('settingsPanels.account.email')}</Label>
-                    <Input value={user.email} disabled className="sm:h-10" />
+                    <Input size="wide" value={user.email} disabled />
                   </div>
-                  <Button variant="outline" onClick={() => setEditingProfile(false)} className="sm:h-10">
+                  <Button size="wide" variant="outline" onClick={() => setEditingProfile(false)}>
                     {t('settingsPanels.account.done')}
                   </Button>
                 </div>
@@ -217,10 +217,9 @@ export function AccountSettings() {
             </CardHeader>
             <CardContent>
               {!showChangePassword ? (
-                <Button
+                <Button size="wide"
                   variant="outline"
                   onClick={() => setShowChangePassword(true)}
-                  className="sm:h-10"
                 >
                   <Lock className="mr-2 h-4 w-4" />
                   {t('settingsPanels.account.changePassword')}
@@ -229,31 +228,28 @@ export function AccountSettings() {
                 <div className="space-y-3 sm:space-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="current-password">{t('settingsPanels.account.currentPassword')}</Label>
-                    <Input
+                    <Input size="wide"
                       id="current-password"
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder={t('settingsPanels.account.currentPasswordPlaceholder')}
-                      className="sm:h-10"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="new-password">{t('settingsPanels.account.newPassword')}</Label>
-                    <Input
+                    <Input size="wide"
                       id="new-password"
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder={t('settingsPanels.account.newPasswordPlaceholder')}
-                      className="sm:h-10"
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button
+                    <Button size="wide"
                       onClick={handleChangePassword}
                       disabled={changePasswordMutation.isPending || !currentPassword || !newPassword}
-                      className="sm:h-10"
                     >
                       {changePasswordMutation.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -262,10 +258,9 @@ export function AccountSettings() {
                       )}
                       {t('settingsPanels.account.changePassword')}
                     </Button>
-                    <Button
+                    <Button size="wide"
                       variant="ghost"
                       onClick={() => setShowChangePassword(false)}
-                      className="sm:h-10"
                     >
                       {t('settingsPanels.account.cancel')}
                     </Button>
@@ -287,16 +282,15 @@ export function AccountSettings() {
             </CardHeader>
             <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex flex-col sm:flex-row gap-2">
-                <Input
+                <Input size="wide"
                   placeholder={t('settingsPanels.account.passkeyNamePlaceholder')}
                   value={passkeyName}
                   onChange={(e) => setPasskeyName(e.target.value)}
-                  className="sm:h-10"
                 />
-                <Button
+                <Button size="wide"
                   onClick={handleAddPasskey}
                   disabled={addPasskeyMutation.isPending}
-                  className="sm:h-10 whitespace-nowrap"
+                  className="whitespace-nowrap"
                 >
                   {addPasskeyMutation.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -361,7 +355,7 @@ export function AccountSettings() {
             <p className="text-xs text-muted-foreground">{t('settingsPanels.account.signOutDescription')}</p>
           </div>
         </div>
-        <Button variant="destructive" onClick={logout} className="shrink-0 sm:h-10">
+        <Button size="wide" variant="destructive" onClick={logout} className="shrink-0">
           <LogOut className="mr-2 h-4 w-4" />
           {t('settingsPanels.account.signOut')}
         </Button>

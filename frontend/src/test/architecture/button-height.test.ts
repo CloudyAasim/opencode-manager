@@ -54,6 +54,10 @@ const LADDER: Record<string, { phone: number; desktop: number | null }> = {
   sm: { phone: 32, desktop: null },
   default: { phone: 36, desktop: null },
   lg: { phone: 40, desktop: null },
+  // A row in a dialog is roomier on a wide screen.
+  wide: { phone: 36, desktop: 40 },
+  // A row of touch-sized controls settles back once a mouse is around.
+  compact: { phone: 40, desktop: 32 },
   touch: { phone: 44, desktop: 36 },
   'icon-2xs': { phone: 24, desktop: null },
   'icon-xs': { phone: 28, desktop: null },
@@ -78,6 +82,21 @@ function heightAfter(list: string, breakpoint: string): number | null {
     const match = new RegExp(`^${breakpoint}:(?:h|size)-(\\d+)$`).exec(token)
     if (match) return Number(match[1])
   }
+  return null
+}
+
+/**
+ * 一串类名里，桌面上有多高。
+ *
+ * 桌面上生效的是**最后一个够得着的断点** ✗——一档在 `sm:` 上就换了 ✗，
+ * 那么 `md:` 上生效的仍然是它 ✗。只认 `md:` 的话 ✗，就会把那种档位
+ * 读成"两屏一样高" ✗。
+ */
+function desktopHeightOf(list: string): number | null {
+  const md = heightAfter(list, 'md')
+  if (md !== null) return md * 4
+  const sm = heightAfter(list, 'sm')
+  if (sm !== null) return sm * 4
   return null
 }
 
@@ -160,6 +179,10 @@ describe('一个按钮不能有两个高度', () => {
     expect(fixedHeight('md:h-6 px-2'), '把断点上的高度当成了写死的').toBe(null)
     expect(heightAfter('h-11 sm:h-9', 'sm'), '认不出断点上的高度').toBe(9)
     expect(heightAfter('h-11 sm:h-9', 'md'), '认不出另一档断点的高度').toBe(null)
+    // 桌面上生效的是**最后一个够得着的断点**——一档在 `sm:` 上换了，桌面上就是它。
+    expect(desktopHeightOf('h-11 sm:h-9'), '认不出在 sm 上换档的那一档').toBe(36)
+    expect(desktopHeightOf('h-11 md:h-9'), '认不出在 md 上换档的那一档').toBe(36)
+    expect(desktopHeightOf('h-11'), '把没换档的当成了换档的').toBe(null)
   })
 
   it('共享的按钮写明了每一档有多高', () => {
@@ -174,12 +197,12 @@ describe('一个按钮不能有两个高度', () => {
         continue
       }
       const phone = pixelsOf(fixedHeight(list))
-      const desktop = heightAfter(list, 'md')
+      const desktop = desktopHeightOf(list)
       if (phone !== expected.phone) {
         offenders.push(`${name}  手机上应该是 ${expected.phone}，现在是 ${phone ?? '(没有)'}`)
         continue
       }
-      const desktopHeight = desktop === null ? expected.phone : desktop * 4
+      const desktopHeight = desktop === null ? expected.phone : desktop
       if (desktopHeight !== (expected.desktop ?? expected.phone)) {
         offenders.push(
           `${name}  桌面上应该是 ${expected.desktop ?? expected.phone}，现在是 ${desktopHeight}`,

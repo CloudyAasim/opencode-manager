@@ -69,6 +69,10 @@ const BUTTON_LADDER: Record<string, number> = {
   sm: 32,
   default: 36,
   lg: 40,
+  // A row in a dialog is roomier on a wide screen.
+  wide: 36,
+  // A row of touch-sized controls settles back once a mouse is around.
+  compact: 40,
 }
 
 /**
@@ -82,6 +86,10 @@ const FIELD_LADDER: Record<string, number> = {
   sm: 32,
   default: 36,
   lg: 40,
+  // A row in a dialog is roomier on a wide screen.
+  wide: 36,
+  // A row of touch-sized controls settles back once a mouse is around.
+  compact: 40,
 }
 
 /** Breeze 要的"空当"：上下各 8px（见 `breeze-design.test.ts` ✓）。 */

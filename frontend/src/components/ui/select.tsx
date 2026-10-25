@@ -38,6 +38,12 @@ const selectTriggerVariants = cva(
         sm: "h-8 rounded-md",
         default: "h-9",
         lg: "h-10",
+        // A row in a dialog is roomier on a wide screen, and the row grows
+        // with it. This used to be written at the call site, eleven times.
+        wide: "h-9 sm:h-10",
+        // The other way round: a row of touch-sized controls settles back to
+        // the ordinary height once the screen is wide enough for a mouse.
+        compact: "h-10 md:h-8",
       },
     },
     defaultVariants: {

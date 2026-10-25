@@ -147,19 +147,19 @@ export function SSHHostKeyDialog({
         </div>
 
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-2 mt-2">
-          <Button
+          <Button size="wide"
             variant="outline"
             onClick={() => handleResponse('reject')}
             disabled={isLoading || isExpired}
-            className="w-full sm:flex-1 sm:h-10"
+            className="w-full sm:flex-1"
           >
             {isLoading ? t('misc.ssh.processing') : t('misc.ssh.reject')}
           </Button>
-          <Button
+          <Button size="wide"
             variant={request.isKeyChanged ? 'destructive' : 'default'}
             onClick={() => handleResponse('accept')}
             disabled={isLoading || isExpired}
-            className="w-full sm:flex-1 sm:h-10"
+            className="w-full sm:flex-1"
           >
             {isLoading ? t('misc.ssh.processing') : t('misc.ssh.accept')}
           </Button>

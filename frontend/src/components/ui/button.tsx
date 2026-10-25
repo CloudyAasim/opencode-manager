@@ -35,6 +35,12 @@ const buttonVariants = cva(
         sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
         lg: "h-10 rounded-lg px-6 has-[>svg]:px-4",
+        // A row in a dialog is roomier on a wide screen, and the row grows
+        // with it. This used to be written at the call site, eleven times.
+        wide: "h-9 px-4 py-2 has-[>svg]:px-3 sm:h-10",
+        // The other way round: a row of touch-sized controls settles back to
+        // the ordinary height once the screen is wide enough for a mouse.
+        compact: "h-10 rounded-lg px-6 has-[>svg]:px-4 md:h-8",
         // A finger has to find this one, so it is taller on a phone and
         // settles back to the ordinary height on a desktop.
         touch: "h-11 rounded-lg px-5 has-[>svg]:px-4 md:h-9 md:px-4",

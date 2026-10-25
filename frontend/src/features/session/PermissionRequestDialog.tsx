@@ -119,34 +119,34 @@ export function PermissionRequestDialog({
         </div>
 
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-2 mt-2">
-          <Button
+          <Button size="wide"
             variant="outline"
             onClick={() => handleResponse('reject')}
             disabled={isLoading}
             className={cn(
-              "w-full sm:flex-1 sm:h-10 reject opacity-70",
+              "w-full sm:flex-1 reject opacity-70",
               loadingAction === 'reject' && "opacity-70"
             )}
           >
             {loadingAction === 'reject' ? t('session.permission.denying') : t('session.permission.deny')}
           </Button>
-          <Button
+          <Button size="wide"
             variant="secondary"
             onClick={() => handleResponse('always')}
             disabled={isLoading}
             className={cn(
-              "w-full sm:flex-1 sm:h-10 always opacity-70",
+              "w-full sm:flex-1 always opacity-70",
               loadingAction === 'always' && "opacity-70"
             )}
           >
             {loadingAction === 'always' ? t('session.permission.allowing') : t('session.permission.allowAlways')}
           </Button>
-          <Button
+          <Button size="wide"
             variant="default"
             onClick={() => handleResponse('once')}
             disabled={isLoading}
             className={cn(
-              "w-full sm:flex-1 sm:h-10 once opacity-70",
+              "w-full sm:flex-1 once opacity-70",
               loadingAction === 'once' && "opacity-70"
             )}
           >

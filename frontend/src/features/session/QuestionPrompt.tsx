@@ -268,20 +268,20 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
 
       <div className="flex gap-1.5 sm:gap-2 px-2 py-2 sm:px-3 sm:py-3 border-t border-primary/40">
         <Button
-          size="sm"
+          size="wide"
           onClick={handleReject}
           disabled={isSubmitting}
-          className="flex-1 sm:h-10 bg-muted hover:bg-muted/80 text-foreground"
+          className="flex-1 bg-muted hover:bg-muted/80 text-foreground"
         >
           {t('session.question.dismiss')}
         </Button>
         {!isSingleSelect && (
           isConfirmStep ? (
             <Button
-              size="sm"
+              size="wide"
               onClick={handleSubmit}
               disabled={isSubmitting || !allQuestionsAnswered}
-              className="flex-1 sm:h-10 bg-success hover:bg-success text-white"
+              className="flex-1 bg-success hover:bg-success text-white"
             >
               {isSubmitting ? (
                 <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
@@ -291,10 +291,10 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
             </Button>
           ) : (
             <Button
-              size="sm"
+              size="wide"
               onClick={handleNext}
               disabled={isSubmitting || (expandedOther === currentIndex && !customInputs[currentIndex]?.trim())}
-              className="flex-1 sm:h-10 bg-success hover:bg-success text-white"
+              className="flex-1 bg-success hover:bg-success text-white"
             >
               {expandedOther === currentIndex ? t('session.question.confirm') : t('session.question.next')}
             </Button>

@@ -424,6 +424,23 @@ export function variantsOf(text: string): Map<string, string> {
 }
 
 /**
+ * The height a class list asks for on each screen size.
+ *
+ * The key is the breakpoint - the empty string is the ordinary one - and the
+ * value is in pixels. `h-8 md:h-9` is 32 everywhere and 36 from `md` up.
+ */
+export function heightsFrom(list: string): Map<string, number> {
+  const heights = new Map<string, number>()
+  for (const token of list.split(/\s+/)) {
+    if (!token) continue
+    const match = /^(?:([a-z0-9]+):)?(?:h|size)-(\d+)$/.exec(token)
+    if (!match) continue
+    heights.set(match[1] ?? '', Number(match[2]) * 4)
+  }
+  return heights
+}
+
+/**
  * The size `field-text` asks for on a phone.
  *
  * It is the floor for anything you can type into: a phone enlarges an input

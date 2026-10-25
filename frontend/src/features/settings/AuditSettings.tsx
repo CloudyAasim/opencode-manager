@@ -171,7 +171,7 @@ export function AuditSettings() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1.5">
           <Label htmlFor="audit-email">{t('settings.audit.filterEmail')}</Label>
-          <Input
+          <Input size="wide"
             id="audit-email"
             value={emailInput}
             onChange={(event) => setEmailInput(event.target.value)}
@@ -179,13 +179,12 @@ export function AuditSettings() {
               if (event.key === 'Enter') applyEmailFilter()
             }}
             placeholder={t('settings.audit.filterEmailPlaceholder')}
-            className="sm:h-10"
           />
         </div>
         <div className="space-y-1.5 sm:w-40">
           <Label htmlFor="audit-status">{t('settings.audit.status')}</Label>
           <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>
-            <SelectTrigger id="audit-status" className="sm:h-10">
+            <SelectTrigger size="wide" id="audit-status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +194,7 @@ export function AuditSettings() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={applyEmailFilter} className="sm:h-10">{t('common.confirm')}</Button>
+        <Button size="wide" onClick={applyEmailFilter}>{t('common.confirm')}</Button>
       </div>
 
       <Card className="border-0 shadow-none">
