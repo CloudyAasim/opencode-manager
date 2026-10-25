@@ -42,18 +42,12 @@ const RESPONSIVE_STEPS = ['wide', 'compact']
  * 一排触摸目标在宽屏上收回来 ✓，而**只此一处**的 ✗——
  * 一排要挤进屏幕的小按钮 ✗、错误信息里的那个链接 ✗。
  * 一次性的那些**点名** ✓，说清楚它们为什么不一样 ✓。
+ *
+ * 53 号那轮又收窄了一轮 ✗："一排要挤进屏幕的小按钮" ✗ 那一类 ✗，
+ * 其实楼梯上早就有它 ✗（`compact` ✓）——只是那几处自己手写了一半高度 ✗，
+ * 而共享的零件在更宽的一档上**把它推了回去** ✗（见 `one-height.test.ts` ✓）。
  */
 const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
-  [
-    'features/settings/ServerHealthStatus.tsx',
-    'sm:h-8',
-    '这一排是**触摸目标** ✗：手机上大 ✗，宽屏上小 ✗——它们挨着别的按钮 ✗，小一点才排得下 ✗',
-  ],
-  [
-    'features/settings/OpenCodeConfigManager.tsx',
-    'sm:h-8',
-    '这一排是**触摸目标** ✗：手机上大 ✗，宽屏上小 ✗——它们挨着别的按钮 ✗，小一点才排得下 ✗',
-  ],
   [
     'pages/SessionDetail.tsx',
     'sm:h-7',

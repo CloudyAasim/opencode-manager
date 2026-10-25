@@ -63,8 +63,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
         <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
-            size="touch"
-            className="sm:h-8"
+            size="compact"
             onClick={performUpgrade}
             disabled={upgradeOpenCodeMutation.isPending}
           >
@@ -77,8 +76,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
           </Button>
           <Button
             variant="secondary"
-            size="touch"
-            className="sm:h-8"
+            size="compact"
             onClick={requestRestart}
             disabled={restartServerMutation.isPending}
           >
@@ -91,8 +89,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
           </Button>
           <Button
             variant="secondary"
-            size="touch"
-            className="sm:h-8"
+            size="compact"
             onClick={onOpenVersionDialog}
           >
             <History className="h-3 w-3 sm:h-4 sm:w-4" />
