@@ -6,6 +6,7 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
+import { FIELD_FACE } from "@/components/ui/field-face"
 
 const Select = SelectPrimitive.Root
 
@@ -19,9 +20,12 @@ const SelectValue = SelectPrimitive.Value
  *
  * It used to be 40 - one step taller than the text field next to it, so a row
  * that had both of them in it was not one height but two.
+ *
+ * And it wears the field's face (see `field-face.ts`): a dropdown next to a
+ * text field is the same thing said twice, so it has to look like it.
  */
 const selectTriggerVariants = cva(
-  "flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 field-text ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+  `flex w-full items-center justify-between ${FIELD_FACE} px-3 py-2 field-text ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1`,
   {
     variants: {
       size: {

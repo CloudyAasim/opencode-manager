@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { ChevronDown, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { Input } from '@/components/ui/input'
 
 export interface ComboboxOption {
   value: string
@@ -168,7 +169,7 @@ export function Combobox({
   return (
     <div ref={containerRef} className={cn('relative', className)}>
       <div className="relative">
-        <input
+        <Input
           ref={inputRef}
           type="text"
           value={inputValue}
@@ -177,14 +178,7 @@ export function Combobox({
           onKeyDown={handleKeyDown}
           placeholder={resolvedPlaceholder}
           disabled={disabled}
-          className={cn(
-            'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 field-text shadow-sm transition-colors',
-            'file:border-0 file:bg-transparent file:text-sm file:font-medium',
-            'placeholder:text-muted-foreground',
-            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-            'pr-8'
-          )}
+          className="pr-8"
         />
         {showClear && value && (
           <button

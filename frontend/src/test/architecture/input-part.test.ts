@@ -124,11 +124,6 @@ interface Exception {
 
 const NOT_AN_ORDINARY_FIELD: readonly Exception[] = [
   {
-    file: 'components/ui/combobox.tsx',
-    reason: '共享的那一副是下拉框自己；这一行是它盒子里的那一行，它跟盒子一起高',
-    height: 'h-9',
-  },
-  {
     file: 'components/ui/header.tsx',
     reason: '行内改标题：它是一行字里的一个编辑框，不是一个字段',
     height: 'h-8',

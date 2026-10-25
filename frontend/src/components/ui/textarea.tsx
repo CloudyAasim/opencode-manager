@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { FIELD_FACE } from "@/components/ui/field-face"
 
 type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>
 
@@ -9,7 +10,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         className={cn(
-          "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 field-text placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50",
+          `flex min-h-[80px] w-full ${FIELD_FACE} px-3 py-2 field-text placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50`,
           className
         )}
         ref={ref}
