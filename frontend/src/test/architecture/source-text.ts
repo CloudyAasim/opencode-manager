@@ -441,6 +441,47 @@ export function heightsFrom(list: string): Map<string, number> {
 }
 
 /**
+ * The screens, from the narrowest to the widest.
+ *
+ * The empty key is the ordinary one - the width below the first breakpoint.
+ */
+export const BREAKPOINTS = ['', 'sm', 'md', 'lg', 'xl', '2xl']
+
+/**
+ * Which of several height stories wins on a given screen.
+ *
+ * The stylesheet is ordered by breakpoint, so on a 768px screen the `md:`
+ * rule is the one that applies - it comes after the `sm:` one. On the same
+ * breakpoint the call site's own rule wins: it is written last.
+ */
+export function effectiveKey(stories: Map<string, number>[], width: string): string | null {
+  const limit = BREAKPOINTS.indexOf(width)
+  let best = -1
+  let key: string | null = null
+  for (const story of stories) {
+    for (const candidate of story.keys()) {
+      const at = BREAKPOINTS.indexOf(candidate)
+      if (at < 0 || at > limit) continue
+      if (at <= best) continue
+      best = at
+      key = candidate
+    }
+  }
+  return key
+}
+
+/** What a set of height stories says on a given screen. */
+export function heightOf(stories: Map<string, number>[], width: string): number | null {
+  const key = effectiveKey(stories, width)
+  if (key === null) return null
+  for (let index = stories.length - 1; index >= 0; index -= 1) {
+    const story = stories[index]!
+    if (story.has(key)) return story.get(key)!
+  }
+  return null
+}
+
+/**
  * The size `field-text` asks for on a phone.
  *
  * It is the floor for anything you can type into: a phone enlarges an input

@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, elementTree, familyOf, stripComments, variantsOf } from './source-text'
+import {
+  BREAKPOINTS,
+  classListOfAttrs,
+  elementTree,
+  familyOf,
+  heightOf,
+  heightsFrom,
+  stripComments,
+  variantsOf,
+} from './source-text'
 
 /**
  * 一行里的字段和按钮，是同一档。
@@ -12,12 +21,17 @@ import { classListOfAttrs, elementTree, familyOf, stripComments, variantsOf } fr
  * 48 号那轮统一了它们的**脸** ✓，但**断点上的高度** ✗ 还能在调用点上各写各的 ✗：
  * 查找栏里 ✗，输入框在宽屏上是 36px ✗，而它旁边的按钮是 32px ✗——**它们不是一行** ✗。
  *
- * 于是这一轮：
+ * 所以这一轮：
  *
  * - **一行里的字段和按钮，在每一档屏幕上都得是同一个高度** ✓。
  * - 判的是**形状** ✓：一行是**一个容器** ✓，里面放着一个字段 ✓ 和按钮 ✓；
  *   它们的高度从**各自的尺寸档**里来 ✓（`size="lg"` 是 40 ✓），
  *   再由**调用点**在断点上改写 ✓（`md:h-8` ✓）。
+ *
+ * 而**每一档屏幕** ✗——不是"两边提到过的那几档" ✗：
+ * 之前门禁只比调用点写过高度的那几档 ✗，于是一边在 `wide` ✓、
+ * 一边在 `compact` ✓ 的两个零件 ✗，在**谁都没提过**的断点上 ✗，
+ * 从来没有被人比过 ✗。
  */
 
 const FRONTEND_SRC = path.resolve(__dirname, '../..')
@@ -46,26 +60,34 @@ function partOf(name: string, size: string | null, list = ''): Part {
   return { name, size, list }
 }
 
-/** 一个尺寸档在某一档屏幕上的高度（没有断点前缀的就是平常那一档 ✓）。 */
-function heightsFrom(list: string): Map<string, number> {
-  const heights = new Map<string, number>()
-  for (const token of list.split(/\s+/)) {
-    if (!token) continue
-    const match = /^(?:([a-z0-9]+):)?(?:h|size)-(\d+)$/.exec(token)
-    if (!match) continue
-    heights.set(match[1] ?? '', Number(match[2]) * 4)
-  }
-  return heights
+/** 某一档屏幕上，一个成员有多高 ✓。 */
+function heightOn(part: Part, variants: Map<string, string>, width: string): number | null {
+  const step = part.size ? variants.get(part.size) ?? '' : ''
+  return heightOf([heightsFrom(step), heightsFrom(part.list)], width)
 }
 
-/** 某一档屏幕上，一个成员有多高 ✓。 */
-function heightOn(part: Part, variants: Map<string, string>, breakpoint: string): number | null {
-  const step = part.size ? variants.get(part.size) ?? '' : ''
-  const fromStep = heightsFrom(step)
-  const overrides = heightsFrom(part.list)
-  if (overrides.has(breakpoint)) return overrides.get(breakpoint)!
-  if (fromStep.has(breakpoint)) return fromStep.get(breakpoint)!
-  return fromStep.get('') ?? null
+/**
+ * 这一行里，哪几档屏幕要比 ✓。
+ *
+ * 两边说过的每一档 ✓，还有平常那一档 ✓——**每一档屏幕都算** ✓，
+ * 不是只有"两边都提到过"的那几档 ✓。
+ */
+function widthsToCompare(
+  field: Part,
+  button: Part,
+  fieldVariants: Map<string, string>,
+  buttonVariants: Map<string, string>,
+): string[] {
+  const widths = new Set<string>([''])
+  for (const [part, variants] of [
+    [field, fieldVariants],
+    [button, buttonVariants],
+  ] as const) {
+    const step = part.size ? variants.get(part.size) ?? '' : ''
+    for (const key of heightsFrom(step).keys()) widths.add(key)
+    for (const key of heightsFrom(part.list).keys()) widths.add(key)
+  }
+  return [...widths].sort((a, b) => BREAKPOINTS.indexOf(a) - BREAKPOINTS.indexOf(b))
 }
 
 /**
@@ -78,17 +100,13 @@ function mismatches(
   buttonVariants: Map<string, string>,
 ): string[] {
   const found: string[] = []
-  const breakpoints = new Set([
-    ...heightsFrom(field.list).keys(),
-    ...heightsFrom(button.list).keys(),
-  ])
-  for (const breakpoint of breakpoints) {
-    const fieldHeight = heightOn(field, fieldVariants, breakpoint)
-    const buttonHeight = heightOn(button, buttonVariants, breakpoint)
+  for (const width of widthsToCompare(field, button, fieldVariants, buttonVariants)) {
+    const fieldHeight = heightOn(field, fieldVariants, width)
+    const buttonHeight = heightOn(button, buttonVariants, width)
     if (fieldHeight === null || buttonHeight === null) continue
     if (fieldHeight === buttonHeight) continue
     found.push(
-      `${field.name}(${field.size ?? '默认'}) 在${breakpoint || '平常'}是 ${fieldHeight}px，` +
+      `${field.name}(${field.size ?? '默认'}) 在${width || '平常'}是 ${fieldHeight}px，` +
         `旁边的 ${button.name}(${button.size ?? '默认'}) 是 ${buttonHeight}px`,
     )
   }
@@ -167,6 +185,13 @@ describe('一行里的字段和按钮，是同一档', () => {
         .length,
       '把对齐了的那一行当成了没对齐',
     ).toBe(0)
+
+    // **两边说的不是同一档、而谁都没在断点上写过高度时，也要比** ✓——
+    // 之前门禁只比"两边提到过"的那几档 ✗，于是这种行从来没被比过 ✗。
+    expect(
+      mismatches(partOf('Input', 'compact'), partOf('Button', 'wide'), FIELD_VARIANTS, BUTTON_VARIANTS).length,
+      '认不出"两边档位不同、而谁都没写过高度"这一行',
+    ).toBeGreaterThan(0)
   })
 
   it('一行里的字段和按钮，在每一档屏幕上都是同一个高度', () => {

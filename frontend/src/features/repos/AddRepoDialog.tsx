@@ -165,12 +165,12 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
           {repoType === 'remote' ? (
             <div className="space-y-2">
               <Label>{t('repo.addDialog.repositoryUrl')}</Label>
-              <Input
+              <Input size="lg"
                 placeholder={t('repo.addDialog.repositoryUrlPlaceholder')}
                 value={repoUrl}
                 onChange={(e) => handleRepoUrlChange(e.target.value)}
                 disabled={mutation.isPending}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[44px]"
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
               <p className="text-xs text-muted-foreground">
                 {t('repo.addDialog.repositoryUrlHint')}
@@ -180,19 +180,19 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
             <div className="space-y-2">
               <Label>{t('repo.addDialog.localPath')}</Label>
               <div className="flex gap-2">
-                <Input
+                <Input size="lg"
                   placeholder={t('repo.addDialog.localPathPlaceholder')}
                   value={localPath}
                   onChange={(e) => setLocalPath(e.target.value)}
                   disabled={mutation.isPending}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[44px]"
+                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  size="lg" variant="outline"
                   onClick={() => setPickerOpen(true)}
                   disabled={mutation.isPending}
-                  className="min-h-[44px] shrink-0 border-border bg-muted px-3 text-muted-foreground hover:bg-accent"
+                  className="shrink-0 border-border bg-muted px-3 text-muted-foreground hover:bg-accent"
                   aria-label={t('repo.addDialog.browseForFolder')}
                 >
                   <FolderSearch className="h-4 w-4" />
@@ -206,19 +206,19 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
             <div className="space-y-2">
               <Label>{t('repo.addDialog.folderPath')}</Label>
               <div className="flex gap-2">
-                <Input
+                <Input size="lg"
                   placeholder={t('repo.addDialog.folderPathPlaceholder')}
                   value={folderPath}
                   onChange={(e) => setFolderPath(e.target.value)}
                   disabled={mutation.isPending}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[44px]"
+                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  size="lg" variant="outline"
                   onClick={() => setPickerOpen(true)}
                   disabled={mutation.isPending}
-                  className="min-h-[44px] shrink-0 border-border bg-muted px-3 text-muted-foreground hover:bg-accent"
+                  className="shrink-0 border-border bg-muted px-3 text-muted-foreground hover:bg-accent"
                   aria-label={t('repo.addDialog.browseForFolder')}
                 >
                   <FolderSearch className="h-4 w-4" />
@@ -233,12 +233,12 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
           {showDirectoryName && (
             <div className="space-y-2">
               <Label>{t('repo.addDialog.directoryName')}</Label>
-              <Input
+              <Input size="lg"
                 placeholder={t('repo.addDialog.directoryNamePlaceholder')}
                 value={directoryName}
                 onChange={(e) => handleDirectoryNameChange(e.target.value)}
                 disabled={mutation.isPending}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[44px]"
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
               {directoryNameError ? (
                 <p className="text-xs text-warning">
@@ -263,12 +263,12 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
           
           <div className="space-y-2">
             <Label>{t('repo.addDialog.branchOptional')}</Label>
-            <Input
+            <Input size="lg"
               placeholder={t('repo.addDialog.branchPlaceholder')}
               value={branch}
               onChange={(e) => setBranch(e.target.value)}
               disabled={mutation.isPending || repoType === 'folder'}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[44px]"
+              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
             />
             <p className="text-xs text-muted-foreground">
               {repoType === 'folder' 
@@ -301,10 +301,10 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
             </div>
           )}
 
-          <Button 
+          <Button size="touch" 
             type="submit" 
             disabled={(!repoUrl && repoType === 'remote') || (!localPath && repoType === 'local') || (!folderPath && repoType === 'folder') || mutation.isPending || (showDirectoryName && (!!directoryNameError || !!directoryCollision))}
-            className="w-full min-h-[48px]"
+            className="w-full"
           >
             {mutation.isPending ? (
               <>

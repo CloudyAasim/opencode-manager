@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, heightsFrom, stripComments, tagAt, variantsOf } from './source-text'
+import {
+  BREAKPOINTS,
+  classListOfAttrs,
+  heightOf,
+  heightsFrom,
+  stripComments,
+  tagAt,
+  variantsOf,
+} from './source-text'
 
 /**
  * 一个高度，一处说了算。
@@ -56,39 +64,6 @@ type Story = Map<string, number>
 
 function rankOf(breakpoint: string): number {
   return BREAKPOINTS.indexOf(breakpoint)
-}
-
-/**
- * 几段故事放在一起时，在某一档屏幕上生效的是哪一句。
- *
- * 样式表按断点的先后排：`md:` 的那一条排在 `sm:` 的后面 ✗，所以在 768px 上，
- * `md:` 的那一句赢 ✗。同一个断点上，调用点的那一句赢 ✓（它写在后面 ✓）。
- */
-function effectiveKey(stories: Story[], width: string): string | null {
-  const limit = rankOf(width)
-  let best = -1
-  let key: string | null = null
-  for (const story of stories) {
-    for (const candidate of story.keys()) {
-      const at = rankOf(candidate)
-      if (at < 0 || at > limit) continue
-      if (at <= best) continue
-      best = at
-      key = candidate
-    }
-  }
-  return key
-}
-
-/** 一段故事在某一档屏幕上说的是多少。 */
-function heightOf(stories: Story[], width: string): number | null {
-  const key = effectiveKey(stories, width)
-  if (key === null) return null
-  for (let index = stories.length - 1; index >= 0; index -= 1) {
-    const story = stories[index]!
-    if (story.has(key)) return story.get(key)!
-  }
-  return null
 }
 
 /**

@@ -244,9 +244,9 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                 {mobileView !== 'menu' && (
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="icon-touch"
                     onClick={handleSettingsBack}
-                    className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px]"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </Button>
@@ -259,10 +259,10 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                  <Header.Actions>
                    <Button
                      variant="ghost"
-                     size="icon"
+                     size="icon-touch"
                      onClick={close}
                      aria-label={t('common.close')}
-                     className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex-shrink-0"
+                     className="text-muted-foreground hover:text-foreground flex-shrink-0"
                    >
                   <X className="w-6 h-6" />
                  </Button>
