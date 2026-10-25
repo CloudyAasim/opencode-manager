@@ -21,6 +21,11 @@ const buttonVariants = cva(
           "border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20",
         outline:
           "border border-border bg-card hover:bg-accent hover:text-accent-foreground",
+        // A toggle that is on. It used to be written at the call site as
+        // `bg-primary text-primary-foreground`, on top of the outline face -
+        // and the outline's own hover won, so the button greyed out under the
+        // pointer.
+        selected: "bg-primary text-primary-foreground hover:bg-primary-hover",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/70",
         ghost:

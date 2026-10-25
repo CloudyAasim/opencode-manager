@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, ownListOf, stripComments, tagAt, variantsOf } from './source-text'
+import { classListOfAttrs, ownListOf, recordOf, stripComments, tagAt, variantsOf } from './source-text'
 
 /**
  * 共享零件的脸，各有各副。
@@ -88,12 +88,44 @@ const FACE_TOKEN = /^(?:rounded|bg|border|shadow)(?:-|$)/
  */
 const SHAPE_TOKEN = /^(?:rounded|border)-(?:[lrtybxy]{1,2})(?:-|$)/
 
+/**
+ * 弹窗**有多宽** ✓。
+ *
+ * 凡是 `w-` ✓ 都算 ✓——`w-[90%]` ✓、`w-[calc(100vw-2rem)]` ✓ 都是"占屏幕多宽" ✓。
+ */
+const A_WIDTH = /^(?:[a-z0-9]+:)?(?:max-)?w-/
+
+/**
+ * 弹窗**有多高** ✓。
+ *
+ * 只有**说到视口单位**的 ✓ 才算 ✓（`vh` ✓、`dvh` ✓、`svh` ✓、`lvh` ✓）——
+ * `h-auto` ✓（随内容 ✓）、`h-fit` ✓（贴着内容 ✓）、`h-4` ✓（固定几个格子 ✓）
+ * 都不是"在屏幕上占多高" ✓。
+ */
+const A_HEIGHT = /^(?:[a-z0-9]+:)?(?:max-)?h-.*vh/
+
+/**
+ * **满屏**的那些说法 ✓：它们是同一个决定 ✓，不是刻度上的某一档 ✓。
+ */
+const FULL_SCREEN = ['w-full', 'max-w-none', 'w-screen', 'h-dvh', 'max-h-dvh']
+
 /** 每一副说了什么 ✓。 */
 function variantsOfPart(part: string): Map<string, string> {
   const rel = PARTS[part]
   if (!rel) return new Map()
   const source = SOURCES.find((candidate) => candidate.rel === rel)
   return source ? variantsOf(source.text, 'variant', DECLARATION[part]) : new Map()
+}
+
+/**
+ * 共享零件自己说的那道刻度 ✓。
+ *
+ * 宽 ✓ 和高 ✓ 都不是脸 ✓，而是尺寸 ✓——它们写在一张表里 ✓，
+ * 不是写在 `cva` 的某一副里 ✓。
+ */
+function scaleOf(declaration: string): Map<string, string> {
+  const source = SOURCES.find((candidate) => candidate.rel === PARTS.DialogContent)
+  return source ? recordOf(source.text, declaration) : new Map()
 }
 
 /** 那一档说过的每一个词 ✓。 */
@@ -106,112 +138,186 @@ function saidBy(variants: Map<string, string>, variant: string): Set<string> {
 }
 
 /**
- * 一次性的那两处。
+ * 被点名的一次性例外 ✓。
  *
- * 错误横幅有**它自己的样子** ✗：一张卡片 ✓，左边一道红线 ✓——
- * 那不是普通警告的样子 ✗，是**错误横幅**的样子 ✓。
+ * 每一处都写清楚三件事 ✓：**是哪个零件** ✓、**哪一句** ✓、
+ * 以及**为什么它不一样** ✓。
+ *
+ * 而且**一个例外只放过一处** ✓：同一处不许写两遍 ✓；
+ * 同一句在同一文件里也不许盖住两个地方 ✓——
+ * 那说明它不是一次性的例外 ✓，而是**又该长出一副脸** ✓。
  */
-const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
+const EXCEPTIONS: ReadonlyArray<readonly [string, string, string, string]> = [
   [
     'components/ui/error-banner.tsx',
+    'Alert',
     'bg-card',
     '错误横幅是**一张卡片** ✗，不是普通警告 ✗',
   ],
   [
     'components/ui/error-banner.tsx',
+    'Alert',
     'border-border',
     '错误横幅是**一张卡片** ✗，不是普通警告 ✗',
   ],
   [
     'features/session/SessionCard.tsx',
+    'Card',
     'rounded-none',
     '这一张**开着** ✗，它没有圆角 ✓',
   ],
   [
     'features/settings/SettingsDialog.tsx',
+    'TabsList',
     'border-border',
     '设置那边的页签是**竖着的一列** ✗，它自己带着一道边 ✓',
   ],
   [
     'features/settings/SettingsDialog.tsx',
+    'TabsList',
     'rounded-none',
     '设置那边的页签是**竖着的一列** ✗，它没有圆角 ✓',
   ],
   [
+    'features/settings/SettingsDialog.tsx',
+    'DialogContent',
+    'rounded-none',
+    '这一个弹窗**通栏** ✗，它没有圆角 ✓',
+  ],
+  [
     'components/ui/EditSessionTitleDialog.tsx',
+    'DialogContent',
     'rounded-none',
     '这个弹窗**通栏** ✗，它没有圆角 ✓',
   ],
   [
     'components/ui/EditSessionTitleDialog.tsx',
+    'DialogContent',
     'border-0',
     '这个弹窗**通栏** ✗，它不要边 ✓',
   ],
   [
     'features/settings/OpenCodeModelDialog.tsx',
+    'FormItem',
     'shadow-sm',
     '这一个盒子**多一道影** ✗',
   ],
   [
     'components/ui/confirm-destructive-dialog.tsx',
+    'DialogContent',
     'max-w-[90%]',
     '这一个弹窗**九成宽** ✗，比默认的那一副宽 ✗',
   ],
   [
     'features/settings/RestartServerDialog.tsx',
+    'DialogContent',
     'max-w-[90%]',
     '这一个弹窗**九成宽** ✗，比默认的那一副宽 ✗',
   ],
   [
     'features/settings/UsersSettings.tsx',
+    'DialogContent',
     'max-w-[90%]',
     '这一个弹窗**九成宽** ✗，比默认的那一副宽 ✗',
   ],
   [
     'features/session/PermissionRequestDialog.tsx',
+    'DialogContent',
     'max-w-[calc(100vw-2rem)]',
     '这一个弹窗**离屏幕边两格** ✗，两边对称 ✗',
   ],
   [
     'features/ssh/SSHHostKeyDialog.tsx',
+    'DialogContent',
     'max-w-[calc(100vw-2rem)]',
     '这一个弹窗**离屏幕边两格** ✗，两边对称 ✗',
   ],
   [
     'features/settings/McpOAuthDialog.tsx',
+    'DialogContent',
     'w-[calc(100vw-2rem)]',
     '这一个弹窗**离屏幕边两格** ✗，两边对称 ✗',
   ],
   [
     'features/schedules/PromptTemplateDialog.tsx',
+    'DialogContent',
     'w-[calc(100vw-1rem)]',
     '这一个弹窗**几乎满屏** ✗',
   ],
   [
     'features/schedules/ScheduleJobDialog.tsx',
+    'DialogContent',
     'sm:max-w-[90vw]',
     '这一个弹窗**几乎满屏** ✗',
   ],
   [
     'features/schedules/ScheduleJobDialog.tsx',
+    'DialogContent',
     'sm:w-[calc(100vw-1rem)]',
     '这一个弹窗**几乎满屏** ✗',
   ],
   [
     'features/source-control/SourceControlPanel.tsx',
+    'DialogContent',
     'w-[90vw]',
     '这一个弹窗**九成视口宽** ✗',
   ],
   [
+    'components/ui/download-dialog.tsx',
+    'DialogContent',
+    'max-h-[80vh]',
+    '这一个弹窗在**所有屏幕**上都限八成高 ✗，不是只有宽屏 ✗',
+  ],
+  [
+    'pages/SessionDetail.tsx',
+    'DialogContent',
+    'max-h-[80vh]',
+    '这一个弹窗在**所有屏幕**上都限八成高 ✗，不是只有宽屏 ✗',
+  ],
+  [
+    'features/schedules/PromptTemplateDialog.tsx',
+    'DialogContent',
+    'max-h-[calc(100dvh-1rem)]',
+    '这一个弹窗**比视口矮一格** ✗',
+  ],
+  [
+    'features/schedules/PromptTemplateDialog.tsx',
+    'DialogContent',
+    'sm:max-h-[90vh]',
+    '这一个弹窗**九成屏幕高** ✗',
+  ],
+  [
+    'features/schedules/PromptTemplateDialog.tsx',
+    'DialogContent',
+    'h-[calc(100dvh-1rem)]',
+    '这一个弹窗**在手机上正好比视口矮一格** ✗',
+  ],
+  [
+    'features/settings/GitCredentialDialog.tsx',
+    'DialogContent',
+    'h-[90vh]',
+    '这一个弹窗**在手机上正好九成高** ✗',
+  ],
+  [
+    'features/source-control/SourceControlPanel.tsx',
+    'DialogContent',
+    'h-[90vh]',
+    '这一个弹窗**九成视口高** ✗',
+  ],
+  [
     'features/schedules/ScheduleJobDialog.tsx',
-    'sm:w-[calc(100vw-1rem)]',
-    '这一个弹窗**几乎满屏** ✗',
+    'DialogContent',
+    'sm:h-[min(85vh,760px)]',
+    '这一个弹窗**在宽屏上最高不超过 760px** ✗，屏幕再大也不长高 ✓',
   ],
 ]
 
 /** 这一处被点名了吗 ✗。 */
-function excused(rel: string, token: string): boolean {
-  return EXCEPTIONS.some(([file, marked]) => file === rel && marked === token)
+function excused(rel: string, part: string, token: string): boolean {
+  return EXCEPTIONS.some(
+    ([file, markedPart, marked]) =>
+      file === rel && markedPart === part && marked === token,
+  )
 }
 
 interface CallSite {
@@ -219,6 +325,8 @@ interface CallSite {
   line: number
   part: string
   variant: string
+  width: string
+  height: string
   list: string
 }
 
@@ -236,6 +344,8 @@ function callSites(parts: Record<string, string>): CallSite[] {
           line: source.text.slice(0, match.index).split('\n').length,
           part,
           variant: /(?:^|\s)variant="([^"]*)"/.exec(attrs)?.[1] ?? 'default',
+          width: /(?:^|\s)width="([^"]*)"/.exec(attrs)?.[1] ?? '',
+          height: /(?:^|\s)height="([^"]*)"/.exec(attrs)?.[1] ?? '',
           list: classListOfAttrs(attrs) ?? '',
         })
       }
@@ -245,6 +355,9 @@ function callSites(parts: Record<string, string>): CallSite[] {
 }
 
 const CALL_SITES = callSites(PARTS)
+
+/** 弹窗的那些调用点 ✓。 */
+const DIALOG_SITES = CALL_SITES.filter((site) => site.part === 'DialogContent')
 
 describe('共享零件的脸，各有各副', () => {
   it('门禁自己看得见东西', () => {
@@ -266,6 +379,33 @@ describe('共享零件的脸，各有各副', () => {
 
     // 找得到调用点 ✓。
     expect(CALL_SITES.length, '一个徽章或警告的调用点都没找到，这道门禁多半跑在空集上').toBeGreaterThan(10)
+
+    // 弹窗的宽和高**各有一道刻度** ✓，而且**每一档都有人用** ✓：
+    // 说了刻度上没有的名字 ✗，是**多了一副** ✗；
+    // 刻度上有一档没人用 ✗，是**摆在那儿没人要** ✗。
+    const widths = scaleOf('DIALOG_CONTENT_WIDTHS')
+    const heights = scaleOf('DIALOG_CONTENT_HEIGHTS')
+    expect(widths.size, '弹窗没有宽度刻度').toBeGreaterThan(1)
+    expect(heights.size, '弹窗没有高度刻度').toBeGreaterThan(1)
+
+    const saidWidths = new Set(DIALOG_SITES.map((site) => site.width).filter(Boolean))
+    const saidHeights = new Set(DIALOG_SITES.map((site) => site.height).filter(Boolean))
+    expect(
+      [...widths.keys()].filter((step) => !saidWidths.has(step)),
+      '这些宽度档没有人用',
+    ).toEqual([])
+    expect(
+      [...heights.keys()].filter((step) => !saidHeights.has(step)),
+      '这些高度档没有人用',
+    ).toEqual([])
+    expect(
+      [...saidWidths].filter((step) => !widths.has(step)),
+      '说了刻度上没有的宽度',
+    ).toEqual([])
+    expect(
+      [...saidHeights].filter((step) => !heights.has(step)),
+      '说了刻度上没有的高度',
+    ).toEqual([])
 
     // 认得脸上那几类 ✓——以及"带前缀的是状态" ✓、"哪一边的是形状" ✓。
     expect(FACE_TOKEN.test('bg-success'), '认不出一个背景').toBe(true)
@@ -336,7 +476,7 @@ describe('共享零件的脸，各有各副', () => {
         if (!token) continue
         if (!FACE_TOKEN.test(token)) continue
         if (SHAPE_TOKEN.test(token)) continue
-        if (excused(site.rel, token)) continue
+        if (excused(site.rel, site.part, token)) continue
         offenders.push(`${site.rel}:${site.line}（${site.part} ${site.variant}）  ${token}`)
       }
     }
@@ -352,19 +492,20 @@ describe('共享零件的脸，各有各副', () => {
     ).toEqual([])
   })
 
-  it('弹窗的宽度，是共享零件的事', () => {
-    // 弹窗有多宽 ✗，是共享零件的尺寸 ✓——三十一处调用点自己写 ✗，
-    // 其中四处是随手写的数 ✗（420 ✗、440 ✗、500 ✗、560 ✗）✗，
+  it('弹窗在屏幕上占多宽、多高，是共享零件的事', () => {
+    // 弹窗有多宽 ✗、有多高 ✗，是共享零件的尺寸 ✓——三十一处调用点自己写宽 ✗，
+    // 十八处自己写高 ✗，其中几处是随手写的数 ✗（420 ✗、440 ✗、500 ✗、560 ✗）✗，
     // **不在任何刻度上** ✗。
     const offenders: string[] = []
-    for (const site of CALL_SITES) {
-      if (site.part !== 'DialogContent') continue
+    for (const site of DIALOG_SITES) {
       for (const token of site.list.split(/\s+/)) {
         if (!token) continue
-        if (!/^(?:[a-z0-9]+:)?(?:max-)?w-/.test(token)) continue
-        // **满屏**的三种说法 ✓：它们是同一个决定 ✓，不是刻度上的某一档 ✓。
-        if (['w-full', 'max-w-none', 'w-screen'].includes(token)) continue
-        if (excused(site.rel, token)) continue
+        const aWidth = A_WIDTH.test(token)
+        const aHeight = A_HEIGHT.test(token)
+        if (!aWidth && !aHeight) continue
+        // **满屏**的那些说法 ✓：它们是同一个决定 ✓，不是刻度上的某一档 ✓。
+        if (FULL_SCREEN.includes(token)) continue
+        if (excused(site.rel, site.part, token)) continue
         offenders.push(`${site.rel}:${site.line}  ${token}`)
       }
     }
@@ -372,15 +513,16 @@ describe('共享零件的脸，各有各副', () => {
     expect(
       offenders,
       [
-        `这些地方自己写了弹窗的宽度：${offenders.length} 处`,
+        `这些地方自己写了弹窗的宽或高：${offenders.length} 处`,
         ...offenders,
-        '弹窗有多宽是共享零件的事：要哪一档，就说哪一档（`width="md"`）。',
+        '弹窗占屏幕多宽、多高是共享零件的事：要哪一档，就说哪一档（`width="md"`、`height="tall"`）。',
       ].join('\n'),
     ).toEqual([])
   })
 
   it('被点名的那些，理由都写清楚了，而且都还在', () => {
-    for (const [rel, token, reason] of EXCEPTIONS) {
+    const seen = new Set<string>()
+    for (const [rel, part, token, reason] of EXCEPTIONS) {
       expect(reason.trim().length, `${rel} 的 ${token} 没有写为什么它不一样`).toBeGreaterThan(0)
       const source = SOURCES.find((candidate) => candidate.rel === rel)
       expect(source, `例外里的 ${rel} 已经不存在了`).toBeDefined()
@@ -388,6 +530,24 @@ describe('共享零件的脸，各有各副', () => {
         source!.text.includes(token),
         `例外里的 ${rel} 已经不再写 ${token} 了`,
       ).toBe(true)
+
+      // **同一处不许写两遍** ✓。
+      const mark = `${rel} ${part} ${token}`
+      expect(seen.has(mark), `例外里的 ${mark} 写了两遍`).toBe(false)
+      seen.add(mark)
+
+      // **一个例外只放过一处** ✓：同一句在同一文件里 ✗，
+      // 若盖住了两个地方 ✗，那它就不是一次性的例外 ✗，而是**又该长出一副脸** ✗。
+      const covered = CALL_SITES.filter(
+        (site) =>
+          site.rel === rel &&
+          site.part === part &&
+          site.list.split(/\s+/).includes(token),
+      ).length
+      expect(
+        covered,
+        `例外里的 ${mark} 在那个文件里盖住了 ${covered} 处，一个例外只放过一处`,
+      ).toBe(1)
     }
   })
 })

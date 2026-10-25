@@ -115,12 +115,14 @@ const FIELD_PARTS = ['Input', 'SelectTrigger', 'Textarea']
 const FACE_TOKEN = /^(?:rounded|bg|border|shadow)(?:-|$)/
 
 /**
- * 一次性的那两处。
+ * 一次性的那几处，各有理由。
  *
  * - 问答提示里**正在答的那一栏** ✗：它自己带着一道主色 ✗，
  *   那是一个**状态** ✗——这一栏是亮着的 ✗，不是另一张脸 ✗。
  * - 多选框里的**搜索栏** ✗：它落在**玻璃上** ✗（`bg-surface-glass` ✓），
  *   要透出那层玻璃 ✓，不是另一张卡 ✗。
+ * - 环境变量里**被挡住的那一项** ✗：它的边是红的 ✗，
+ *   那也是一个**状态** ✗——这一项不让用 ✗，不是另一张脸 ✗。
  */
 const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
   [
@@ -132,6 +134,11 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'components/ui/multi-select.tsx',
     'bg-transparent',
     '这一栏在**玻璃上** ✗：它要透出那层玻璃 ✓，不是另一张卡 ✗',
+  ],
+  [
+    'features/settings/ServerEnvVarsSettings.tsx',
+    'border-destructive',
+    '这一项**被挡住了** ✗：它的边是红的 ✗，那是状态 ✗，不是脸 ✗',
   ],
 ]
 

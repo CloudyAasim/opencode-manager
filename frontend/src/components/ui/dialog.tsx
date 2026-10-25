@@ -55,6 +55,8 @@ interface DialogContentProps
   variant?: VariantProps<typeof dialogContentVariants>['variant']
   /** 手机上永远是九成宽 ✓；再宽一点 ✗ 就说哪一档 ✓。 */
   width?: DialogContentWidth
+  /** 宽屏上多高 ✗ 就说哪一档 ✓；不说 ✗ 就由内容决定 ✓。 */
+  height?: DialogContentHeight
   onOpenChange?: (open: boolean) => void
   overlayClassName?: string
 }
@@ -80,6 +82,19 @@ const DIALOG_CONTENT_WIDTHS = {
 } as const
 
 type DialogContentWidth = keyof typeof DIALOG_CONTENT_WIDTHS
+
+/**
+ * 弹窗在宽屏上有多高。
+ *
+ * 手机上 ✗ 它由内容决定 ✓（或者满屏 ✓）；到了宽屏上 ✗，**有两个数** ✗：
+ * 八成 ✓ 和八五成 ✓——**十八处调用点自己写** ✗，十三处写的是同一句 ✗。
+ */
+const DIALOG_CONTENT_HEIGHTS = {
+  short: "sm:max-h-[80vh]",
+  tall: "sm:max-h-[85vh]",
+} as const
+
+type DialogContentHeight = keyof typeof DIALOG_CONTENT_HEIGHTS
 
 /**
  * 弹窗有两副脸。
@@ -128,7 +143,7 @@ const dialogFooterVariants = cva(
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, hideCloseButton, fullscreen, mobileFullscreen, mobileSwipeToClose, keyboardAware, canSwipeBack, onSwipeBack, overlayClassName, style, variant, width = "lg", ...props }, ref) => {
+>(({ className, children, hideCloseButton, fullscreen, mobileFullscreen, mobileSwipeToClose, keyboardAware, canSwipeBack, onSwipeBack, overlayClassName, style, variant, width = "lg", height, ...props }, ref) => {
   const { t } = useI18n()
   const isMobileFullscreenMode = fullscreen || mobileFullscreen
   const isDialogOpen = React.useContext(DialogOpenContext)
@@ -188,6 +203,7 @@ const DialogContent = React.forwardRef<
         className={cn(
           dialogContentVariants({ variant }),
           DIALOG_CONTENT_WIDTHS[width],
+          height ? DIALOG_CONTENT_HEIGHTS[height] : undefined,
           fullscreen
             ? "inset-0 w-full h-full max-w-none max-h-none p-0 rounded-none"
             : mobileFullscreen

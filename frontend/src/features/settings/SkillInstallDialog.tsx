@@ -127,7 +127,7 @@ export function SkillInstallDialog({ open, onOpenChange, onInstalled }: SkillIns
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent width="lg" mobileFullscreen className="sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
+      <DialogContent height="tall" width="lg" mobileFullscreen className="gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
         <DialogLayout title={t('settingsPanels.skillInstall.title')}>
           <div className="space-y-4">
             <Tabs value={sourceType} onValueChange={(v) => setSourceType(v as 'github' | 'upload')}>

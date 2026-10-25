@@ -401,11 +401,10 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
             
             <div className="flex items-center gap-1 flex-shrink-0 mt-1">
               {isMarkdownFile && viewMode !== 'edit' && (
-                <Button 
-                  variant="outline" 
-                  size="icon-xs" 
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMarkdownPreview(!markdownPreview) }} 
-                  className={`${markdownPreview ? 'bg-primary text-primary-foreground' : ''}`}
+                <Button
+                  variant={markdownPreview ? 'selected' : 'outline'}
+                  size="icon-xs"
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMarkdownPreview(!markdownPreview) }}
                   title={markdownPreview ? t('repo.fileBrowser.showRawMarkdown') : t('repo.fileBrowser.previewRenderedMarkdown')}
                 >
                   {markdownPreview ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
@@ -413,11 +412,10 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               )}
               
               {isTextFile && !markdownPreview && (
-                <Button 
-                  variant="outline" 
-                  size="icon-xs" 
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLineWrap(!lineWrap) }} 
-                  className={`${lineWrap ? 'bg-primary text-primary-foreground' : ''}`}
+                <Button
+                  variant={lineWrap ? 'selected' : 'outline'}
+                  size="icon-xs"
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLineWrap(!lineWrap) }}
                   title={lineWrap ? t('repo.fileBrowser.disableLineWrap') : t('repo.fileBrowser.enableLineWrap')}
                 >
                   <WrapText className="w-3 h-3" />

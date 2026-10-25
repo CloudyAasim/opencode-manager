@@ -67,7 +67,7 @@ export function RepoSkillsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent width="3xl" mobileFullscreen className="sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
+        <DialogContent height="tall" width="3xl" mobileFullscreen className="gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
           <DialogTitleBar
             title={t('repo.skills.title')}
             description={canLoad ? t('repo.skills.descriptionLoad') : t('repo.skills.descriptionAvailable')}

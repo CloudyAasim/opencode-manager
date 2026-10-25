@@ -141,7 +141,7 @@ describe('按钮的脸，是它那一档的事', () => {
 
     // 每一档都写着什么 ✓。
     expect(VARIANTS.size, '共享的按钮没有档，这道门禁多半读错了地方').toBeGreaterThan(4)
-    for (const name of ['default', 'outline', 'ghost']) {
+    for (const name of ['default', 'outline', 'ghost', 'selected']) {
       expect(VARIANTS.has(name), `共享的按钮没有 ${name} 那一档`).toBe(true)
     }
 
@@ -150,6 +150,12 @@ describe('按钮的脸，是它那一档的事', () => {
     expect(outline.has('border-border'), '认不出 outline 那一档的边框').toBe(true)
     expect(outline.has('hover:bg-accent'), '认不出 outline 那一档的悬停').toBe(true)
     expect(saidBy('default').has('bg-primary'), '认不出 default 那一档的背景').toBe(true)
+    // **亮着的那一副** ✓：它自己有名字 ✓，不是调用点自己写的主色 ✓。
+    expect(saidBy('selected').has('bg-primary'), '认不出 selected 那一档的背景').toBe(true)
+    expect(
+      saidBy('selected').has('hover:bg-primary-hover'),
+      'selected 那一档没有自己的悬停——它会落回 outline 的那一档 ✗',
+    ).toBe(true)
 
     // 找得到调用点 ✓。
     expect(CALL_SITES.length, '一个按钮的调用点都没找到，这道门禁多半跑在空集上').toBeGreaterThan(100)

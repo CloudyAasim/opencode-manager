@@ -241,7 +241,7 @@ export function AssistantWorkspaceSettings() {
       )}
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent width="3xl" mobileFullscreen keyboardAware className="sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
+        <DialogContent height="tall" width="3xl" mobileFullscreen keyboardAware className="gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
           <DialogTitleBar
             title={t('settings.assistantWorkspace.editTitle', { name: editing?.name ?? '' })}
             titleClassName="break-all pr-8"

@@ -187,14 +187,14 @@ export function OpenCodeConfigEditor({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) requestClose() }}>
-        <DialogContent
+        <DialogContent height="tall"
           mobileFullscreen
           width="4xl"
           keyboardAware
           onOpenAutoFocus={(event) => {
             if (isMobile) event.preventDefault()
           }}
-          className="flex w-full min-w-0 flex-col gap-0 sm:max-h-[85vh] "
+          className="flex w-full min-w-0 flex-col gap-0"
         >
           <DialogTitleBar
             title={t('settingsPanels.configEditor.editTitle', { name: draftSource.name })}

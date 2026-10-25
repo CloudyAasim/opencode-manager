@@ -96,7 +96,7 @@ export function WorkspaceManager({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent width="xl" mobileFullscreen className="flex flex-col gap-0 sm:gap-4 overflow-hidden sm:max-h-[85vh]">
+        <DialogContent height="tall" width="xl" mobileFullscreen className="flex flex-col gap-0 sm:gap-4 overflow-hidden">
           <DialogTitleBar
             title={t('repo.workspaces')}
             description={t('repo.workspaceManager.description')}

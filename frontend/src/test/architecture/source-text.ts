@@ -179,7 +179,9 @@ function classNamesOfExpression(
     if (char === '"' || char === "'" || char === '`') {
       const end = expression.indexOf(char, index + 1)
       if (end < 0) break
-      parts.push(expression.slice(index + 1, end))
+      const literal = expression.slice(index + 1, end)
+      // **模板字符串** ✓：它里面插进来的那些 ✓ 也要读 ✓。
+      parts.push(char === '`' ? templateClasses(literal) : literal)
       index = end + 1
       continue
     }
@@ -241,6 +243,46 @@ function ownAttributeAt(text: string, name: string): number | null {
 }
 
 /**
+ * The class names a template literal asks for.
+ *
+ * `className={`p-2 ${open ? "rounded-none" : "rounded-r-lg"}`}` is two decisions
+ * written as one list: the words that are always there, and the words one of
+ * the branches adds. Read as one flat string, the branches stay inside it -
+ * `"rounded-none"` with its quotes - and a rule about class names then sees a
+ * word nobody wrote.
+ */
+function templateClasses(text: string): string {
+  const parts: string[] = []
+  let words = ''
+  let index = 0
+  while (index < text.length) {
+    if (text.startsWith('${', index)) {
+      if (words) {
+        parts.push(words)
+        words = ''
+      }
+      let depth = 0
+      let cursor = index + 1
+      for (; cursor < text.length; cursor += 1) {
+        const char = text[cursor]
+        if (char === '{') depth += 1
+        else if (char === '}') {
+          depth -= 1
+          if (depth === 0) break
+        }
+      }
+      parts.push(classNamesOfExpression(text.slice(index + 2, cursor)))
+      index = cursor + 1
+      continue
+    }
+    words += text[index]
+    index += 1
+  }
+  if (words) parts.push(words)
+  return parts.join(' ').replace(/\s+/g, ' ').trim()
+}
+
+/**
  * The class names a piece of markup asks for.
  *
  * `className="…"` is literal. `className={…}` is computed, and the class names
@@ -256,7 +298,11 @@ export function classListOfAttrs(
   const equals = text.indexOf('=', at)
   const value = attributeValue(text, equals + 1)
   if (!value) return ''
-  if (value.quoted) return value.text.replace(/\s+/g, ' ').trim()
+  if (value.quoted) {
+    // **模板字符串** ✓：它里面插进来的那些 ✓ 也要读 ✓。
+    if (text[equals + 1] === '`') return templateClasses(value.text)
+    return value.text.replace(/\s+/g, ' ').trim()
+  }
   return classNamesOfExpression(value.text, resolve)
 }
 
@@ -437,6 +483,37 @@ function groupOf(text: string, key: string, found: Map<string, string>): Map<str
   }
   const body = text.slice(at, end)
   for (const match of body.matchAll(/"?([\w-]+)"?:\s*"([^"]*)"/g)) {
+    found.set(match[1]!, match[2]!)
+  }
+  return found
+}
+
+/**
+ * The steps a plain record offers.
+ *
+ * `const DIALOG_CONTENT_HEIGHTS = { short: "…", tall: "…" } as const` is where a
+ * part says what it has to offer - a ladder of sizes that is not a face, so it
+ * is not written with `cva`. A rule about that ladder has to read it from
+ * there, the same way `variantsOf` reads the faces.
+ */
+export function recordOf(text: string, identifier: string): Map<string, string> {
+  const found = new Map<string, string>()
+  const at = text.indexOf(`const ${identifier} =`)
+  if (at < 0) return found
+  const open = text.indexOf('{', at)
+  if (open < 0) return found
+  let depth = 0
+  let end = open
+  for (; end < text.length; end += 1) {
+    const char = text[end]
+    if (char === '{') depth += 1
+    else if (char === '}') {
+      depth -= 1
+      if (depth === 0) break
+    }
+  }
+  const body = text.slice(open, end)
+  for (const match of body.matchAll(/"?([\w-]+)"?\s*:\s*"([^"]*)"/g)) {
     found.set(match[1]!, match[2]!)
   }
   return found

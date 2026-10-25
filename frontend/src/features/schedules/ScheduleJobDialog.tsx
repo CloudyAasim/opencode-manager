@@ -308,11 +308,11 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent width="4xl"
+      <DialogContent height="tall" width="4xl"
         overlayClassName="bg-black/80"
         mobileFullscreen
         variant="opaque"
-      className="flex h-dvh max-h-dvh w-full flex-col gap-0 sm:gap-4 overflow-hidden sm:h-[min(85vh,760px)] sm:max-h-[85vh] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
+      className="flex h-dvh max-h-dvh w-full flex-col gap-0 sm:gap-4 overflow-hidden sm:h-[min(85vh,760px)] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
       >
         <DialogTitleBar
           title={job ? t('schedules.scheduleDialog.editTitle') : t('schedules.scheduleDialog.newTitle')}

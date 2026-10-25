@@ -432,7 +432,7 @@ export function OpenCodeModelDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange} key={editingModel ? `edit-${editingModel.modelId}` : 'create'}>
-      <DialogContent width="2xl" mobileFullscreen className="sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col">
+      <DialogContent height="tall" width="2xl" mobileFullscreen className="gap-0 sm:gap-4 flex flex-col">
         <DialogLayout
           title={isEditing ? t('settingsPanels.modelDialog.editTitle') : t('settingsPanels.modelDialog.createTitle')}
           onBodyClick={(e) => e.stopPropagation()}
