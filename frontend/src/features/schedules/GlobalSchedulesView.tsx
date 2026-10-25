@@ -343,14 +343,14 @@ export function GlobalSchedulesView() {
 
       <Tabs value={scheduleTab} onValueChange={(v) => setScheduleTab(v as ScheduleTab)} className="flex-1 min-h-0 flex flex-col overflow-hidden">
         <div className="border-b border-border px-4">
-          <TabsList className="h-auto gap-0 rounded-none border-0 bg-transparent p-0">
-            <TabsTrigger value="jobs" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+          <TabsList variant="bar">
+            <TabsTrigger value="jobs" variant="bar" className="px-4 py-2.5">
               {t('schedules.global.jobsTab')}
             </TabsTrigger>
-            <TabsTrigger value="runs" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <TabsTrigger value="runs" variant="bar" className="px-4 py-2.5">
               {t('schedules.global.runsTab')}
             </TabsTrigger>
-            <TabsTrigger value="prompts" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+            <TabsTrigger value="prompts" variant="bar" className="px-4 py-2.5">
               {t('schedules.global.promptsTab')}
             </TabsTrigger>
           </TabsList>

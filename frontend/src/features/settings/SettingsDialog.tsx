@@ -211,12 +211,12 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
             orientation="vertical"
             className="flex min-h-0 w-full flex-1"
           >
-            <TabsList className="flex h-full min-h-0 w-56 shrink-0 flex-col items-stretch justify-start overflow-y-auto rounded-none border-r border-border bg-card p-1">
+            <TabsList variant="card" className="flex h-full min-h-0 w-56 shrink-0 flex-col items-stretch justify-start overflow-y-auto rounded-none border-r border-border p-1">
               {menuItems.map((item) => (
                 <TabsTrigger
                   key={item.id}
                   value={item.id}
-                  className="shrink-0 justify-start gap-2 rounded-md px-3 py-2 text-muted-foreground transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                  className="shrink-0 justify-start gap-2 px-3 py-2 text-muted-foreground transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                 >
                   <item.icon className="h-4 w-4 shrink-0" />
                   {item.label}

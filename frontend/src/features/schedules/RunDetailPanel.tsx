@@ -41,10 +41,10 @@ export function RunDetailPanel({ repoId, activeRun, selectedRunLoading, onCancel
   return (
     <Tabs key={`${activeRun.id}-${String(activeRun.responseText ? 'response' : activeRun.errorText ? 'error' : 'log')}`} defaultValue={activeRun.responseText ? 'response' : activeRun.errorText ? 'error' : 'log'} className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex items-center justify-center gap-2 px-2 py-1.5">
-        <TabsList className="h-auto gap-0 rounded-none border-0 bg-transparent p-0">
-          <TabsTrigger value="log" className="rounded-none border-b-2 border-transparent px-3 py-1.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">{t('schedules.runs.log')}</TabsTrigger>
-          <TabsTrigger value="response" disabled={!activeRun.responseText} className="rounded-none border-b-2 border-transparent px-3 py-1.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">{t('schedules.runs.assistantOutput')}</TabsTrigger>
-          <TabsTrigger value="error" disabled={!activeRun.errorText} className="rounded-none border-b-2 border-transparent px-3 py-1.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">{activeRun.status === 'cancelled' ? t('schedules.runs.details') : t('schedules.runs.error')}</TabsTrigger>
+        <TabsList variant="bar">
+          <TabsTrigger value="log" variant="bar" className="px-3 py-1.5">{t('schedules.runs.log')}</TabsTrigger>
+          <TabsTrigger value="response" disabled={!activeRun.responseText} variant="bar" className="px-3 py-1.5">{t('schedules.runs.assistantOutput')}</TabsTrigger>
+          <TabsTrigger value="error" disabled={!activeRun.errorText} variant="bar" className="px-3 py-1.5">{activeRun.status === 'cancelled' ? t('schedules.runs.details') : t('schedules.runs.error')}</TabsTrigger>
         </TabsList>
       </div>
       {(activeRun.status === 'running' || activeRun.sessionId || activeRun.responseText) && (

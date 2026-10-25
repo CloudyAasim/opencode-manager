@@ -49,6 +49,8 @@ const PARTS: Record<string, string> = {
   Badge: 'components/ui/badge.tsx',
   Alert: 'components/ui/alert.tsx',
   Card: 'components/ui/card.tsx',
+  TabsList: 'components/ui/tabs.tsx',
+  TabsTrigger: 'components/ui/tabs.tsx',
 }
 
 /** 所有的"有档的"零件 ✓——颜色那一道规矩管的是全部 ✓。 */
@@ -107,6 +109,16 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'rounded-none',
     '这一张**开着** ✗，它没有圆角 ✓',
   ],
+  [
+    'features/settings/SettingsDialog.tsx',
+    'border-border',
+    '设置那边的页签是**竖着的一列** ✗，它自己带着一道边 ✓',
+  ],
+  [
+    'features/settings/SettingsDialog.tsx',
+    'rounded-none',
+    '设置那边的页签是**竖着的一列** ✗，它没有圆角 ✓',
+  ],
 ]
 
 /** 这一处被点名了吗 ✗。 */
@@ -158,6 +170,7 @@ describe('共享零件的脸，各有各副', () => {
     expect(variantsOfPart(PARTS.Badge!).has('success'), '徽章没有成功那一副').toBe(true)
     expect(variantsOfPart(PARTS.Alert!).has('success'), '警告没有成功那一副').toBe(true)
     expect(variantsOfPart(PARTS.Card!).has('flat'), '卡片没有"嵌在面板里"那一副').toBe(true)
+    expect(variantsOfPart(PARTS.TabsList!).has('bar'), '页签条没有"贴在边上"那一副').toBe(true)
 
     // 找得到调用点 ✓。
     expect(CALL_SITES.length, '一个徽章或警告的调用点都没找到，这道门禁多半跑在空集上').toBeGreaterThan(10)

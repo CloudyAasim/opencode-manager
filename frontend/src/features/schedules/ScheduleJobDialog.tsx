@@ -320,7 +320,7 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
 
         <Tabs defaultValue="basics" className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="border-b border-border pb-3">
-            <TabsList className="grid h-9 w-full grid-cols-4 bg-card p-0.5">
+            <TabsList variant="card" className="grid h-9 w-full grid-cols-4 p-0.5">
               <TabsTrigger value="basics" className="h-8 px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">{t('schedules.scheduleDialog.generalTab')}</TabsTrigger>
               <TabsTrigger value="timing" className="h-8 px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">{t('schedules.scheduleDialog.timingTab')}</TabsTrigger>
               <TabsTrigger value="prompt" className="h-8 px-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">{t('schedules.scheduleDialog.promptTab')}</TabsTrigger>

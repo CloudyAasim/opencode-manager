@@ -154,7 +154,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
           <div className="space-y-2">
             <Label>{t('repo.addDialog.type')}</Label>
             <Tabs value={repoType} onValueChange={(value) => setRepoType(value as 'remote' | 'local' | 'folder')}>
-              <TabsList className="grid w-full grid-cols-3 bg-muted">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="remote">{t('repo.addDialog.remote')}</TabsTrigger>
                 <TabsTrigger value="local">{t('repo.addDialog.local')}</TabsTrigger>
                 <TabsTrigger value="folder">{t('repo.addDialog.folder')}</TabsTrigger>
