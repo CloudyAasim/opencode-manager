@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -177,10 +177,11 @@ export function CreateWorktreeDialog({
             </div>
           )}
 
-          <div className="flex gap-2 justify-end">
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
+              size="touch"
               className="border-border hover:bg-accent"
             >
               {t('repo.cancel')}
@@ -188,6 +189,7 @@ export function CreateWorktreeDialog({
             <Button
               onClick={handleCreate}
               disabled={!canCreate || !branchName.trim() || !baseBranch || worktreeMutation.isPending}
+              size="touch"
               className="bg-primary hover:bg-primary disabled:opacity-50"
             >
               {worktreeMutation.isPending ? (
@@ -199,7 +201,7 @@ export function CreateWorktreeDialog({
                 t('repo.worktreeCreation.title')
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </div>
       </DialogContent>
     </Dialog>

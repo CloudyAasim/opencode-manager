@@ -213,11 +213,11 @@ export function SkillInstallDialog({ open, onOpenChange, onInstalled }: SkillIns
           </div>
         </DialogLayout>
 
-        <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
-          <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
+        <DialogFooter className="pt-2 border-t border-border">
+          <Button size="touch" variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
             {t('settingsPanels.skillInstall.cancel')}
           </Button>
-          <Button
+          <Button size="touch"
             onClick={handleSubmit}
             disabled={installMutation.isPending}
             className="flex-1 sm:flex-none"

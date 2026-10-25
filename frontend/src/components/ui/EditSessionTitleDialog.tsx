@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -83,23 +83,23 @@ export function EditSessionTitleDialog({ isOpen, currentTitle, onClose, onSave }
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-3">
+          <DialogFooter className="items-center mt-3">
             <Button
               type="button"
               variant="outline"
               onClick={handleCancel}
-              size="lg" className="flex-1"
+              size="touch" className="flex-1"
             >
               {t('session.editTitle.cancel')}
             </Button>
             <Button
               type="submit"
-              size="lg" className="flex-1"
+              size="touch" className="flex-1"
             >
               <Check className="w-4 h-4 mr-2" />
               {t('session.editTitle.save')}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

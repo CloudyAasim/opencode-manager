@@ -58,9 +58,9 @@ export function ConfirmDestructiveDialog({
           </Alert>
         )}
 
-        <DialogFooter className="gap-2">
+        <DialogFooter>
           <Button
-            variant="outline"
+            size="touch" variant="outline"
             onClick={onCancel}
             disabled={isPending}
             className="flex-1 sm:flex-none"
@@ -68,7 +68,7 @@ export function ConfirmDestructiveDialog({
             {resolvedCancelLabel}
           </Button>
           <Button
-            variant="destructive"
+            size="touch" variant="destructive"
             onClick={onConfirm}
             disabled={isPending}
             className="flex-1 sm:flex-none font-semibold"

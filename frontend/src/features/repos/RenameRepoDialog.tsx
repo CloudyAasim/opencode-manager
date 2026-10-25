@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { X, Check } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
@@ -72,23 +72,23 @@ export function RenameRepoDialog({
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <DialogFooter className="items-center">
             <Button
               type="button"
               variant="outline"
               onClick={handleCancel}
-              size="lg" className="flex-1"
+              size="touch" className="flex-1"
             >
               {t('repo.cancel')}
             </Button>
             <Button
               type="submit"
-              size="lg" className="flex-1"
+              size="touch" className="flex-1"
             >
               <Check className="w-4 h-4 mr-2" />
               {t('repo.save')}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

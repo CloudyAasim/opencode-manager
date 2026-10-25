@@ -218,11 +218,11 @@ export function SkillDialog({ open, onOpenChange, onSubmit, editingSkill }: Skil
           </Form>
         </DialogLayout>
 
-        <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
-          <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
+        <DialogFooter className="pt-2 border-t border-border">
+          <Button size="touch" variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
             {t('settingsPanels.skillDialog.cancel')}
           </Button>
-          <Button
+          <Button size="touch"
             onClick={() => form.handleSubmit(handleSubmit)()}
             disabled={!form.formState.isValid}
             className="flex-1 sm:flex-none"

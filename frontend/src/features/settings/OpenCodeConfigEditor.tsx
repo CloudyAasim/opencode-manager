@@ -316,16 +316,16 @@ export function OpenCodeConfigEditor({
             </div>
           )}
 
-          <DialogFooter data-editor-footer className="shrink-0 gap-2 border-t pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-6">
+          <DialogFooter data-editor-footer className="shrink-0 border-t pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-6">
             <Button
-              variant="outline"
+              size="touch" variant="outline"
               onClick={requestClose}
               disabled={isSaving}
               className="flex-1 sm:flex-none"
             >
               {t('settingsPanels.configEditor.cancel')}
             </Button>
-            <Button
+            <Button size="touch"
               onClick={updateConfig}
               disabled={isSaving || !editConfigContent.trim()}
               className="flex-1 sm:flex-none"

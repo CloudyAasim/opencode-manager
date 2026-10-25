@@ -369,11 +369,11 @@ export function UsersSettings() {
               placeholder={t('settings.users.passwordPlaceholder')}
             />
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setResetTarget(null)} disabled={resetMutation.isPending}>
+          <DialogFooter>
+            <Button size="touch" variant="outline" onClick={() => setResetTarget(null)} disabled={resetMutation.isPending}>
               {t('settings.users.cancel')}
             </Button>
-            <Button
+            <Button size="touch"
               onClick={() => {
                 if (resetTarget && resetPasswordValue.length >= 8) {
                   resetMutation.mutate({ id: resetTarget.id, password: resetPasswordValue })

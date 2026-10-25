@@ -246,11 +246,11 @@ export function CommandDialog({
           </Form>
         </DialogLayout>
 
-        <DialogFooter className="border-t gap-2">
-          <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
+        <DialogFooter className="border-t">
+          <Button size="touch" variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
             {t("settingsPanels.commandDialog.cancel")}
           </Button>
-          <Button onClick={() => form.handleSubmit(handleSubmit)()} disabled={!form.formState.isValid} className="flex-1 sm:flex-none">
+          <Button size="touch" onClick={() => form.handleSubmit(handleSubmit)()} disabled={!form.formState.isValid} className="flex-1 sm:flex-none">
             {editingCommand ? t("settingsPanels.commandDialog.update") : t("settingsPanels.commandDialog.create")}
           </Button>
         </DialogFooter>

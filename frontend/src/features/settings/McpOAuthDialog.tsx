@@ -374,15 +374,15 @@ export function McpOAuthDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter>
           {step === 'error' && (
-            <Button variant="outline" onClick={handleRetry}>
+            <Button size="touch" variant="outline" onClick={handleRetry}>
               {t('common.retry')}
             </Button>
           )}
           {step !== 'success' && (
             <Button
-              variant="outline"
+              size="touch" variant="outline"
               onClick={() => handleOpenChange(false)}
               disabled={loading}
             >

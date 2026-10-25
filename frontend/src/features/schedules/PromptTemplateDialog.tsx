@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { PromptTemplate, CreatePromptTemplateRequest } from '@opencode-manager/shared/types'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -116,13 +116,13 @@ export function PromptTemplateDialog({ open, onOpenChange, template, initialValu
             <Textarea id="template-prompt" value={form.prompt} onChange={handleChange('prompt')} className="min-h-[200px]" placeholder={t('schedules.promptTemplates.dialog.promptPlaceholder')} />
           </div>
         </div>
-        <div className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
-          <Button onClick={handleSubmit} disabled={isSaving || !isValid} className="flex-1 sm:flex-none">
+        <DialogFooter className="pt-2 border-t border-border">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} size="touch" className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
+          <Button onClick={handleSubmit} disabled={isSaving || !isValid} size="touch" className="flex-1 sm:flex-none">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isSaving ? t('schedules.common.saving') : template ? t('schedules.common.saveChanges') : t('schedules.promptTemplates.dialog.create')}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

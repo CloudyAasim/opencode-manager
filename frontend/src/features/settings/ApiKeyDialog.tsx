@@ -118,10 +118,10 @@ export function ApiKeyDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button size="touch" variant="outline" onClick={handleClose} disabled={isSubmitting}>
             {t('misc.common.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!apiKey.trim() || isSubmitting}>
+          <Button size="touch" onClick={handleSubmit} disabled={!apiKey.trim() || isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

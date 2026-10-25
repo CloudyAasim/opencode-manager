@@ -103,7 +103,7 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
             />
           </div>
 
-          <DialogFooter className="flex flex-row gap-2 pt-2 border-t border-border sm:justify-end">
+          <DialogFooter className="pt-2 border-t border-border">
             <Button variant="outline" onClick={() => setEditingFile(null)} size="touch" className="flex-1 sm:flex-none">
               {t('settingsPanels.directoryFiles.cancel')}
             </Button>

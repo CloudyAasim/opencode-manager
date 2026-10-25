@@ -10,7 +10,7 @@ import type { Repo } from '@/api/types'
 import { OPENCODE_API_ENDPOINT } from '@/config'
 import { Button } from '@/components/ui/button'
 import type { ComboboxOption } from '@/components/ui/combobox'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { DialogTitleBar } from '@/components/ui/dialog-layout'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -398,13 +398,13 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
           />
         </Tabs>
 
-        <div className="mt-0 shrink-0 border-t border-border py-4 flex flex-row gap-2 sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
-          <Button onClick={handleSubmit} disabled={isSaving || !name.trim() || !prompt.trim() || isScheduleConfigInvalid || (!!showRepoSelector && !job && selectedRepoId === undefined)} className="flex-1 sm:flex-none">
+        <DialogFooter className="mt-0 shrink-0 border-t border-border py-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} size="touch" className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
+          <Button onClick={handleSubmit} disabled={isSaving || !name.trim() || !prompt.trim() || isScheduleConfigInvalid || (!!showRepoSelector && !job && selectedRepoId === undefined)} size="touch" className="flex-1 sm:flex-none">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isSaving ? t('schedules.common.saving') : job ? t('schedules.common.saveChanges') : t('schedules.scheduleDialog.create')}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
       <PromptTemplateDialog
         open={templateDialogOpen}

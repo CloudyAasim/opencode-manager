@@ -34,10 +34,10 @@ export function CreateWorkspaceDialog({ open, onOpenChange, onCreate, isCreating
           </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
+          <Button size="touch" variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
             {t('repo.cancel')}
           </Button>
-          <Button onClick={() => { void onCreate(); }} disabled={isCreating} className="bg-primary hover:bg-primary-hover text-primary-foreground">
+          <Button size="touch" onClick={() => { void onCreate(); }} disabled={isCreating} className="bg-primary hover:bg-primary-hover text-primary-foreground">
             {isCreating ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

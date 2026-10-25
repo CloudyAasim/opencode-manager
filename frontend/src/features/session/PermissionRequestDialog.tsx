@@ -118,8 +118,8 @@ export function PermissionRequestDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-2 mt-2">
-          <Button size="wide"
+        <DialogFooter className="flex-col-reverse mt-2">
+          <Button size="touch"
             variant="outline"
             onClick={() => handleResponse('reject')}
             disabled={isLoading}
@@ -130,7 +130,7 @@ export function PermissionRequestDialog({
           >
             {loadingAction === 'reject' ? t('session.permission.denying') : t('session.permission.deny')}
           </Button>
-          <Button size="wide"
+          <Button size="touch"
             variant="secondary"
             onClick={() => handleResponse('always')}
             disabled={isLoading}
@@ -141,7 +141,7 @@ export function PermissionRequestDialog({
           >
             {loadingAction === 'always' ? t('session.permission.allowing') : t('session.permission.allowAlways')}
           </Button>
-          <Button size="wide"
+          <Button size="touch"
             variant="default"
             onClick={() => handleResponse('once')}
             disabled={isLoading}

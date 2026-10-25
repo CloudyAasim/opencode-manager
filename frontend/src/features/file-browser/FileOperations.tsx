@@ -1,7 +1,7 @@
 import { useState, memo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Upload, Plus, FolderPlus, FilePlus, File, Folder } from 'lucide-react'
@@ -122,14 +122,14 @@ export const FileOperations = memo(function FileOperations({ onUpload, onCreate 
               }}
             />
             
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)} size="touch">
                 {t('repo.cancel')}
               </Button>
-              <Button onClick={handleCreate} disabled={!createName.trim()}>
+              <Button onClick={handleCreate} disabled={!createName.trim()} size="touch">
                 {t('repo.create')}
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

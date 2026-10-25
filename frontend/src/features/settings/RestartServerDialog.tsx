@@ -35,11 +35,11 @@ export function RestartServerDialog({
             }
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onCancel} disabled={isRestarting}>
+        <DialogFooter>
+          <Button size="touch" variant="outline" onClick={onCancel} disabled={isRestarting}>
             {t('settingsPanels.restartServer.later')}
           </Button>
-          <Button onClick={onConfirm} disabled={isConfirmDisabled}>
+          <Button size="touch" onClick={onConfirm} disabled={isConfirmDisabled}>
             {isRestarting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />

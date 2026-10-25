@@ -360,11 +360,11 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
           </div>
         </DialogLayout>
 
-        <DialogFooter className="border-t gap-2">
-          <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
+        <DialogFooter className="border-t">
+          <Button size="touch" variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
             {t('settingsPanels.addMcpServer.cancel')}
           </Button>
-          <Button
+          <Button size="touch"
             onClick={handleAdd}
             disabled={!serverId || isPending}
             className="flex-1 sm:flex-none"

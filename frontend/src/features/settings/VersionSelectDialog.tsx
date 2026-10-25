@@ -3,7 +3,7 @@ import { PanelLoading } from '@/components/ui/panel-loading'
 import { PanelMessage } from '@/components/ui/panel-message'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Loader2, Check, Download } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { settingsApi } from '@/api/settings'
 import { showToast } from '@/lib/toast'
@@ -145,17 +145,19 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t">
+            <DialogFooter className="pt-4 border-t">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={installMutation.isPending}
+                size="touch"
               >
                 {t('settingsPanels.versionSelect.cancel')}
               </Button>
               <Button
                 onClick={handleInstall}
                 disabled={!selectedVersion || installMutation.isPending}
+                size="touch"
                 className="min-w-[120px]"
               >
                 {installMutation.isPending ? (
@@ -165,7 +167,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                 )}
                 {selectedVersion ? t('settingsPanels.versionSelect.install') : t('settingsPanels.versionSelect.selectVersion')}
               </Button>
-            </div>
+            </DialogFooter>
           </>
         )}
       </DialogContent>

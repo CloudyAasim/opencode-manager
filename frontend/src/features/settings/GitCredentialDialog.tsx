@@ -388,17 +388,17 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
           </div>
         </form>
 
-        <DialogFooter className="border-t gap-2">
+        <DialogFooter className="border-t">
           <Button
             type="button"
-            variant="outline"
+            size="touch" variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
             className="flex-1 sm:flex-none"
           >
             {t('settingsPanels.gitCredential.cancel')}
           </Button>
-          <Button
+          <Button size="touch"
             type="button"
             onClick={handleSubmit}
             disabled={isSaving || !formData.name.trim() || !formData.host.trim() ||

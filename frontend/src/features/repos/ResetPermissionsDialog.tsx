@@ -47,14 +47,14 @@ export function ResetPermissionsDialog({
         </DialogHeader>
         <DialogFooter>
           <Button
-            variant="outline"
+            size="touch" variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={resetPermissionsMutation.isPending}
           >
             {t('repo.cancel')}
           </Button>
           <Button
-            variant="destructive"
+            size="touch" variant="destructive"
             onClick={() => resetPermissionsMutation.mutate()}
             disabled={resetPermissionsMutation.isPending}
           >

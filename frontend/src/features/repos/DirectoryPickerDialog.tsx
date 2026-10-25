@@ -121,11 +121,11 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter>
+          <Button type="button" size="touch" variant="outline" onClick={() => onOpenChange(false)}>
             {t('repo.cancel')}
           </Button>
-          <Button type="button" onClick={handleSelect} disabled={!data?.path}>
+          <Button size="touch" type="button" onClick={handleSelect} disabled={!data?.path}>
             {t('repo.directoryPicker.selectThisFolder')}
           </Button>
         </DialogFooter>

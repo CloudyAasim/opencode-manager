@@ -146,8 +146,8 @@ export function SSHHostKeyDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-2 mt-2">
-          <Button size="wide"
+        <DialogFooter className="flex-col-reverse mt-2">
+          <Button size="touch"
             variant="outline"
             onClick={() => handleResponse('reject')}
             disabled={isLoading || isExpired}
@@ -155,7 +155,7 @@ export function SSHHostKeyDialog({
           >
             {isLoading ? t('misc.ssh.processing') : t('misc.ssh.reject')}
           </Button>
-          <Button size="wide"
+          <Button size="touch"
             variant={request.isKeyChanged ? 'destructive' : 'default'}
             onClick={() => handleResponse('accept')}
             disabled={isLoading || isExpired}
