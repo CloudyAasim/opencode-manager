@@ -43,7 +43,7 @@ export function RenameRepoDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent hideCloseButton className="sm:max-w-md">
+      <DialogContent width="md" hideCloseButton>
         <DialogHeader>
           <DialogTitle>{t('repo.rename.title')}</DialogTitle>
         </DialogHeader>

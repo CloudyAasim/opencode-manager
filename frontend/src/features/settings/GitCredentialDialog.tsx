@@ -162,7 +162,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent mobileFullscreen className="max-w-lg h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col">
+      <DialogContent width="lg" mobileFullscreen className="h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{credential ? t('settingsPanels.gitCredential.editTitle') : t('settingsPanels.gitCredential.addTitle')}</DialogTitle>
         </DialogHeader>

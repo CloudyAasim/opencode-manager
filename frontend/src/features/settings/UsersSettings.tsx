@@ -353,7 +353,7 @@ export function UsersSettings() {
       </Card>
 
       <Dialog open={resetTarget !== null} onOpenChange={(open) => !open && setResetTarget(null)}>
-        <DialogContent className="max-w-[90%] sm:max-w-sm">
+        <DialogContent width="sm" className="max-w-[90%]">
           <DialogHeader>
             <DialogTitle>
               {t('settings.users.resetPasswordTitle', { email: resetTarget?.email ?? '' })}

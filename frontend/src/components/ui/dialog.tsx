@@ -53,9 +53,33 @@ interface DialogContentProps
   canSwipeBack?: () => boolean
   onSwipeBack?: () => void
   variant?: VariantProps<typeof dialogContentVariants>['variant']
+  /** 手机上永远是九成宽 ✓；再宽一点 ✗ 就说哪一档 ✓。 */
+  width?: DialogContentWidth
   onOpenChange?: (open: boolean) => void
   overlayClassName?: string
 }
+
+/**
+ * 弹窗有多宽。
+ *
+ * 手机上是**九成宽** ✓；再宽一点 ✗，就有刻度了 ✓：
+ * 窄 ✗、中 ✗、宽 ✓（默认的那一副 ✓）、更宽 ✗、很宽 ✗、最宽 ✗。
+ *
+ * 以前 ✗，**每个弹窗自己写** ✗——三十一处 ✗，其中四处是随手写的数 ✗
+ * （420 ✗、440 ✗、500 ✗、560 ✗）✗，**不在任何刻度上** ✗。
+ */
+const DIALOG_CONTENT_WIDTHS = {
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-lg",
+  xl: "sm:max-w-xl",
+  "2xl": "sm:max-w-2xl",
+  "3xl": "sm:max-w-3xl",
+  "4xl": "sm:max-w-4xl",
+  "6xl": "sm:max-w-6xl",
+} as const
+
+type DialogContentWidth = keyof typeof DIALOG_CONTENT_WIDTHS
 
 /**
  * 弹窗有两副脸。
@@ -104,7 +128,7 @@ const dialogFooterVariants = cva(
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, hideCloseButton, fullscreen, mobileFullscreen, mobileSwipeToClose, keyboardAware, canSwipeBack, onSwipeBack, overlayClassName, style, variant, ...props }, ref) => {
+>(({ className, children, hideCloseButton, fullscreen, mobileFullscreen, mobileSwipeToClose, keyboardAware, canSwipeBack, onSwipeBack, overlayClassName, style, variant, width = "lg", ...props }, ref) => {
   const { t } = useI18n()
   const isMobileFullscreenMode = fullscreen || mobileFullscreen
   const isDialogOpen = React.useContext(DialogOpenContext)
@@ -163,11 +187,12 @@ const DialogContent = React.forwardRef<
         aria-describedby={undefined}
         className={cn(
           dialogContentVariants({ variant }),
+          DIALOG_CONTENT_WIDTHS[width],
           fullscreen
             ? "inset-0 w-full h-full max-w-none max-h-none p-0 rounded-none"
             : mobileFullscreen
               ? "inset-0 w-full h-full max-w-none max-h-none p-4 rounded-none [--dialog-margin:1rem] sm:[--dialog-margin:1.5rem] sm:inset-auto sm:left-[50%] sm:bottom-auto sm:w-[90%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:top-[8%] sm:p-6"
-              : "left-[50%] top-[50%] w-[90%] max-w-lg translate-x-[-50%] translate-y-[-50%] p-4 sm:p-6 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl",
+              : "left-[50%] top-[50%] w-[90%] translate-x-[-50%] translate-y-[-50%] p-4 sm:p-6 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-xl",
           className
         )}
         style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}

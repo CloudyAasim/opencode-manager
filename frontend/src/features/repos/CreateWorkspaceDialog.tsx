@@ -14,7 +14,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, onCreate, isCreating
   const { t } = useI18n()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent width="md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-primary" />

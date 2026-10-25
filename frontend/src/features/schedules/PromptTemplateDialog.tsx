@@ -78,7 +78,7 @@ export function PromptTemplateDialog({ open, onOpenChange, template, initialValu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className=" flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden sm:h-auto sm:max-h-[90vh]">
+      <DialogContent width="2xl" className=" flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)]  flex-col overflow-hidden sm:h-auto sm:max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{template ? t('schedules.promptTemplates.dialog.editTitle') : t('schedules.promptTemplates.dialog.newTitle')}</DialogTitle>
         </DialogHeader>

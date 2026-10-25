@@ -100,7 +100,7 @@ export function CommandDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent mobileFullscreen className="sm:max-w-3xl sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col">
+      <DialogContent width="3xl" mobileFullscreen className="sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col">
         <DialogLayout
           title={editingCommand ? t("settingsPanels.commandDialog.editTitle") : t("settingsPanels.commandDialog.createTitle")}
         >

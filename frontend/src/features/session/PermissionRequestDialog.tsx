@@ -62,7 +62,7 @@ export function PermissionRequestDialog({
 
   return (
     <Dialog open={parentOpen ?? true} onOpenChange={onOpenChange ?? (() => {})}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
+      <DialogContent width="md" className="max-w-[calc(100vw-2rem)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <span>{t('session.permission.title')}</span>

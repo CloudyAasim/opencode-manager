@@ -1086,7 +1086,7 @@ export function SessionDetail() {
 
       {/* Sessions Dialog */}
       <Dialog open={sessionsDialogOpen} onOpenChange={setSessionsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent width="4xl" className="max-h-[80vh]">
           <DialogTitle>{t('session.header.sessionsDialogTitle')}</DialogTitle>
           <div className="overflow-y-auto max-h-[60vh] mt-4">
             {opcodeUrl && (

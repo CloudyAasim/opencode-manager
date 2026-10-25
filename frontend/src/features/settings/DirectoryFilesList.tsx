@@ -91,7 +91,7 @@ export function DirectoryFilesList({ kind, files }: DirectoryFilesListProps) {
       })}
 
       <Dialog open={!!editingFile} onOpenChange={(open) => !open && setEditingFile(null)}>
-        <DialogContent mobileFullscreen keyboardAware className="sm:max-w-2xl sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
+        <DialogContent width="2xl" mobileFullscreen keyboardAware className="sm:max-h-[85vh] gap-0 sm:gap-4 flex flex-col pb-safe sm:pb-6">
           <DialogTitleBar title={editingFile?.relativePath} titleClassName="break-all pr-8" />
           <div className="flex min-h-0 flex-1 flex-col">
             <Textarea

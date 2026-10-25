@@ -57,7 +57,7 @@ export function CommandPalette() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(next) => (next ? setOpen(true) : close())}>
-      <DialogContent className="max-w-lg gap-0 p-0" hideCloseButton>
+      <DialogContent width="lg" className="gap-0 p-0" hideCloseButton>
         <DialogHeader className="px-3 pt-3">
           <DialogTitle className="sr-only">{t('shell.commands.title')}</DialogTitle>
           <Input

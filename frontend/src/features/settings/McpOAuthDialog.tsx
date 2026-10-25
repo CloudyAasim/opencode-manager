@@ -236,7 +236,7 @@ export function McpOAuthDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-md h-auto">
+      <DialogContent width="md" className="w-[calc(100vw-2rem)] h-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="h-5 w-5 shrink-0" />

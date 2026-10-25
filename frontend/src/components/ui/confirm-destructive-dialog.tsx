@@ -42,8 +42,8 @@ export function ConfirmDestructiveDialog({
   const warningId = useId()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-[90%] sm:max-w-sm"
+      <DialogContent width="sm"
+        className="max-w-[90%]"
         aria-describedby={warning ? `${descriptionId} ${warningId}` : descriptionId}
       >
         <DialogHeader>

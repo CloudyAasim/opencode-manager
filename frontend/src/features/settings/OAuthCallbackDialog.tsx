@@ -74,7 +74,7 @@ export function OAuthCallbackDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent variant="solid" className="max-w-lg">
+      <DialogContent width="lg" variant="solid">
         <DialogHeader>
           <DialogTitle>{t('settingsPanels.oauthCallback.title', { name: providerName })}</DialogTitle>
           <DialogDescription>

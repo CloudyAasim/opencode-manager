@@ -152,6 +152,61 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'shadow-sm',
     '这一个盒子**多一道影** ✗',
   ],
+  [
+    'components/ui/confirm-destructive-dialog.tsx',
+    'max-w-[90%]',
+    '这一个弹窗**九成宽** ✗，比默认的那一副宽 ✗',
+  ],
+  [
+    'features/settings/RestartServerDialog.tsx',
+    'max-w-[90%]',
+    '这一个弹窗**九成宽** ✗，比默认的那一副宽 ✗',
+  ],
+  [
+    'features/settings/UsersSettings.tsx',
+    'max-w-[90%]',
+    '这一个弹窗**九成宽** ✗，比默认的那一副宽 ✗',
+  ],
+  [
+    'features/session/PermissionRequestDialog.tsx',
+    'max-w-[calc(100vw-2rem)]',
+    '这一个弹窗**离屏幕边两格** ✗，两边对称 ✗',
+  ],
+  [
+    'features/ssh/SSHHostKeyDialog.tsx',
+    'max-w-[calc(100vw-2rem)]',
+    '这一个弹窗**离屏幕边两格** ✗，两边对称 ✗',
+  ],
+  [
+    'features/settings/McpOAuthDialog.tsx',
+    'w-[calc(100vw-2rem)]',
+    '这一个弹窗**离屏幕边两格** ✗，两边对称 ✗',
+  ],
+  [
+    'features/schedules/PromptTemplateDialog.tsx',
+    'w-[calc(100vw-1rem)]',
+    '这一个弹窗**几乎满屏** ✗',
+  ],
+  [
+    'features/schedules/ScheduleJobDialog.tsx',
+    'sm:max-w-[90vw]',
+    '这一个弹窗**几乎满屏** ✗',
+  ],
+  [
+    'features/schedules/ScheduleJobDialog.tsx',
+    'sm:w-[calc(100vw-1rem)]',
+    '这一个弹窗**几乎满屏** ✗',
+  ],
+  [
+    'features/source-control/SourceControlPanel.tsx',
+    'w-[90vw]',
+    '这一个弹窗**九成视口宽** ✗',
+  ],
+  [
+    'features/schedules/ScheduleJobDialog.tsx',
+    'sm:w-[calc(100vw-1rem)]',
+    '这一个弹窗**几乎满屏** ✗',
+  ],
 ]
 
 /** 这一处被点名了吗 ✗。 */
@@ -293,6 +348,33 @@ describe('共享零件的脸，各有各副', () => {
         ...offenders,
         '要哪一副脸，就说哪一副（`variant="success"`、`variant="outline-warning"`）。',
         '状态不是脸——`hover:` 那一类不算；形状也不是脸——`rounded-l-none` 那一类不算。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('弹窗的宽度，是共享零件的事', () => {
+    // 弹窗有多宽 ✗，是共享零件的尺寸 ✓——三十一处调用点自己写 ✗，
+    // 其中四处是随手写的数 ✗（420 ✗、440 ✗、500 ✗、560 ✗）✗，
+    // **不在任何刻度上** ✗。
+    const offenders: string[] = []
+    for (const site of CALL_SITES) {
+      if (site.part !== 'DialogContent') continue
+      for (const token of site.list.split(/\s+/)) {
+        if (!token) continue
+        if (!/^(?:[a-z0-9]+:)?(?:max-)?w-/.test(token)) continue
+        // **满屏**的三种说法 ✓：它们是同一个决定 ✓，不是刻度上的某一档 ✓。
+        if (['w-full', 'max-w-none', 'w-screen'].includes(token)) continue
+        if (excused(site.rel, token)) continue
+        offenders.push(`${site.rel}:${site.line}  ${token}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些地方自己写了弹窗的宽度：${offenders.length} 处`,
+        ...offenders,
+        '弹窗有多宽是共享零件的事：要哪一档，就说哪一档（`width="md"`）。',
       ].join('\n'),
     ).toEqual([])
   })

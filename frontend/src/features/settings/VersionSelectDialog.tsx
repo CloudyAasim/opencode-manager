@@ -73,7 +73,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent width="md">
         <DialogHeader>
           <DialogTitle>{t('settingsPanels.versionSelect.title')}</DialogTitle>
           <DialogDescription>
