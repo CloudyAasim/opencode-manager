@@ -17,7 +17,7 @@ const SelectValue = SelectPrimitive.Value
 
 /**
  * A dropdown is a field, so it walks the same ladder the button and the text
- * field walk: `xs` is 28, `sm` is 32, `default` is 36, `lg` is 40.
+ * field walk: `sm` is 32, `default` is 36, `lg` is 40.
  *
  * It used to be 40 - one step taller than the text field next to it, so a row
  * that had both of them in it was not one height but two.
@@ -35,8 +35,7 @@ const selectTriggerVariants = cva(
   {
     variants: {
       size: {
-        xs: "h-7 rounded-md",
-        sm: "h-8",
+        sm: "h-8 rounded-md",
         default: "h-9",
         lg: "h-10",
       },

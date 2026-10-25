@@ -9,9 +9,13 @@ import { FOCUS_RING } from "@/components/ui/focus-ring"
  * A text field.
  *
  * The height is a size of its own, and it is the same ladder the button walks:
- * `xs` is 28, `sm` is 32, `default` is 36, `lg` is 40. A row that has a field
- * and a button in it wants them to be the same height, and the only way to
+ * `sm` is 32, `default` is 36, `lg` is 40. A row that has a field and a
+ * button in it wants them to be the same height, and the only way to
  * guarantee that is for one name to mean one height everywhere.
+ *
+ * The smallest step is 32 and not 28: the app's smallest text is 16px on a
+ * phone, and Breeze asks for 8px of air above and below it - 16 + 8 + 8 is
+ * 32. A 28px field cannot hold the words in it.
  *
  * The face - the radius, the border, the background, the shadow - is not this
  * part's business: it is the field's, and it is written once (see
@@ -23,8 +27,7 @@ const inputVariants = cva(
   {
     variants: {
       size: {
-        xs: "h-7 rounded-md",
-        sm: "h-8",
+        sm: "h-8 rounded-md",
         default: "h-9",
         lg: "h-10",
       },

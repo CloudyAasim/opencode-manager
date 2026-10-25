@@ -233,7 +233,7 @@ export const FileTree = memo(function FileTree({
             style={{ paddingLeft: `${row.level * 16 + 8}px` }}
           >
             {row.expandable && <div className="w-4 shrink-0" />}
-            <Input size="xs"
+            <Input size="sm"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onBlur={submitRename}
@@ -254,7 +254,7 @@ export const FileTree = memo(function FileTree({
             style={{ paddingLeft: `${row.level * 16 + 8}px` }}
           >
             {row.expandable && <div className="w-4 shrink-0" />}
-            <Input size="xs"
+            <Input size="sm"
               value={copyName}
               onChange={(e) => setCopyName(e.target.value)}
               onBlur={submitCopy}

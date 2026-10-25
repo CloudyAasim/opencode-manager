@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, stripComments, tagAt } from './source-text'
+import {
+  classListOfAttrs,
+  constValue,
+  fieldTextPhonePx,
+  ownListOf,
+  stripComments,
+  tagAt,
+} from './source-text'
 
 /**
  * 字段的高度只有一副。
@@ -38,6 +45,17 @@ const SOURCES = graph.files.map((file) => ({
   text: stripComments(fs.readFileSync(file, 'utf8')),
 }))
 
+/** 样式表（`field-text` 那一档字号在那里写着 ✓）。 */
+const CSS = stripComments(fs.readFileSync(path.join(FRONTEND_SRC, 'index.css'), 'utf8'))
+
+/** 字段的那副脸（47 号那轮写在一处 ✓）——圆角要从那里拿 ✓。 */
+const FACE_OWNER = 'components/ui/field-face.ts'
+const FACE_VALUE = constValue(
+  SOURCES.find((source) => source.rel === FACE_OWNER)?.text ?? '',
+  'FIELD_FACE',
+)
+const CONSTANTS = new Map([['FIELD_FACE', FACE_VALUE ?? '']])
+
 /** 共享的那些字段。 */
 const SHARED_FIELDS: Record<string, string> = {
   Input: 'components/ui/input.tsx',
@@ -53,13 +71,21 @@ const BUTTON_LADDER: Record<string, number> = {
   lg: 40,
 }
 
-/** 字段那一道楼梯：与按钮同名的那几档，高度必须一样。 */
+/**
+ * 字段那一道楼梯：与按钮同名的那几档，高度必须一样。
+ *
+ * 最小的一档是 32 ✗——不是 28 ✗：手机上字段里的字是 16px（`field-text` 那一档 ✓），
+ * Breeze 还要上下各留 8px 的空当 ✓，16 + 8 + 8 就是 32 ✓。
+ * 28px 那一档**装不下它的字** ✗。
+ */
 const FIELD_LADDER: Record<string, number> = {
-  xs: 28,
   sm: 32,
   default: 36,
   lg: 40,
 }
+
+/** Breeze 要的"空当"：上下各 8px（见 `breeze-design.test.ts` ✓）。 */
+const BREATHING_ROOM_PX = 8
 
 /** 一串类名里写死的高度（没有断点前缀的那种）。 */
 function fixedHeight(list: string): string | null {
@@ -74,6 +100,21 @@ function pixelsOf(token: string | null): number | null {
   if (!token) return null
   const match = /(\d+)$/.exec(token)
   return match ? Number(match[1]) * 4 : null
+}
+
+/**
+ * 一个尺寸档最后是什么圆角。
+ *
+ * 档位自己说的就是它自己的 ✗；它没说的话 ✗，就是它那一副脸说的 ✗。
+ */
+function radiusOf(
+  variants: Map<string, string>,
+  size: string,
+  base: string,
+): string | null {
+  const declared = /\brounded-(?:sm|md|lg|xl|full)\b/.exec(variants.get(size) ?? '')?.[0]
+  if (declared) return declared
+  return /\brounded-(?:sm|md|lg|xl|full)\b/.exec(base)?.[0] ?? null
 }
 
 /** 一个文件里，尺寸那一段的每一档写了什么。 */
@@ -136,7 +177,10 @@ describe('字段的高度只有一副', () => {
       const shared = SOURCES.find((source) => source.rel === rel)
       expect(shared, `找不到共享的 ${name}`).toBeDefined()
       const variants = variantsOf(shared!.text)
-      expect(variants.size, `共享的 ${name} 没有尺寸档，这道门禁多半读错了地方`).toBeGreaterThan(3)
+      // 认得楼梯上的每一档 ✓（而不是"有几档" ✗——档数变了不是它瞎了 ✗）。
+      for (const size of Object.keys(FIELD_LADDER)) {
+        expect(variants.has(size), `共享的 ${name} 没有 ${size} 这一档`).toBe(true)
+      }
     }
 
     // 找得到调用点。
@@ -180,11 +224,12 @@ describe('字段的高度只有一副', () => {
     ).toEqual([])
   })
 
-  it('同一个尺寸名字，在按钮上和在字段上是同一个高度', () => {
+  it('同一个尺寸名字，在按钮上和在字段上是同一个高度、同一个圆角', () => {
     // 一行里放着一个按钮和一个字段，它们要真的是一行——所以 `size="sm"` 在两边
-    // 必须是一个高度。
+    // 必须是一个高度、一个圆角。
     const button = SOURCES.find((source) => source.rel === 'components/ui/button.tsx')!
     const buttonVariants = variantsOf(button.text)
+    const buttonBase = ownListOf(button.text)
 
     const offenders: string[] = []
     for (const [size, expected] of Object.entries(BUTTON_LADDER)) {
@@ -202,11 +247,19 @@ describe('字段的高度只有一副', () => {
     for (const [name, rel] of Object.entries(SHARED_FIELDS)) {
       const shared = SOURCES.find((source) => source.rel === rel)!
       const variants = variantsOf(shared.text)
+      const base = ownListOf(shared.text, CONSTANTS)
       for (const size of Object.keys(FIELD_LADDER)) {
         const phone = pixelsOf(fixedHeight(variants.get(size) ?? ''))
         if (phone !== BUTTON_LADDER[size]) {
           offenders.push(
             `${name}  ${size} 是 ${phone ?? '(没有)'}px，按钮的 ${size} 是 ${BUTTON_LADDER[size]}px`,
+          )
+        }
+        const radius = radiusOf(variants, size, base)
+        const buttonRadius = radiusOf(buttonVariants, size, buttonBase)
+        if (radius !== buttonRadius) {
+          offenders.push(
+            `${name}  ${size} 的圆角是 ${radius ?? '(没有)'}，按钮的 ${size} 是 ${buttonRadius ?? '(没有)'}`,
           )
         }
       }
@@ -215,9 +268,38 @@ describe('字段的高度只有一副', () => {
     expect(
       offenders,
       [
-        `同一个尺寸名字在两处不是一个高度：${offenders.length} 处`,
+        `同一个尺寸名字在两处不是一个高度或不是一个圆角：${offenders.length} 处`,
         ...offenders,
-        '同一个名字就是同一个高度——不然一行里放着一个按钮和一个字段，它们不是一行。',
+        '同一个名字就是同一个高度、同一个圆角——不然一行里放着一个按钮和一个字段，它们不是一行。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('字段的每一档都装得下它的字', () => {
+    // 手机上字段里的字是 16px（`field-text` 那一档 ✓），Breeze 还要上下各留
+    // 8px 的空当 ✓——16 + 8 + 8 就是 32 ✓。所以最小的一档是 32px ✓：
+    // 28px 那一档**装不下它的字** ✗。
+    const phone = fieldTextPhonePx(CSS)
+    const minimum = phone + BREATHING_ROOM_PX * 2
+    const offenders: string[] = []
+    for (const [name, rel] of Object.entries(SHARED_FIELDS)) {
+      const shared = SOURCES.find((source) => source.rel === rel)!
+      for (const [size, list] of variantsOf(shared.text)) {
+        const height = pixelsOf(fixedHeight(list))
+        if (height === null) continue
+        if (height >= minimum) continue
+        offenders.push(
+          `${name}  ${size} 只有 ${height}px，装不下 ${phone}px 的字和上下各 ${BREATHING_ROOM_PX}px 的空当`,
+        )
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些档位装不下字段里的字：${offenders.length} 处`,
+        ...offenders,
+        `字段最小的一档是 ${minimum}px（${phone}px 的字 + 上下各 ${BREATHING_ROOM_PX}px）。`,
       ].join('\n'),
     ).toEqual([])
   })

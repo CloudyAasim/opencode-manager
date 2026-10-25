@@ -397,6 +397,20 @@ export function ownListOf(text: string, constants?: Map<string, string>): string
 }
 
 /**
+ * The size `field-text` asks for on a phone.
+ *
+ * It is the floor for anything you can type into: a phone enlarges an input
+ * with a smaller font and does not shrink it back, so the app puts 16px in
+ * there. A rule about how tall a field has to be measures against it.
+ */
+export function fieldTextPhonePx(css: string): number {
+  const utility = /@utility\s+field-text\s*\{([\s\S]*?)\n\}/.exec(css)?.[1]
+  if (!utility) return 0
+  const rem = Number(/font-size:\s*([\d.]+)rem/.exec(utility)?.[1] ?? '0')
+  return Math.round(rem * 16 * 100) / 100
+}
+
+/**
  * Reading the shape of a JSX tree out of source text.
  *
  * A rule about "a block that says something" has to know what is inside that
