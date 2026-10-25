@@ -225,7 +225,7 @@ export function CommandDialog({
                 control={form.control}
                 name="subtask"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <FormItem variant="boxed">
                     <div className="space-y-0.5">
                       <FormLabel>{t("settingsPanels.commandDialog.runAsSubtask")}</FormLabel>
                       <FormDescription>

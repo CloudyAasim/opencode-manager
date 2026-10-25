@@ -53,6 +53,7 @@ const PARTS: Record<string, string> = {
   TabsTrigger: 'components/ui/tabs.tsx',
   DialogFooter: 'components/ui/dialog.tsx',
   DialogContent: 'components/ui/dialog.tsx',
+  FormItem: 'components/ui/form.tsx',
 }
 
 /**
@@ -65,6 +66,7 @@ const DECLARATION: Record<string, string> = {
   TabsTrigger: 'tabsTriggerVariants',
   DialogFooter: 'dialogFooterVariants',
   DialogContent: 'dialogContentVariants',
+  FormItem: 'formItemVariants',
 }
 
 /** 所有的"有档的"零件 ✓——颜色那一道规矩管的是全部 ✓。 */
@@ -145,6 +147,11 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'border-0',
     '这个弹窗**通栏** ✗，它不要边 ✓',
   ],
+  [
+    'features/settings/OpenCodeModelDialog.tsx',
+    'shadow-sm',
+    '这一个盒子**多一道影** ✗',
+  ],
 ]
 
 /** 这一处被点名了吗 ✗。 */
@@ -200,6 +207,7 @@ describe('共享零件的脸，各有各副', () => {
     expect(variantsOfPart('TabsTrigger').has('bar'), '页签没有"贴在边上"那一副').toBe(true)
     expect(variantsOfPart('DialogFooter').has('divided'), '底行没有"上面有一道线"那一副').toBe(true)
     expect(variantsOfPart('DialogContent').has('solid'), '弹窗没有"实心的"那一副').toBe(true)
+    expect(variantsOfPart('FormItem').has('boxed'), '表单没有"一个带边框的盒子"那一副').toBe(true)
 
     // 找得到调用点 ✓。
     expect(CALL_SITES.length, '一个徽章或警告的调用点都没找到，这道门禁多半跑在空集上').toBeGreaterThan(10)

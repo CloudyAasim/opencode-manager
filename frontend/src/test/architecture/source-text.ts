@@ -410,8 +410,21 @@ export function variantsOf(
   declaration?: string,
 ): Map<string, string> {
   const found = new Map<string, string>()
-  const from = declaration ? text.indexOf(`const ${declaration}`) : 0
-  const at = text.indexOf(`${key}: {`, from < 0 ? 0 : from)
+  // A named declaration that is not there means *nothing*: falling back to the
+  // first group would read another part's variants and call them its own.
+  if (declaration) {
+    const at = text.indexOf(`const ${declaration} = cva(`)
+    if (at < 0) return found
+    return groupOf(text.slice(at), key, found)
+  }
+  const at = text.indexOf(`${key}: {`)
+  if (at < 0) return found
+  return groupOf(text.slice(at), key, found)
+}
+
+/** The group of variants that starts at the beginning of the text. */
+function groupOf(text: string, key: string, found: Map<string, string>): Map<string, string> {
+  const at = text.indexOf(`${key}: {`)
   if (at < 0) return found
   let depth = 0
   let end = at

@@ -236,7 +236,7 @@ export function TTSSettings() {
             control={form.control}
             name="enabled"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border p-4">
+              <FormItem variant="boxed">
                 <div className="space-y-0.5">
                   <FormLabel>{t('settingsPanels.tts.enable')}</FormLabel>
                   <FormDescription>
@@ -258,7 +258,7 @@ export function TTSSettings() {
               control={form.control}
               name="autoPlay"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border p-4">
+                <FormItem variant="boxed">
                   <div className="space-y-0.5">
                     <FormLabel>{t('settingsPanels.tts.autoPlay')}</FormLabel>
                     <FormDescription>
