@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { constValue, stripComments } from './source-text'
+import { constValue, ownListOf, stripComments } from './source-text'
 
 /**
  * 字段只有一副脸。
@@ -68,46 +68,6 @@ function tokensOf(list: string, pattern: RegExp): string[] {
   return found
 }
 
-/**
- * 一个调用（`cva(...)` 或 `cn(...)`）的第一段。
- *
- * 那一段就是"这个零件自己长什么样"的地方 ✗——尺寸档改的是别的 ✗。
- */
-function firstArgumentOf(text: string, callee: string): string | null {
-  const at = text.indexOf(`${callee}(`)
-  if (at < 0) return null
-  let index = at + callee.length + 1
-  while (index < text.length && /\s/.test(text[index]!)) index += 1
-  const quote = text[index]
-  if (quote === '"' || quote === "'") {
-    const end = text.indexOf(quote, index + 1)
-    return end < 0 ? null : text.slice(index + 1, end)
-  }
-  if (quote === '`') {
-    let cursor = index + 1
-    while (cursor < text.length) {
-      if (text[cursor] === '\\') {
-        cursor += 2
-        continue
-      }
-      if (text[cursor] === '`') break
-      cursor += 1
-    }
-    return text.slice(index + 1, cursor)
-  }
-  return null
-}
-
-/** 这个零件自己那一段类名。 */
-function ownListOf(text: string): string | null {
-  return firstArgumentOf(text, 'cva') ?? firstArgumentOf(text, 'cn')
-}
-
-/** 把模板里的常量换成它真正的值。 */
-function resolveConstants(text: string, values: Map<string, string>): string {
-  return text.replace(/\$\{(\w+)\}/g, (whole, name) => values.get(name) ?? whole)
-}
-
 /** 尺寸档那一段。 */
 function sizeVariantsOf(text: string): Map<string, string> {
   const found = new Map<string, string>()
@@ -139,8 +99,7 @@ const CONSTANTS = new Map([[FACE, FACE_VALUE ?? '']])
 function ownListOfPart(rel: string): string {
   const source = SOURCES.find((candidate) => candidate.rel === rel)
   if (!source) return ''
-  const own = ownListOf(source.text) ?? ''
-  return resolveConstants(own, CONSTANTS)
+  return ownListOf(source.text, CONSTANTS)
 }
 
 describe('字段只有一副脸', () => {

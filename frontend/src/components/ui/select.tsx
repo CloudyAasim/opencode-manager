@@ -7,6 +7,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 import { FIELD_FACE } from "@/components/ui/field-face"
+import { FOCUS_RING } from "@/components/ui/focus-ring"
 
 const Select = SelectPrimitive.Root
 
@@ -23,9 +24,14 @@ const SelectValue = SelectPrimitive.Value
  *
  * And it wears the field's face (see `field-face.ts`): a dropdown next to a
  * text field is the same thing said twice, so it has to look like it.
+ *
+ * "Open" is not "focused". The trigger used to paint its open look with
+ * `focus:`, so a mouse click on it made it look keyboard-selected; the open
+ * look is now `data-[state=open]:`, and the focus ring is the focus ring
+ * (see `focus-ring.ts`).
  */
 const selectTriggerVariants = cva(
-  `flex w-full items-center justify-between ${FIELD_FACE} px-3 py-2 field-text ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1`,
+  `flex w-full items-center justify-between ${FIELD_FACE} px-3 py-2 field-text data-[placeholder]:text-muted-foreground ${FOCUS_RING} data-[state=open]:bg-accent data-[state=open]:text-foreground disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1`,
   {
     variants: {
       size: {

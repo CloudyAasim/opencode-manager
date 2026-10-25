@@ -351,6 +351,52 @@ export function stringLiterals(text: string): string[] {
 }
 
 /**
+ * A call's first argument.
+ *
+ * `cva('…')` and `cn('…')` are where a part says what it looks like, and a
+ * rule about a part's face has to read that place - not the first string
+ * literal in the file, which might be a colour or a label.
+ */
+export function firstArgumentOf(text: string, callee: string): string | null {
+  const at = text.indexOf(`${callee}(`)
+  if (at < 0) return null
+  let index = at + callee.length + 1
+  while (index < text.length && /\s/.test(text[index]!)) index += 1
+  const quote = text[index]
+  if (quote === '"' || quote === "'") {
+    const end = text.indexOf(quote, index + 1)
+    return end < 0 ? null : text.slice(index + 1, end)
+  }
+  if (quote === '`') {
+    let cursor = index + 1
+    while (cursor < text.length) {
+      if (text[cursor] === '\\') {
+        cursor += 2
+        continue
+      }
+      if (text[cursor] === '`') break
+      cursor += 1
+    }
+    return text.slice(index + 1, cursor)
+  }
+  return null
+}
+
+/**
+ * The class list a part says it wears.
+ *
+ * A part that keeps its face in a constant writes `cva(\`… ${FIELD_FACE} …\`)`
+ * or `cn(\`… ${FIELD_FACE} …\`)`, so the constant has to be put back before
+ * the list can be judged - otherwise the rule sees a placeholder where the
+ * face should be.
+ */
+export function ownListOf(text: string, constants?: Map<string, string>): string {
+  const own = firstArgumentOf(text, 'cva') ?? firstArgumentOf(text, 'cn') ?? ''
+  if (!constants) return own
+  return own.replace(/\$\{(\w+)\}/g, (whole, name) => constants.get(name) ?? whole)
+}
+
+/**
  * Reading the shape of a JSX tree out of source text.
  *
  * A rule about "a block that says something" has to know what is inside that
