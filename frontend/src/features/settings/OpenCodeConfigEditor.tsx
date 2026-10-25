@@ -316,7 +316,7 @@ export function OpenCodeConfigEditor({
             </div>
           )}
 
-          <DialogFooter data-editor-footer className="shrink-0 border-t pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-6">
+          <DialogFooter data-editor-footer variant="divided" className="shrink-0 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-6">
             <Button
               size="touch" variant="outline"
               onClick={requestClose}

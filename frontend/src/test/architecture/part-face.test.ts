@@ -51,6 +51,20 @@ const PARTS: Record<string, string> = {
   Card: 'components/ui/card.tsx',
   TabsList: 'components/ui/tabs.tsx',
   TabsTrigger: 'components/ui/tabs.tsx',
+  DialogFooter: 'components/ui/dialog.tsx',
+  DialogContent: 'components/ui/dialog.tsx',
+}
+
+/**
+ * 有些文件里**不止一副档** ✓——按声明名挑 ✓。
+ *
+ * 不挑的话 ✗，门禁读到的是**第一个** ✗（页签条 ✓ 而不是页签 ✗），
+ * 于是"不许重复"那条 ✗ 用错了档 ✗。
+ */
+const DECLARATION: Record<string, string> = {
+  TabsTrigger: 'tabsTriggerVariants',
+  DialogFooter: 'dialogFooterVariants',
+  DialogContent: 'dialogContentVariants',
 }
 
 /** 所有的"有档的"零件 ✓——颜色那一道规矩管的是全部 ✓。 */
@@ -72,10 +86,12 @@ const FACE_TOKEN = /^(?:rounded|bg|border|shadow)(?:-|$)/
  */
 const SHAPE_TOKEN = /^(?:rounded|border)-(?:[lrtybxy]{1,2})(?:-|$)/
 
-/** 每一档说了什么 ✓。 */
-function variantsOfPart(rel: string): Map<string, string> {
+/** 每一副说了什么 ✓。 */
+function variantsOfPart(part: string): Map<string, string> {
+  const rel = PARTS[part]
+  if (!rel) return new Map()
   const source = SOURCES.find((candidate) => candidate.rel === rel)
-  return source ? variantsOf(source.text, 'variant') : new Map()
+  return source ? variantsOf(source.text, 'variant', DECLARATION[part]) : new Map()
 }
 
 /** 那一档说过的每一个词 ✓。 */
@@ -118,6 +134,16 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'features/settings/SettingsDialog.tsx',
     'rounded-none',
     '设置那边的页签是**竖着的一列** ✗，它没有圆角 ✓',
+  ],
+  [
+    'components/ui/EditSessionTitleDialog.tsx',
+    'rounded-none',
+    '这个弹窗**通栏** ✗，它没有圆角 ✓',
+  ],
+  [
+    'components/ui/EditSessionTitleDialog.tsx',
+    'border-0',
+    '这个弹窗**通栏** ✗，它不要边 ✓',
   ],
 ]
 
@@ -163,14 +189,17 @@ describe('共享零件的脸，各有各副', () => {
     expect(SOURCES.length, '源文件少得可疑，这道门禁多半跑在空集上').toBeGreaterThan(300)
 
     // 每一副都写着什么 ✓。
-    for (const [part, rel] of Object.entries(PARTS)) {
-      const variants = variantsOfPart(rel)
-      expect(variants.size, `共享的 ${part} 没有档，这道门禁多半读错了地方`).toBeGreaterThan(2)
+    for (const part of Object.keys(PARTS)) {
+      const variants = variantsOfPart(part)
+      expect(variants.size, `共享的 ${part} 没有档，这道门禁多半读错了地方`).toBeGreaterThan(1)
     }
-    expect(variantsOfPart(PARTS.Badge!).has('success'), '徽章没有成功那一副').toBe(true)
-    expect(variantsOfPart(PARTS.Alert!).has('success'), '警告没有成功那一副').toBe(true)
-    expect(variantsOfPart(PARTS.Card!).has('flat'), '卡片没有"嵌在面板里"那一副').toBe(true)
-    expect(variantsOfPart(PARTS.TabsList!).has('bar'), '页签条没有"贴在边上"那一副').toBe(true)
+    expect(variantsOfPart('Badge').has('success'), '徽章没有成功那一副').toBe(true)
+    expect(variantsOfPart('Alert').has('success'), '警告没有成功那一副').toBe(true)
+    expect(variantsOfPart('Card').has('flat'), '卡片没有"嵌在面板里"那一副').toBe(true)
+    expect(variantsOfPart('TabsList').has('bar'), '页签条没有"贴在边上"那一副').toBe(true)
+    expect(variantsOfPart('TabsTrigger').has('bar'), '页签没有"贴在边上"那一副').toBe(true)
+    expect(variantsOfPart('DialogFooter').has('divided'), '底行没有"上面有一道线"那一副').toBe(true)
+    expect(variantsOfPart('DialogContent').has('solid'), '弹窗没有"实心的"那一副').toBe(true)
 
     // 找得到调用点 ✓。
     expect(CALL_SITES.length, '一个徽章或警告的调用点都没找到，这道门禁多半跑在空集上').toBeGreaterThan(10)
@@ -192,7 +221,7 @@ describe('共享零件的脸，各有各副', () => {
       const source = SOURCES.find((candidate) => candidate.rel === rel)
       const faces: Array<readonly [string, string]> = [
         ['底子', ownListOf(source?.text ?? '')],
-        ...variantsOfPart(rel).entries(),
+        ...variantsOfPart(part).entries(),
       ]
       for (const [name, list] of faces) {
         const tokens = list.split(/\s+/).filter(Boolean)
@@ -217,7 +246,7 @@ describe('共享零件的脸，各有各副', () => {
   it('调用点不许重复它那一档说过的话', () => {
     const offenders: string[] = []
     for (const site of CALL_SITES) {
-      const said = saidBy(variantsOfPart(PARTS[site.part]!), site.variant)
+      const said = saidBy(variantsOfPart(site.part), site.variant)
       for (const token of site.list.split(/\s+/)) {
         if (!token) continue
         if (!said.has(token)) continue

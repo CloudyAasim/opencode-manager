@@ -1,5 +1,6 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -51,14 +52,59 @@ interface DialogContentProps
   keyboardAware?: boolean
   canSwipeBack?: () => boolean
   onSwipeBack?: () => void
+  variant?: VariantProps<typeof dialogContentVariants>['variant']
   onOpenChange?: (open: boolean) => void
   overlayClassName?: string
 }
 
+/**
+ * 弹窗有两副脸。
+ *
+ * 一副是**玻璃的** ✓（默认的那一副 ✓）——浮在应用上面 ✓，透出底下 ✓。
+ * 另一副是**实心的卡片** ✓：三个弹窗自己写的 ✓，而它们没有名字 ✗。
+ */
+const dialogContentVariants = cva(
+  "fixed z-[70] grid gap-4 border-0 sm:border bg-surface-glass backdrop-blur-lg shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+  {
+    variants: {
+      variant: {
+        default: "",
+        solid: "bg-card border-border",
+        opaque: "bg-background border-border shadow-lg",
+        plain: "bg-background",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
+
+/**
+ * 底行有两副：一副是**光光的** ✓，一副是**上面有一道线** ✓。
+ *
+ * 那道线**说了十四遍** ✓，而且有两种写法 ✗：八处只说"上面有线" ✓，
+ * 六处还说清了线的颜色 ✓——于是那八处的线是**字的颜色** ✗。
+ */
+const dialogFooterVariants = cva(
+  "flex flex-row sm:flex-row sm:justify-end gap-2",
+  {
+    variants: {
+      variant: {
+        default: "",
+        divided: "border-t border-border",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
+
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, hideCloseButton, fullscreen, mobileFullscreen, mobileSwipeToClose, keyboardAware, canSwipeBack, onSwipeBack, overlayClassName, style, ...props }, ref) => {
+>(({ className, children, hideCloseButton, fullscreen, mobileFullscreen, mobileSwipeToClose, keyboardAware, canSwipeBack, onSwipeBack, overlayClassName, style, variant, ...props }, ref) => {
   const { t } = useI18n()
   const isMobileFullscreenMode = fullscreen || mobileFullscreen
   const isDialogOpen = React.useContext(DialogOpenContext)
@@ -116,7 +162,7 @@ const DialogContent = React.forwardRef<
         autoFocus={false}
         aria-describedby={undefined}
         className={cn(
-          "fixed z-[70] grid gap-4 border-0 sm:border bg-surface-glass backdrop-blur-lg shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          dialogContentVariants({ variant }),
           fullscreen
             ? "inset-0 w-full h-full max-w-none max-h-none p-0 rounded-none"
             : mobileFullscreen
@@ -179,11 +225,12 @@ DialogHeader.displayName = "DialogHeader"
 
 const DialogFooter = ({
   className,
+  variant,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
+}: React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof dialogFooterVariants>) => (
   <div
     className={cn(
-      "flex flex-row sm:flex-row sm:justify-end gap-2",
+      dialogFooterVariants({ variant }),
       className
     )}
     {...props}

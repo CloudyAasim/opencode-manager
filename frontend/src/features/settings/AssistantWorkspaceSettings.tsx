@@ -255,7 +255,7 @@ export function AssistantWorkspaceSettings() {
               className="h-full min-h-0 flex-1 field-sizing-fixed resize-none font-mono"
             />
           </div>
-          <DialogFooter className="pt-2 border-t border-border">
+          <DialogFooter variant="divided" className="pt-2">
             <Button variant="outline" onClick={() => setEditing(null)} size="touch" className="flex-1 sm:flex-none">
               {t('common.cancel')}
             </Button>

@@ -145,7 +145,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
               </div>
             </div>
 
-            <DialogFooter className="pt-4 border-t">
+            <DialogFooter variant="divided" className="pt-4">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}

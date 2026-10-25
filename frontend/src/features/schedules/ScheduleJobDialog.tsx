@@ -311,7 +311,8 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
       <DialogContent
         overlayClassName="bg-black/80"
         mobileFullscreen
-        className="flex h-dvh max-h-dvh w-full max-w-4xl flex-col gap-0 sm:gap-4 overflow-hidden border-border bg-background shadow-lg sm:h-[min(85vh,760px)] sm:max-h-[85vh] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
+        variant="opaque"
+      className="flex h-dvh max-h-dvh w-full max-w-4xl flex-col gap-0 sm:gap-4 overflow-hidden sm:h-[min(85vh,760px)] sm:max-h-[85vh] sm:max-w-[90vw] sm:w-[calc(100vw-1rem)]"
       >
         <DialogTitleBar
           title={job ? t('schedules.scheduleDialog.editTitle') : t('schedules.scheduleDialog.newTitle')}
@@ -398,7 +399,7 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
           />
         </Tabs>
 
-        <DialogFooter className="mt-0 shrink-0 border-t border-border py-4">
+        <DialogFooter variant="divided" className="mt-0 shrink-0 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} size="touch" className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={isSaving || !name.trim() || !prompt.trim() || isScheduleConfigInvalid || (!!showRepoSelector && !job && selectedRepoId === undefined)} size="touch" className="flex-1 sm:flex-none">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { stripComments, stringLiterals } from './source-text'
+import { cvaBase, stripComments, stringLiterals } from './source-text'
 
 /**
  * 弹窗里的零件，只有共享的那几个。
@@ -87,6 +87,11 @@ function classListOf(text: string, tag: string): string[] {
  * 不在一个标签上——它在那个函数自己的 `cn(...)` 里。
  */
 function sharedClassOf(name: string): string {
+  // The shared footer's words live in its `cva` now.
+  if (name === 'DialogFooter') {
+    const base = cvaBase(sourceOf(SHARED.dialog), 'dialogFooterVariants')
+    if (base) return base.replace(/\s+/g, ' ').trim()
+  }
   for (const rel of Object.values(SHARED)) {
     const text = sourceOf(rel)
     const declaration = new RegExp(`(?:function|const)\\s+${name}\\b`).exec(text)

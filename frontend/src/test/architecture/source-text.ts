@@ -404,9 +404,14 @@ export function ownListOf(text: string, constants?: Map<string, string>): string
  * read it from there. The same is true of the `variant:` group - the face a
  * button wears.
  */
-export function variantsOf(text: string, key = 'size'): Map<string, string> {
+export function variantsOf(
+  text: string,
+  key = 'size',
+  declaration?: string,
+): Map<string, string> {
   const found = new Map<string, string>()
-  const at = text.indexOf(`${key}: {`)
+  const from = declaration ? text.indexOf(`const ${declaration}`) : 0
+  const at = text.indexOf(`${key}: {`, from < 0 ? 0 : from)
   if (at < 0) return found
   let depth = 0
   let end = at
@@ -480,6 +485,19 @@ export function heightOf(stories: Map<string, number>[], width: string): number 
     if (story.has(key)) return story.get(key)!
   }
   return null
+}
+
+/**
+ * 某一个 cva 声明自己的底子。
+ *
+ * `const dialogFooterVariants = cva("…", …)` 的那个字符串——共享零件的类名
+ * 现在住在那里，不在它的 `cn(...)` 里了。
+ */
+export function cvaBase(text: string, declaration: string): string {
+  const at = text.indexOf(`const ${declaration} = cva(`)
+  if (at < 0) return ''
+  const quoted = /cva\(\s*['"]([^'"]*)['"]/.exec(text.slice(at))
+  return quoted?.[1] ?? ''
 }
 
 /**

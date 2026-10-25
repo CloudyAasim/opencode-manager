@@ -358,7 +358,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
           </div>
         </DialogLayout>
 
-        <DialogFooter className="border-t">
+        <DialogFooter variant="divided">
           <Button size="touch" variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
             {t('settingsPanels.addMcpServer.cancel')}
           </Button>

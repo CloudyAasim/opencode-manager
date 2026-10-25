@@ -30,8 +30,9 @@ export function SourceControlPanel({
       <DialogContent
         mobileFullscreen
         hideCloseButton={isMobile}
+        variant="solid"
         className={cn(
-          'flex flex-col bg-card border-border gap-0',
+          'flex flex-col gap-0',
           isMobile ? 'h-full' : 'w-[90vw] sm:max-w-6xl h-[90vh] sm:pb-0'
         )}
       >

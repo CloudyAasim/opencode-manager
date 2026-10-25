@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, elementTree, familyOf, heightsFrom, stripComments, variantsOf } from './source-text'
+import { classListOfAttrs, cvaBase, elementTree, familyOf, heightsFrom, stripComments, variantsOf } from './source-text'
 
 /**
  * 弹窗底下的按钮行，只有一副样子。
@@ -55,11 +55,8 @@ const FINGER_PX = 44
 function sharedFooterClasses(): string[] {
   const source = SOURCES.find((candidate) => candidate.rel === SHARED_FOOTER)
   if (!source) return []
-  const declaration = /const\s+DialogFooter\s*=/.exec(source.text)
-  if (!declaration) return []
-  const body = source.text.slice(declaration.index, declaration.index + 800)
-  const quoted = /cn\(\s*['"]([^'"]*)['"]/.exec(body)
-  return (quoted?.[1] ?? '').split(/\s+/).filter(Boolean)
+  const base = cvaBase(source.text, 'dialogFooterVariants')
+  return base.split(/\s+/).filter(Boolean)
 }
 
 /** 共享的按钮那道楼梯 ✓。 */

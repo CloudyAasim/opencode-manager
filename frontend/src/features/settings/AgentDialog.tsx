@@ -513,7 +513,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
           </Form>
         </DialogLayout>
 
-        <DialogFooter className="border-t">
+        <DialogFooter variant="divided">
           <Button variant="outline" onClick={() => handleOpenChange(false)} size="touch" className="flex-1 sm:flex-none">
             {t('settingsPanels.agentDialog.cancel')}
           </Button>

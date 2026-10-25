@@ -116,7 +116,7 @@ export function PromptTemplateDialog({ open, onOpenChange, template, initialValu
             <Textarea id="template-prompt" value={form.prompt} onChange={handleChange('prompt')} className="min-h-[200px]" placeholder={t('schedules.promptTemplates.dialog.promptPlaceholder')} />
           </div>
         </div>
-        <DialogFooter className="pt-2 border-t border-border">
+        <DialogFooter variant="divided" className="pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} size="touch" className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={isSaving || !isValid} size="touch" className="flex-1 sm:flex-none">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

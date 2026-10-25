@@ -148,7 +148,7 @@ export function OAuthAuthorizeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-card border-border w-full sm:max-w-lg">
+      <DialogContent variant="solid" className="w-full sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t('settingsPanels.oauthAuthorize.title', { name: providerName })}</DialogTitle>
           <DialogDescription>

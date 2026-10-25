@@ -388,7 +388,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
           </div>
         </form>
 
-        <DialogFooter className="border-t">
+        <DialogFooter variant="divided">
           <Button
             type="button"
             size="touch" variant="outline"

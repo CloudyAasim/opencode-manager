@@ -778,7 +778,7 @@ export function OpenCodeModelDialog({
           </Form>
         </DialogLayout>
 
-        <DialogFooter className="border-t">
+        <DialogFooter variant="divided">
           <Button size="touch" variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">{t('settingsPanels.modelDialog.cancel')}</Button>
           <Button size="touch" onClick={() => form.handleSubmit(handleSubmit)()} disabled={!isValid} className="flex-1 sm:flex-none">
             {isEditing ? t('settingsPanels.modelDialog.update') : t('settingsPanels.modelDialog.create')}

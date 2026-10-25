@@ -245,7 +245,7 @@ export function CommandDialog({
           </Form>
         </DialogLayout>
 
-        <DialogFooter className="border-t">
+        <DialogFooter variant="divided">
           <Button size="touch" variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
             {t("settingsPanels.commandDialog.cancel")}
           </Button>
