@@ -2,6 +2,7 @@ import * as React from "react"
 import * as SwitchPrimitives from "@radix-ui/react-switch"
 
 import { cn } from "@/lib/utils"
+import { FOCUS_RING_STRONG } from "@/components/ui/focus-ring"
 
 /**
  * Plasma's switch, not a green light.
@@ -23,8 +24,7 @@ const Switch = React.forwardRef<
   <SwitchPrimitives.Root
       data-slot="switch"
       className={cn(
-        "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-border p-px transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        `peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-border p-px transition-colors ${FOCUS_RING_STRONG}`,
         "disabled:cursor-not-allowed disabled:opacity-50",
         "data-[state=checked]:border-primary data-[state=checked]:bg-primary",
         "data-[state=unchecked]:bg-muted",
