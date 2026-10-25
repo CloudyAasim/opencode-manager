@@ -155,7 +155,7 @@ export function AccountSettings() {
       )}
 
       {success && (
-        <Alert className="border-success text-success">
+        <Alert variant="success">
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>{success}</AlertDescription>
         </Alert>

@@ -37,10 +37,10 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
   const content = (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className="border-transparent bg-warning uppercase tracking-wide text-white">
+        <Badge variant="warning" className="uppercase tracking-wide">
           {template.category}
         </Badge>
-        <Badge className="border-transparent bg-muted uppercase tracking-wide text-white">
+        <Badge variant="secondary" className="uppercase tracking-wide">
           {template.cadenceHint}
         </Badge>
       </div>

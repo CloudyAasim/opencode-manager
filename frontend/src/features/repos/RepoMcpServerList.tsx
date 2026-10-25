@@ -74,9 +74,9 @@ export function RepoMcpServerList({
 
     switch (status.status) {
       case 'connected':
-        return <Badge variant="default" className="bg-success">{t('repo.mcp.connected')}</Badge>
+        return <Badge variant="success">{t('repo.mcp.connected')}</Badge>
       case 'disabled':
-        return <Badge className="bg-muted text-muted-foreground border-border">{t('repo.mcp.disabled')}</Badge>
+        return <Badge variant="secondary">{t('repo.mcp.disabled')}</Badge>
       case 'failed':
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
@@ -86,7 +86,7 @@ export function RepoMcpServerList({
         )
       case 'needs_auth':
         return (
-          <Badge variant="outline" className="border-warning text-warning">
+          <Badge variant="outline-warning">
             {t('repo.mcp.needsAuth')}
           </Badge>
         )

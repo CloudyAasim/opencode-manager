@@ -26,7 +26,7 @@ interface McpServerCardProps {
 function getStatusBadge(status: McpStatus, t: Translate) {
   switch (status.status) {
     case 'connected':
-      return <Badge variant="default" className="bg-success">{t('settingsPanels.mcpServerCard.connected')}</Badge>
+      return <Badge variant="success">{t('settingsPanels.mcpServerCard.connected')}</Badge>
     case 'disabled':
       return <Badge variant="secondary">{t('settingsPanels.mcpServerCard.disabled')}</Badge>
     case 'failed':
@@ -38,14 +38,14 @@ function getStatusBadge(status: McpStatus, t: Translate) {
       )
     case 'needs_auth':
       return (
-        <Badge variant="outline" className="flex items-center gap-1 border-warning text-warning">
+        <Badge variant="outline-warning" className="flex items-center gap-1">
           <Key className="h-3 w-3" />
           {t('settingsPanels.mcpServerCard.authRequired')}
         </Badge>
       )
     case 'needs_client_registration':
       return (
-        <Badge variant="outline" className="flex items-center gap-1 border-warning text-primary">
+        <Badge variant="outline-warning" className="flex items-center gap-1 text-primary">
           <AlertCircle className="h-3 w-3" />
           {t('settingsPanels.mcpServerCard.registrationRequired')}
         </Badge>

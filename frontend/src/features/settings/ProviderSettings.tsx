@@ -214,7 +214,7 @@ export function ProviderSettings() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {hasKey ? (
-                      <Badge variant="default" className="bg-success hover:bg-success shrink-0">
+                      <Badge variant="success" className="shrink-0">
                         <Check className="h-3 w-3 mr-1" />
                         {t('settingsPanels.provider.connected')}
                       </Badge>
@@ -329,7 +329,7 @@ export function ProviderSettings() {
                             )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Badge variant="default" className="bg-success hover:bg-success shrink-0">
+                            <Badge variant="success" className="shrink-0">
                               <Check className="h-3 w-3 mr-1" />
                               {t('settingsPanels.provider.connected')}
                             </Badge>

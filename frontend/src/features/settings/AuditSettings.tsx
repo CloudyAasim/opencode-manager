@@ -67,7 +67,7 @@ function ChangedKeys({ entry }: { entry: OpenCodeConfigAuditEntry }) {
         <Badge key={key} variant="outline" className="font-mono">{key}</Badge>
       ))}
       {added.map((id) => (
-        <Badge key={`+${id}`} className="bg-success hover:bg-success font-mono">
+        <Badge key={`+${id}`} variant="success" className="font-mono">
           {t('settings.audit.configProviderAdded', { ids: id })}
         </Badge>
       ))}
@@ -162,7 +162,7 @@ export function AuditSettings() {
       )}
 
       {notice && (
-        <Alert className="border-success text-success">
+        <Alert variant="success">
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>{notice}</AlertDescription>
         </Alert>

@@ -11,6 +11,11 @@ const alertVariants = cva(
         default: "bg-background text-foreground",
         destructive:
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+        // The green one and the blue one. They were written at the call
+        // sites - and the blue one had no text colour of its own, so the
+        // words on it were the colour of the page.
+        success: "border-success text-success",
+        primary: "border-primary bg-primary text-primary-foreground",
       },
     },
     defaultVariants: {

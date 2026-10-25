@@ -25,7 +25,7 @@ export function OpenCodeConfigSourcesNotice({ config, targetName }: OpenCodeConf
   if (!writeTargetName) return null
 
   return (
-    <Alert className="border-primary bg-primary">
+    <Alert variant="primary">
       <Info className="h-4 w-4 text-primary" />
       <details className="group" open>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
