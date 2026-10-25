@@ -130,7 +130,7 @@ function ringListsOf(rel: string): string[] {
     /\$\{(\w+)\}/g,
     (whole, name) => CONSTANTS.get(name) ?? whole,
   )
-  return stringLiterals(resolved).filter((list) => /\bring[-\/]/.test(list))
+  return stringLiterals(resolved).filter((list) => /ring[-/]/.test(list))
 }
 
 /** 这个零件自己有多大（第一段写着固定尺寸的那一段 ✗）。 */
