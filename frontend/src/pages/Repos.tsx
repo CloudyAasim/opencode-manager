@@ -23,7 +23,6 @@ export function Repos() {
           </div>
           <Button
             onClick={() => setAddRepoOpen(true)}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground"
           >
             <Plus className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">{t('navigation.newRepo')}</span>

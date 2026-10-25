@@ -799,7 +799,7 @@ export function SessionDetail() {
                 variant="ghost"
                 size="xs"
                 onClick={handleParentSessionClick}
-                className="text-muted-foreground hover:text-foreground hover:bg-accent px-2 gap-1"
+                className="text-muted-foreground hover:text-foreground px-2 gap-1"
                 title={t('session.header.backToParent')}
               >
                 <CornerUpLeft className="w-3.5 h-3.5" />

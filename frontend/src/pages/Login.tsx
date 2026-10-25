@@ -105,7 +105,7 @@ export function Login() {
             <Button
               type="button"
               variant="outline"
-              className="w-full border-border hover:bg-accent transition-all duration-200"
+              className="w-full transition-all duration-200"
               onClick={() => shell.changeServer()}
             >
               <Server className="mr-2 h-4 w-4" />
@@ -124,7 +124,7 @@ export function Login() {
         {hasPasskey && (
           <Button
             variant="outline"
-            className="w-full border-border hover:bg-accent transition-all duration-200"
+            className="w-full transition-all duration-200"
             onClick={handlePasskey}
             disabled={isSubmitting || isPasskeyLoading}
           >
@@ -142,7 +142,7 @@ export function Login() {
             {config.enabledProviders.includes('github') && (
               <Button
                 variant="outline"
-                className="w-full border-border hover:bg-accent transition-all duration-200"
+                className="w-full transition-all duration-200"
                 onClick={() => handleOAuth('github')}
                 disabled={!!oauthLoading}
               >
@@ -157,7 +157,7 @@ export function Login() {
             {config.enabledProviders.includes('google') && (
               <Button
                 variant="outline"
-                className="w-full border-border hover:bg-accent transition-all duration-200"
+                className="w-full transition-all duration-200"
                 onClick={() => handleOAuth('google')}
                 disabled={!!oauthLoading}
               >
@@ -189,7 +189,7 @@ export function Login() {
             {config.enabledProviders.includes('discord') && (
               <Button
                 variant="outline"
-                className="w-full border-border hover:bg-accent transition-all duration-200"
+                className="w-full transition-all duration-200"
                 onClick={() => handleOAuth('discord')}
                 disabled={!!oauthLoading}
               >

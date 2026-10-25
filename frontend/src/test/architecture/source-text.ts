@@ -401,11 +401,12 @@ export function ownListOf(text: string, constants?: Map<string, string>): string
  *
  * `cva(…, { variants: { size: { sm: "h-8 …", … } } })` is where a part says
  * what each step of its ladder looks like, and a rule about the ladder has to
- * read it from there.
+ * read it from there. The same is true of the `variant:` group - the face a
+ * button wears.
  */
-export function variantsOf(text: string): Map<string, string> {
+export function variantsOf(text: string, key = 'size'): Map<string, string> {
   const found = new Map<string, string>()
-  const at = text.indexOf('size: {')
+  const at = text.indexOf(`${key}: {`)
   if (at < 0) return found
   let depth = 0
   let end = at

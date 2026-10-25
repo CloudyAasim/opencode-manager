@@ -192,7 +192,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                   size="lg" variant="outline"
                   onClick={() => setPickerOpen(true)}
                   disabled={mutation.isPending}
-                  className="shrink-0 border-border bg-muted px-3 text-muted-foreground hover:bg-accent"
+                  className="shrink-0 bg-muted px-3 text-muted-foreground"
                   aria-label={t('repo.addDialog.browseForFolder')}
                 >
                   <FolderSearch className="h-4 w-4" />
@@ -218,7 +218,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                   size="lg" variant="outline"
                   onClick={() => setPickerOpen(true)}
                   disabled={mutation.isPending}
-                  className="shrink-0 border-border bg-muted px-3 text-muted-foreground hover:bg-accent"
+                  className="shrink-0 bg-muted px-3 text-muted-foreground"
                   aria-label={t('repo.addDialog.browseForFolder')}
                 >
                   <FolderSearch className="h-4 w-4" />

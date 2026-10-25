@@ -182,7 +182,6 @@ export function CreateWorktreeDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               size="touch"
-              className="border-border hover:bg-accent"
             >
               {t('repo.cancel')}
             </Button>
@@ -190,7 +189,7 @@ export function CreateWorktreeDialog({
               onClick={handleCreate}
               disabled={!canCreate || !branchName.trim() || !baseBranch || worktreeMutation.isPending}
               size="touch"
-              className="bg-primary hover:bg-primary disabled:opacity-50"
+              className="disabled:opacity-50"
             >
               {worktreeMutation.isPending ? (
                 <>
