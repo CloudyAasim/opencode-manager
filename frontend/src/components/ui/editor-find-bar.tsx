@@ -51,7 +51,7 @@ export function EditorFindBar({
           aria-label={t('ui.editorFindBar.findInContent')}
           autoComplete="off"
           name={inputName}
-          size="lg" className="pl-9 md:h-9"
+          size="lg" className="pl-9 md:h-8"
         />
       </div>
       {query && (

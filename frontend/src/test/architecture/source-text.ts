@@ -397,6 +397,33 @@ export function ownListOf(text: string, constants?: Map<string, string>): string
 }
 
 /**
+ * The size steps a part declares.
+ *
+ * `cva(…, { variants: { size: { sm: "h-8 …", … } } })` is where a part says
+ * what each step of its ladder looks like, and a rule about the ladder has to
+ * read it from there.
+ */
+export function variantsOf(text: string): Map<string, string> {
+  const found = new Map<string, string>()
+  const at = text.indexOf('size: {')
+  if (at < 0) return found
+  let depth = 0
+  let end = at
+  for (; end < text.length; end += 1) {
+    if (text[end] === '{') depth += 1
+    else if (text[end] === '}') {
+      depth -= 1
+      if (depth === 0) break
+    }
+  }
+  const body = text.slice(at, end)
+  for (const match of body.matchAll(/"?([\w-]+)"?:\s*"([^"]*)"/g)) {
+    found.set(match[1]!, match[2]!)
+  }
+  return found
+}
+
+/**
  * The size `field-text` asks for on a phone.
  *
  * It is the floor for anything you can type into: a phone enlarges an input
