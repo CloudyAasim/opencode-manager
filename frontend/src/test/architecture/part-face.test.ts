@@ -376,12 +376,14 @@ const DIALOG_SITES = CALL_SITES.filter((site) => site.part === 'DialogContent')
 const WIDTH_PARTS: Record<string, string> = {
   Card: 'components/ui/card.tsx',
   SideDrawer: 'components/ui/side-drawer.tsx',
+  Row: 'components/ui/row.tsx',
 }
 
 /** 它们各自的刻度写在哪张表里 ✓。 */
 const WIDTH_SCALES: ReadonlyArray<readonly [string, string]> = [
   ['Card', 'CARD_WIDTHS'],
   ['SideDrawer', 'SIDE_DRAWER_WIDTHS'],
+  ['Row', 'ROW_WIDTHS'],
 ]
 
 const WIDTH_SITES = callSites(WIDTH_PARTS)
@@ -596,6 +598,14 @@ describe('共享零件的脸，各有各副', () => {
       const said = new Set(
         WIDTH_SITES.filter((site) => site.part === part && site.width).map((site) => site.width),
       )
+      // **默认的那一档** ✓ 也算有人用 ✓ —— 那些**没有说宽度**的调用点 ✓
+      // 用的是它 ✓，它当然不是摆在那儿的 ✓。
+      const partSource = SOURCES.find((candidate) => candidate.rel === WIDTH_PARTS[part])?.text ?? ''
+      for (const step of steps.keys()) {
+        if (partSource.includes(`width = '${step}'`) || partSource.includes(`width = "${step}"`)) {
+          said.add(step)
+        }
+      }
       expect(
         [...steps.keys()].filter((step) => !said.has(step)),
         `${part} 的这些宽度档没有人用`,

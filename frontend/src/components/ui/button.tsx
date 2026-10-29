@@ -20,6 +20,10 @@ const buttonVariants = cva(
         // There is no green button: green is what a *mark* and a *message*
         // are, not what a button is. The one that used to be green is the
         // ordinary one now.
+        //
+        // The yellow one is what the warnings are - the same yellow the
+        // marks and the messages use.
+        warning: "bg-warning text-white hover:bg-warning/90",
         "outline-destructive":
           "border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20",
         outline:

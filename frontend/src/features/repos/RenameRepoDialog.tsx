@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { X, Check } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useI18n } from '@/lib/i18n'
+import { Input } from '@/components/ui/input'
 
 interface RenameRepoDialogProps {
   isOpen: boolean
@@ -49,13 +50,13 @@ export function RenameRepoDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
-            <input
+            <Input
               ref={inputRef}
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               placeholder={derivedName}
-              className="text-base font-semibold bg-background border border-border rounded-md px-3 py-2.5 pr-10 outline-none w-full focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="font-semibold pr-10"
               autoFocus
             />
             {editName && (

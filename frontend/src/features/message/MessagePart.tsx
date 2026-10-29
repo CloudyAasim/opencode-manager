@@ -10,6 +10,7 @@ import { useMobile } from '@/hooks/useMobile'
 import { useSettings } from '@/hooks/useSettings'
 import { CopyButton } from '@/components/ui/copy-button'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 type RetryPartType = components['schemas']['RetryPart']
 
@@ -87,12 +88,14 @@ function TTSButton({ messageId, content, className = "" }: TTSButtonProps) {
   }
 
   return (
-    <button
-      onClick={handleClick}
-      className={`p-1.5 rounded ${isThisPlaying ? 'bg-destructive text-destructive hover:bg-destructive' : 'bg-card hover:bg-card-hover text-muted-foreground hover:text-foreground'} ${className}`}
-      title={isThisPlaying ? t('message.actions.stopPlayback') : t('message.actions.readAloud')}
-      disabled={isLoading && !isThisPlaying}
-    >
+    <Button
+        variant={isThisPlaying ? 'destructive' : 'ghost'}
+        size="icon-xs"
+        onClick={handleClick}
+        className={`${isThisPlaying ? 'text-destructive' : 'text-muted-foreground'} ${className}`}
+        title={isThisPlaying ? t('message.actions.stopPlayback') : t('message.actions.readAloud')}
+        disabled={isLoading && !isThisPlaying}
+      >
       {isLoading && isThisPlaying ? (
         <Loader2 className="w-4 h-4 animate-spin" />
       ) : isThisPlaying ? (
@@ -100,7 +103,7 @@ function TTSButton({ messageId, content, className = "" }: TTSButtonProps) {
       ) : (
         <Volume2 className="w-4 h-4" />
       )}
-    </button>
+    </Button>
   )
 }
 

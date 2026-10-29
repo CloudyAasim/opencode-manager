@@ -55,12 +55,13 @@ function RecordingInput({ value, onStop }: RecordingInputProps) {
         onBlur={onStop}
         readOnly
       />
-      <button
-        onClick={onStop}
-        className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-      >
+      <Button
+            variant="ghost"
+            size="xs"
+            onClick={onStop}
+          >
         {t('settingsPanels.shortcuts.cancel')}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -96,12 +97,14 @@ function ShortcutRow({ action, keys, isDirect, display, isRecording, currentKeys
         <RecordingInput value={currentKeys} onStop={onStopRecording} />
       ) : (
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="chip"
+            size="xs"
             onClick={() => onStartRecording(action)}
-            className={`px-3 py-1.5 bg-accent border border-border hover:border-border rounded text-sm font-mono transition-colors ${keys ? 'text-foreground' : 'text-muted-foreground italic'}`}
+            className={`font-mono ${keys ? '' : 'italic'}`}
           >
             {display}
-          </button>
+          </Button>
           {keys && (
             <button
               onClick={() => onClear(action)}

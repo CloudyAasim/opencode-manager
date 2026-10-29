@@ -1422,18 +1422,16 @@ return (
           {isMobile && sttEnabled && sttSupported && !hasPendingPermissionForSession && (
             renderVoiceButton('mobile')
           )}
-            <button
+            <Button
+              variant={hasPendingPermissionForSession ? 'warning' : 'default'}
+              size="default"
               onClick={handleSubmitPress}
               disabled={hasPendingPermissionForSession ? false : ((!prompt.trim() && imageAttachments.length === 0) || (isPromptSubmitPending && !isStreamingResponse))}
-              className={`px-4 md:px-5 py-1.5 md:py-2 rounded-lg text-sm font-medium transition-colors dark:border flex-shrink-0 min-w-[52px] ${
-                hasPendingPermissionForSession
-                  ? 'bg-warning hover:bg-warning border-warning/40 text-primary-foreground ring-warning'
-                  : 'bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground border-white/30'
-              }`}
+              className="px-4 md:px-5 flex-shrink-0 min-w-[52px] disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
               title={hasPendingPermissionForSession ? t('message.actions.viewPendingPermission') : (isStreamingResponse ? t('message.actions.queueMessage') : t('message.actions.send'))}
             >
               <span className="whitespace-nowrap">{hasPendingPermissionForSession ? t('message.actions.view') : (isStreamingResponse ? t('message.actions.queue') : t('message.actions.send'))}</span>
-            </button>
+            </Button>
         </div>
       </div>
       

@@ -5,6 +5,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { showToast } from '@/lib/toast'
 import { DEFAULT_TTS_CONFIG } from '@opencode-manager/shared'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 interface FloatingTTSButtonProps {
   messageId: string
@@ -86,18 +87,14 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
     title: pillTitle,
     autoPlay: autoPlay ? t('message.tts.autoPlayEnabledState') : t('message.tts.autoPlayDisabledState'),
   })
-  const buttonToneClasses = showStop
-    ? 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-destructive to-destructive border border-destructive shadow-destructive ring-destructive hover:ring-destructive text-white'
-    : autoPlay
-      ? 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-primary to-primary border border-primary/40 shadow-primary ring-primary hover:ring-primary text-white'
-      : 'justify-center px-3 py-1.5 rounded-lg bg-gradient-to-br from-warning to-warning border border-warning/40 shadow-warning ring-warning hover:ring-warning text-white'
-
   return (
-      <button
+      <Button
+        variant={showStop ? 'destructive' : autoPlay ? 'default' : 'warning'}
+        size="default"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
-        className={`flex items-center transition-all duration-200 shadow-md backdrop-blur-md ring-1 ${buttonToneClasses} ${isLongPressVisual ? 'scale-95 opacity-80' : 'active:scale-95 hover:scale-105'} ${!hasContent && !autoPlay ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`transition-all duration-200 backdrop-blur-md ${isLongPressVisual ? 'scale-95 opacity-80' : 'active:scale-95 hover:scale-105'} ${!hasContent && !autoPlay ? 'opacity-50 cursor-not-allowed' : ''}`}
         title={pillTitle}
         aria-label={pillAriaLabel}
         disabled={!hasContent && !autoPlay}
@@ -107,6 +104,6 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
         ) : hasContent || autoPlay ? (
           <Volume2 className="w-5 h-5" />
         ) : null}
-      </button>
+      </Button>
   )
 }

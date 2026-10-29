@@ -9,6 +9,7 @@ import {
   SESSION_RAIL_WIDTH_MAX,
   SESSION_RAIL_WIDTH_MIN,
 } from '@/lib/repo-constants'
+import { Backdrop } from '@/components/ui/backdrop'
 
 interface SessionRailProps {
   open: boolean
@@ -37,11 +38,10 @@ export function SessionRail({ open, onClose, children }: SessionRailProps) {
   return (
     <>
       {!isDesktop && (
-        <button
+        <Backdrop
           type="button"
           aria-label={t('navigation.close')}
           onClick={onClose}
-          className="absolute inset-0 z-30 bg-black/40 transition-opacity duration-200 md:hidden"
         />
       )}
       <aside

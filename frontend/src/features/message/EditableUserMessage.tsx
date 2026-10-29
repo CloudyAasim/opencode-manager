@@ -7,6 +7,7 @@ import { useSessionAgent } from '@/hooks/useSessionAgent'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
 import { Row } from '@/components/ui/row'
+import { Textarea } from '@/components/ui/textarea'
 
 interface EditableUserMessageProps {
   opcodeUrl: string
@@ -86,13 +87,13 @@ export const EditableUserMessage = memo(function EditableUserMessage({
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      <textarea
+      <Textarea
         ref={textareaRef}
         value={editedContent}
         onChange={(e) => setEditedContent(e.target.value)}
         onKeyDown={handleKeyDown}
         onFocus={() => setIsEditingMessage(true)}
-        className="w-full p-3 rounded-lg bg-background border border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none min-h-[60px] field-text"
+        className="min-h-[60px] resize-none"
         placeholder={t('message.editing.placeholder')}
         disabled={refreshMessage.isPending}
       />

@@ -102,7 +102,8 @@ export function TopBar() {
                 selected={active}
                 aria-current={active ? 'page' : undefined}
                 onClick={() => go(item)}
-                className="w-auto gap-1.5 px-2 font-medium text-muted-foreground hover:text-foreground"
+                width="auto"
+                className="gap-1.5 px-2 font-medium text-muted-foreground hover:text-foreground"
               >
                 <item.icon className="size-4 shrink-0" />
                 <span className="truncate">{item.labelKey ? t(item.labelKey) : item.label}</span>

@@ -4,6 +4,7 @@ import { X, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useMobile } from "@/hooks/useMobile";
 import { useI18n } from "@/lib/i18n";
+import { Input } from "@/components/ui/input"
 
 interface EditSessionTitleDialogProps {
   isOpen: boolean;
@@ -62,13 +63,13 @@ export function EditSessionTitleDialog({ isOpen, currentTitle, onClose, onSave }
         <form onSubmit={handleSubmit} className="min-w-0">
           <p className="text-sm text-muted-foreground mb-2">{t('session.editTitle.label')}</p>
           <div className="relative">
-            <input
+            <Input
               ref={inputRef}
               type="text"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="text-xl font-semibold bg-background border border-border rounded px-3 py-2.5 pr-10 outline-none w-full focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="font-semibold pr-10"
               autoFocus
             />
             {editTitle && (

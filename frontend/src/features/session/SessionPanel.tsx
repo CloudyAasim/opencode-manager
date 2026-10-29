@@ -10,6 +10,7 @@ import {
 import { usePersistentJSONState } from '@/hooks/usePersistentJSONState'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
+import { Backdrop } from '@/components/ui/backdrop'
 
 export interface SessionPanelTab {
   id: string
@@ -131,11 +132,10 @@ export function SessionPanel({
         />
       )}
       {!isDesktop && (
-        <button
+        <Backdrop
           type="button"
           aria-label={t('navigation.close')}
           onClick={() => onOpenChange(false)}
-          className="absolute inset-0 z-30 bg-black/40 transition-opacity duration-200 md:hidden"
         />
       )}
       <aside

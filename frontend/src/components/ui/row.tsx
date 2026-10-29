@@ -18,8 +18,20 @@ import { cn } from "@/lib/utils"
  * 于是**行只写一处** ✓：普通的 ✓ 与选中的 ✓ 两副 ✓，
  * 调用点**只说名字** ✓（`selected` ✓）✓，**不自己画** ✓。
  */
+/**
+ * 一行有多宽。
+ *
+ * 只有两个宽度被真正用过 ✓——**撑满** ✓ 与 **按自己的来** ✓（顶栏里那一排 ✓）✓。
+ */
+const ROW_WIDTHS = {
+  full: "w-full",
+  auto: "w-auto",
+} as const
+
+type RowWidth = keyof typeof ROW_WIDTHS
+
 const rowVariants = cva(
-  `flex w-full items-center gap-2 rounded-md px-3 py-2 text-start text-sm text-foreground transition-colors hover:bg-muted`,
+  `flex items-center gap-2 rounded-md px-3 py-2 text-start text-sm text-foreground transition-colors hover:bg-muted`,
   {
     variants: {
       variant: {
@@ -52,12 +64,16 @@ const rowVariants = cva(
 
 const Row = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof rowVariants>
->(({ className, variant, selected, size, ...props }, ref) => (
+  React.ButtonHTMLAttributes<HTMLButtonElement> &
+    VariantProps<typeof rowVariants> & {
+      /** 一行有多宽 ✓——**说哪一档** ✓，不许自己写 ✓。 */
+      width?: RowWidth
+    }
+>(({ className, variant, width = "full", selected, size, ...props }, ref) => (
   <button
     ref={ref}
     data-slot="row"
-    className={cn(rowVariants({ variant, selected, size }), className)}
+    className={cn(rowVariants({ variant, selected, size }), ROW_WIDTHS[width], className)}
     {...props}
   />
 ))

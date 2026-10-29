@@ -28,6 +28,7 @@ import { useOptionalAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/lib/i18n'
 import { DESKTOP_MEDIA_QUERY, useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/card'
 
 type SettingsView = 'menu' | SettingsContentTab
 
@@ -274,10 +275,17 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
              {mobileView === 'menu' && (
                <div className="space-y-3">
                  {menuItems.map((item) => (
-                    <button
+                    <Card
+                      asChild
+                      clickable
                       key={item.id}
+                      width="full"
+                      className="p-4"
+                    >
+                     <button
+                      type="button"
                       onClick={() => handleOpenMobileView(item.id)}
-                      className="w-full bg-card hover:bg-card-hover border border-border rounded-xl p-4 transition-colors text-left"
+                      className="text-left"
                     >
                      <div className="flex items-center gap-4">
                        <div className="p-3 bg-accent rounded-lg">
@@ -289,6 +297,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                        </div>
                      </div>
                    </button>
+                   </Card>
                  ))}
                </div>
              )}

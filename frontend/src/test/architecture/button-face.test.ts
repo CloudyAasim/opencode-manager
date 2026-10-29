@@ -144,6 +144,8 @@ describe('按钮的脸，是它那一档的事', () => {
     for (const name of ['default', 'outline', 'ghost', 'selected']) {
       expect(VARIANTS.has(name), `共享的按钮没有 ${name} 那一档`).toBe(true)
     }
+    // **黄色是警告的** ✓ —— 门禁盯着它 ✓。
+    expect(VARIANTS.has('warning'), '共享的按钮没有警告那一副').toBe(true)
 
     // 认得那一档说过的每一个词 ✓。
     const outline = saidBy('outline')

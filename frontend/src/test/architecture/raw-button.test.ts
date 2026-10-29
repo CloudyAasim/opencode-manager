@@ -97,9 +97,9 @@ const FROM_CONTENT = /\bvar\(/
  */
 const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
   [
-    'components/LanguageToggle.tsx',
-    'bg-accent',
-    '这是**语言切换那一排** ✓：选中时它自己带一层底 ✓，那是**状态** ✓，不是另一副按钮 ✓',
+    'components/ui/backdrop.tsx',
+    'bg-black/40',
+    '这就是**那层黑** ✓ —— 它**自己就是**那个零件 ✓，不是调用点画的脸 ✓',
   ],
   [
     'features/message/AgentQuickSelect.tsx',
@@ -107,54 +107,9 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这个键**跟着 agent 的颜色走** ✓：它的脸是**内容给的** ✓，不是它自己画的 ✓',
   ],
   [
-    'features/message/FloatingTTSButton.tsx',
-    'shadow-md',
-    '这个键的底色**跟着内容走** ✓（它有**自己的调子** ✓），那不是它自己画的那一个 ✓',
-  ],
-  [
-    'features/message/MessagePart.tsx',
-    'bg-card',
-    '这个键的底色**跟着状态走** ✓（在放的时候是红的 ✓，平时是卡的 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
-  ],
-  [
-    'features/message/ToolCallPart.tsx',
-    'bg-primary',
-    '这是**一个工具调用的条子** ✓：它自己带一道主色的边 ✓，那是一个**标记** ✓，不是按钮 ✓',
-  ],
-  [
     'features/session/QuestionPrompt.tsx',
     'bg-success/10',
     '这是**一个可点的答案** ✓：答对了它自己带一层底 ✓，那是一个**选项** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/session/SessionPanel.tsx',
-    'bg-black/40',
-    '这是**盖住下面的那层黑** ✓：它遮住东西 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/session/SessionRail.tsx',
-    'bg-black/40',
-    '这是**盖住下面的那层黑** ✓：它遮住东西 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/settings/KeyboardShortcuts.tsx',
-    'bg-accent',
-    '这是**一个快捷键的条子** ✓：它自己带一层底 ✓，那是一个**标记** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/message/PromptInput.tsx',
-    'bg-warning',
-    '这个键的底色**跟着状态走** ✓（要权限时是警告色 ✓，平时是主色 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
-  ],
-  [
-    'features/settings/SettingsDialog.tsx',
-    'bg-card',
-    '这是**设置里的一张卡** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/settings/STTSettings.tsx',
-    'bg-muted',
-    '这个键的底色**跟着状态走** ✓（不能测时是灰的 ✓，录着音时是红的 ✓，平时是主色 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
   ],
 ]
 
@@ -215,7 +170,7 @@ describe('原生 button 不许自己画脸', () => {
     expect(
       RAW_BUTTONS.length,
       '一个原生按钮都没找到，这道门禁多半跑在空集上',
-    ).toBeGreaterThan(50)
+    ).toBeGreaterThan(40)
 
     // 共享的那个按钮有档 ✓。
     expect(VARIANTS.size, '共享的按钮没有档，这道门禁多半读错了地方').toBeGreaterThan(4)

@@ -139,16 +139,6 @@ const NOT_AN_ORDINARY_FIELD: readonly Exception[] = [
     height: null,
   },
   {
-    file: 'components/ui/EditSessionTitleDialog.tsx',
-    reason: '名字的字段：字号是名字自己那一档（20px），不是普通字段',
-    height: null,
-  },
-  {
-    file: 'features/repos/RenameRepoDialog.tsx',
-    reason: '名字的字段：字号是名字自己那一档，不是普通字段',
-    height: null,
-  },
-  {
     file: 'features/settings/KeyboardShortcuts.tsx',
     reason: '按键捕获：它等的不是字，是一次按键',
     height: null,

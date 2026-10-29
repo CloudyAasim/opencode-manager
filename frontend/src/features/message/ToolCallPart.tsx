@@ -10,6 +10,7 @@ import { CopyButton } from '@/components/ui/copy-button'
 import { getToolSpecificRender } from './FileToolRender'
 import { useI18n } from '@/lib/i18n'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 type ToolPart = components['schemas']['ToolPart']
 
@@ -230,13 +231,15 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
 
     if (sessionId) {
       return (
-        <button
+        <Button
+          variant="default"
+          size="xs"
           onClick={() => onChildSessionClick?.(sessionId)}
-          className="my-1 w-full rounded-lg border border-primary bg-primary px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-primary hover:border-primary transition-all duration-200 shadow-sm shadow-primary"
+          className="my-1 w-full justify-start"
           title={t('message.actions.viewSubagentSession')}
         >
           {content}
-        </button>
+        </Button>
       )
     }
 

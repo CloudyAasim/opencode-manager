@@ -15,6 +15,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox } from '@/components/ui/combobox'
 import { useI18n, i18n } from '@/lib/i18n'
 import { DEFAULT_STT_CONFIG } from '@/api/types/settings'
+import { Button } from '@/components/ui/button'
 
 const sttFormSchema = z.object({
   enabled: z.boolean(),
@@ -309,15 +310,17 @@ export function STTSettings() {
                       <FormItem>
                         <div className="flex items-center justify-between">
                           <FormLabel>{t('settingsPanels.stt.model')}</FormLabel>
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="xs"
                             onClick={() => fetchModels(true)}
                             disabled={isLoadingModels || !watchEndpoint}
-                            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
+                            className="gap-1 text-muted-foreground hover:text-foreground"
                           >
                             <RefreshCw className={`h-3 w-3 ${isLoadingModels ? 'animate-spin' : ''}`} />
                             {t('settingsPanels.stt.refresh')}
-                          </button>
+                          </Button>
                         </div>
                         <FormControl>
                           <Combobox
@@ -432,19 +435,13 @@ export function STTSettings() {
                     </div>
                   )}
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant={!canTest && !isRecording && !isProcessing ? 'ghost' : isRecording ? 'destructive' : 'default'}
+                  size="default"
                   onClick={handleTest}
                   disabled={!canTest && !isRecording && !isProcessing}
-                  className={`px-4 py-2 rounded-lg transition-all duration-200 active:scale-95 flex items-center gap-2 ${
-                    !canTest && !isRecording && !isProcessing
-                      ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                      : isRecording
-                      ? 'bg-gradient-to-br from-destructive to-destructive hover:from-destructive hover:to-destructive text-destructive-foreground border-2 border-destructive shadow-lg shadow-destructive'
-                      : isProcessing
-                      ? 'bg-muted text-muted-foreground cursor-wait'
-                      : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                  }`}
+                  className="gap-2 cursor-not-allowed"
                 >
                   {isRecording ? (
                     <>
@@ -462,7 +459,7 @@ export function STTSettings() {
                       {t('settingsPanels.stt.test')}
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             </>
           )}
