@@ -53,11 +53,6 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'sm:h-7',
     '会话页头部有**六格** ✗：手机上有五格那么宽 ✗，鼠标上用 28px 的小按钮 ✗（那里有注释写着 ✗）✗',
   ],
-  [
-    'features/settings/OpenCodeConfigEditor.tsx',
-    'md:h-8',
-    '这是一个**错误信息里的链接** ✗，它不是共享零件 ✗',
-  ],
 ]
 
 /** 这一处被点名了吗 ✗。 */

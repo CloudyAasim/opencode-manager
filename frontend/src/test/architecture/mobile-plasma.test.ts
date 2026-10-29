@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { stringLiterals, stripComments } from './source-text'
+import { stringLiterals, stripComments, variantsOf } from './source-text'
 
 /**
  * The phone is the same design, not an older one.
@@ -373,18 +373,29 @@ describe('移动端也是 Plasma', () => {
     // A finger is not a cursor. The drawer's entries are the phone's whole
     // navigation, so they have to be big enough to hit - 44px is the number
     // every platform agrees on.
+    //
+    // 那些入口**是共享的行零件** ✓ —— 够不够得着 ✓ 是**那一档**说了算 ✓，
+    // 不再是**每个调用点自己写** ✓。
     const text = sourceOf('features/navigation/MoreDrawer.tsx')
-    const items = classListsOf(text).filter(
-      (list) => hasUtility(list, 'w-full') && hasUtility(list, 'items-center'),
-    )
-    expect(items.length, '没认出抽屉里的入口').toBeGreaterThan(0)
+    const entries = [...text.matchAll(/<Row\b([^>]*)>/g)]
+    expect(entries.length, '没认出抽屉里的入口').toBeGreaterThan(0)
 
-    for (const item of items) {
-      const height = minHeightPx(item)
+    const sizes = variantsOf(sourceOf('components/ui/row.tsx'), 'size')
+    const used = new Set(
+      entries
+        .map((entry) => /size="([^"]*)"/.exec(entry[1] ?? '')?.[1])
+        .filter((step): step is string => Boolean(step)),
+    )
+    expect(used.size, '抽屉里的入口没有说自己是哪一档').toBeGreaterThan(0)
+
+    for (const step of used) {
+      const list = sizes.get(step)
+      expect(list, `共享的行零件没有 ${step} 那一档`).toBeDefined()
+      const height = minHeightPx(list!)
       expect(
         height,
         [
-          `抽屉里的入口没有声明最小高度：${item}`,
+          `抽屉里的入口没有声明最小高度：${step}`,
           '手指不是指针——入口至少要 44px 高。',
         ].join('\n'),
       ).not.toBeNull()

@@ -10,6 +10,7 @@ import { PanelMessage } from '@/components/ui/panel-message'
 import { workspaceLabel, type RepoSibling } from '@/api/repos'
 import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
+import { Row } from '@/components/ui/row'
 
 interface WorkspaceManagerProps {
   open: boolean
@@ -184,21 +185,19 @@ export function WorkspaceManager({
               const isChecked = selected.has(workspaceId)
               const isActive = !!workspace.fullPath && workspace.fullPath === activeWorkspaceDirectory
               const label = workspaceLabel(workspace)
-              const rowClassName = isActive
-                ? 'border-primary/50 bg-primary/10 text-foreground'
-                : 'border-border bg-muted/30 hover:bg-muted/50'
               if (!manageMode) {
                 return (
-                  <button
+                  <Row
                     key={workspaceId}
                     type="button"
+                    variant="bordered"
+                    selected={isActive}
                     disabled={!workspace.fullPath}
                     onClick={() => {
                       if (!workspace.fullPath) return
                       onActiveWorkspaceChange(workspace.fullPath)
                       onOpenChange(false)
                     }}
-                    className={`flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm text-left ${rowClassName}`}
                     aria-pressed={isActive}
                   >
                     <GitBranch className="h-3.5 w-3.5 text-primary flex-shrink-0" />
@@ -209,7 +208,7 @@ export function WorkspaceManager({
                         {toDisplayPath(workspace.fullPath)}
                       </span>
                     )}
-                  </button>
+                  </Row>
                 )
               }
               return (

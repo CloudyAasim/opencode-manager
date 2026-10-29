@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
 import { useShortcutAction } from '@/framework/commands/shortcutRegistry'
 import type { Model, Provider } from '@/api/providers'
+import { Row } from '@/components/ui/row'
+import { Card } from '@/components/ui/card'
 
 interface ModelQuickSelectProps {
   opcodeUrl: string | null | undefined
@@ -666,19 +668,16 @@ export function ModelQuickSelect({
                   <>
                     <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">{t('misc.modelQuickSelect.connected')}</p>
                     {connectedProviderItems.map(provider => (
-                      <button
+                      <Row
                         key={provider.id}
                         type="button"
+                        selected={selectedProviderId === provider.id}
                         onClick={() => handleProviderSelect(provider.id)}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                          selectedProviderId === provider.id
-                            ? 'bg-warning/20 text-warning font-medium'
-                            : 'text-foreground/80 hover:bg-muted/50'
-                        }`}
+                        className="px-3"
                       >
                         <div className="truncate">{provider.label}</div>
                         <div className="text-xs text-muted-foreground">{t(provider.count === 1 ? 'misc.modelQuickSelect.modelCountOne' : 'misc.modelQuickSelect.modelCountOther', { n: provider.count })}</div>
-                      </button>
+                      </Row>
                     ))}
                     {availableProviderItems.length > 0 && <div className="mx-3 my-1 h-px bg-muted" />}
                   </>
@@ -687,19 +686,16 @@ export function ModelQuickSelect({
                   <>
                     <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">{t('misc.modelQuickSelect.available')}</p>
                     {availableProviderItems.map(provider => (
-                      <button
+                      <Row
                         key={provider.id}
                         type="button"
+                        selected={selectedProviderId === provider.id}
                         onClick={() => handleProviderSelect(provider.id)}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                          selectedProviderId === provider.id
-                            ? 'bg-warning/20 text-warning font-medium'
-                            : 'text-foreground/80 hover:bg-muted/50'
-                        }`}
+                        className="px-3"
                       >
                         <div className="truncate">{provider.label}</div>
                         <div className="text-xs text-muted-foreground">{t(provider.count === 1 ? 'misc.modelQuickSelect.modelCountOne' : 'misc.modelQuickSelect.modelCountOther', { n: provider.count })}</div>
-                      </button>
+                      </Row>
                     ))}
                   </>
                 )}
@@ -783,14 +779,17 @@ export function ModelQuickSelect({
               ))}
             </div>
             <div className="flex-shrink-0 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setShowAllModels(true)}
-                className="flex w-full items-center justify-between bg-card px-6 py-4 text-left text-sm font-semibold text-foreground transition-colors hover:bg-accent active:bg-card"
+              <Card
+                asChild
+                variant="flat"
+                clickable
+                className="px-6 py-4 items-center justify-between"
               >
-                <span>{t('misc.modelQuickSelect.moreModels')}</span>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </button>
+                <button type="button" onClick={() => setShowAllModels(true)}>
+                  <span>{t('misc.modelQuickSelect.moreModels')}</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </Card>
             </div>
           </div>
         )}

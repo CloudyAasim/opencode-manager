@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { ChevronDown, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { Input } from '@/components/ui/input'
+import { Row } from '@/components/ui/row'
 
 export interface ComboboxOption {
   value: string
@@ -234,21 +235,19 @@ export function Combobox({
                 const isSelected = currentIndex === selectedIndex
 
                 return (
-                  <button
+                  <Row
                     key={option.value}
                     data-option
                     type="button"
+                    selected={isSelected}
                     onClick={() => handleSelect(option.value)}
-                    className={cn(
-                      'w-full scroll-mt-7 px-3 py-2 text-left text-sm transition-colors',
-                      isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-                    )}
+                    className="scroll-mt-7"
                   >
                     <div className="font-medium">{option.label}</div>
                     {option.description && (
                       <div className="text-xs text-muted-foreground truncate">{option.description}</div>
                     )}
-                  </button>
+                  </Row>
                 )
               })}
             </div>

@@ -3,6 +3,7 @@ import type { components } from '@/api/opencode-types'
 import { getRelativePath } from './FileToolRender'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { Card } from '@/components/ui/card'
 
 type PatchPartType = components['schemas']['PatchPart']
 
@@ -23,18 +24,23 @@ export function PatchPart({ part, onFileClick }: PatchPartProps) {
 
   return (
     <div className="border border-border rounded-lg overflow-hidden my-2">
-      <button
+      <Card
+        asChild
+        variant="flat"
+        clickable
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-3 py-1.5 bg-card hover:bg-card-hover text-left flex items-center justify-between text-sm gap-2"
+        className="px-3 py-1.5 items-center justify-between gap-2"
       >
-        <span className="font-medium">
-          {t('message.files.changes', { count: part.files.length })}
-        </span>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-muted-foreground text-xs font-mono">{part.hash.slice(0, 8)}</span>
-          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-        </div>
-      </button>
+        <button type="button">
+          <span className="font-medium">
+            {t('message.files.changes', { count: part.files.length })}
+          </span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-muted-foreground text-xs font-mono">{part.hash.slice(0, 8)}</span>
+            {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </div>
+        </button>
+      </Card>
 
       <div className="bg-card px-3 py-2 space-y-1">
         {displayedFiles.map((file) => (

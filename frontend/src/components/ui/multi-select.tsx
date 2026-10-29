@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { Check, ChevronDown, SearchX, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { Input } from '@/components/ui/input'
+import { Row } from '@/components/ui/row'
 import { PanelMessage } from '@/components/ui/panel-message'
 
 export interface MultiSelectOption {
@@ -197,18 +198,14 @@ export function MultiSelect({
                 const isSelected = value.includes(option.value)
                 const isHighlighted = index === highlightedIndex
                 return (
-                  <button
+                  <Row
                     key={option.value}
                     id={`option-${index}`}
                     type="button"
                     role="option"
                     aria-selected={isSelected}
+                    selected={isSelected || isHighlighted}
                     onClick={() => handleToggle(option.value)}
-                    className={cn(
-                      'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted',
-                      isSelected && 'bg-primary/5',
-                      isHighlighted && 'bg-accent'
-                    )}
                   >
                     <div className={cn(
                       'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
@@ -222,7 +219,7 @@ export function MultiSelect({
                         <div className="text-xs text-muted-foreground truncate">{option.description}</div>
                       )}
                     </div>
-                  </button>
+                  </Row>
                 )
               })
             )}

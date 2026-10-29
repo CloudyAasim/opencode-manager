@@ -18,6 +18,7 @@ import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { RepoSwitcher } from './RepoSwitcher'
 import { useFloatingShell } from './shell-layout'
+import { Row } from '@/components/ui/row'
 
 // The one place navigation happens. It used to be three: a left rail, a bottom
 // bar, and a drawer, each with its own copy of the item list and its own idea
@@ -94,21 +95,18 @@ export function TopBar() {
           primary.map((item) => {
             const active = isNavItemActive(item, location.pathname)
             return (
-              <button
+              <Row
                 key={item.key}
                 type="button"
+                size="sm"
+                selected={active}
                 aria-current={active ? 'page' : undefined}
                 onClick={() => go(item)}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors',
-                  active
-                    ? 'bg-accent font-medium text-foreground'
-                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
-                )}
+                className="w-auto gap-1.5 px-2 font-medium text-muted-foreground hover:text-foreground"
               >
                 <item.icon className="size-4 shrink-0" />
                 <span className="truncate">{item.labelKey ? t(item.labelKey) : item.label}</span>
-              </button>
+              </Row>
             )
           })}
       </div>

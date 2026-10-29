@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
+import { Row } from '@/components/ui/row'
 
 function sortEntries(a: FileInfo, b: FileInfo) {
   if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
@@ -59,13 +60,12 @@ function TreeNode({ file, guides, isLast, selectedPath, onSelectFile }: TreeNode
 
   return (
     <div>
-      <button
+      <Row
         type="button"
+        size="sm"
+        selected={isSelected}
         onClick={() => void toggle()}
-        className={cn(
-          'flex w-full items-center gap-1 rounded px-1 py-1 text-left transition-colors hover:bg-accent',
-          isSelected && 'bg-primary-soft text-primary',
-        )}
+        className="gap-1 px-1"
         title={toDisplayPath(file.path)}
       >
         <span className="whitespace-pre font-mono text-xs text-muted-foreground select-none">{prefix}</span>
@@ -82,7 +82,7 @@ function TreeNode({ file, guides, isLast, selectedPath, onSelectFile }: TreeNode
           <File className="h-4 w-4 shrink-0 text-muted-foreground" />
         )}
         <span className="truncate">{file.name}</span>
-      </button>
+      </Row>
 
       {file.isDirectory && expanded && (
         <div>

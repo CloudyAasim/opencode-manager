@@ -125,13 +125,15 @@ function MermaidBlock({ code }: MermaidBlockProps) {
           dangerouslySetInnerHTML={{ __html: svg }}
         />
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 max-sm:opacity-100">
-          <button
+          <Button
+            variant="glass"
+            size="icon-xs"
             onClick={() => setIsExpanded(true)}
-            className="p-1.5 rounded bg-card hover:bg-card-hover text-muted-foreground hover:text-foreground"
+            className="p-1.5 text-muted-foreground"
             title={t('message.actions.expandDiagram')}
           >
             <Maximize2 className="w-4 h-4" />
-          </button>
+          </Button>
           <CopyButton content={code} title={t('message.actions.copyCode')} />
         </div>
       </div>

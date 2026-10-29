@@ -285,13 +285,15 @@ export function OpenCodeConfigEditor({
               <p className="break-words text-sm text-destructive">
                 {editError}
                 {editErrorLine != null && (
-                  <button
+                  <Button
                     type="button"
+                    variant="link"
+                    size="default"
                     onClick={() => revealLine(editErrorLine)}
-                    className="ml-2 h-10 rounded px-2 text-xs underline underline-offset-2 md:h-8"
+                    className="ml-2 px-2"
                   >
                     {t('settingsPanels.configEditor.goToLine', { line: editErrorLine })}
-                  </button>
+                  </Button>
                 )}
               </p>
               {validationIssues.length > 0 && (

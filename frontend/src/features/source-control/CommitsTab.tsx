@@ -5,6 +5,7 @@ import { GitCommit, AlertCircle, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GIT_UI_COLORS } from '@/lib/git-status-styles'
 import { useI18n } from '@/lib/i18n'
+import { Row } from '@/components/ui/row'
 
 interface CommitsTabProps {
   repoId: number
@@ -66,9 +67,9 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
     <div className="flex flex-col h-full overflow-x-hidden">
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {data.commits.map((commit) => (
-          <button
+          <Row
             key={commit.hash}
-            className="flex items-start gap-3 px-3 py-2 text-left hover:bg-accent/50 transition-colors border-b border-border last:border-0"
+            className="items-start gap-3 border-b border-border last:border-0"
             onClick={() => onSelectCommit?.(commit.hash)}
           >
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent flex items-center justify-center mt-0.5">
@@ -95,7 +96,7 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
                 )}
               </div>
             </div>
-          </button>
+          </Row>
         ))}
       </div>
     </div>

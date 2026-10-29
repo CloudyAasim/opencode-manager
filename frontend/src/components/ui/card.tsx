@@ -39,6 +39,11 @@ const cardVariants = cva(
         // it carries a title and a line of text.
         tile: "rounded-xl border-2 border-border/70 bg-background/60 shadow-none",
       },
+      /** 可以按的那一张 ✓——工具调用的那一头 ✓。 */
+      clickable: {
+        false: "",
+        true: "cursor-pointer hover:bg-card-hover",
+      },
     },
     defaultVariants: {
       variant: "default",

@@ -7,6 +7,7 @@ import { useI18n } from '@/lib/i18n'
 import { useLayer } from '@/framework/layer/useLayer'
 import { useCommandList } from './commandRegistry'
 import { COMMAND_PALETTE_LAYER, type AppCommand } from './types'
+import { Row } from '@/components/ui/row'
 
 interface PaletteEntry {
   command: AppCommand
@@ -91,19 +92,18 @@ export function CommandPalette() {
         <ul className="max-h-80 overflow-y-auto p-1">
           {entries.map((entry, index) => (
             <li key={entry.command.id}>
-              <button
+              <Row
                 type="button"
+                selected={index === highlighted}
                 onMouseEnter={() => setHighlighted(index)}
                 onClick={() => runEntry(entry)}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${
-                  index === highlighted ? 'bg-accent text-accent-foreground' : 'text-foreground'
-                }`}
+                className="px-2"
               >
                 <span className="truncate">{entry.label}</span>
                 <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                   {entry.command.groupLabel ?? t(`shell.commands.group.${entry.command.group}`)}
                 </span>
-              </button>
+              </Row>
             </li>
           ))}
           {entries.length === 0 && (

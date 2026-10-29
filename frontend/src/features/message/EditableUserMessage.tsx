@@ -6,6 +6,7 @@ import { useMobile } from '@/hooks/useMobile'
 import { useSessionAgent } from '@/hooks/useSessionAgent'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/lib/i18n'
+import { Row } from '@/components/ui/row'
 
 interface EditableUserMessageProps {
   opcodeUrl: string
@@ -156,13 +157,14 @@ export const ClickableUserMessage = memo(function ClickableUserMessage({
   }
 
   return (
-    <button
+    <Row
+      size="sm"
       onClick={onClick}
-      className="text-left text-sm whitespace-pre-wrap break-words w-full group/edit hover:bg-primary rounded p-1 -m-1 transition-colors flex items-start gap-2"
+      className="whitespace-pre-wrap break-words group/edit p-1 -m-1 items-start gap-2"
       title={t('message.actions.clickToEditAndResend')}
     >
       <span className="flex-1">{content}</span>
       <Pencil className={`w-4 h-4 flex-shrink-0 mt-0.5 text-muted-foreground transition-all ${isMobile ? 'opacity-100' : 'opacity-50 group-hover/edit:opacity-100 group-hover/edit:text-primary'}`} />
-    </button>
+    </Row>
   )
 })

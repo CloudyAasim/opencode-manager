@@ -54,6 +54,7 @@ const PARTS: Record<string, string> = {
   DialogFooter: 'components/ui/dialog.tsx',
   DialogContent: 'components/ui/dialog.tsx',
   FormItem: 'components/ui/form.tsx',
+  Row: 'components/ui/row.tsx',
 }
 
 /**
@@ -67,6 +68,7 @@ const DECLARATION: Record<string, string> = {
   DialogFooter: 'dialogFooterVariants',
   DialogContent: 'dialogContentVariants',
   FormItem: 'formItemVariants',
+  Row: 'rowVariants',
 }
 
 /** 所有的"有档的"零件 ✓——颜色那一道规矩管的是全部 ✓。 */
@@ -159,6 +161,12 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string, string]> = [
     'Alert',
     'border-border',
     '错误横幅是**一张卡片** ✗，不是普通警告 ✗',
+  ],
+  [
+    'features/source-control/CommitsTab.tsx',
+    'Row',
+    'border-border',
+    '这一行的**分隔线** ✓ 是**那一列**的事 ✓，不是行自己的脸 ✓',
   ],
   [
     'features/session/SessionCard.tsx',
@@ -402,6 +410,14 @@ describe('共享零件的脸，各有各副', () => {
     expect(variantsOfPart('DialogFooter').has('divided'), '底行没有"上面有一道线"那一副').toBe(true)
     expect(variantsOfPart('DialogContent').has('solid'), '弹窗没有"实心的"那一副').toBe(true)
     expect(variantsOfPart('FormItem').has('boxed'), '表单没有"一个带边框的盒子"那一副').toBe(true)
+    // 行**必须**有"选中的那一个" ✓ 那一副 ✓ —— 没有它 ✓，
+    // **选中就看不出** ✓，而清单里的一半意思是这个 ✓。
+    const rowSource = SOURCES.find((candidate) => candidate.rel === PARTS.Row)
+    const rowSelected = variantsOf(rowSource?.text ?? '', 'selected')
+    expect(
+      rowSelected.get('true'),
+      '共享的行没有"选中的那一个"那一副',
+    ).toBeTruthy()
 
     // 找得到调用点 ✓。
     expect(CALL_SITES.length, '一个徽章或警告的调用点都没找到，这道门禁多半跑在空集上').toBeGreaterThan(10)

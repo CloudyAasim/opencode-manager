@@ -9,6 +9,7 @@ import { ExternalLink, Loader2 } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
 import { getToolSpecificRender } from './FileToolRender'
 import { useI18n } from '@/lib/i18n'
+import { Card } from '@/components/ui/card'
 
 type ToolPart = components['schemas']['ToolPart']
 
@@ -305,10 +306,14 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
 
   return (
     <div ref={outputRef} className={`border rounded-lg overflow-hidden my-2 transition-all ${getBorderStyle()}`}>
-      <button
+      <Card
+        asChild
+        variant="flat"
+        clickable
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-4 py-2 bg-card hover:bg-card-hover text-left flex items-center gap-2 text-sm min-w-0"
+        className="px-4 py-2 items-center gap-2 min-w-0"
       >
+        <button type="button">
         <span className={getStatusColor()}>{getStatusIcon()}</span>
         <span className="font-medium">{part.tool}</span>
 
@@ -346,7 +351,8 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
           ) : null
         })()}
          <span className="text-muted-foreground text-xs ml-auto">({isWaitingPermission ? t('message.tools.awaitingPermission') : isWaitingQuestion ? t('message.tools.awaitingAnswer') : part.state.status})</span>
-      </button>
+        </button>
+      </Card>
 
       {expanded && (
         <div className="bg-card space-y-2 p-3">

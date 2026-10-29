@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Bot, FileText } from 'lucide-react'
 import { useTouchTapSelect } from '@/hooks/useTouchTapSelect'
 import { useI18n } from '@/lib/i18n'
+import { Row } from '@/components/ui/row'
 
 export interface MentionItem {
   type: 'file' | 'agent'
@@ -65,18 +66,15 @@ export function MentionSuggestions({
       className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-surface-glass backdrop-blur-md border border-border rounded-lg shadow-xl max-h-48 md:max-h-[40vh] lg:max-h-[50vh] overflow-y-auto"
     >
       {items.map((item, idx) => (
-        <button
+        <Row
           key={`${item.type}-${item.value}`}
+          selected={idx === selectedIndex}
           onMouseDown={(e) => e.preventDefault()}
           onTouchStart={touchTapSelect.onTouchStart}
           onTouchMove={touchTapSelect.onTouchMove}
           onTouchEnd={(e) => touchTapSelect.onTouchEnd(e, item)}
           onClick={() => touchTapSelect.onClick(item)}
-          className={`w-full px-3 py-2 text-left transition-colors flex items-start gap-2 ${
-            idx === selectedIndex
-              ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-muted text-foreground'
-          }`}
+          className="px-3"
         >
           {item.type === 'agent' ? (
             <Bot className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -91,7 +89,7 @@ export function MentionSuggestions({
               {item.type === 'file' ? getDirectory(item.value) : item.description || t('message.roles.agent')}
             </div>
           </div>
-        </button>
+        </Row>
       ))}
     </div>
   )

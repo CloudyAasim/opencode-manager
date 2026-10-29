@@ -15,6 +15,7 @@ import { cn, getRepoDisplayName } from '@/lib/utils'
 import { getPathWithReturnTo, isAssistantPath } from '@/lib/navigation'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
+import { Row } from '@/components/ui/row'
 
 /**
  * Which question this drawer is answering.
@@ -164,9 +165,10 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
             // the same model, so the two cannot disagree.
             const current = isNavItemActive(item, location.pathname)
             return (
-              <button
+              <Row
                 key={item.key}
                 type="button"
+                size="touch"
                 onClick={() => {
                   if (item.to) {
                     handleItemClick(item)
@@ -179,14 +181,12 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
                   }
                 }}
                 aria-current={current ? 'page' : undefined}
-                className={cn(
-                  'flex min-h-11 items-center gap-3 rounded-lg p-3 text-left w-full transition-colors',
-                  current ? 'bg-accent' : 'hover:bg-accent',
-                )}
+                selected={current}
+                className="items-center gap-3 p-3"
               >
                 <item.icon className={cn('w-5 h-5 shrink-0', current ? 'text-foreground' : 'text-muted-foreground')} />
                 <span className="font-medium text-foreground">{item.labelKey ? t(item.labelKey) : item.label}</span>
-              </button>
+              </Row>
             )
           })}
         </SideDrawerContent>

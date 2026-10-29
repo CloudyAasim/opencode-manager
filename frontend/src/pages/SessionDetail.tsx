@@ -77,6 +77,7 @@ import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
 import { useCommands } from "@/hooks/useCommands";
 import { toPromptMentionPath } from "@/lib/prompt-mention-path";
 import type { components } from "@/api/opencode-types";
+import { Row } from '@/components/ui/row'
 
 type CommandType = components['schemas']['Command'];
 import { STORAGE_KEYS } from "@/lib/storage-keys";
@@ -1029,11 +1030,12 @@ export function SessionDetail() {
                       />
                     ) : (
                       commandList.map((command) => (
-                        <button
+                        <Row
                           key={command.name}
                           type="button"
+                          size="sm"
                           onClick={() => handleSelectCommand(command)}
-                          className="flex w-full min-w-0 items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent"
+                          className="min-w-0 items-start gap-2 px-2 py-1.5"
                         >
                           <span className="font-mono text-sm font-medium text-primary">
                             {command.name}
@@ -1043,7 +1045,7 @@ export function SessionDetail() {
                               {command.description}
                             </span>
                           )}
-                        </button>
+                        </Row>
                       ))
                     )}
                   </div>

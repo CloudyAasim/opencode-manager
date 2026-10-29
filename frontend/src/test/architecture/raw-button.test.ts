@@ -102,39 +102,9 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这是**语言切换那一排** ✓：选中时它自己带一层底 ✓，那是**状态** ✓，不是另一副按钮 ✓',
   ],
   [
-    'components/ui/combobox.tsx',
-    'bg-accent',
-    '这是**下拉里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'components/ui/multi-select.tsx',
-    'bg-accent',
-    '这是**多选里的一行** ✓：高亮时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/file-browser/FileTreeExplorer.tsx',
-    'bg-primary-soft',
-    '这是**文件树里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
     'features/message/AgentQuickSelect.tsx',
     'border',
     '这个键**跟着 agent 的颜色走** ✓：它的脸是**内容给的** ✓，不是它自己画的 ✓',
-  ],
-  [
-    'features/message/CommandSuggestions.tsx',
-    'bg-primary',
-    '这是**命令列表里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/message/EditableUserMessage.tsx',
-    'rounded',
-    '这是**那条可以点的消息** ✓（点了就改）✓：它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/message/FileToolRender.tsx',
-    'bg-card',
-    '这是**工具调用的那一头** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
   ],
   [
     'features/message/FloatingTTSButton.tsx',
@@ -142,54 +112,14 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这个键的底色**跟着内容走** ✓（它有**自己的调子** ✓），那不是它自己画的那一个 ✓',
   ],
   [
-    'features/message/MentionSuggestions.tsx',
-    'bg-primary',
-    '这是**@ 列表里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
     'features/message/MessagePart.tsx',
     'bg-card',
     '这个键的底色**跟着状态走** ✓（在放的时候是红的 ✓，平时是卡的 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
   ],
   [
-    'features/message/ModelQuickSelect.tsx',
-    'bg-warning/20',
-    '这是**列表里的一行** ✓（一个 provider ✓）：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/message/ModelQuickSelect.tsx',
-    'bg-card',
-    '这是**模型列表底下那一行** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/message/PatchPart.tsx',
-    'bg-card',
-    '这是**改动那一块的头** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/message/TextPart.tsx',
-    'bg-card',
-    '这个键**浮在一张图上** ✓：它自己带着卡片的底 ✓，那是一个**浮层上的动作** ✓，不是按钮 ✓',
-  ],
-  [
     'features/message/ToolCallPart.tsx',
     'bg-primary',
     '这是**一个工具调用的条子** ✓：它自己带一道主色的边 ✓，那是一个**标记** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/message/ToolCallPart.tsx',
-    'bg-card',
-    '这是**工具调用的那一头** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/navigation/MoreDrawer.tsx',
-    'bg-accent',
-    '这是**抽屉里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/repos/WorkspaceManager.tsx',
-    'border',
-    '这是**工作区列表里的一行** ✓：它自己带一道边 ✓，那是一行 ✓，不是按钮 ✓',
   ],
   [
     'features/session/QuestionPrompt.tsx',
@@ -212,11 +142,6 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这是**一个快捷键的条子** ✓：它自己带一层底 ✓，那是一个**标记** ✓，不是按钮 ✓',
   ],
   [
-    'features/settings/OpenCodeConfigEditor.tsx',
-    'rounded',
-    '这是**编辑器里的一行链接** ✓（点了就跳到那一行 ✓）：它自己带一层底 ✓，那是一行字 ✓，不是按钮 ✓',
-  ],
-  [
     'features/message/PromptInput.tsx',
     'bg-warning',
     '这个键的底色**跟着状态走** ✓（要权限时是警告色 ✓，平时是主色 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
@@ -230,36 +155,6 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'features/settings/STTSettings.tsx',
     'bg-muted',
     '这个键的底色**跟着状态走** ✓（不能测时是灰的 ✓，录着音时是红的 ✓，平时是主色 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
-  ],
-  [
-    'features/source-control/BranchesTab.tsx',
-    'bg-warning/10',
-    '这是**分支列表里的一行** ✓：当前那个带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/source-control/CommitsTab.tsx',
-    'border-border',
-    '这是**提交列表里的一行** ✓：它自己带一道分隔线 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'features/source-control/GitFlatFileList.tsx',
-    'rounded',
-    '这是**文件列表里的一行** ✓：它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'framework/commands/CommandPalette.tsx',
-    'bg-accent',
-    '这是**命令面板里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'framework/shell/TopBar.tsx',
-    'bg-accent',
-    '这是**顶栏里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
-  ],
-  [
-    'pages/SessionDetail.tsx',
-    'rounded-md',
-    '这是**命令面板里的一行** ✓：它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
   ],
 ]
 

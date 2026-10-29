@@ -5,6 +5,7 @@ import { DiffStats } from './DiffStats'
 import { ContentDiffViewer } from './ContentDiffViewer'
 import { CodePreview } from './CodePreview'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { Card } from '@/components/ui/card'
 
 type ToolPart = components['schemas']['ToolPart']
 
@@ -91,10 +92,14 @@ export function FileToolRender({ part, filediff, filePath, content, toolName, on
 
   return (
     <div className="border border-border rounded-lg overflow-hidden my-2">
-      <button
+      <Card
+        asChild
+        variant="flat"
+        clickable
         onClick={() => hasExpandableContent && setExpanded(!expanded)}
-        className="w-full px-3 py-1.5 bg-card hover:bg-card-hover text-left flex items-center justify-between text-sm gap-2"
+        className="px-3 py-1.5 items-center justify-between gap-2"
       >
+        <button type="button">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-success flex-shrink-0">✓</span>
           <span className="font-medium flex-shrink-0">{toolName}</span>
@@ -114,7 +119,8 @@ export function FileToolRender({ part, filediff, filePath, content, toolName, on
             expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />
           )}
         </div>
-      </button>
+        </button>
+      </Card>
 
       {expanded && hasExpandableContent && (
         <div className="bg-card p-0">

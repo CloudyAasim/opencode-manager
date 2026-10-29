@@ -14,6 +14,7 @@ import { GIT_UI_COLORS } from '@/lib/git-status-styles'
 import { CreateWorktreeDialog } from '@/features/repos/CreateWorktreeDialog'
 import { invalidateRepoGitCaches, setRepoGitStatusCaches } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
+import { Row } from '@/components/ui/row'
 
 interface BranchesTabProps {
   repoId: number
@@ -200,13 +201,10 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               }
 
               return (
-                <button
+                <Row
                   key={branch.name}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-2 w-full text-left transition-colors',
-                    isCurrent && 'bg-warning/10',
-                    isCheckedOutElsewhere ? 'opacity-60 cursor-not-allowed' : 'hover:bg-accent/50'
-                  )}
+                  selected={isCurrent}
+                  className={isCheckedOutElsewhere ? 'opacity-60 cursor-not-allowed' : undefined}
                   onClick={handleClick}
                   disabled={isCurrent || isCheckedOutElsewhere || switchBranchMutation.isPending}
                   title={isCheckedOutElsewhere ? t('misc.branches.checkedOutElsewhere') : undefined}
@@ -224,7 +222,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                     <span className="text-2xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t('misc.branches.localBadge')}</span>
                   )}
                   {isCurrent && <Check className={`w-4 h-4 ${GIT_UI_COLORS.current}`} />}
-                </button>
+                </Row>
               )
             })}
           </div>

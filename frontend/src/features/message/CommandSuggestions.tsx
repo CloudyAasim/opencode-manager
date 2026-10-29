@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Command } from 'lucide-react'
 import type { components } from '@/api/opencode-types'
 import { useTouchTapSelect } from '@/hooks/useTouchTapSelect'
+import { Row } from '@/components/ui/row'
 
 type CommandType = components['schemas']['Command']
 
@@ -65,18 +66,15 @@ export function CommandSuggestions({
         const displayName = `/${command.name}`
 
         return (
-          <button
+          <Row
             key={command.name}
+            selected={isSelected}
             onMouseDown={(e) => e.preventDefault()}
             onTouchStart={touchTapSelect.onTouchStart}
             onTouchMove={touchTapSelect.onTouchMove}
             onTouchEnd={(e) => touchTapSelect.onTouchEnd(e, command)}
             onClick={() => touchTapSelect.onClick(command)}
-            className={`w-full px-3 py-2 text-left transition-colors flex items-center gap-2 ${
-              isSelected
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-muted text-foreground'
-            }`}
+            className="px-3"
           >
             <Command className={`h-4 w-4 flex-shrink-0 ${isSelected ? 'opacity-90' : 'opacity-70'}`} />
             <div className="flex-1 min-w-0">
@@ -85,7 +83,7 @@ export function CommandSuggestions({
                 <div className="text-xs opacity-70 mt-0.5 truncate">{command.description}</div>
               )}
             </div>
-          </button>
+          </Row>
         )
       })}
     </div>

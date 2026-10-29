@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 import type { GitFileStatus, GitFileStatusType } from '@/types/git'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/lib/git-status-styles'
+import { Row } from '@/components/ui/row'
 
 interface GitFlatFileListProps {
   files: GitFileStatus[]
@@ -155,8 +156,9 @@ export function GitFlatFileList({
 
         return (
           <div key={status}>
-            <button
-              className="flex items-center gap-1 px-2 py-1 w-full text-left hover:bg-accent rounded transition-colors"
+            <Row
+              size="sm"
+              className="gap-1 px-2"
               onClick={() => toggleGroup(status)}
             >
               {isCollapsed ? (
@@ -170,7 +172,7 @@ export function GitFlatFileList({
               <span className="text-xs text-muted-foreground">
                 ({groupFiles.length})
               </span>
-            </button>
+            </Row>
 
             {!isCollapsed && (
               <div className="ml-4">
