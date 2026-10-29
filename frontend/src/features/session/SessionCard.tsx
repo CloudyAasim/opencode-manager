@@ -277,16 +277,18 @@ export const SessionCard = ({
               </>
             )}
             {manageMode && (
-              <button
+              <Button
+                variant="ghost-destructive"
+                size="icon-2xs"
                 aria-label={t('session.card.deleteAria')}
-                className="h-6 w-6 p-0 text-foreground hover:text-destructive dark:hover:text-destructive bg-transparent border-none cursor-pointer"
+                className="text-foreground"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(e);
                 }}
               >
                 <Trash2 className="w-4 h-4" />
-              </button>
+              </Button>
             )}
           </div>
         </Card>

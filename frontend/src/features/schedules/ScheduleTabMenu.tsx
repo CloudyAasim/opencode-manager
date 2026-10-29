@@ -1,6 +1,7 @@
 import { CalendarClock, History, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type TabType = 'jobs' | 'detail' | 'runs'
 
@@ -14,46 +15,37 @@ export function ScheduleTabMenu({ activeTab, onTabChange, className }: ScheduleT
   const { t } = useI18n()
 
   return (
-    <div className={cn('flex border-t border-border bg-card/80 backdrop-blur-sm pb-1', className)}>
-      <button
-        type="button"
-        className={cn(
-          'flex-1 flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium border-b-2 transition-colors',
-          activeTab === 'jobs'
-            ? 'text-primary border-primary'
-            : 'text-muted-foreground border-transparent hover:text-foreground',
-        )}
-        onClick={() => onTabChange('jobs')}
-      >
-        <CalendarClock className="h-5 w-5" />
-        <span>{t('schedules.tabs.jobs')}</span>
-      </button>
-      <button
-        type="button"
-        className={cn(
-          'flex-1 flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium border-b-2 transition-colors',
-          activeTab === 'detail'
-            ? 'text-primary border-primary'
-            : 'text-muted-foreground border-transparent hover:text-foreground',
-        )}
-        onClick={() => onTabChange('detail')}
-      >
-        <Info className="h-5 w-5" />
-        <span>{t('schedules.tabs.detail')}</span>
-      </button>
-      <button
-        type="button"
-        className={cn(
-          'flex-1 flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium border-b-2 transition-colors',
-          activeTab === 'runs'
-            ? 'text-primary border-primary'
-            : 'text-muted-foreground border-transparent hover:text-foreground',
-        )}
-        onClick={() => onTabChange('runs')}
-      >
-        <History className="h-5 w-5" />
-        <span>{t('schedules.tabs.runs')}</span>
-      </button>
-    </div>
+    <Tabs
+      value={activeTab}
+      onValueChange={(next) => onTabChange(next as TabType)}
+      className={cn('flex border-t border-border bg-card/80 backdrop-blur-sm pb-1', className)}
+    >
+      <TabsList variant="bar" className="w-full justify-start">
+        <TabsTrigger
+          value="jobs"
+          variant="bar"
+          className="flex-1 flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground data-[state=active]:text-primary"
+        >
+          <CalendarClock className="h-5 w-5" />
+          <span>{t('schedules.tabs.jobs')}</span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="detail"
+          variant="bar"
+          className="flex-1 flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground data-[state=active]:text-primary"
+        >
+          <Info className="h-5 w-5" />
+          <span>{t('schedules.tabs.detail')}</span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="runs"
+          variant="bar"
+          className="flex-1 flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground data-[state=active]:text-primary"
+        >
+          <History className="h-5 w-5" />
+          <span>{t('schedules.tabs.runs')}</span>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   )
 }

@@ -12,6 +12,7 @@ import { CommitDetailView } from './CommitDetailView'
 import { GitErrorBanner } from './GitErrorBanner'
 import { FileDiffView } from '@/features/source-control/FileDiffView'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GIT_UI_COLORS } from '@/lib/git-status-styles'
 import {
   Loader2,
@@ -174,31 +175,33 @@ export function SourceControlContent({
       )}
 
       {!((currentView === 'commit-detail' && selectedCommitFile) || (isMobile && selectedFile && activeTab === 'changes')) && (
-        <div className="flex border-b border-border flex-shrink-0">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 text-sm transition-colors border-b-2 -mb-px',
-                  activeTab === tab.id
-                    ? 'border-primary text-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
-                )}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-                {tab.id === 'changes' && changesCount > 0 && (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-accent">
-                    {stagedCount > 0 ? `${stagedCount}/${changesCount}` : changesCount}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+        <Tabs
+          value={activeTab}
+          onValueChange={(next) => setActiveTab(next as typeof activeTab)}
+          className="flex border-b border-border flex-shrink-0"
+        >
+          <TabsList variant="bar" className="w-full justify-start">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              return (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  variant="bar"
+                  className="flex items-center gap-1.5 px-3 py-2 -mb-px text-muted-foreground data-[state=active]:text-foreground"
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  {tab.id === 'changes' && changesCount > 0 && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-accent">
+                      {stagedCount > 0 ? `${stagedCount}/${changesCount}` : changesCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+        </Tabs>
       )}
 
       <div className={cn('flex-1 min-h-0', isMobile ? 'flex flex-col gap-0' : 'flex')}>

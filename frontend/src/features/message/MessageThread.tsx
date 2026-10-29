@@ -14,6 +14,7 @@ import type { components } from '@/api/opencode-types'
 import type { Todo } from '@/features/message/SessionTodoDisplay'
 import type { OpenCodeError } from '@/lib/opencode-errors'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 function getMessageTextContent(parts: Part[]): string {
   return parts
@@ -256,13 +257,15 @@ const MessageRow = memo(function MessageRow({
               </span>
             )}
             {canEditUserMessage && nextAssistantMsg && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon-2xs"
                 onClick={() => handleStartEditUserMessage(msg.id, nextAssistantMsg.id)}
-                className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground"
                 title={t('message.actions.editMessage')}
               >
                 <Pencil className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             )}
             {isQueued && (
               <span className="text-xs font-semibold bg-warning text-warning px-1.5 py-0.5 rounded">

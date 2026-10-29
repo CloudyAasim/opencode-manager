@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import type { QuestionRequest } from '@/api/types'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 interface MinimizedQuestionIndicatorProps {
   question: QuestionRequest
@@ -29,14 +30,16 @@ export function MinimizedQuestionIndicator({
             : t('session.question.minimizedCount', { count: questionCount })
           }
         </button>
-        <button
+        <Button
           type="button"
+          variant="ghost-destructive"
+          size="icon"
           onClick={onDismiss}
           aria-label={t('navigation.close')}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          className="shrink-0 text-muted-foreground"
         >
           <X className="w-3.5 h-3.5" />
-        </button>
+        </Button>
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { MODAL_TRANSITION_MS } from '@/lib/utils'
 import { X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 export interface SideDrawerProps {
   isOpen: boolean
@@ -121,14 +122,16 @@ export function SideDrawerHeader({ title, onClose, meta }: SideDrawerHeaderProps
         <h2 className="text-lg font-semibold text-foreground leading-none">{title}</h2>
         {meta ? <div className="mt-1 min-w-0">{meta}</div> : null}
       </div>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         onClick={onClose}
-        className="text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-sm p-1 shrink-0"
+        className="shrink-0 text-muted-foreground hover:text-foreground"
         aria-label={t('ui.sideDrawer.close')}
       >
         <X className="w-5 h-5" />
-      </button>
+      </Button>
     </div>
   )
 }

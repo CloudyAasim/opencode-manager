@@ -1305,13 +1305,15 @@ return (
               className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/80 border border-border text-xs text-muted-foreground"
             >
               <span className="max-w-[120px] truncate">{attachment.filename}</span>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-2xs"
                 onClick={() => removeImageAttachment(attachment.id)}
-                className="p-0.5 rounded hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-3 h-3" />
-              </button>
+              </Button>
             </div>
           ))}
         </div>

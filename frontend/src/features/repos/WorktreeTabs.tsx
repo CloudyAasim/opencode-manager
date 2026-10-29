@@ -3,6 +3,7 @@ import { GitBranch, Layers, Plus } from 'lucide-react'
 import type { RepoSibling } from '@/api/repos'
 import type { WorktreeTabValue } from '@/hooks/useWorktreeTab'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 interface WorktreeTabsProps {
   workspaces: RepoSibling[]
@@ -47,15 +48,17 @@ export function WorktreeTabs({
               </TabsTrigger>
             </>
           ) : (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={onCreateWorkspace}
-              className="inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground sm:flex-none sm:px-3"
+              className="min-w-0 flex-1 justify-center text-muted-foreground hover:text-foreground sm:flex-none"
             >
               <Layers className="h-3 w-3 shrink-0 text-primary" />
               <span className="min-w-0 truncate">{t('repo.workspace')}</span>
               <Plus className="h-3.5 w-3.5 shrink-0" />
-            </button>
+            </Button>
           )}
         </TabsList>
       </Tabs>

@@ -3,6 +3,7 @@ import { X, Loader2 } from 'lucide-react'
 import { useUndoMessage } from '@/hooks/useUndoMessage'
 import { useMobile } from '@/hooks/useMobile'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 interface UserMessageActionButtonsProps {
   opcodeUrl: string
@@ -40,10 +41,12 @@ export const UserMessageActionButtons = memo(function UserMessageActionButtons({
 
   return (
     <div className={`flex items-center gap-1 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-      <button
+      <Button
+        variant="ghost-destructive"
+        size="icon-2xs"
         onClick={handleUndo}
         disabled={undoMessage.isPending}
-        className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+        className="text-muted-foreground"
         title={t('message.actions.undoThisMessage')}
       >
         {undoMessage.isPending ? (
@@ -51,7 +54,7 @@ export const UserMessageActionButtons = memo(function UserMessageActionButtons({
         ) : (
           <X className="w-3.5 h-3.5" />
         )}
-      </button>
+      </Button>
     </div>
   )
 })

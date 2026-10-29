@@ -489,29 +489,33 @@ export function ModelQuickSelect({
           </span>
         </button>
         {isRecent && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-circle-sm"
             onClick={(event) => {
               event.stopPropagation()
               removeRecentModel({ providerID: item.providerID, modelID: item.modelID })
             }}
-            className="rounded-full p-1.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground/80"
+            className="text-muted-foreground/60 hover:text-foreground/80"
             aria-label={t('misc.modelQuickSelect.removeFromRecent')}
           >
             <Trash2 className="h-3.5 w-3.5 text-destructive" />
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-circle-sm"
           onClick={(event) => {
             event.stopPropagation()
             toggleFavorite({ providerID: item.providerID, modelID: item.modelID })
           }}
-          className="rounded-full p-1.5 text-muted-foreground transition-opacity hover:bg-muted hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
           aria-label={isFavorite ? t('misc.modelQuickSelect.removeFromFavorites') : t('misc.modelQuickSelect.addToFavorites')}
         >
           <Star className={`h-4 w-4 ${isFavorite ? 'fill-warning text-warning' : ''}`} />
-        </button>
+        </Button>
         {isSelected && <Check className="h-5 w-5 shrink-0 pr-2 text-warning" />}
       </div>
     )

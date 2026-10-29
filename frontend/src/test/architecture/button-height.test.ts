@@ -68,6 +68,7 @@ const LADDER: Record<string, { phone: number; desktop: number | null }> = {
   // other step of the ladder - a round key is a shape of the same kind as a
   // small one.
   'icon-circle': { phone: 36, desktop: null },
+  'icon-circle-sm': { phone: 28, desktop: null },
   'icon-touch': { phone: 40, desktop: 32 },
 }
 

@@ -146,8 +146,10 @@ export function RepoMcpServerList({
                     {(showAuthButton || connectedWithOAuth) ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button 
-                            className="cursor-pointer hover:bg-accent rounded inline-flex items-center gap-1"
+                          <Button
+                            variant="ghost"
+                            size="2xs"
+                            className="cursor-pointer"
                             title={t('repo.mcp.optionsTitle')}
                           >
                             {status?.status === 'connected' && (
@@ -165,7 +167,7 @@ export function RepoMcpServerList({
                                 <AlertCircle className="h-3 w-3" />{t('repo.mcp.failed')}<ChevronDown className="h-3 w-3" />
                               </span>
                             )}
-                          </button>
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                           {showAuthButton && (

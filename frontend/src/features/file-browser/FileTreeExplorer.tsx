@@ -7,6 +7,7 @@ import type { FileInfo } from '@/types/files'
 import { cn } from '@/lib/utils'
 import { toDisplayPath } from '@/lib/display-path'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 function sortEntries(a: FileInfo, b: FileInfo) {
   if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
@@ -150,14 +151,16 @@ export const FileTreeExplorer = memo(function FileTreeExplorer({
             header already does, so the two spellings agree. Display only -
             every request still carries the real path. */}
         <span className="truncate font-mono text-xs text-muted-foreground">{toDisplayPath(rootPath)}</span>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-2xs"
           onClick={() => void load()}
-          className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
           aria-label={t('repo.fileBrowser.refresh')}
         >
           <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-        </button>
+        </Button>
       </div>
 
       <div data-testid="file-tree-scroller" className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">

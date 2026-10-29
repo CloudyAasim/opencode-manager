@@ -4,6 +4,7 @@ import { TodoItem } from './TodoItem'
 import { useSessionTodosForSession } from '@/stores/sessionTodosStore'
 import type { components } from '@/api/opencode-types'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 export type Todo = components['schemas']['Todo']
 
@@ -95,13 +96,15 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
               style={{ width: `${stats.percentage}%` }}
             />
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-2xs"
             onClick={handleDismiss}
-            className="ml-1 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="ml-1 text-muted-foreground hover:text-foreground"
             aria-label={t('message.todos.dismiss')}
           >
             <X className="w-3.5 h-3.5" />
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -123,13 +126,15 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
             style={{ width: `${stats.percentage}%` }}
           />
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="icon-2xs"
           onClick={handleDismiss}
-          className="ml-1 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+          className="ml-1 text-muted-foreground hover:text-foreground"
           aria-label={t('message.todos.dismiss')}
         >
           <X className="w-3.5 h-3.5" />
-        </button>
+        </Button>
       </div>
       <div data-testid="todo-expanded-list" className="max-h-[80px] sm:max-h-[160px] overflow-y-auto p-1.5 sm:p-2 bg-muted/30">
         {renderGroup(t('message.todos.inProgress'), inProgress)}

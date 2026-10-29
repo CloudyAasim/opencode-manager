@@ -5,26 +5,27 @@ import { buildImportGraph, relativeTo } from './import-graph'
 import { classListOfAttrs, stripComments, tagAt, variantsOf } from './source-text'
 
 /**
- * 原生 `<button>` 不许自己画成一副按钮。
+ * 原生 `<button>` 不许自己画脸。
  *
  * 共享的那个按钮（`components/ui/button.tsx` ✓）有**一道档** ✓（variant ✓）——
  * `default` ✓、`outline` ✓、`secondary` ✓、`ghost` ✓、`destructive` ✓、`link` ✓，
  * 这一轮又添了**五副** ✓：`glass` ✓（浮在一层半透明上面的 ✓）、`muted` ✓（安静的、带细边的 ✓）、
  * `accent` ✓（主色描边的 ✓）、`stop` ✓（停下来的那个 ✓）、`keycap` ✓（键帽 ✓），
- * 还有**一个圆形的尺寸档** ✓（`icon-circle` ✓）。
+ * 还有**一副** ✓ `ghost-destructive` ✓（悬停时变红的那个 ✓），
+ * 以及**两个圆形的尺寸档** ✓（`icon-circle` ✓、`icon-circle-sm` ✓）。
  *
  * 可是**原生 `<button>`** ✗ 还在自己画 ✗：**底** ✓、**边** ✓、**影** ✓、**圆角** ✓——
  * 一百二十处原生按钮 ✗，**三十四处自己写了脸** ✗。
  *
- * 于是这一轮：**十八处换成了共享的那个按钮** ✓，
+ * 于是这两轮：**三十处换成了共享的那个按钮** ✓，
  * 每一处**说清自己是谁** ✓（`variant="glass"` ✓、`variant="muted"` ✓ …）。
  *
  * 而**根本不是按钮的那几处** ✗——**列表里的一行** ✓、**一个筛选项** ✓、
  * **一个版本** ✓、**一个浮层上的叉** ✓、**跟着 agent 走的那个键** ✓——
  * 它们**点名** ✓，并且**写清楚自己是什么** ✓。
  *
- * 门禁按**形状**判 ✓：一个原生 `<button>` ✗ **既有底** ✓ **又有边或圆角** ✓
- * → 它画成了一副**完整的按钮** ✗。
+ * 门禁按**形状**判 ✓：一个原生 `<button>` ✗ **写了任何一句脸** ✗
+ * → 它就是**另一副按钮** ✗——**写全了没有不算** ✓，**只写一半也不行** ✓。
  *
  * - **哪一边的那一句不算** ✓——`border-b-2` ✓ 那是**形状** ✓，不是脸 ✓。
  * - **跟着变量走的颜色不算** ✓——`bg-[var(--agent-bg-light)]` ✓
@@ -78,21 +79,94 @@ const FROM_CONTENT = /\bvar\(/
  * 点名的是**一个按钮** ✓（写它脸上的一句 ✓ 就够了 ✓）——
  * 它**根本不是按钮** ✓，而是**别的零件** ✓：
  *
- * - **列表里的一行** ✓（provider ✓、抽屉里的一项 ✓、命令面板里的一项 ✓、顶栏里的一项 ✓）：
- *   选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓。
+ * - **列表里的一行** ✓（provider ✓、抽屉里的一项 ✓、命令面板里的一项 ✓、顶栏里的一项 ✓、
+ *   文件树里的一项 ✓、命令列表里的一项 ✓、@ 列表里的一项 ✓、分支列表里的一项 ✓、
+ *   提交列表里的一项 ✓、文件列表里的一项 ✓）：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓。
  * - **一个筛选项 / 一个语音模型 / 一个版本 / 一个工具调用** ✓：
  *   选中时它自己带一道边 ✓，那是一个**标记** ✓，不是按钮 ✓。
  * - **一个可点的答案** ✓：它自己带一层底 ✓，那是一个**选项** ✓，不是按钮 ✓。
- * - **设置里的一张卡** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓。
- * - **删掉那个键** ✓：它**什么都没有** ✓（透明 ✓、不要边 ✓），那是一个**动作** ✓，不是按钮 ✓。
- * - **底色跟着状态走的那些键** ✓（发送 ✓、测试语音 ✓）：
+ * - **一张卡的头** ✓（工具调用 ✓、改动 ✓、模型列表底下那一行 ✓）：
+ *   它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓。
+ * - **盖住下面的那层黑** ✓：它遮住东西 ✓，不是按钮 ✓。
+ * - **底色跟着状态走的那些键** ✓（发送 ✓、测试语音 ✓、放声音 ✓、编辑器里那一行 ✓）：
  *   要权限时是警告色 ✓，平时是主色 ✓——那是**状态** ✓，不是另一副按钮 ✓。
+ * - **脸跟着内容走的那些键** ✓（agent ✓、语音 ✓）：那张脸是**内容给的** ✓，不是它自己画的 ✓。
  */
 const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
+  [
+    'components/LanguageToggle.tsx',
+    'bg-accent',
+    '这是**语言切换那一排** ✓：选中时它自己带一层底 ✓，那是**状态** ✓，不是另一副按钮 ✓',
+  ],
+  [
+    'components/ui/combobox.tsx',
+    'bg-accent',
+    '这是**下拉里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'components/ui/multi-select.tsx',
+    'bg-accent',
+    '这是**多选里的一行** ✓：高亮时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/file-browser/FileTreeExplorer.tsx',
+    'bg-primary-soft',
+    '这是**文件树里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/AgentQuickSelect.tsx',
+    'border',
+    '这个键**跟着 agent 的颜色走** ✓：它的脸是**内容给的** ✓，不是它自己画的 ✓',
+  ],
+  [
+    'features/message/CommandSuggestions.tsx',
+    'bg-primary',
+    '这是**命令列表里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/EditableUserMessage.tsx',
+    'rounded',
+    '这是**那条可以点的消息** ✓（点了就改）✓：它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/FileToolRender.tsx',
+    'bg-card',
+    '这是**工具调用的那一头** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/FloatingTTSButton.tsx',
+    'shadow-md',
+    '这个键的底色**跟着内容走** ✓（它有**自己的调子** ✓），那不是它自己画的那一个 ✓',
+  ],
+  [
+    'features/message/MentionSuggestions.tsx',
+    'bg-primary',
+    '这是**@ 列表里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/MessagePart.tsx',
+    'bg-card',
+    '这个键的底色**跟着状态走** ✓（在放的时候是红的 ✓，平时是卡的 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
+  ],
   [
     'features/message/ModelQuickSelect.tsx',
     'bg-warning/20',
     '这是**列表里的一行** ✓（一个 provider ✓）：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/ModelQuickSelect.tsx',
+    'bg-card',
+    '这是**模型列表底下那一行** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/PatchPart.tsx',
+    'bg-card',
+    '这是**改动那一块的头** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/TextPart.tsx',
+    'bg-card',
+    '这个键**浮在一张图上** ✓：它自己带着卡片的底 ✓，那是一个**浮层上的动作** ✓，不是按钮 ✓',
   ],
   [
     'features/message/ToolCallPart.tsx',
@@ -100,9 +174,19 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这是**一个工具调用的条子** ✓：它自己带一道主色的边 ✓，那是一个**标记** ✓，不是按钮 ✓',
   ],
   [
+    'features/message/ToolCallPart.tsx',
+    'bg-card',
+    '这是**工具调用的那一头** ✓：它自己带着卡片的底 ✓，那是一张**卡** ✓，不是按钮 ✓',
+  ],
+  [
     'features/navigation/MoreDrawer.tsx',
     'bg-accent',
     '这是**抽屉里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/repos/WorkspaceManager.tsx',
+    'border',
+    '这是**工作区列表里的一行** ✓：它自己带一道边 ✓，那是一行 ✓，不是按钮 ✓',
   ],
   [
     'features/schedules/JobsTab.tsx',
@@ -120,14 +204,29 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这是**一个可点的答案** ✓：答对了它自己带一层底 ✓，那是一个**选项** ✓，不是按钮 ✓',
   ],
   [
-    'features/session/SessionCard.tsx',
-    'bg-transparent',
-    '这个键**什么都没有** ✓（透明 ✓、不要边 ✓）：它是**删掉**那个 ✓，那是一个**动作** ✓，不是按钮 ✓',
+    'features/session/SessionPanel.tsx',
+    'bg-black/40',
+    '这是**盖住下面的那层黑** ✓：它遮住东西 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/session/SessionRail.tsx',
+    'bg-black/40',
+    '这是**盖住下面的那层黑** ✓：它遮住东西 ✓，不是按钮 ✓',
   ],
   [
     'features/settings/KeyboardShortcuts.tsx',
     'bg-accent',
     '这是**一个快捷键的条子** ✓：它自己带一层底 ✓，那是一个**标记** ✓，不是按钮 ✓',
+  ],
+  [
+    'features/settings/OpenCodeConfigEditor.tsx',
+    'rounded',
+    '这是**编辑器里的一行链接** ✓（点了就跳到那一行 ✓）：它自己带一层底 ✓，那是一行字 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/message/PromptInput.tsx',
+    'bg-warning',
+    '这个键的底色**跟着状态走** ✓（要权限时是警告色 ✓，平时是主色 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
   ],
   [
     'features/settings/SettingsDialog.tsx',
@@ -150,6 +249,21 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这是**一个版本** ✓：选中时它自己带一道边 ✓，那是一个**选项** ✓，不是按钮 ✓',
   ],
   [
+    'features/source-control/BranchesTab.tsx',
+    'bg-warning/10',
+    '这是**分支列表里的一行** ✓：当前那个带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/source-control/CommitsTab.tsx',
+    'border-border',
+    '这是**提交列表里的一行** ✓：它自己带一道分隔线 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
+    'features/source-control/GitFlatFileList.tsx',
+    'rounded',
+    '这是**文件列表里的一行** ✓：它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
+  ],
+  [
     'framework/commands/CommandPalette.tsx',
     'bg-accent',
     '这是**命令面板里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
@@ -160,9 +274,9 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这是**顶栏里的一行** ✓：选中时它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
   ],
   [
-    'features/message/PromptInput.tsx',
-    'bg-warning',
-    '这个键的底色**跟着状态走** ✓（要权限时是警告色 ✓，平时是主色 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
+    'pages/SessionDetail.tsx',
+    'rounded-md',
+    '这是**命令面板里的一行** ✓：它自己带一层底 ✓，那是一行 ✓，不是按钮 ✓',
   ],
 ]
 
@@ -230,8 +344,8 @@ describe('原生 button 不许自己画脸', () => {
     for (const name of ['default', 'outline', 'ghost', 'destructive']) {
       expect(VARIANTS.has(name), `共享的按钮没有 ${name} 那一档`).toBe(true)
     }
-    // 这一轮添的那五副 ✓。
-    for (const name of ['glass', 'muted', 'accent', 'stop', 'keycap']) {
+    // 这一轮添的那五副 ✓，还有那一副悬停变红的 ✓。
+    for (const name of ['glass', 'muted', 'accent', 'stop', 'keycap', 'ghost-destructive']) {
       expect(VARIANTS.has(name), `共享的按钮没有 ${name} 那一档`).toBe(true)
     }
 
@@ -244,16 +358,13 @@ describe('原生 button 不许自己画脸', () => {
     expect(FROM_CONTENT.test('bg-[var(--agent-bg-light)]'), '认不出跟着内容走的颜色').toBe(true)
   })
 
-  it('原生 button 不许自己画成一副完整的按钮', () => {
+  it('原生 button 不许自己写脸', () => {
     const offenders: string[] = []
     for (const button of RAW_BUTTONS) {
       const faces = faceOf(button.list)
-      // **底** ✓ 和 **边或圆角** ✓ **都有** ✓ → 它画成了一副完整的按钮 ✗。
-      const aBackground = faces.some((token) => token.startsWith('bg-'))
-      const anEdge = faces.some(
-        (token) => token.startsWith('border-') || token.startsWith('rounded-'),
-      )
-      if (!aBackground || !anEdge) continue
+      // **脸只写一处** ✓：一个原生 button ✗ 写了**任何一句**脸 ✗，
+      // 它就是**另一副按钮** ✗——不管那副脸写全了没有 ✗。
+      if (!faces.length) continue
       // 点名的是**一个按钮** ✓：它脸上**任何一句**被点名 ✓，它就放行 ✓。
       if (faces.some((token) => excused(button.rel, token))) continue
       offenders.push(`${button.rel}:${button.line}  ${faces.join(' ')}`)
@@ -262,7 +373,7 @@ describe('原生 button 不许自己画脸', () => {
     expect(
       offenders,
       [
-        `这些地方自己画了一副按钮：${offenders.length} 处`,
+        `这些地方自己画了一张脸：${offenders.length} 处`,
         ...offenders,
         '按钮的脸是共享那个零件的事：要哪一副，就说哪一副（`variant="muted"`）。',
         '它**根本不是按钮**的话（列表里的一行 ✓、一个标记 ✓），写进 EXCEPTIONS 并说明理由。',

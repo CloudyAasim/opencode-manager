@@ -285,10 +285,12 @@ export function ProviderSettings() {
           </div>
 
         <div className="space-y-3">
-          <button
+          <Button
+            variant="ghost"
+            size="default"
             onClick={() => setConnectedExpanded(!connectedExpanded)}
             aria-expanded={connectedExpanded}
-            className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-accent/50 rounded-md transition-colors"
+            className="w-full justify-start py-2 px-1"
           >
             {connectedExpanded ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -299,7 +301,7 @@ export function ProviderSettings() {
             <Badge variant="secondary" className="ml-auto">
               {apiKeyProviders.connected.length}
             </Badge>
-          </button>
+          </Button>
 
           {connectedExpanded && (
             <div className="pl-6 space-y-2">
@@ -363,10 +365,12 @@ export function ProviderSettings() {
         </div>
 
         <div className="space-y-3">
-          <button
+          <Button
+            variant="ghost"
+            size="default"
             onClick={() => setAvailableExpanded(!availableExpanded)}
             aria-expanded={availableExpanded}
-            className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-accent/50 rounded-md transition-colors"
+            className="w-full justify-start py-2 px-1"
           >
             {availableExpanded ? (
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -377,7 +381,7 @@ export function ProviderSettings() {
             <Badge variant="secondary" className="ml-auto">
               {apiKeyProviders.available.length}
             </Badge>
-          </button>
+          </Button>
 
           {availableExpanded && (
             <div className="pl-6 space-y-3">

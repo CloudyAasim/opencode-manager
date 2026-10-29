@@ -14,6 +14,7 @@ import { useSwipeBack } from '@/hooks/useMobile'
 import { cn, getRepoDisplayName } from '@/lib/utils'
 import { getPathWithReturnTo, isAssistantPath } from '@/lib/navigation'
 import { useI18n } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
 
 /**
  * Which question this drawer is answering.
@@ -145,14 +146,16 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
               </div>
             )}
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             onClick={onClose}
-            className="-mr-1 shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="-mr-1 shrink-0 text-muted-foreground hover:text-foreground"
             aria-label={t('navigation.close')}
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
         <SideDrawerContent className="flex flex-col gap-1 pt-2">
           {items.map((item) => {

@@ -72,16 +72,18 @@ export function EditSessionTitleDialog({ isOpen, currentTitle, onClose, onSave }
               autoFocus
             />
             {editTitle && (
-              <button
+              <Button
                 type="button"
+                variant="ghost-destructive"
+                size="icon-circle-sm"
                 onClick={() => {
                   setEditTitle("");
                   inputRef.current?.focus();
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-destructive/10 text-destructive transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-destructive"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             )}
           </div>
           <DialogFooter className="items-center mt-3">

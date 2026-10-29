@@ -35,6 +35,9 @@ const buttonVariants = cva(
         stop: "bg-destructive text-destructive-foreground border border-destructive shadow-md shadow-destructive ring-1 ring-destructive hover:bg-destructive/90",
         // A keycap: what a shortcut looks like.
         keycap: "bg-primary/20 border border-primary/50 text-foreground hover:border-primary",
+        // A flat key that turns destructive when the pointer is on it - the
+        // ones that clear, dismiss or delete.
+        "ghost-destructive": "hover:bg-destructive/10 hover:text-destructive",
         // A toggle that is on. It used to be written at the call site as
         // `bg-primary text-primary-foreground`, on top of the outline face -
         // and the outline's own hover won, so the button greyed out under the
@@ -78,6 +81,7 @@ const buttonVariants = cva(
         // every other step of the ladder - a round key is a shape of the same
         // kind as a small one.
         "icon-circle": "size-9 rounded-full",
+        "icon-circle-sm": "size-7 rounded-full",
         // A finger has to find this one too: bigger on a phone, back to the
         // ordinary size on a desktop.
         "icon-touch": "size-10 md:size-8",
