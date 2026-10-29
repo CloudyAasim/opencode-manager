@@ -294,7 +294,7 @@ export function GlobalSchedulesView() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <Card variant="dashed" className="max-w-md">
+        <Card variant="dashed" width="md">
           <PanelMessage
             tone="error"
             icon={<AlertCircle />}
@@ -509,7 +509,7 @@ export function GlobalSchedulesView() {
           <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pb-4 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
             {!hasJobs ? (
               <div className="flex min-h-full items-center justify-center">
-                <Card variant="dashed" className="max-w-md">
+                <Card variant="dashed" width="md">
                   <PanelMessage
                     icon={<CalendarClock />}
                     title={t('schedules.global.noSchedulesYet')}
@@ -526,7 +526,7 @@ export function GlobalSchedulesView() {
               </div>
             ) : filteredAndSortedJobs.length === 0 ? (
               <div className="flex min-h-full items-center justify-center">
-                <Card variant="dashed" className="max-w-md">
+                <Card variant="dashed" width="md">
                   <PanelMessage
                     icon={<CalendarClock />}
                     title={t('schedules.global.noMatching')}
@@ -815,7 +815,7 @@ export function GlobalSchedulesView() {
               <PanelLoading size="md" />
             ) : allRuns.length === 0 ? (
               <div className="flex items-center justify-center py-12">
-                <Card variant="dashed" className="max-w-md">
+                <Card variant="dashed" width="md">
                   <PanelMessage
                     icon={<History />}
                     title={t('schedules.global.noRunsFound')}

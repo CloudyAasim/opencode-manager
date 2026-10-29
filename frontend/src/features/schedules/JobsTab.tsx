@@ -1,8 +1,8 @@
 import type { ScheduleJob } from '@opencode-manager/shared/types'
 import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import { formatScheduleShortLabel, getJobStatusTone } from './schedule-utils'
 import { Bot, Clock3 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 
 interface JobsTabProps {
@@ -17,17 +17,16 @@ export function JobsTab({ jobs, selectedJobId, onSelectJob }: JobsTabProps) {
   return (
     <div className="h-full overflow-y-auto space-y-2 pt-2">
       {jobs.map((job) => (
-        <button
+        <Card
+          asChild
+          variant={selectedJobId === job.id ? 'selected' : 'tile'}
+          className="px-4 py-3"
           key={job.id}
-          type="button"
-          onClick={() => onSelectJob(job.id)}
-          className={cn(
-            'w-full rounded-xl border-2 px-4 py-3 text-left transition-all',
-            selectedJobId === job.id
-              ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
-              : 'border-border/70 bg-background/60 hover:bg-accent/40'
-          )}
         >
+          <button
+            type="button"
+            onClick={() => onSelectJob(job.id)}
+          >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="font-medium truncate">{job.name}</p>
@@ -40,6 +39,7 @@ export function JobsTab({ jobs, selectedJobId, onSelectJob }: JobsTabProps) {
             <span className="inline-flex items-center gap-1"><Bot className="h-3.5 w-3.5" /> {job.agentSlug ?? t('schedules.common.defaultAgent')}</span>
           </div>
         </button>
+        </Card>
       ))}
     </div>
   )

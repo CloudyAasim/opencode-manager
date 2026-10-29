@@ -279,18 +279,16 @@ export function TTSSettings() {
           {watchEnabled && (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <button
+                <Button
                   type="button"
+                  variant={watchProvider === 'builtin' ? 'chip-selected' : 'chip'}
+                  size="default"
                   onClick={() => {
                     form.setValue('provider', 'builtin', { shouldDirty: true })
                     form.setValue('apiKey', '', { shouldDirty: true })
                     form.setValue('endpoint', '', { shouldDirty: true })
                   }}
-                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition ${
-                    watchProvider === 'builtin'
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/40'
-                  }`}
+                  className="flex-col items-center justify-center gap-2 p-4"
                 >
                   <MonitorSpeaker className={`h-6 w-6 ${watchProvider === 'builtin' ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={`font-medium ${watchProvider === 'builtin' ? 'text-primary' : ''}`}>
@@ -299,17 +297,15 @@ export function TTSSettings() {
                   <span className="text-xs text-muted-foreground text-center">
                     {t('settingsPanels.tts.builtinHint')}
                   </span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant={watchProvider === 'external' ? 'chip-selected' : 'chip'}
+                  size="default"
                   onClick={() => {
                     form.setValue('provider', 'external', { shouldDirty: true })
                   }}
-                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 transition ${
-                    watchProvider === 'external'
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/40'
-                  }`}
+                  className="flex-col items-center justify-center gap-2 p-4"
                 >
                   <Globe className={`h-6 w-6 ${watchProvider === 'external' ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={`font-medium ${watchProvider === 'external' ? 'text-primary' : ''}`}>
@@ -318,7 +314,7 @@ export function TTSSettings() {
                   <span className="text-xs text-muted-foreground text-center">
                     {t('settingsPanels.tts.externalHint')}
                   </span>
-                </button>
+                </Button>
               </div>
               <div className="text-xs text-muted-foreground mt-1">
                 {t('settingsPanels.tts.chooseProvider')}

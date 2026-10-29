@@ -5,10 +5,25 @@ import { X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 
+/**
+ * 抽屉有多宽。
+ *
+ * 应用里**只有一个宽度**被真正用过 ✓，所以刻度上就**只有这一档** ✓——
+ * 多摆一档没人用的 ✓，就是**摆在那儿** ✓。
+ * 以前那是一个 `widthClass` ✓ 的字符串 ✓——**每个调用点自己写宽度** ✓，
+ * 写的是**随手写的数** ✓（`min(92vw,420px)` ✓）。
+ */
+const SIDE_DRAWER_WIDTHS = {
+  lg: 'w-[min(92vw,420px)]',
+} as const
+
+type SideDrawerWidth = keyof typeof SIDE_DRAWER_WIDTHS
+
 export interface SideDrawerProps {
   isOpen: boolean
   onClose: () => void
-  widthClass?: string
+  /** 抽屉有多宽 ✓——**说哪一档** ✓，不许自己写 ✓。 */
+  width?: SideDrawerWidth
   className?: string
   children: React.ReactNode
   ariaLabel?: string
@@ -26,7 +41,7 @@ export interface SideDrawerProps {
 export function SideDrawer({
   isOpen,
   onClose,
-  widthClass = 'w-[min(85vw,320px)]',
+  width = 'lg',
   className,
   children,
   ariaLabel,
@@ -95,7 +110,7 @@ export function SideDrawer({
           // strings cannot be read - the gate would see the corner and not
           // the gutter, and say nothing.
           'fixed bottom-3 right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-50 flex flex-col rounded-xl border border-border bg-surface-glass backdrop-blur-lg shadow-lg',
-          widthClass,
+          SIDE_DRAWER_WIDTHS[width],
           className,
         )}
         role="dialog"

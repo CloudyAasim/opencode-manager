@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -34,6 +35,9 @@ const cardVariants = cva(
         // The one that is picked, and the one that is open.
         selected: "border-primary shadow-lg shadow-primary bg-accent",
         active: "bg-accent border-border",
+        // A block you can pick - a job, a run. It is bigger than a chip and
+        // it carries a title and a line of text.
+        tile: "rounded-xl border-2 border-border/70 bg-background/60 shadow-none",
       },
     },
     defaultVariants: {
@@ -42,16 +46,40 @@ const cardVariants = cva(
   }
 )
 
+/**
+ * 卡片有多宽。
+ *
+ * 只有三个宽度被真正用过 ✓（半屏 ✓、很宽 ✓、撑满 ✓）——
+ * 所以刻度上就**只有这三档** ✓，不多摆一档没人用的 ✓。
+ */
+const CARD_WIDTHS = {
+  md: "max-w-md",
+  "3xl": "max-w-3xl",
+  full: "w-full",
+} as const
+
+type CardWidth = keyof typeof CARD_WIDTHS
+
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof cardVariants>
->(({ className, variant, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(cardVariants({ variant }), className)}
-    {...props}
-  />
-))
+  React.HTMLAttributes<HTMLDivElement> &
+    VariantProps<typeof cardVariants> & {
+      /** 画成别的那个东西 ✓——比如**一个键** ✓（点了就选 ✓）。 */
+      asChild?: boolean
+      /** 卡片有多宽 ✓——**说哪一档** ✓，不许自己写 ✓。 */
+      width?: CardWidth
+    }
+>(({ className, variant, asChild = false, width, ...props }, ref) => {
+  const Comp = asChild ? Slot : "div"
+  return (
+    <Comp
+      ref={ref}
+      data-slot="card"
+      className={cn(cardVariants({ variant }), width ? CARD_WIDTHS[width] : undefined, className)}
+      {...props}
+    />
+  )
+})
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<

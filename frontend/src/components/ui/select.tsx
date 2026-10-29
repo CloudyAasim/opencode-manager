@@ -6,7 +6,7 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
-import { FIELD_FACE } from "@/components/ui/field-face"
+import { FIELD_FACE, FIELD_INVALID } from "@/components/ui/field-face"
 import { FOCUS_RING } from "@/components/ui/focus-ring"
 
 const Select = SelectPrimitive.Root
@@ -31,7 +31,7 @@ const SelectValue = SelectPrimitive.Value
  * (see `focus-ring.ts`).
  */
 const selectTriggerVariants = cva(
-  `flex w-full items-center justify-between ${FIELD_FACE} px-3 py-2 field-text data-[placeholder]:text-muted-foreground ${FOCUS_RING} data-[state=open]:bg-accent data-[state=open]:text-foreground disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1`,
+  `flex w-full items-center justify-between ${FIELD_FACE} px-3 py-2 field-text data-[placeholder]:text-muted-foreground ${FOCUS_RING} ${FIELD_INVALID} data-[state=open]:bg-accent data-[state=open]:text-foreground disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1`,
   {
     variants: {
       size: {

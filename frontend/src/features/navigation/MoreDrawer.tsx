@@ -118,7 +118,7 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
       isOpen={isOpen}
       onClose={onClose}
       ariaLabel={t('navigation.more')}
-      widthClass="w-[min(92vw,420px)]"
+      width="lg"
     >
       <div ref={swipeRef} className="flex flex-col flex-1 min-h-0">
         {/* The head of the drawer says where you are.

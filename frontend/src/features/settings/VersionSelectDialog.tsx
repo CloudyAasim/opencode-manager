@@ -111,17 +111,13 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                   const isSelected = release.version === selectedVersion
 
                   return (
-                    <button
+                    <Button
                       key={release.version}
+                      variant={isSelected ? 'chip-selected' : 'chip'}
+                      size="default"
                       onClick={() => setSelectedVersion(isCurrent ? null : release.version)}
                       disabled={isCurrent || installMutation.isPending}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                        isSelected
-                          ? 'border-primary bg-primary/10'
-                          : isCurrent
-                            ? 'border-success bg-success cursor-default'
-                            : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                      }`}
+                      className="p-3"
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -139,7 +135,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                         </div>
                         {isSelected && <Check className="h-4 w-4 text-primary" />}
                       </div>
-                    </button>
+                    </Button>
                   )
                 })}
               </div>

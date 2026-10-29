@@ -17,12 +17,15 @@ import { classListOfAttrs, stripComments, tagAt, variantsOf } from './source-tex
  * 可是**原生 `<button>`** ✗ 还在自己画 ✗：**底** ✓、**边** ✓、**影** ✓、**圆角** ✓——
  * 一百二十处原生按钮 ✗，**三十四处自己写了脸** ✗。
  *
- * 于是这两轮：**三十处换成了共享的那个按钮** ✓，
+ * 于是这两轮：**三十七处换成了共享的那个按钮** ✓，
  * 每一处**说清自己是谁** ✓（`variant="glass"` ✓、`variant="muted"` ✓ …）。
+ * —— 其中 ✗**三个可点的块** ✓（作业 ✓、版本 ✓、语音模型 ✓、答案 ✓）✓
+ * **长成了共享零件的样子** ✓：条子 ✓（`chip` ✓）✓、板 ✓（`tile` ✓）✓，
+ * **选中那一个** ✓ 也各有名字 ✓（`chip-selected` ✓）。
+ * 而 ✗**页签** ✓ **用上了共享的 `bar` 档** ✓（61 号起的名字 ✓，这一轮才真的用上 ✓）。
  *
- * 而**根本不是按钮的那几处** ✗——**列表里的一行** ✓、**一个筛选项** ✓、
- * **一个版本** ✓、**一个浮层上的叉** ✓、**跟着 agent 走的那个键** ✓——
- * 它们**点名** ✓，并且**写清楚自己是什么** ✓。
+ * 而**根本不是按钮的那几处** ✗——**列表里的一行** ✓、**一个浮层上的叉** ✓、
+ * **跟着 agent 走的那个键** ✓——它们**点名** ✓，并且**写清楚自己是什么** ✓。
  *
  * 门禁按**形状**判 ✓：一个原生 `<button>` ✗ **写了任何一句脸** ✗
  * → 它就是**另一副按钮** ✗——**写全了没有不算** ✓，**只写一半也不行** ✓。
@@ -189,16 +192,6 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     '这是**工作区列表里的一行** ✓：它自己带一道边 ✓，那是一行 ✓，不是按钮 ✓',
   ],
   [
-    'features/schedules/JobsTab.tsx',
-    'bg-primary/10',
-    '这是**一个筛选项** ✓：选中时它自己带一道边 ✓，那是一个**标记** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/session/QuestionPrompt.tsx',
-    'bg-primary/10',
-    '这是**一个可点的答案** ✓：它自己带一层底 ✓，那是一个**选项** ✓，不是按钮 ✓',
-  ],
-  [
     'features/session/QuestionPrompt.tsx',
     'bg-success/10',
     '这是**一个可点的答案** ✓：答对了它自己带一层底 ✓，那是一个**选项** ✓，不是按钮 ✓',
@@ -237,16 +230,6 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'features/settings/STTSettings.tsx',
     'bg-muted',
     '这个键的底色**跟着状态走** ✓（不能测时是灰的 ✓，录着音时是红的 ✓，平时是主色 ✓）——那是**状态** ✓，不是另一副按钮 ✓',
-  ],
-  [
-    'features/settings/TTSSettings.tsx',
-    'bg-primary/10',
-    '这是**一个语音模型** ✓：选中时它自己带一道边 ✓，那是一个**选项** ✓，不是按钮 ✓',
-  ],
-  [
-    'features/settings/VersionSelectDialog.tsx',
-    'bg-primary/10',
-    '这是**一个版本** ✓：选中时它自己带一道边 ✓，那是一个**选项** ✓，不是按钮 ✓',
   ],
   [
     'features/source-control/BranchesTab.tsx',

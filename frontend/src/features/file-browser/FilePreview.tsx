@@ -429,7 +429,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
               )}
               
               {showSaveButton && (
-                <Button variant="success" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (shouldVirtualize) { handleVirtualizedSaveClick(); } else { handleSave(); } }} disabled={isSaving || (shouldVirtualize && !hasVirtualizedChanges)}>
+                <Button variant="default" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (shouldVirtualize) { handleVirtualizedSaveClick(); } else { handleSave(); } }} disabled={isSaving || (shouldVirtualize && !hasVirtualizedChanges)}>
                   <Save className="w-3 h-3" />
                 </Button>
               )}

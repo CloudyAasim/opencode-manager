@@ -150,6 +150,16 @@ describe('按钮的脸，是它那一档的事', () => {
     expect(outline.has('border-border'), '认不出 outline 那一档的边框').toBe(true)
     expect(outline.has('hover:bg-accent'), '认不出 outline 那一档的悬停').toBe(true)
     expect(saidBy('default').has('bg-primary'), '认不出 default 那一档的背景').toBe(true)
+    // **绿色不是按钮的** ✓：绿色是**标记** ✓ 和**消息** ✓ 的 ✓——
+    // 按钮**不许**有那一副脸 ✓。
+    expect(
+      VARIANTS.has('success'),
+      '共享的按钮还有绿色的那一副——绿色是标记和消息的，不是按钮的',
+    ).toBe(false)
+    expect(
+      [...VARIANTS.values()].some((list) => /(^|\s)bg-success(\s|$)/.test(list)),
+      '有一副脸是绿的——按钮不许是绿的',
+    ).toBe(false)
     // **亮着的那一副** ✓：它自己有名字 ✓，不是调用点自己写的主色 ✓。
     expect(saidBy('selected').has('bg-primary'), '认不出 selected 那一档的背景').toBe(true)
     expect(

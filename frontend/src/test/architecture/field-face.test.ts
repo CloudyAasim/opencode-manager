@@ -135,11 +135,6 @@ const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
     'bg-transparent',
     '这一栏在**玻璃上** ✗：它要透出那层玻璃 ✓，不是另一张卡 ✗',
   ],
-  [
-    'features/settings/ServerEnvVarsSettings.tsx',
-    'border-destructive',
-    '这一项**被挡住了** ✗：它的边是红的 ✗，那是状态 ✗，不是脸 ✗',
-  ],
 ]
 
 /** 这一处被点名了吗 ✗。 */
@@ -346,6 +341,26 @@ describe('字段只有一副脸', () => {
         '确实只此一处的，写进 EXCEPTIONS 并说明理由。',
       ].join('\n'),
     ).toEqual([])
+  })
+
+  it('每个字段零件都认得“这一行是无效的”', () => {
+    // 按钮早就有这一条 ✓（`aria-invalid:border-destructive` ✓），
+    // 字段却没有 ✗——于是 ✗**登录/注册页报错的字段** ✓ **不会变红** ✗，
+    // 而**按钮会** ✗。
+    //
+    // 于是**三个字段零件** ✓（输入框 ✓、下拉框 ✓、多行框 ✓）**都认得它** ✓——
+    // 那一行是无效的 ✓，**不是它自己画的** ✓。
+    const face = SOURCES.find((candidate) => candidate.rel === FACE_OWNER)
+    expect(face!.text, '共享的那张脸没有说“无效的时候什么样”').toContain('aria-invalid')
+
+    for (const rel of SHARED_FIELDS) {
+      const source = SOURCES.find((candidate) => candidate.rel === rel)
+      expect(source, `找不到共享的字段零件 ${rel}`).toBeDefined()
+      expect(
+        source!.text.includes('${FIELD_INVALID}'),
+        `${rel} 不认得“无效”——报错的那一行不会变红`,
+      ).toBe(true)
+    }
   })
 
   it('被点名的那些，理由都写清楚了，而且都还在', () => {

@@ -282,7 +282,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               size="wide"
               onClick={handleSubmit}
               disabled={isSubmitting || !allQuestionsAnswered}
-              variant="success"
+              variant="default"
               className="flex-1"
             >
               {isSubmitting ? (
@@ -296,7 +296,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               size="wide"
               onClick={handleNext}
               disabled={isSubmitting || (expandedOther === currentIndex && !customInputs[currentIndex]?.trim())}
-              variant="success"
+              variant="default"
               className="flex-1"
             >
               {expandedOther === currentIndex ? t('session.question.confirm') : t('session.question.next')}
@@ -362,15 +362,12 @@ function QuestionStep({
         {question.options.map((option, i) => {
           const isSelected = answers.includes(option.label)
           return (
-            <button
+            <Button
               key={i}
+              variant={isSelected ? 'chip-selected' : 'chip'}
+              size="default"
               onClick={() => onSelectOption(option.label)}
-              className={cn(
-                "w-full text-left p-2 sm:p-3 rounded-lg transition-all duration-200 active:scale-[0.98]",
-                isSelected
-                  ? "bg-primary/10"
-                  : "bg-white/40 dark:bg-white/5 hover:bg-white/60 dark:hover:bg-white/10"
-              )}
+              className="p-2 sm:p-3 gap-1.5 sm:gap-2"
             >
               <div className="flex items-start justify-between gap-1.5 sm:gap-2">
                 <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -395,11 +392,13 @@ function QuestionStep({
                   {option.description}
                 </p>
               )}
-            </button>
+            </Button>
           )
         })}
 
-        <button
+        <Button
+          variant={expandedOther || isCustomSelected ? 'chip-selected' : 'chip'}
+          size="default"
           onClick={() => {
             if (expandedOther) {
               onCollapseOther()
@@ -407,12 +406,7 @@ function QuestionStep({
               onExpandOther()
             }
           }}
-          className={cn(
-            "w-full text-left p-2 sm:p-3 rounded-lg transition-all duration-200",
-            expandedOther || isCustomSelected
-              ? "bg-primary/10"
-              : "bg-white/40 dark:bg-white/5 hover:bg-white/60 dark:hover:bg-white/10"
-          )}
+          className="p-2 sm:p-3 gap-1.5 sm:gap-2"
         >
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className={cn(
@@ -430,7 +424,7 @@ function QuestionStep({
               {t('session.question.other')}
             </span>
           </div>
-        </button>
+        </Button>
 
         {expandedOther && (
           <div className="ml-5 sm:ml-7 space-y-1.5 sm:space-y-2 animate-in slide-in-from-top-2 duration-200">

@@ -13,4 +13,16 @@
  * 不是"一模一样"；三个零件的内边距现在都是 `px-3 py-2` ✓，
  * 而那条门禁盯着它们别再变窄 ✓。
  */
+/**
+ * 那张脸**无效的时候**是什么样子 ✓。
+ *
+ * 按钮早就有这一条 ✓（`aria-invalid:border-destructive` ✓），
+ * 字段却没有 ✗——所以 ✗**登录/注册页报错的字段** ✓ **不会变红** ✗，
+ * 而**按钮会** ✗。
+ *
+ * 于是它也归到共享的这张脸上 ✓：**三个字段零件** ✓（输入框 ✓、下拉框 ✓、多行框 ✓）
+ * **都认得 `aria-invalid`** ✓——**那一行是无效的** ✓，不是**它自己画的** ✓。
+ */
+export const FIELD_INVALID = 'aria-invalid:border-destructive focus-visible:aria-invalid:border-destructive'
+
 export const FIELD_FACE = 'rounded-lg border border-input bg-card shadow-xs'

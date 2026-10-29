@@ -359,6 +359,32 @@ const CALL_SITES = callSites(PARTS)
 /** 弹窗的那些调用点 ✓。 */
 const DIALOG_SITES = CALL_SITES.filter((site) => site.part === 'DialogContent')
 
+/**
+ * 那些**自己也有宽度刻度**的共享零件 ✓。
+ *
+ * 弹窗 ✓、卡片 ✓、抽屉 ✓——**弹窗的刻度早就有了** ✓（64 号 ✓），
+ * **卡片和抽屉的没有** ✗，于是调用点自己写宽度 ✗。
+ */
+const WIDTH_PARTS: Record<string, string> = {
+  Card: 'components/ui/card.tsx',
+  SideDrawer: 'components/ui/side-drawer.tsx',
+}
+
+/** 它们各自的刻度写在哪张表里 ✓。 */
+const WIDTH_SCALES: ReadonlyArray<readonly [string, string]> = [
+  ['Card', 'CARD_WIDTHS'],
+  ['SideDrawer', 'SIDE_DRAWER_WIDTHS'],
+]
+
+const WIDTH_SITES = callSites(WIDTH_PARTS)
+
+/** 某一个共享零件自己说的那道刻度 ✓。 */
+function widthScaleOf(part: string, declaration: string): Map<string, string> {
+  const rel = WIDTH_PARTS[part]
+  const source = SOURCES.find((candidate) => candidate.rel === rel)
+  return source ? recordOf(source.text, declaration) : new Map()
+}
+
 describe('共享零件的脸，各有各副', () => {
   it('门禁自己看得见东西', () => {
     expect(SOURCES.length, '源文件少得可疑，这道门禁多半跑在空集上').toBeGreaterThan(300)
@@ -518,6 +544,51 @@ describe('共享零件的脸，各有各副', () => {
         '弹窗占屏幕多宽、多高是共享零件的事：要哪一档，就说哪一档（`width="md"`、`height="tall"`）。',
       ].join('\n'),
     ).toEqual([])
+  })
+
+  it('卡片和抽屉的宽度，是共享零件的事', () => {
+    // 卡片**有多宽** ✗、抽屉**有多宽** ✗，也是共享零件的尺寸 ✓——
+    // 卡片**七处**自己写 `max-w-md` ✗ / `max-w-3xl` ✗，
+    // 抽屉自己写 `min(85vw,320px)` ✗——**随手写的数** ✗，不在任何刻度上 ✗。
+    const offenders: string[] = []
+    for (const site of WIDTH_SITES) {
+      for (const token of site.list.split(/\s+/)) {
+        if (!token) continue
+        if (!A_WIDTH.test(token)) continue
+        // **满屏**的那些说法 ✓：它们是同一个决定 ✓，不是刻度上的某一档 ✓。
+        if (FULL_SCREEN.includes(token)) continue
+        if (excused(site.rel, site.part, token)) continue
+        offenders.push(`${site.rel}:${site.line}（${site.part}）  ${token}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些地方自己写了宽度：${offenders.length} 处`,
+        ...offenders,
+        '卡片和抽屉有多宽是共享零件的事：要哪一档，就说哪一档（`width="md"`）。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('每一道宽度刻度都有人用', () => {
+    // 一道**没人用的档** ✗，就是**摆在那儿** ✗——要么去掉它 ✓，要么用它 ✓。
+    for (const [part, declaration] of WIDTH_SCALES) {
+      const steps = widthScaleOf(part, declaration)
+      expect(steps.size, `${part} 没有宽度刻度`).toBeGreaterThan(0)
+      const said = new Set(
+        WIDTH_SITES.filter((site) => site.part === part && site.width).map((site) => site.width),
+      )
+      expect(
+        [...steps.keys()].filter((step) => !said.has(step)),
+        `${part} 的这些宽度档没有人用`,
+      ).toEqual([])
+      expect(
+        [...said].filter((step) => !steps.has(step)),
+        `${part} 说了刻度上没有的宽度`,
+      ).toEqual([])
+    }
   })
 
   it('被点名的那些，理由都写清楚了，而且都还在', () => {

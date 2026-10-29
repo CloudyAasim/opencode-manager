@@ -131,7 +131,8 @@ export function ServerEnvVarsSettings() {
                   value={envVar.key}
                   onChange={(event) => handleChange(index, 'key', event.target.value)}
                   placeholder={t('settingsPanels.serverEnv.namePlaceholder')}
-                  className={`font-mono ${isBlocked ? 'border-destructive' : ''}`}
+                  aria-invalid={isBlocked}
+                  className="font-mono"
                 />
                 <Input
                   value={envVar.value}

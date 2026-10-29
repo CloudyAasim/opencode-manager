@@ -513,7 +513,8 @@ export function recordOf(text: string, identifier: string): Map<string, string> 
     }
   }
   const body = text.slice(open, end)
-  for (const match of body.matchAll(/"?([\w-]+)"?\s*:\s*"([^"]*)"/g)) {
+  // **两种引号都认** ✓——有的文件用单引号 ✓，有的用双引号 ✓。
+  for (const match of body.matchAll(/"?([\w-]+)"?\s*:\s*["']([^"']*)["']/g)) {
     found.set(match[1]!, match[2]!)
   }
   return found

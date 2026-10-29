@@ -49,7 +49,7 @@ export function RunHistoryTab({
     }
     return (
       <div className="flex min-h-0 flex-1 h-full items-start">
-        <Card variant="dashed" className="max-w-3xl w-full">
+        <Card variant="dashed" width="full">
           <PanelMessage
   icon={<History />}
   title={t('schedules.jobDetail.noJobSelected')}

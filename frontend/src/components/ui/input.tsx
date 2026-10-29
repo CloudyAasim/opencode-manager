@@ -2,7 +2,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
-import { FIELD_FACE } from "@/components/ui/field-face"
+import { FIELD_FACE, FIELD_INVALID } from "@/components/ui/field-face"
 import { FOCUS_RING } from "@/components/ui/focus-ring"
 
 /**
@@ -23,7 +23,7 @@ import { FOCUS_RING } from "@/components/ui/focus-ring"
  * inside is Breeze's own rule ("at least 8px"), not this part's.
  */
 const inputVariants = cva(
-  `flex w-full ${FIELD_FACE} px-3 py-2 field-text text-foreground file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground ${FOCUS_RING} focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50`,
+  `flex w-full ${FIELD_FACE} px-3 py-2 field-text text-foreground file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground ${FOCUS_RING} focus-visible:border-primary ${FIELD_INVALID} disabled:cursor-not-allowed disabled:opacity-50`,
   {
     variants: {
       size: {

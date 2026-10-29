@@ -16,7 +16,10 @@ const buttonVariants = cva(
         // The affirmative one, and the destructive one with an outline. They
         // used to be written at the call sites, one button at a time - and
         // every one of them was a slightly different shade of the same idea.
-        success: "bg-success text-white",
+        //
+        // There is no green button: green is what a *mark* and a *message*
+        // are, not what a button is. The one that used to be green is the
+        // ordinary one now.
         "outline-destructive":
           "border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20",
         outline:
@@ -38,6 +41,10 @@ const buttonVariants = cva(
         // A flat key that turns destructive when the pointer is on it - the
         // ones that clear, dismiss or delete.
         "ghost-destructive": "hover:bg-destructive/10 hover:text-destructive",
+        // A small block you can pick - a filter, a version, a model, an answer.
+        chip: "w-full justify-start rounded-lg border border-border bg-card text-start text-foreground transition-colors hover:border-primary/40 hover:bg-accent/40",
+        // The one that is picked.
+        "chip-selected": "w-full justify-start rounded-lg border border-primary bg-primary/10 text-start text-foreground transition-colors",
         // A toggle that is on. It used to be written at the call site as
         // `bg-primary text-primary-foreground`, on top of the outline face -
         // and the outline's own hover won, so the button greyed out under the
