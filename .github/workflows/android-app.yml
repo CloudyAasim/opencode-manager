@@ -165,6 +165,23 @@ jobs:
             --device "pixel_6"
           avdmanager list avd
 
+      # The emulator's qemu binary is linked against PulseAudio, and the
+      # runner image does not carry it. Without this the emulator dies the
+      # instant it starts, with a message about a shared library and nothing
+      # about the emulator.
+      - name: Install what the emulator needs to run
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpulse0 \
+            libgl1 \
+            libnss3 \
+            libxcursor1 \
+            libxrandr2 \
+            libxi6 \
+            libxcomposite1 \
+            libasound2
+
       # Every flag here is one the emulator still knows. It used to be handed
       # `-enable-hw-keyboard`, and that option is gone: the emulator said
       # "unknown option" and exited, which is a good way to fail - the
