@@ -24,6 +24,7 @@ export const repo = {
   worktree: '工作树',
   workspaces: '工作区',
   workspace: '工作区',
+  newWorkspace: '新建工作区',
   createWorkspace: '创建工作区',
   createWorkspaceDescription: '为此项目创建一个 OpenCode 工作树工作区。',
   createWorkspaceHint: 'OpenCode 将创建并管理一个 git 工作树工作区。',

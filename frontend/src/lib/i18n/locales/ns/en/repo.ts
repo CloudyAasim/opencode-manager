@@ -24,6 +24,7 @@ export const repo = {
   worktree: 'Worktree',
   workspaces: 'Workspaces',
   workspace: 'Workspace',
+  newWorkspace: 'New Workspace',
   createWorkspace: 'Create Workspace',
   createWorkspaceDescription: 'Create an OpenCode worktree workspace for this repository.',
   createWorkspaceHint: 'OpenCode will create and manage a git worktree workspace.',
