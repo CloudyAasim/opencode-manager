@@ -165,23 +165,28 @@ jobs:
             --device "pixel_6"
           avdmanager list avd
 
-      # `-accel on` because the step above gave the runner KVM on purpose: the
-      # emulator ran with `-no-accel` before, which is software emulation, and
-      # a software-emulated Android does not boot in the time the wait below
-      # allows. `on` rather than the default `auto` so that a runner without
-      # KVM fails here, with a message about KVM, instead of booting slowly
-      # and failing later with a message about a timeout.
+      # Every flag here is one the emulator still knows. It used to be handed
+      # `-enable-hw-keyboard`, and that option is gone: the emulator said
+      # "unknown option" and exited, which is a good way to fail - the
+      # hardware keyboard is on by default anyway, and the flag was only
+      # ever about the on-screen one.
+      #
+      # There is no acceleration flag either. The default is "use KVM if the
+      # machine has it", and the step above gives this runner KVM on
+      # purpose. Asking for it explicitly would only make a runner without
+      # it fail here instead of booting slowly.
       #
       # `setsid` because the emulator is a *background* process and the step
       # has to be able to end: without it the runner waits for the emulator to
       # exit, and the emulator never does.
       - name: Start the emulator
         run: |
+          $ANDROID_HOME/emulator/emulator -version
           setsid $ANDROID_HOME/emulator/emulator \
             -avd opencode \
             -no-window -no-audio -no-boot-anim -no-snapshot \
-            -gpu swiftshader_indirect -accel on -enable-hw-keyboard \
-            -qemu -m 2048M -camera-back none -camera-front none -wipe-data \
+            -gpu swiftshader_indirect \
+            -camera-back none -camera-front none -wipe-data \
             > /tmp/emulator.log 2>&1 &
 
           # `adb wait-for-device` returns as soon as the device is visible to
