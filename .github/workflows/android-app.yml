@@ -172,15 +172,20 @@ jobs:
       - name: Install what the emulator needs to run
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libpulse0 \
-            libgl1 \
-            libnss3 \
-            libxcursor1 \
-            libxrandr2 \
-            libxi6 \
-            libxcomposite1 \
-            libasound2
+          # One at a time: `libasound2t64` does not exist on an older runner,
+          # and one package that cannot be installed takes the whole list
+          # down with it - which is how this step failed once, with "Package
+          # 'libasound2' has no installation candidate" and nothing else.
+          for pkg in libpulse0 libgl1 libnss3 libxcursor1 libxrandr2 libxi6 libxcomposite1 libasound2t64; do
+            sudo apt-get install -y --no-install-recommends "$pkg" || echo "could not install $pkg"
+          done
+          # The one the emulator cannot start without. Without this check the
+          # missing library shows up three steps later, inside the emulator's
+          # own error message.
+          if ! ldconfig -p | grep -q libpulse.so.0; then
+            echo "libpulse is still missing, and the emulator will not start without it" >&2
+            exit 1
+          fi
 
       # Every flag here is one the emulator still knows. It used to be handed
       # `-enable-hw-keyboard`, and that option is gone: the emulator said
