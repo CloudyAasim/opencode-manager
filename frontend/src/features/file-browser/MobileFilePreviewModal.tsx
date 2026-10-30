@@ -23,18 +23,37 @@ export const MobileFilePreviewModal = memo(function MobileFilePreviewModal({
 }: MobileFilePreviewModalProps) {
   const [localFile, setLocalFile] = useState<FileInfo | null>(null);
   const isClosingRef = useRef(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
-  
+
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     onClose();
-    setTimeout(() => {
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
       setLocalFile(null);
       isClosingRef.current = false;
     }, MODAL_TRANSITION_MS);
   }, [onClose]);
+
+  /*
+   * The timer must not outlive the modal.
+   *
+   * It used to: it was scheduled and never cancelled, so a modal that went
+   * away first left a timer behind. That timer fired into a world that no
+   * longer had a window in it - which is how a whole test run turned red over
+   * a file that had not even failed.
+   */
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, []);
   
   const { bind, swipeStyles } = useSwipeBack(handleClose, {
     enabled: isOpen,
