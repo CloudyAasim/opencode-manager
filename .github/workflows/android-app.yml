@@ -49,7 +49,19 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
+        with:
+          # `tools` is gone from Google's repository.
+          #
+          # The v3 default asked for it, `sdkmanager` answered "Failed to find
+          # package 'tools'", and the step failed - so the run failed, every
+          # day, before a single line of the project had been built. That is
+          # what this workflow did from the day it was added; it had never
+          # once reached the build.
+          #
+          # v4 does not ask for it. Saying it out loud here means a future
+          # default cannot quietly put it back either.
+          packages: "platform-tools"
 
       - name: Accept the SDK licences
         # `sdkmanager --licenses` reads from stdin, and a licence it has not
@@ -57,6 +69,15 @@ jobs:
         # says nothing about licences.
         run: |
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Install the platform the app compiles against
+        # `compileSdk` is 35 and AGP 8.7 wants build-tools 35.0.0. AGP would
+        # fetch both by itself, but a build that stops to download its own
+        # toolchain is a build whose failure message is about the network
+        # rather than about the project. Naming them says what the build
+        # needs, and a missing one fails here with a name in it.
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build the debug APK
         working-directory: android
@@ -96,15 +117,23 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
+        with:
+          # The same reason as in the build job, and the same words: `tools` is
+          # gone from Google's repository and v3 still asked for it.
+          packages: "platform-tools"
 
       - name: Accept the SDK licences
         run: |
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: Install the emulator and the system image
+        # `platforms;android-35` and `build-tools;35.0.0` are here because the
+        # instrumented run builds the app before it installs it, and the app
+        # compiles against 35. The emulator itself runs API 34, which is above
+        # the app's `minSdk` of 26, so the device can run what is built.
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "emulator" "system-images;android-34;google_apis;x86_64"
+          sdkmanager "platform-tools" "platforms;android-35" "platforms;android-34" "build-tools;35.0.0" "emulator" "system-images;android-34;google_apis;x86_64"
 
       # The emulator is a virtualised device: without KVM it either refuses to
       # start or falls back to software, which is too slow to finish a test
@@ -118,11 +147,17 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -l /dev/kvm
 
+      # `-accel on` because the step above gave the runner KVM on purpose: the
+      # emulator ran with `-no-accel` before, which is software emulation, and
+      # a software-emulated Android does not boot in the five minutes the wait
+      # below allows. `on` rather than the default `auto` so that a runner
+      # without KVM fails here, with a message about KVM, instead of booting
+      # slowly and failing later with a message about a timeout.
       - name: Start the emulator
         run: |
           $ANDROID_HOME/emulator/emulator \
             -no-window -no-audio -no-boot-anim -no-snapshot \
-            -gpu swiftshader_indirect -no-accel -enable-hw-keyboard \
+            -gpu swiftshader_indirect -accel on -enable-hw-keyboard \
             -qemu -m 2048M -camera-back none -camera-front none -wipe-data \
             > /tmp/emulator.log 2>&1 &
 
