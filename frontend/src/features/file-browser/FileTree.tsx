@@ -188,7 +188,7 @@ export const FileTree = memo(function FileTree({
               className={cn('shrink-0 opacity-100 opacity-0 group-hover:opacity-100', isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}
               aria-label={t('repo.fileBrowser.actions.more')}
             >
-              <MoreVertical className="w-3 h-3" />
+              <MoreVertical className="size-3" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
@@ -202,23 +202,23 @@ export const FileTree = memo(function FileTree({
                   window.open(url, '_blank')
                 }}
               >
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="size-4 mr-2" />
                 {t('repo.fileBrowser.actions.download')}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={() => startRename(file)}>
-              <Edit3 className="w-4 h-4 mr-2" />
+              <Edit3 className="size-4 mr-2" />
               {t('repo.fileBrowser.actions.rename')}
             </DropdownMenuItem>
             {onCopy && (
               <DropdownMenuItem onClick={() => startCopy(file)}>
-                <Copy className="w-4 h-4 mr-2" />
+                <Copy className="size-4 mr-2" />
                 {t('repo.fileBrowser.actions.copy')}
               </DropdownMenuItem>
             )}
             {onDelete && (
               <DropdownMenuItem onClick={() => setDeleteTarget(file.path)} className="text-destructive">
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="size-4 mr-2" />
                 {t('repo.fileBrowser.actions.delete')}
               </DropdownMenuItem>
             )}
@@ -295,9 +295,9 @@ export const FileTree = memo(function FileTree({
               data-tree-toggle={file.path}
             >
               {expandedOf(expandedPaths, file.path) ? (
-                <ChevronDown className="w-3 h-3" />
+                <ChevronDown className="size-3" />
               ) : (
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className="size-3" />
               )}
             </Button>
           ) : (
@@ -306,13 +306,13 @@ export const FileTree = memo(function FileTree({
 
           {file.isDirectory ? (
             expandedOf(expandedPaths, file.path) ? (
-              <FolderOpen className="w-4 h-4 shrink-0" />
+              <FolderOpen className="size-4 shrink-0" />
             ) : (
-              <Folder className="w-4 h-4 shrink-0" />
+              <Folder className="size-4 shrink-0" />
             )
           ) : (
             <span className="w-4 h-4 flex items-center justify-center text-xs shrink-0">
-              {FILE_ICON_MAP[file.name.split('.').pop()?.toLowerCase() ?? ''] ?? <File className="w-4 h-4" />}
+              {FILE_ICON_MAP[file.name.split('.').pop()?.toLowerCase() ?? ''] ?? <File className="size-4" />}
             </span>
           )}
 

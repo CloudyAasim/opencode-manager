@@ -186,7 +186,7 @@ export function STTSettings() {
       <>
         {saveStatus === 'saved' && (
         <>
-        <CheckCircle2 className="h-4 w-4 text-success" />
+        <CheckCircle2 className="size-4 text-success" />
         <span className="text-success">{t('settingsPanels.stt.saved')}</span>
       </>
             )}
@@ -318,7 +318,7 @@ export function STTSettings() {
                             disabled={isLoadingModels || !watchEndpoint}
                             className="gap-1 text-muted-foreground hover:text-foreground"
                           >
-                            <RefreshCw className={`h-3 w-3 ${isLoadingModels ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`size-3 ${isLoadingModels ? 'animate-spin' : ''}`} />
                             {t('settingsPanels.stt.refresh')}
                           </Button>
                         </div>
@@ -385,7 +385,7 @@ export function STTSettings() {
               {sttError && (
                 <div className="rounded-lg bg-warning/10 border border-warning/40 p-4">
                   <div className="text-sm text-warning flex items-start gap-2">
-                    <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <XCircle className="size-4 mt-0.5 shrink-0" />
                     <div>{sttError}</div>
                   </div>
                 </div>
@@ -405,13 +405,13 @@ export function STTSettings() {
                       <p className="text-sm">{testTranscript || (isProcessing ? t('settingsPanels.stt.processing') : t('settingsPanels.stt.listening'))}</p>
                       {isRecording && (
                         <div className="flex items-center gap-1 mt-1">
-                          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                          <Loader2 className="size-3 animate-spin text-primary" />
                           <span className="text-xs text-muted-foreground">{t('settingsPanels.stt.recording')}</span>
                         </div>
                       )}
                       {isProcessing && !isRecording && (
                         <div className="flex items-center gap-1 mt-1">
-                          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                          <Loader2 className="size-3 animate-spin text-primary" />
                           <span className="text-xs text-muted-foreground">{t('settingsPanels.stt.transcribing')}</span>
                         </div>
                       )}
@@ -420,7 +420,7 @@ export function STTSettings() {
                   {!isTesting && !isProcessing && testResult === 'success' && testTranscript && (
                     <div className="mt-2 p-2 bg-success/10 border border-success/40 rounded max-h-24 overflow-y-auto">
                       <div className="flex items-center gap-1 mb-1">
-                        <CheckCircle2 className="h-3 w-3 text-success" />
+                        <CheckCircle2 className="size-3 text-success" />
                         <span className="text-xs font-medium text-success">{t('settingsPanels.stt.testSuccessful')}</span>
                       </div>
                       <p className="text-sm text-success">{testTranscript}</p>
@@ -429,7 +429,7 @@ export function STTSettings() {
                   {!isTesting && !isProcessing && testResult === 'failed' && (
                     <div className="mt-2 p-2 bg-destructive/10 border border-destructive/40 rounded">
                       <div className="flex items-center gap-1">
-                        <XCircle className="h-3 w-3 text-destructive" />
+                        <XCircle className="size-3 text-destructive" />
                         <span className="text-xs font-medium text-destructive">{t('settingsPanels.stt.testFailed', { error: sttError || t('settingsPanels.stt.noSpeechDetected') })}</span>
                       </div>
                     </div>
@@ -445,17 +445,17 @@ export function STTSettings() {
                 >
                   {isRecording ? (
                     <>
-                      <MicOff className="w-4 h-4" />
+                      <MicOff className="size-4" />
                       {t('settingsPanels.stt.stop')}
                     </>
                   ) : isProcessing ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="size-4 animate-spin" />
                       {t('settingsPanels.stt.processingLabel')}
                     </>
                   ) : (
                     <>
-                      <Mic className="w-4 h-4" />
+                      <Mic className="size-4" />
                       {t('settingsPanels.stt.test')}
                     </>
                   )}

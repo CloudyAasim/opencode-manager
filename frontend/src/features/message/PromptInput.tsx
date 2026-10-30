@@ -1227,9 +1227,9 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
           ) : isProcessing && !isRecording ? (
             <div className={spinnerClassName} />
           ) : isRecording ? (
-            <MicOff className="w-5 h-5" />
+            <MicOff className="size-5" />
           ) : (
-            <Mic className="w-5 h-5" />
+            <Mic className="size-5" />
           )}
         </button>
       </div>
@@ -1271,7 +1271,7 @@ return (
           className="absolute bottom-full right-0 mb-2 md:hidden z-50 transition-all duration-200 active:scale-95 hover:scale-105"
           title={t('message.actions.stop')}
         >
-          <SquareFill className="w-5 h-5" />
+          <SquareFill className="size-5" />
         </Button>
       )}
 
@@ -1312,7 +1312,7 @@ return (
                 onClick={() => removeImageAttachment(attachment.id)}
                 className="text-muted-foreground hover:text-foreground"
               >
-                <X className="w-3 h-3" />
+                <X className="size-3" />
               </Button>
             </div>
           ))}
@@ -1332,7 +1332,7 @@ return (
                 title={t('message.actions.scrollToBottom')}
                 aria-label={t('message.actions.scrollToBottom')}
               >
-                <ArrowDown className="w-4 h-4" />
+                <ArrowDown className="size-4" />
                 <span>{t('message.actions.latest')}</span>
               </Button>
               {isSessionActive && (
@@ -1385,7 +1385,7 @@ return (
                 className={`transition-all duration-200 active:scale-95 hover:scale-105 ${showScrollButton ? 'visible' : 'invisible'}`}
                 title={t('message.actions.scrollToBottom')}
               >
-                <ArrowDown className="w-6 h-6" />
+                <ArrowDown className="size-6" />
               </Button>
             )}
 {showStopButton && (
@@ -1396,7 +1396,7 @@ return (
               className="hidden md:block p-1.5 px-5 md:p-2 md:px-6 transition-all duration-200 active:scale-95 hover:scale-105"
               title={t('message.actions.stop')}
             >
-              <SquareFill className="w-4 h-4 md:w-5 md:h-5" />
+              <SquareFill className="size-4 md:size-5" />
             </Button>
 )}
           <input
@@ -1409,12 +1409,12 @@ return (
           <Button
             type="button"
             variant="muted"
-            size="icon-lg"
+            size="icon"
             onClick={() => fileInputRef.current?.click()}
             className="hidden md:block text-muted-foreground transition-all duration-200 active:scale-95 hover:scale-105"
             title={t('message.actions.uploadImageOrPdf')}
           >
-            <Upload className="w-5 h-5" />
+            <Upload className="size-5" />
           </Button>
           {sttEnabled && sttSupported && (
             renderVoiceButton('desktop')

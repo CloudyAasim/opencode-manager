@@ -77,7 +77,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
             disabled={!token}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
-            {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
         <Button
@@ -89,7 +89,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
           aria-label={t('settingsPanels.managerToken.copy')}
           title={t('settingsPanels.managerToken.copy')}
         >
-          {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+          {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
         </Button>
         <Button
           variant={confirmRotate ? 'destructive' : 'outline'}
@@ -100,7 +100,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
           aria-label={t('settingsPanels.managerToken.rotate')}
           title={t('settingsPanels.managerToken.rotate')}
         >
-          <RefreshCw className={`h-4 w-4 ${rotate.isPending ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`size-4 ${rotate.isPending ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
@@ -110,7 +110,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
 
       {confirmRotate && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <AlertTriangle className="size-4" />
           <AlertDescription>
             {t('settingsPanels.managerToken.rotateWarning')}
           </AlertDescription>

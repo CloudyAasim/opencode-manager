@@ -149,9 +149,9 @@ export function ChangesTab({ repoId, onFileSelect, onClearFileSelection, selecte
               className="w-full"
             >
               {git.commit.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Loader2 className="size-4 animate-spin mr-2" />
               ) : (
-                <GitCommit className="w-4 h-4 mr-2" />
+                <GitCommit className="size-4 mr-2" />
               )}
               {t('misc.changesTab.commit')} {stagedFiles.length > 0 && t('misc.changesTab.stagedCount', { n: stagedFiles.length })}
             </Button>

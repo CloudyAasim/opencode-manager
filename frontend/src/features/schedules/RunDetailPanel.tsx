@@ -57,7 +57,7 @@ export function RunDetailPanel({ repoId, activeRun, selectedRunLoading, onCancel
             )}
           </div>
           <Button variant="outline" size="sm" onClick={onCancelRun} disabled={cancelRunPending || activeRun.status !== 'running'}>
-            {cancelRunPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {cancelRunPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             {t('schedules.runs.cancelRun')}
           </Button>
         </div>

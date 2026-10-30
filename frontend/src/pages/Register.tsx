@@ -125,7 +125,7 @@ export function Register() {
             busy={isSubmitting}
             busyLabel={t('register.createAdminAccount')}
             idleLabel={config.isFirstUser ? t('register.createAdminAccount') : t('register.createAccount')}
-            idleIcon={<UserPlus className="h-4 w-4" />}
+            idleIcon={<UserPlus className="size-4" />}
           />
         </form>
       </AuthCard>

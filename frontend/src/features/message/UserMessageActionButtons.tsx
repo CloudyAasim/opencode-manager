@@ -50,9 +50,9 @@ export const UserMessageActionButtons = memo(function UserMessageActionButtons({
         title={t('message.actions.undoThisMessage')}
       >
         {undoMessage.isPending ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <Loader2 className="size-3.5 animate-spin" />
         ) : (
-          <X className="w-3.5 h-3.5" />
+          <X className="size-3.5" />
         )}
       </Button>
     </div>

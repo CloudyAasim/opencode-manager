@@ -312,7 +312,7 @@ export const SessionList = ({
               className="shrink-0 text-destructive hover:text-destructive"
               
             >
-              <Trash2 className="w-3 h-3 mr-1" />
+              <Trash2 className="size-3 mr-1" />
               {t('session.list.delete')}
             </Button>
             <Button
@@ -323,13 +323,13 @@ export const SessionList = ({
               title={t('common.close')}
               className="shrink-0 ml-auto text-destructive hover:text-destructive"
             >
-              <X className="w-4 h-4" />
+              <X className="size-4" />
             </Button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={t('session.list.searchPlaceholder')}
@@ -351,7 +351,7 @@ export const SessionList = ({
                 createSession.mutate({ agent: undefined });
               }}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="size-4" />
             </Button>
             <Button
               variant="outline"
@@ -362,7 +362,7 @@ export const SessionList = ({
                 setManageMode(true);
               }}
             >
-              <Pencil className="w-4 h-4" />
+              <Pencil className="size-4" />
             </Button>
           </div>
         )}

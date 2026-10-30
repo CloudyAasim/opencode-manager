@@ -367,7 +367,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
             disabled={!serverId || isPending}
             className="flex-1 sm:flex-none"
           >
-            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
             {t('settingsPanels.addMcpServer.add')}
           </Button>
         </DialogFooter>

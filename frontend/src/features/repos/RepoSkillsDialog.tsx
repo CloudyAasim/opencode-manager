@@ -73,7 +73,7 @@ export function RepoSkillsDialog({
             description={canLoad ? t('repo.skills.descriptionLoad') : t('repo.skills.descriptionAvailable')}
           >
             <Button type="button" variant="outline" size="sm" onClick={() => setInstallDialogOpen(true)}>
-                <Download className="h-4 w-4 mr-1" />
+                <Download className="size-4 mr-1" />
                 {t('repo.skills.install')}
               </Button>
           </DialogTitleBar>

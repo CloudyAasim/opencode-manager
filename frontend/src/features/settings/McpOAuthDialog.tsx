@@ -239,7 +239,7 @@ export function McpOAuthDialog({
       <DialogContent width="md" className="w-[calc(100vw-2rem)] h-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5 shrink-0" />
+            <Key className="size-5 shrink-0" />
             <span className="truncate">{t('settingsPanels.mcpOAuth.connectTitle', { name: serverName })}</span>
           </DialogTitle>
           <DialogDescription>
@@ -250,7 +250,7 @@ export function McpOAuthDialog({
         <div className="space-y-4 py-2 min-w-0">
           {error && (
             <Alert variant="destructive">
-              <XCircle className="h-4 w-4 shrink-0" />
+              <XCircle className="size-4 shrink-0" />
               <AlertDescription className="break-words">{error}</AlertDescription>
             </Alert>
           )}
@@ -268,7 +268,7 @@ export function McpOAuthDialog({
                 onClick={handleOpenAuthPage}
                 className="w-full"
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <ExternalLink className="size-4 mr-2" />
                 {t('settingsPanels.mcpOAuth.openAuthPage')}
               </Button>
               <a
@@ -300,7 +300,7 @@ export function McpOAuthDialog({
                   className="w-full text-muted-foreground"
                   onClick={handleOpenAuthPage}
                 >
-                  <ExternalLink className="h-3 w-3 mr-1" />
+                  <ExternalLink className="size-3 mr-1" />
                   {t('settingsPanels.mcpOAuth.reopenPopup')}
                 </Button>
               )}
@@ -337,7 +337,7 @@ export function McpOAuthDialog({
                     disabled={loading || !authCode.trim()}
                     size="sm"
                   >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('settingsPanels.mcpOAuth.submit')}
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : t('settingsPanels.mcpOAuth.submit')}
                   </Button>
                 </div>
               </div>
@@ -348,7 +348,7 @@ export function McpOAuthDialog({
                   className="w-full"
                   onClick={handleOpenAuthPage}
                 >
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  <ExternalLink className="size-4 mr-2" />
                   {t('common.retry')}
                 </Button>
               )}
@@ -357,7 +357,7 @@ export function McpOAuthDialog({
 
           {step === 'success' && (
             <div className="flex flex-col items-center justify-center py-6 gap-2">
-              <CheckCircle className="h-8 w-8 text-success" />
+              <CheckCircle className="size-8 text-success" />
               <p className="text-sm font-medium">{t('settingsPanels.mcpOAuth.success')}</p>
             </div>
           )}
@@ -418,7 +418,7 @@ function ManualCodeEntry({
         onClick={() => setShowManualEntry(!showManualEntry)}
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
       >
-        {showManualEntry ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        {showManualEntry ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
         {t('settingsPanels.mcpOAuth.pasteManually')}
       </button>
 
@@ -441,7 +441,7 @@ function ManualCodeEntry({
               disabled={loading || !authCode.trim()}
               size="sm"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('settingsPanels.mcpOAuth.submit')}
+              {loading ? <Loader2 className="size-4 animate-spin" /> : t('settingsPanels.mcpOAuth.submit')}
             </Button>
           </div>
         </div>

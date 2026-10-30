@@ -116,7 +116,7 @@ export function FileToolRender({ part, filediff, filePath, content, toolName, on
           {filediff && <DiffStats additions={filediff.additions} deletions={filediff.deletions} />}
           <span className="text-muted-foreground text-xs">{getDuration()}</span>
           {hasExpandableContent && (
-            expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            expanded ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />
           )}
         </div>
         </button>

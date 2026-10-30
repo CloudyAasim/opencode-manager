@@ -198,10 +198,10 @@ function DiffLineComponent({
       )}
       <div className="w-6 flex-shrink-0 flex items-center justify-center bg-muted/20">
         {line.type === "add" && (
-          <Plus className="w-3 h-3 text-diff-add" />
+          <Plus className="size-3 text-diff-add" />
         )}
         {line.type === "remove" && (
-          <Minus className="w-3 h-3 text-diff-remove" />
+          <Minus className="size-3 text-diff-remove" />
         )}
       </div>
       <pre
@@ -252,7 +252,7 @@ export function FileDiffView({
         action={
           onBack ? (
             <Button variant="ghost" size="sm" onClick={onBack}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className="size-4 mr-2" />
               {t('repo.back')}
             </Button>
           ) : undefined
@@ -286,7 +286,7 @@ export function FileDiffView({
             onClick={onBack}
             className="mr-1"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="size-4" />
           </Button>
         )}
         <Icon className={cn("w-4 h-4 flex-shrink-0", config.color)} />
@@ -298,7 +298,7 @@ export function FileDiffView({
             >
               <div className="text-sm font-medium text-foreground truncate group-hover:text-primary group-hover:underline flex items-center gap-1">
                 {fileName}
-                <ExternalLink className="w-3 h-3 opacity-0 transition-opacity group-hover:opacity-100 max-sm:opacity-100" />
+                <ExternalLink className="size-3 opacity-0 transition-opacity group-hover:opacity-100 max-sm:opacity-100" />
               </div>
               {dirPath && (
                 <div className="text-xs text-muted-foreground truncate">
@@ -351,7 +351,7 @@ export function FileDiffView({
               className="flex-shrink-0"
               onClick={onClose}
             >
-              <X className="w-4 h-4" />
+              <X className="size-4" />
             </Button>
           )}
         </div>

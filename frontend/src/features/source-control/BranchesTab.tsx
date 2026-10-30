@@ -130,7 +130,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               disabled={!newBranchName.trim() || git.createBranch.isPending}
             >
               {git.createBranch.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
                 t('misc.common.create')
               )}
@@ -163,7 +163,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
               onClick={() => setIsCreating(true)}
               title={t('misc.branches.createBranch')}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="size-4" />
               <span className="hidden sm:inline ml-1">{t('misc.branches.branch')}</span>
             </Button>
             {repoUrl && (
@@ -174,7 +174,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                 onClick={() => setWorktreeDialogOpen(true)}
                 title={t('misc.branches.createWorktreeTitle')}
               >
-                <GitBranchPlus className="w-4 h-4" />
+                <GitBranchPlus className="size-4" />
                 <span className="hidden sm:inline ml-1">{t('misc.branches.worktree')}</span>
               </Button>
             )}
@@ -210,9 +210,9 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                   title={isCheckedOutElsewhere ? t('misc.branches.checkedOutElsewhere') : undefined}
                 >
                   {isRemote ? (
-                    <Globe className="w-4 h-4 text-info" />
+                    <Globe className="size-4 text-info" />
                   ) : (
-                    <GitBranch className={cn('w-4 h-4', isCurrent ? GIT_UI_COLORS.current : 'text-muted-foreground')} />
+                    <GitBranch className={cn('size-4', isCurrent ? GIT_UI_COLORS.current : 'text-muted-foreground')} />
                   )}
                   <span className="flex-1 text-sm truncate">{branch.name}</span>
                   {(isCheckedOutElsewhere || (isCurrent && isRepoWorktree)) && (
@@ -221,7 +221,7 @@ export function BranchesTab({ repoId, currentBranch }: BranchesTabProps) {
                   {branch.type === 'local' && !branch.upstream && !branch.isWorktree && !(isCurrent && isRepoWorktree) && (
                     <span className="text-2xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t('misc.branches.localBadge')}</span>
                   )}
-                  {isCurrent && <Check className={`w-4 h-4 ${GIT_UI_COLORS.current}`} />}
+                  {isCurrent && <Check className={`size-4 ${GIT_UI_COLORS.current}`} />}
                 </Row>
               )
             })}

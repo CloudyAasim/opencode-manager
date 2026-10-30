@@ -15,11 +15,11 @@ export function TodoItem({ todo, compact = false }: TodoItemProps) {
   return (
     <div className={`flex items-center gap-1.5 ${compact ? 'py-0.5 text-xs' : 'py-1 text-sm'} pl-0.5`}>
       {isCompleted ? (
-        <CheckCircle2 className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-success flex-shrink-0`} />
+        <CheckCircle2 className={`${compact ? 'size-3' : 'size-3.5'} text-success flex-shrink-0`} />
       ) : isInProgress ? (
         <span className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} rounded-full border-2 border-warning border-t-transparent animate-spin flex-shrink-0`} />
       ) : (
-        <Circle className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-muted-foreground flex-shrink-0`} />
+        <Circle className={`${compact ? 'size-3' : 'size-3.5'} text-muted-foreground flex-shrink-0`} />
       )}
       <span
         className={`flex-1 min-w-0 truncate ${

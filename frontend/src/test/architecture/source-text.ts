@@ -587,8 +587,31 @@ export function heightOf(stories: Map<string, number>[], width: string): number 
 export function cvaBase(text: string, declaration: string): string {
   const at = text.indexOf(`const ${declaration} = cva(`)
   if (at < 0) return ''
-  const quoted = /cva\(\s*['"]([^'"]*)['"]/.exec(text.slice(at))
-  return quoted?.[1] ?? ''
+  // 底子可以是引号里的字面量，也可以是反引号里的模板字符串——
+  // 共享的按钮就写着后者，只认引号的话，它就"读不出自己的底子"。
+  const quoted =
+    /cva\(\s*(?:'([^']*)'|"([^"]*)"|`([\s\S]*?)`)/.exec(text.slice(at))
+  return quoted?.[1] ?? quoted?.[2] ?? quoted?.[3] ?? ''
+}
+
+/**
+ * The icon names a file brought in.
+ *
+ * An icon is not whatever happens to start with a capital letter - it is what
+ * came from the icon library. A rule about icons has to tell the two apart,
+ * or it ends up ruling about buttons and cards in a button's name.
+ */
+export function iconNames(text: string): Set<string> {
+  const names = new Set<string>()
+  for (const match of text.matchAll(
+    /import\s*\{([^}]*)\}\s*from\s*['"]lucide-react['"]/g,
+  )) {
+    for (const piece of match[1]!.split(',')) {
+      const name = piece.trim().split(/\s+as\s+/).pop()?.trim()
+      if (name) names.add(name)
+    }
+  }
+  return names
 }
 
 /**

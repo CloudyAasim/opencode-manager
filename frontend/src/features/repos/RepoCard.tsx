@@ -125,23 +125,23 @@ export function RepoCard({
                 // where the user actually is when they notice something is off.
                 // It is a measurement, not cloneStatus, so it cannot be stale.
                 <span className="flex items-center gap-1.5 text-destructive min-w-0">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <AlertCircle className="size-3.5 shrink-0" />
                   <span className="truncate">{t('repo.directoryMissing')}</span>
                 </span>
               ) : isCloning ? (
                 <span className="flex items-center gap-1.5">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                  <Loader2 className="size-3.5 animate-spin text-primary" />
                   {t('repo.cloning')}
                 </span>
               ) : (
                 <>
                   <span className={`flex items-center gap-1 shrink-0 ${repo.isWorktree ? 'text-worktree' : ''}`}>
-                    <GitBranch className="w-3.5 h-3.5 shrink-0" />
+                    <GitBranch className="size-3.5 shrink-0" />
                     <span className="truncate max-w-[80px]">{branchToDisplay || DEFAULT_REPO_BRANCH}</span>
                   </span>
                   {isDirty && (
                     <span className="flex items-center gap-1 text-primary shrink-0">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <AlertCircle className="size-3.5 shrink-0" />
                       <span className="text-xs whitespace-nowrap">
                         {unstagedCount > 0 && unstagedCount}
                         {unstagedCount > 0 && stagedCount > 0 && "/"}
@@ -159,7 +159,7 @@ export function RepoCard({
                   )}
                   {repo.isLocal && (
                     <span className="flex items-center gap-1 shrink-0">
-                      <FolderOpen className="w-3.5 h-3.5 shrink-0" />
+                      <FolderOpen className="size-3.5 shrink-0" />
                     </span>
                   )}
                 </>

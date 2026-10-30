@@ -76,11 +76,11 @@ export function SkillsEditor({ managedSkills = [] }: SkillsEditorProps) {
       <div className="flex items-center justify-end">
         <div className="flex w-full items-center gap-2 sm:w-auto">
           <Button type="button" variant="outline" onClick={() => setInstallDialogOpen(true)} size="sm">
-            <Download className="h-4 w-4 mr-1" />
+            <Download className="size-4 mr-1" />
             {t('settingsPanels.skillsEditor.installSkill')}
           </Button>
           <Button type="button" onClick={handleCreate} size="sm" className="flex-1 sm:flex-none">
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus className="size-4 mr-1" />
             {t('settingsPanels.skillsEditor.createSkill')}
           </Button>
         </div>

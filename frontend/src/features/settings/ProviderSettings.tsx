@@ -215,12 +215,12 @@ export function ProviderSettings() {
                   <div className="flex flex-wrap items-center gap-2">
                     {hasKey ? (
                       <Badge variant="success" className="shrink-0">
-                        <Check className="h-3 w-3 mr-1" />
+                        <Check className="size-3 mr-1" />
                         {t('settingsPanels.provider.connected')}
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="shrink-0">
-                        <X className="h-3 w-3 mr-1" />
+                        <X className="size-3 mr-1" />
                         {t('settingsPanels.provider.notConnected')}
                       </Badge>
                     )}
@@ -232,7 +232,7 @@ export function ProviderSettings() {
                         setOauthDialogOpen(true)
                       }}
                     >
-                      <Shield className="h-4 w-4 mr-1" />
+                      <Shield className="size-4 mr-1" />
                       {hasKey ? t('settingsPanels.provider.reconnect') : t('settingsPanels.provider.connect')}
                     </Button>
                     {hasKey && (
@@ -293,9 +293,9 @@ export function ProviderSettings() {
             className="w-full justify-start py-2 px-1"
           >
             {connectedExpanded ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="size-4 text-muted-foreground" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <ChevronRight className="size-4 text-muted-foreground" />
             )}
             <span className="font-medium text-sm">{t('settingsPanels.provider.connected')}</span>
             <Badge variant="secondary" className="ml-auto">
@@ -332,7 +332,7 @@ export function ProviderSettings() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Badge variant="success" className="shrink-0">
-                              <Check className="h-3 w-3 mr-1" />
+                              <Check className="size-3 mr-1" />
                               {t('settingsPanels.provider.connected')}
                             </Badge>
                             <Button
@@ -341,7 +341,7 @@ export function ProviderSettings() {
                               onClick={() => handleEditApiKey(provider)}
                               aria-label={t('settingsPanels.provider.editApiKeyFor', { name: provider.name || provider.id })}
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <Pencil className="size-3.5" />
                             </Button>
                             <Button
                               size="icon-sm"
@@ -351,7 +351,7 @@ export function ProviderSettings() {
                               aria-label={t('settingsPanels.provider.removeCredentialsFor', { name: provider.name || provider.id })}
                               className="text-destructive hover:text-destructive"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="size-3.5" />
                             </Button>
                           </div>
                         </div>
@@ -373,9 +373,9 @@ export function ProviderSettings() {
             className="w-full justify-start py-2 px-1"
           >
             {availableExpanded ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="size-4 text-muted-foreground" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <ChevronRight className="size-4 text-muted-foreground" />
             )}
             <span className="font-medium text-sm">{t('settingsPanels.provider.availableProviders')}</span>
             <Badge variant="secondary" className="ml-auto">
@@ -386,7 +386,7 @@ export function ProviderSettings() {
           {availableExpanded && (
             <div className="pl-6 space-y-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   placeholder={t('settingsPanels.provider.searchPlaceholder')}
                   value={availableSearch}
@@ -430,7 +430,7 @@ export function ProviderSettings() {
                           onClick={() => handleAddApiKey(provider)}
                           className="px-2"
                         >
-                          <Key className="h-3.5 w-3.5 mr-1" />
+                          <Key className="size-3.5 mr-1" />
                           {t('settingsPanels.provider.addKey')}
                         </Button>
                       </div>

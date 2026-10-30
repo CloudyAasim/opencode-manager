@@ -129,7 +129,7 @@ export function RepoRowActions({
               title={t('repo.actions.repositoryActions')}
               onClick={(e) => e.stopPropagation()}
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -142,25 +142,25 @@ export function RepoRowActions({
               onClick={() => handleSourceControlOpen(true)}
               disabled={!isReady}
             >
-              <GitBranch className="w-4 h-4 mr-2" />
+              <GitBranch className="size-4 mr-2" />
               {t('repo.actions.sourceControl')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setShowResetPermissions(true)}
               disabled={!isReady}
             >
-              <ShieldAlert className="w-4 h-4 mr-2" />
+              <ShieldAlert className="size-4 mr-2" />
               {t('repo.actions.resetPermissions')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleRenameOpen(true)}>
-              <Pencil className="w-4 h-4 mr-2" />
+              <Pencil className="size-4 mr-2" />
               {t('repo.actions.rename')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleDownloadDialogOpen(true)}
               disabled={!isReady}
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="size-4 mr-2" />
               {t('repo.actions.download')}
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -169,9 +169,9 @@ export function RepoRowActions({
               className="text-destructive"
             >
               {isDeleting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
               ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="size-4 mr-2" />
               )}
               {repo.isLocal ? t('repo.unlink') : t('repo.delete')}
             </DropdownMenuItem>
@@ -229,7 +229,7 @@ export function RepoRowActions({
                 onClick={() => handleRenameOpen(true)}
                 title={t('repo.actions.renameRepository')}
               >
-                <Pencil className="w-4 h-4" />
+                <Pencil className="size-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('repo.actions.renameRepository')}</TooltipContent>
@@ -245,7 +245,7 @@ export function RepoRowActions({
                 disabled={!isReady}
                 title={t('repo.actions.sourceControl')}
               >
-                <GitBranch className="w-4 h-4" />
+                <GitBranch className="size-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('repo.actions.sourceControl')}</TooltipContent>
@@ -261,7 +261,7 @@ export function RepoRowActions({
                   onClick={() => handleWorktreeDialogOpen(true)}
                   title={t('repo.actions.createWorktree')}
                 >
-                  <GitBranchPlus className="w-4 h-4" />
+                  <GitBranchPlus className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('repo.actions.createWorktree')}</TooltipContent>
@@ -278,7 +278,7 @@ export function RepoRowActions({
                   disabled={!isReady}
                   title={t('repo.actions.resetPermissions')}
                 >
-                  <ShieldAlert className="w-4 h-4" />
+                  <ShieldAlert className="size-4" />
                 </Button>
             </TooltipTrigger>
             <TooltipContent>{t('repo.actions.resetPermissions')}</TooltipContent>
@@ -294,7 +294,7 @@ export function RepoRowActions({
                 disabled={!isReady}
                 title={t('repo.actions.downloadRepository')}
               >
-                <Download className="w-4 h-4" />
+                <Download className="size-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t('repo.actions.downloadRepository')}</TooltipContent>
@@ -312,9 +312,9 @@ export function RepoRowActions({
                 title={deleteLabel}
               >
                 {isDeleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="size-4" />
                 )}
               </Button>
             </TooltipTrigger>

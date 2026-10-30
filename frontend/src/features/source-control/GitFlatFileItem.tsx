@@ -87,9 +87,9 @@ export function GitFlatFileItem({ file, isSelected, onSelect, onStage, onUnstage
           onClick={handleAction}
         >
           {file.staged ? (
-            <Minus className={cn('w-3 h-3', GIT_UI_COLORS.unstage)} />
+            <Minus className={cn('size-3', GIT_UI_COLORS.unstage)} />
           ) : (
-            <Plus className={cn('w-3 h-3', GIT_UI_COLORS.stage)} />
+            <Plus className={cn('size-3', GIT_UI_COLORS.stage)} />
           )}
         </Button>
       )}
@@ -101,7 +101,7 @@ export function GitFlatFileItem({ file, isSelected, onSelect, onStage, onUnstage
           onClick={handleDiscard}
           title={t('misc.fileItem.discardChanges')}
         >
-          <RotateCcw className="w-3 h-3 text-diff-remove" />
+          <RotateCcw className="size-3 text-diff-remove" />
         </Button>
       )}
     </div>

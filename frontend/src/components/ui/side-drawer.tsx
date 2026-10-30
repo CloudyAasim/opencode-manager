@@ -145,7 +145,7 @@ export function SideDrawerHeader({ title, onClose, meta }: SideDrawerHeaderProps
         className="shrink-0 text-muted-foreground hover:text-foreground"
         aria-label={t('ui.sideDrawer.close')}
       >
-        <X className="w-5 h-5" />
+        <X className="size-5" />
       </Button>
     </div>
   )

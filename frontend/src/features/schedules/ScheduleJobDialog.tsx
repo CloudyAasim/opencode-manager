@@ -402,7 +402,7 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
         <DialogFooter variant="divided" className="mt-0 shrink-0 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} size="touch" className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={isSaving || !name.trim() || !prompt.trim() || isScheduleConfigInvalid || (!!showRepoSelector && !job && selectedRepoId === undefined)} size="touch" className="flex-1 sm:flex-none">
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             {isSaving ? t('schedules.common.saving') : job ? t('schedules.common.saveChanges') : t('schedules.scheduleDialog.create')}
           </Button>
         </DialogFooter>

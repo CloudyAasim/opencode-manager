@@ -362,7 +362,7 @@ export function ModelQuickSelect({
     if (favoriteModelsWithNames.length > 0) {
       sections.push({
         title: t('misc.modelQuickSelect.favorites'),
-        icon: <Star className="h-3.5 w-3.5" />,
+        icon: <Star className="size-3.5" />,
         models: favoriteModelsWithNames,
       })
     }
@@ -370,7 +370,7 @@ export function ModelQuickSelect({
     if (recentModelsWithNames.length > 0) {
       sections.push({
         title: t('misc.modelQuickSelect.recent'),
-        icon: <Clock className="h-3.5 w-3.5" />,
+        icon: <Clock className="size-3.5" />,
         models: recentModelsWithNames,
       })
     }
@@ -378,7 +378,7 @@ export function ModelQuickSelect({
     if (sections.length === 0 && quickModels.length > 0) {
       sections.push({
         title: t('misc.modelQuickSelect.models'),
-        icon: <ChevronRight className="h-3.5 w-3.5" />,
+        icon: <ChevronRight className="size-3.5" />,
         models: quickModels,
       })
     }
@@ -502,7 +502,7 @@ export function ModelQuickSelect({
             className="text-muted-foreground/60 hover:text-foreground/80"
             aria-label={t('misc.modelQuickSelect.removeFromRecent')}
           >
-            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            <Trash2 className="size-3.5 text-destructive" />
           </Button>
         )}
         <Button
@@ -516,9 +516,9 @@ export function ModelQuickSelect({
           className="text-muted-foreground hover:text-foreground"
           aria-label={isFavorite ? t('misc.modelQuickSelect.removeFromFavorites') : t('misc.modelQuickSelect.addToFavorites')}
         >
-          <Star className={`h-4 w-4 ${isFavorite ? 'fill-warning text-warning' : ''}`} />
+          <Star className={`size-4 ${isFavorite ? 'fill-warning text-warning' : ''}`} />
         </Button>
-        {isSelected && <Check className="h-5 w-5 shrink-0 pr-2 text-warning" />}
+        {isSelected && <Check className="size-5 shrink-0 pr-2 text-warning" />}
       </div>
     )
   }
@@ -537,7 +537,7 @@ export function ModelQuickSelect({
           <span className="block truncate text-sm font-medium text-foreground">{provider.label}</span>
           <span className="mt-0.5 block truncate text-xs text-muted-foreground">{t(provider.count === 1 ? 'misc.modelQuickSelect.modelCountOne' : 'misc.modelQuickSelect.modelCountOther', { n: provider.count })}</span>
         </span>
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
       </button>
     )
   }
@@ -550,12 +550,12 @@ export function ModelQuickSelect({
         <DropdownMenuLabel>{t('misc.modelQuickSelect.variant')}</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => clearVariant()} className={!currentVariant ? 'text-warning' : ''}>
           {t('misc.modelQuickSelect.defaultVariant')}
-          {!currentVariant && <Check className="ml-auto h-4 w-4" />}
+          {!currentVariant && <Check className="ml-auto size-4" />}
         </DropdownMenuItem>
         {availableVariants.map(variant => (
           <DropdownMenuItem key={variant} onClick={() => setVariant(variant)} className={currentVariant === variant ? 'text-warning' : ''}>
             <span className="capitalize">{variant}</span>
-            {currentVariant === variant && <Check className="ml-auto h-4 w-4" />}
+            {currentVariant === variant && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         ))}
       </>
@@ -600,10 +600,10 @@ export function ModelQuickSelect({
                 className="shrink-0 text-foreground"
                 aria-label={t('misc.modelQuickSelect.backToQuickModels')}
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="size-5" />
               </Button>
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -624,7 +624,7 @@ export function ModelQuickSelect({
                 className="text-foreground"
                 aria-label={t('misc.modelQuickSelect.closeSelector')}
               >
-                <X className="h-5 w-5" />
+                <X className="size-5" />
               </Button>
               <div className="min-w-0 flex-1 px-3 text-center">
                 <h2 className="truncate text-lg font-semibold tracking-tight leading-none">
@@ -647,7 +647,7 @@ export function ModelQuickSelect({
                       aria-label={t('misc.modelQuickSelect.currentVariant', { variant: selectedVariantLabel })}
                     >
                       <span className="truncate">{selectedVariantLabel}</span>
-                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="z-[350] min-w-56">
@@ -787,7 +787,7 @@ export function ModelQuickSelect({
               >
                 <button type="button" onClick={() => setShowAllModels(true)}>
                   <span>{t('misc.modelQuickSelect.moreModels')}</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  <ChevronRight className="size-5 text-muted-foreground" />
                 </button>
               </Card>
             </div>

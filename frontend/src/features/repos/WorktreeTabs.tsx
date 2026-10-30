@@ -36,13 +36,13 @@ export function WorktreeTabs({
       <Tabs value={value} onValueChange={(next) => onValueChange(next as WorktreeTabValue)} className="min-w-0">
         <TabsList className="w-full justify-start gap-1 overflow-hidden">
           <TabsTrigger value="repo" className={tabClassName}>
-            <GitBranch className="h-3 w-3 shrink-0" />
+            <GitBranch className="size-3 shrink-0" />
             <span className={`min-w-0 truncate ${activeLabelClassName}`}>{baseLabel}</span>
           </TabsTrigger>
           {hasWorkspaces ? (
             <>
               <TabsTrigger value="workspaces" className={tabClassName} onClick={onWorkspaceMenu}>
-                <Layers className="h-3 w-3 shrink-0 text-primary" />
+                <Layers className="size-3 shrink-0 text-primary" />
                 <span className={`min-w-0 truncate ${activeLabelClassName}`}>{workspaceLabel}</span>
                 <span className={`shrink-0 text-xs text-muted-foreground ${activeLabelClassName}`}>({workspaces.length})</span>
               </TabsTrigger>
@@ -55,9 +55,9 @@ export function WorktreeTabs({
               onClick={onCreateWorkspace}
               className="min-w-0 flex-1 justify-center text-muted-foreground hover:text-foreground sm:flex-none"
             >
-              <Layers className="h-3 w-3 shrink-0 text-primary" />
+              <Layers className="size-3 shrink-0 text-primary" />
               <span className="min-w-0 truncate">{t('repo.workspace')}</span>
-              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <Plus className="size-3.5 shrink-0" />
             </Button>
           )}
         </TabsList>

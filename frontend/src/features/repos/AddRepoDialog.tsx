@@ -195,7 +195,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                   className="shrink-0 px-3 text-muted-foreground"
                   aria-label={t('repo.addDialog.browseForFolder')}
                 >
-                  <FolderSearch className="h-4 w-4" />
+                  <FolderSearch className="size-4" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -221,7 +221,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                   className="shrink-0 px-3 text-muted-foreground"
                   aria-label={t('repo.addDialog.browseForFolder')}
                 >
-                  <FolderSearch className="h-4 w-4" />
+                  <FolderSearch className="size-4" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -308,7 +308,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
           >
             {mutation.isPending ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
                 {repoType === 'local' ? t('repo.addDialog.linking') : repoType === 'folder' ? t('repo.addDialog.discovering') : t('repo.cloning')}
               </>
             ) : (

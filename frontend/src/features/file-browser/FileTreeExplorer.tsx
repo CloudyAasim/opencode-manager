@@ -71,15 +71,15 @@ function TreeNode({ file, guides, isLast, selectedPath, onSelectFile }: TreeNode
         <span className="whitespace-pre font-mono text-xs text-muted-foreground select-none">{prefix}</span>
         {file.isDirectory ? (
           <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground">
-            {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
           </span>
         ) : (
           <span className="h-4 w-4 shrink-0" />
         )}
         {file.isDirectory ? (
-          expanded ? <FolderOpen className="h-4 w-4 shrink-0 text-primary" /> : <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+          expanded ? <FolderOpen className="size-4 shrink-0 text-primary" /> : <Folder className="size-4 shrink-0 text-muted-foreground" />
         ) : (
-          <File className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <File className="size-4 shrink-0 text-muted-foreground" />
         )}
         <span className="truncate">{file.name}</span>
       </Row>
@@ -159,7 +159,7 @@ export const FileTreeExplorer = memo(function FileTreeExplorer({
           className="text-muted-foreground hover:text-foreground"
           aria-label={t('repo.fileBrowser.refresh')}
         >
-          <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+          <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
         </Button>
       </div>
 

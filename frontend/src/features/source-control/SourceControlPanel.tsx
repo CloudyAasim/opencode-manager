@@ -40,7 +40,7 @@ export function SourceControlPanel({
         <DialogTitleBar
           title={
             <>
-              <GitBranch className="w-5 h-5" />
+              <GitBranch className="size-5" />
               {isMobile && repoName ? repoName : t('misc.sourceControl.title')}
             </>
           }
@@ -54,7 +54,7 @@ export function SourceControlPanel({
               onClick={onClose}
               className="absolute right-2 top-1/2 -translate-y-1/2"
             >
-              <X className="h-6 w-6" />
+              <X className="size-6" />
             </Button>
           )}
         </DialogTitleBar>

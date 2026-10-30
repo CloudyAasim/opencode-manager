@@ -97,11 +97,11 @@ function TTSButton({ messageId, content, className = "" }: TTSButtonProps) {
         disabled={isLoading && !isThisPlaying}
       >
       {isLoading && isThisPlaying ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="size-4 animate-spin" />
       ) : isThisPlaying ? (
-        <VolumeX className="w-4 h-4" />
+        <VolumeX className="size-4" />
       ) : (
-        <Volume2 className="w-4 h-4" />
+        <Volume2 className="size-4" />
       )}
     </Button>
   )

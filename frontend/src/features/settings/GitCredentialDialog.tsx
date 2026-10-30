@@ -198,7 +198,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                   disabled={isSaving}
                   className="flex-1"
                 >
-                  <Key className="h-4 w-4 mr-2" />
+                  <Key className="size-4 mr-2" />
                   {t('settingsPanels.gitCredential.pat')}
                 </Button>
                 <Button
@@ -213,7 +213,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                   disabled={isSaving}
                   className="flex-1"
                 >
-                  <Lock className="h-4 w-4 mr-2" />
+                  <Lock className="size-4 mr-2" />
                   {t('settingsPanels.gitCredential.sshKey')}
                 </Button>
               </div>
@@ -372,12 +372,12 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                   disabled={isTesting || isSaving || !formData.sshPrivateKey?.trim()}
                   className="w-full"
                 >
-                  {isTesting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {isTesting && <Loader2 className="size-4 mr-2 animate-spin" />}
                   {t('settingsPanels.gitCredential.testConnection')}
                 </Button>
 
                 <Alert>
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="size-4" />
                   <p className="text-sm font-medium">{t('settingsPanels.gitCredential.securityNotice')}</p>
                   <p className="text-xs mt-1">
                     {t('settingsPanels.gitCredential.securityNoticeDescription')}
@@ -406,7 +406,7 @@ export function GitCredentialDialog({ open, onOpenChange, onSave, credential, re
                      (formData.type === 'ssh' && !formData.sshPrivateKey?.trim())}
             className="flex-1 sm:flex-none"
           >
-            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isSaving && <Loader2 className="size-4 mr-2 animate-spin" />}
             {credential ? t('settingsPanels.gitCredential.update') : t('settingsPanels.gitCredential.add')}
           </Button>
         </DialogFooter>

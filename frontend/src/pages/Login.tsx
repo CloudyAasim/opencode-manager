@@ -108,7 +108,7 @@ export function Login() {
               className="w-full transition-all duration-200"
               onClick={() => shell.changeServer()}
             >
-              <Server className="mr-2 h-4 w-4" />
+              <Server className="mr-2 size-4" />
               {t('auth.changeServer')}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
@@ -129,9 +129,9 @@ export function Login() {
             disabled={isSubmitting || isPasskeyLoading}
           >
             {isPasskeyLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 size-4 animate-spin" />
             ) : (
-              <KeyRound className="mr-2 h-4 w-4" />
+              <KeyRound className="mr-2 size-4" />
             )}
             {t('auth.signInWithPasskey')}
           </Button>
@@ -147,9 +147,9 @@ export function Login() {
                 disabled={!!oauthLoading}
               >
                 {oauthLoading === 'github' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
-                  <Github className="mr-2 h-4 w-4" />
+                  <Github className="mr-2 size-4" />
                 )}
                 {t('auth.continueWithGithub')}
               </Button>
@@ -162,7 +162,7 @@ export function Login() {
                 disabled={!!oauthLoading}
               >
                 {oauthLoading === 'google' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                     <path
@@ -194,7 +194,7 @@ export function Login() {
                 disabled={!!oauthLoading}
               >
                 {oauthLoading === 'discord' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                     <path
@@ -242,7 +242,7 @@ export function Login() {
               busy={isSubmitting}
               busyLabel={t('auth.signIn')}
               idleLabel={t('auth.signIn')}
-              idleIcon={<Mail className="h-4 w-4" />}
+              idleIcon={<Mail className="size-4" />}
               disabled={isPasskeyLoading}
             />
           </form>

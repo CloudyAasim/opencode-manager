@@ -46,9 +46,9 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
 
   const getStatusIcon = () => {
     if (!status) return null
-    if (status.source === 'db') return <CheckCircle2 className="h-4 w-4 text-success" />
-    if (status.source === 'env') return <CheckCircle2 className="h-4 w-4 text-primary" />
-    return <XCircle className="h-4 w-4 text-destructive" />
+    if (status.source === 'db') return <CheckCircle2 className="size-4 text-success" />
+    if (status.source === 'env') return <CheckCircle2 className="size-4 text-primary" />
+    return <XCircle className="size-4 text-destructive" />
   }
 
   return (
@@ -66,7 +66,7 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
     >
       {status?.source === 'none' && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <AlertTriangle className="size-4" />
           <AlertDescription>
             {t('settingsPanels.serverAuth.dockerWarning')}
           </AlertDescription>
@@ -90,7 +90,7 @@ export function OpenCodeServerAuthSettings({ isOpen: controlledOpen, onToggle }:
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
         <Button

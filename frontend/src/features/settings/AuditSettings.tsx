@@ -140,14 +140,14 @@ export function AuditSettings() {
           <>
             <Button variant="outline" size="sm" onClick={() => auditQuery.refetch()} disabled={auditQuery.isFetching}>
               {auditQuery.isFetching ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="mr-2 size-4" />
               )}
               {t('settings.audit.refresh')}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setPruneOpen(true)}>
-              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+              <Trash2 className="mr-2 size-4 text-destructive" />
               {t('settings.audit.prune')}
             </Button>
           </>
@@ -156,14 +156,14 @@ export function AuditSettings() {
 
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="size-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {notice && (
         <Alert variant="success">
-          <CheckCircle className="h-4 w-4" />
+          <CheckCircle className="size-4" />
           <AlertDescription>{notice}</AlertDescription>
         </Alert>
       )}
@@ -200,7 +200,7 @@ export function AuditSettings() {
       <Card variant="flat">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <History className="h-4 w-4 sm:h-5 sm:w-5" />
+            <History className="size-4 sm:size-5" />
             {t('settings.audit.title')}
           </CardTitle>
           <CardDescription>{t('settings.audit.description')}</CardDescription>
@@ -275,7 +275,7 @@ export function AuditSettings() {
       <Card variant="flat">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <FileCog className="h-4 w-4 sm:h-5 sm:w-5" />
+            <FileCog className="size-4 sm:size-5" />
             {t('settings.audit.configTitle')}
           </CardTitle>
           <CardDescription>

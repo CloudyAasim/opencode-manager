@@ -209,7 +209,7 @@ export function OpenCodeConfigManager() {
        {health?.opencodeRestartPending && (
          <div className="flex flex-col gap-2 rounded-md border border-warning bg-warning p-3 sm:flex-row sm:items-center sm:justify-between">
            <div className="flex items-center gap-2">
-             <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+             <AlertTriangle className="size-4 shrink-0 text-warning" />
              <p className="text-sm">
                {t('settingsPanels.configManager.restartPending')}
              </p>
@@ -221,9 +221,9 @@ export function OpenCodeConfigManager() {
              className="shrink-0"
            >
              {restartServerMutation.isPending ? (
-               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+               <Loader2 className="size-3 mr-1 animate-spin" />
              ) : (
-               <RotateCcw className="h-3 w-3 mr-1" />
+               <RotateCcw className="size-3 mr-1" />
              )}
              {t('settingsPanels.configManager.restartNow')}
            </Button>
@@ -246,7 +246,7 @@ export function OpenCodeConfigManager() {
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-2">
-              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <FileText className="mt-0.5 size-4 shrink-0 text-primary" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{getConfigFileName(config.path)}</p>
                 <details className="text-xs text-muted-foreground">
@@ -266,7 +266,7 @@ export function OpenCodeConfigManager() {
                 size="compact"
                 onClick={() => setIsEditDialogOpen(true)}
               >
-                <Edit className="h-3.5 w-3.5 mr-1" />
+                <Edit className="size-3.5 mr-1" />
                 {t('settingsPanels.configManager.edit')}
               </Button>
               <Button
@@ -274,7 +274,7 @@ export function OpenCodeConfigManager() {
                 size="compact"
                 onClick={() => downloadConfig(config)}
               >
-                <Download className="h-3.5 w-3.5 mr-1" />
+                <Download className="size-3.5 mr-1" />
                 {t('settingsPanels.configManager.download')}
               </Button>
             </div>
@@ -334,7 +334,7 @@ export function OpenCodeConfigManager() {
             onClick={() => toggleSection('agentsMd', agentsMdRef)}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <FileText className="h-4 w-4 shrink-0 text-primary" />
+              <FileText className="size-4 shrink-0 text-primary" />
               <div className="min-w-0 text-left">
                 <h4 className="text-sm font-medium">{t('settingsPanels.configManager.agentsMdTitle')}</h4>
                 <p className={SECTION_META_CLASS}>{t('settingsPanels.configManager.agentsMdMeta')}</p>
@@ -532,7 +532,7 @@ export function OpenCodeConfigManager() {
             onClick={() => toggleSection('hostImport', hostImportRef)}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <Download className="h-4 w-4 shrink-0 text-primary" />
+              <Download className="size-4 shrink-0 text-primary" />
               <h4 className={SECTION_TITLE_CLASS}>{t('settingsPanels.configManager.hostImportTitle')}</h4>
             </div>
             <ChevronDown className={cn(SECTION_CHEVRON_CLASS, expandedSections.hostImport && 'rotate-180')} />
@@ -570,9 +570,9 @@ export function OpenCodeConfigManager() {
               }}
             >
               {syncOpenCodeImportMutation.isPending ? (
-                <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 animate-spin" />
+                <Loader2 className="size-3 sm:size-4 mr-1 animate-spin" />
               ) : (
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <Download className="size-3 sm:size-4 mr-1" />
               )}
               <span className="text-sm">{t('settingsPanels.configManager.importFromHost')}</span>
             </Button>
@@ -592,7 +592,7 @@ export function OpenCodeConfigManager() {
             </div>
             {!isImportStatusLoading && workspaceConfigPathsToRemove.length > 0 && (
               <p className="flex items-start gap-2 text-xs text-warning">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 <span>
                   {t('settingsPanels.configManager.importingRemoves', { files: workspaceConfigPathsToRemove.map(getConfigFileName).join(', ') })}{' '}
                   {hostConfigSourcePaths.length > 1 && (

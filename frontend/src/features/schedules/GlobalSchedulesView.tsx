@@ -302,7 +302,7 @@ export function GlobalSchedulesView() {
             detail={t('common.loadFailedHint')}
             action={
               <Button variant="outline" onClick={() => navigate('/')}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ArrowLeft className="size-4 mr-2" />
                 {t('schedules.global.backToHome')}
               </Button>
             }
@@ -326,7 +326,7 @@ export function GlobalSchedulesView() {
               size="sm"
               className="hidden sm:flex"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="size-4 mr-2" />
               {t('schedules.global.newSchedule')}
             </Button>
             <Button
@@ -335,7 +335,7 @@ export function GlobalSchedulesView() {
               aria-label={t('schedules.global.newSchedule')}
               className="sm:hidden"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="size-5" />
             </Button>
           </Header.Actions>
         </div>
@@ -370,7 +370,7 @@ export function GlobalSchedulesView() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon-sm" aria-label={t('schedules.global.filters')} className="sm:hidden shrink-0 relative">
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <SlidersHorizontal className="size-3.5" />
                     {(statusFilter !== 'all' || scheduleModeFilter !== 'all') && (
                       <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
                     )}
@@ -516,7 +516,7 @@ export function GlobalSchedulesView() {
                     detail={t('schedules.global.noSchedulesHint')}
                     action={
                       <Button onClick={() => navigate('/')}>
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="size-4 mr-2" />
                         {t('schedules.global.goToRepositories')}
                       </Button>
                     }
@@ -578,20 +578,20 @@ export function GlobalSchedulesView() {
 
                       <div className="space-y-2 text-xs text-muted-foreground">
                         <div className="flex items-center gap-2">
-                          <CalendarClock className="h-3.5 w-3.5" />
+                          <CalendarClock className="size-3.5" />
                           <span className="truncate">
                             {formatScheduleShortLabel(t, job)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Clock3 className="h-3.5 w-3.5" />
+                          <Clock3 className="size-3.5" />
                           <span>
                             {t('schedules.global.next')} {job.nextRunAt ? new Date(job.nextRunAt).toLocaleString() : t('schedules.time.never')}
                           </span>
                         </div>
                         {job.lastRunAt && (
                           <div className="flex items-center gap-2">
-                            <History className="h-3.5 w-3.5" />
+                            <History className="size-3.5" />
                             <span>
                               {t('schedules.global.last')} {formatTimestamp(t, job.lastRunAt)}
                             </span>
@@ -610,7 +610,7 @@ export function GlobalSchedulesView() {
                           }}
                           disabled={runMutation.isPending}
                         >
-                          <PlayCircle className="h-3.5 w-3.5 mr-1" />
+                          <PlayCircle className="size-3.5 mr-1" />
                           {t('schedules.global.run')}
                         </Button>
                         <Button
@@ -623,9 +623,9 @@ export function GlobalSchedulesView() {
                           }}
                         >
                           {job.enabled ? (
-                            <Pause className="h-3.5 w-3.5" />
+                            <Pause className="size-3.5" />
                           ) : (
-                            <Play className="h-3.5 w-3.5" />
+                            <Play className="size-3.5" />
                           )}
                         </Button>
                         <Button
@@ -637,7 +637,7 @@ export function GlobalSchedulesView() {
                             handleEdit(job)
                           }}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="size-3.5" />
                         </Button>
                         <Button
                           variant="outline"
@@ -649,7 +649,7 @@ export function GlobalSchedulesView() {
                               openDeleteJob(job.id)
                             }}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="size-3.5" />
                         </Button>
                       </div>
                     </CardContent>
@@ -674,7 +674,7 @@ export function GlobalSchedulesView() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon-sm" aria-label={t('schedules.global.filters')} className="sm:hidden shrink-0 relative">
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <SlidersHorizontal className="size-3.5" />
                     {(runStatusFilter !== 'all' || runTriggerFilter !== 'all' || runSortOption !== 'startedAt') && (
                       <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
                     )}

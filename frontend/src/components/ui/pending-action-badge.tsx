@@ -56,7 +56,7 @@ export function PendingActionBadge({
         className
       )}
     >
-      <Icon className="w-4 h-4" />
+      <Icon className="size-4" />
       <span
         className={cn(
           'absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse',

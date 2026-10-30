@@ -49,15 +49,15 @@ export function ProjectInfoPanel({ repoId, name, directory, branch }: ProjectInf
       </div>
 
       <div className="flex items-center gap-2">
-        <GitBranch className="h-4 w-4 text-muted-foreground" />
+        <GitBranch className="size-4 text-muted-foreground" />
         <span className="font-mono text-xs">{branchLabel || '—'}</span>
         {status && (status.ahead > 0 || status.behind > 0) ? (
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             {status.ahead > 0 ? (
-              <span className="flex items-center gap-0.5"><ArrowUp className="h-3 w-3" />{status.ahead}</span>
+              <span className="flex items-center gap-0.5"><ArrowUp className="size-3" />{status.ahead}</span>
             ) : null}
             {status.behind > 0 ? (
-              <span className="flex items-center gap-0.5"><ArrowDown className="h-3 w-3" />{status.behind}</span>
+              <span className="flex items-center gap-0.5"><ArrowDown className="size-3" />{status.behind}</span>
             ) : null}
           </span>
         ) : null}
@@ -73,7 +73,7 @@ export function ProjectInfoPanel({ repoId, name, directory, branch }: ProjectInf
       {gitEnabled ? (
         <div>
           <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <GitCommitHorizontal className="h-3.5 w-3.5" />
+            <GitCommitHorizontal className="size-3.5" />
             {t('repo.info.recentCommits')}
           </div>
           {commits.length === 0 ? (

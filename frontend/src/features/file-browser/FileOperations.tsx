@@ -60,23 +60,23 @@ export const FileOperations = memo(function FileOperations({ onUpload, onCreate 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
-              <Upload className="w-4 h-4" />
+              <Upload className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-              <File className="w-4 h-4 mr-2" />
+              <File className="size-4 mr-2" />
               {t('repo.fileBrowser.create.files')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => folderInputRef.current?.click()}>
-              <Folder className="w-4 h-4 mr-2" />
+              <Folder className="size-4 mr-2" />
               {t('repo.fileBrowser.create.folder')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
         <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-          <Upload className="w-4 h-4" />
+          <Upload className="size-4" />
           <span className="hidden sm:inline ml-1">{t('repo.fileBrowser.create.upload')}</span>
         </Button>
       )}
@@ -84,7 +84,7 @@ export const FileOperations = memo(function FileOperations({ onUpload, onCreate 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm">
-            <Plus className="w-4 h-4" />
+            <Plus className="size-4" />
           </Button>
         </DialogTrigger>
         <DialogContent>
@@ -100,13 +100,13 @@ export const FileOperations = memo(function FileOperations({ onUpload, onCreate 
               <SelectContent>
                 <SelectItem value="file">
                   <div className="flex items-center gap-2">
-                    <FilePlus className="w-4 h-4" />
+                    <FilePlus className="size-4" />
                     {t('repo.fileBrowser.create.file')}
                   </div>
                 </SelectItem>
                 <SelectItem value="folder">
                   <div className="flex items-center gap-2">
-                    <FolderPlus className="w-4 h-4" />
+                    <FolderPlus className="size-4" />
                     {t('repo.fileBrowser.create.folder')}
                   </div>
                 </SelectItem>

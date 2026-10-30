@@ -159,13 +159,13 @@ export function MultiSelect({
                 className="text-muted-foreground hover:text-foreground disabled:pointer-events-none"
                 aria-label={t('ui.multiSelect.removeOption', { label: option?.label ?? v })}
               >
-                <X className="h-3 w-3" />
+                <X className="size-3" />
               </button>
             </span>
           )
         })}
         <ChevronDown className={cn(
-          'ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+          'ml-auto size-4 shrink-0 text-muted-foreground transition-transform',
           isOpen && 'rotate-180'
         )} />
       </div>
@@ -211,7 +211,7 @@ export function MultiSelect({
                       'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
                       isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border'
                     )}>
-                      {isSelected && <Check className="h-3 w-3" />}
+                      {isSelected && <Check className="size-3" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">{option.label}</div>

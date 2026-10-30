@@ -42,8 +42,8 @@ export const RetryPart = memo(function RetryPart({ part }: RetryPartProps) {
     <div className="flex items-center gap-3 p-3 my-2 rounded-lg bg-warning border border-warning">
       <div className="flex-shrink-0">
         <div className="relative">
-          <RefreshCw className="w-5 h-5 text-warning animate-spin" style={{ animationDuration: '2s' }} />
-          <AlertTriangle className="w-3 h-3 text-warning absolute -bottom-0.5 -right-0.5" />
+          <RefreshCw className="size-5 text-warning animate-spin" style={{ animationDuration: '2s' }} />
+          <AlertTriangle className="size-3 text-warning absolute -bottom-0.5 -right-0.5" />
         </div>
       </div>
       <div className="flex-1 min-w-0">

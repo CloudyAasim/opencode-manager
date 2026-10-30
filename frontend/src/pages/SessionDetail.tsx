@@ -802,7 +802,7 @@ export function SessionDetail() {
                 className="text-muted-foreground hover:text-foreground px-2 gap-1"
                 title={t('session.header.backToParent')}
               >
-                <CornerUpLeft className="w-3.5 h-3.5" />
+                <CornerUpLeft className="size-3.5" />
                 <span className="hidden sm:inline text-xs">{t('session.header.parent')}</span>
               </Button>
             )}
@@ -814,7 +814,7 @@ export function SessionDetail() {
               title={t('navigation.sessions')}
               className="shrink-0 bg-accent text-foreground"
             >
-              <PanelLeft className="h-4 w-4" />
+              <PanelLeft className="size-4" />
             </Button>
             <Header.EditableTitle
               value={session?.title || t('session.card.untitled')}
@@ -846,7 +846,7 @@ export function SessionDetail() {
               title={t('navigation.detail')}
               className="bg-accent text-foreground"
             >
-              <PanelRight className="h-4 w-4" />
+              <PanelRight className="size-4" />
             </Button>
           </Header.Actions>
         </Header>
@@ -930,11 +930,11 @@ export function SessionDetail() {
                   phone instead of the 28px they use with a mouse. */}
               <div className="mb-1.5 flex items-center gap-1 overflow-x-auto scrollbar-thin">
                 <Button variant="ghost"  className="shrink-0 gap-1 px-2 sm:h-7" onClick={() => navigate('/files')}>
-                  <Folder className="h-3.5 w-3.5" />
+                  <Folder className="size-3.5" />
                   <span className="hidden sm:inline">{t('navigation.files')}</span>
                 </Button>
                 <Button variant="ghost"  className="shrink-0 gap-1 px-2 sm:h-7" onClick={() => setSkillsDialogOpen(true)}>
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Sparkles className="size-3.5" />
                   <span className="hidden sm:inline">{t('navigation.skills')}</span>
                 </Button>
                 <Button
@@ -946,7 +946,7 @@ export function SessionDetail() {
                   aria-expanded={commandsPanelOpen}
                   data-testid="session-commands-trigger"
                 >
-                  <CommandIcon className="h-3.5 w-3.5" />
+                  <CommandIcon className="size-3.5" />
                   <span className="hidden sm:inline">{t('navigation.commands')}</span>
                 </Button>
                 <Button
@@ -957,27 +957,27 @@ export function SessionDetail() {
                   title={t('navigation.mentionFile')}
                   data-testid="session-mention-file-trigger"
                 >
-                  <FileText className="h-3.5 w-3.5" />
+                  <FileText className="size-3.5" />
                   <span className="hidden sm:inline">{t('navigation.mentionFile')}</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost"  className="shrink-0 gap-1 px-2 sm:h-7" aria-label={t('navigation.more')}>
-                      <Plus className="h-3.5 w-3.5" />
+                      <Plus className="size-3.5" />
                       <span className="hidden sm:inline">{t('navigation.more')}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     <DropdownMenuItem onClick={() => setSourceControlOpen(true)}>
-                      <GitPullRequest className="h-4 w-4 mr-2" />
+                      <GitPullRequest className="size-4 mr-2" />
                       {t('navigation.sourceControl')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate(`/repos/${repoId}/schedules`)}>
-                      <CalendarClock className="h-4 w-4 mr-2" />
+                      <CalendarClock className="size-4 mr-2" />
                       {t('navigation.schedules')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setMcpDialogOpen(true)}>
-                      <Plug className="h-4 w-4 mr-2" />
+                      <Plug className="size-4 mr-2" />
                       {t('navigation.mcp')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -990,7 +990,7 @@ export function SessionDetail() {
                     className="shrink-0 gap-1 px-2 sm:h-7 text-destructive hover:bg-destructive/10"
                     aria-label={t('session.header.clear')}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="size-3.5" />
                     <span className="hidden sm:inline">{t('session.header.clear')}</span>
                   </Button>
                 )}
@@ -1001,7 +1001,7 @@ export function SessionDetail() {
                   className="mb-1.5 overflow-hidden rounded-lg border border-border bg-background"
                 >
                   <div className="flex items-center gap-2 border-b border-border px-2">
-                    <CommandIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <CommandIcon className="size-3.5 shrink-0 text-muted-foreground" />
                     <input
                       value={commandQuery}
                       onChange={(event) => setCommandQuery(event.target.value)}
@@ -1016,7 +1016,7 @@ export function SessionDetail() {
                       onClick={closeCommandsPanel}
                       aria-label={t('navigation.close')}
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="size-3.5" />
                     </Button>
                   </div>
                   <div className="max-h-56 overflow-y-auto p-1">

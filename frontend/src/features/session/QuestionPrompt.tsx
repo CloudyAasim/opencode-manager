@@ -221,8 +221,8 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
           className="flex items-center gap-1.5 flex-1 text-left text-sm font-semibold text-primary dark:text-white"
         >
           {isMinimized
-            ? <ChevronUp className="w-3 h-3 opacity-60 flex-shrink-0" />
-            : <ChevronDown className="w-3 h-3 opacity-60 flex-shrink-0" />
+            ? <ChevronUp className="size-3 opacity-60 flex-shrink-0" />
+            : <ChevronDown className="size-3 opacity-60 flex-shrink-0" />
           }
           {isConfirmStep ? t('session.question.review') : (currentQuestion?.header || t('session.question.headerFallback'))}
         </button>
@@ -231,7 +231,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
           disabled={isSubmitting}
           className="p-1.5 sm:p-2 hover:bg-destructive text-muted-foreground hover:text-destructive transition-colors"
         >
-          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <X className="size-3.5 sm:size-4" />
         </button>
       </div>
 
@@ -286,7 +286,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
               className="flex-1"
             >
               {isSubmitting ? (
-                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                <Loader2 className="size-3.5 sm:size-4 animate-spin" />
               ) : (
                 t('session.question.submit')
               )}
@@ -377,7 +377,7 @@ function QuestionStep({
                       ? "border-primary bg-primary" 
                       : "border-muted-foreground"
                   )}>
-                    {isSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />}
+                    {isSelected && <Check className="size-2.5 sm:size-3 text-white" />}
                   </div>
                   <span className={cn(
                     "text-sm font-semibold",
@@ -415,7 +415,7 @@ function QuestionStep({
                 ? "border-primary bg-primary" 
                 : "border-muted-foreground"
             )}>
-              {isCustomSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />}
+              {isCustomSelected && <Check className="size-2.5 sm:size-3 text-white" />}
             </div>
             <span className={cn(
               "text-sm font-semibold",
@@ -494,7 +494,7 @@ function ConfirmStep({ questions, answers, onEditQuestion }: ConfirmStepProps) {
                     {hasAnswer ? answer.join(', ') : t('session.question.notAnswered')}
                   </p>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-foreground/50 flex-shrink-0 mt-0.5 sm:mt-1" />
+                <ChevronRight className="size-3.5 sm:size-4 text-foreground/50 flex-shrink-0 mt-0.5 sm:mt-1" />
               </div>
             </button>
           )

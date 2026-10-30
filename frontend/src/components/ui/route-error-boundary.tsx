@@ -76,11 +76,11 @@ export function RouteErrorBoundary() {
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background text-foreground">
         <img src="/icons/icon-192x192.png" alt="" className="h-36 w-36" />
         <div className="flex items-center gap-3 text-2xl font-semibold text-foreground">
-          <WifiOff className="h-6 w-6" />
+          <WifiOff className="size-6" />
           <span>{title}</span>
         </div>
         <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className="size-4" />
           {t('ui.routeErrorBoundary.reload')}
         </Button>
       </div>
@@ -89,7 +89,7 @@ export function RouteErrorBoundary() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-6 text-center bg-background">
-      <AlertTriangle className="w-12 h-12 text-destructive" />
+      <AlertTriangle className="size-12 text-destructive" />
       <div className="space-y-2">
         <h1 className="text-xl font-semibold text-foreground">{title}</h1>
         <p className="text-sm text-muted-foreground max-w-sm">{message}</p>
@@ -97,13 +97,13 @@ export function RouteErrorBoundary() {
       <div className="flex gap-3">
         {isAuthError && (
           <Button variant="default" onClick={() => (window.location.href = '/login')}>
-            <LogIn className="w-4 h-4 mr-2" />
+            <LogIn className="size-4 mr-2" />
             {t('ui.routeErrorBoundary.login')}
           </Button>
         )}
         {isRetryable && (
           <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="size-4" />
             {t('common.retry')}
           </Button>
         )}

@@ -103,7 +103,7 @@ export function RepoListControls({
             className="shrink-0 text-destructive hover:text-destructive"
             
           >
-            <Trash2 className="w-3 h-3 mr-1" />
+            <Trash2 className="size-3 mr-1" />
             {getDeleteLabel()}
           </Button>
           <Button
@@ -114,7 +114,7 @@ export function RepoListControls({
             title={t('common.close')}
             className="shrink-0 ml-auto text-destructive hover:text-destructive"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" />
           </Button>
         </div>
       </div>
@@ -125,7 +125,7 @@ export function RepoListControls({
     <div className="px-2 md:px-0 space-y-2">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -140,7 +140,7 @@ export function RepoListControls({
           <DropdownMenu open={showMenu} onOpenChange={setShowMenu}>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <SlidersHorizontal className="w-4 h-4" />
+                <SlidersHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -185,7 +185,7 @@ export function RepoListControls({
           <DropdownMenu open={showMenu} onOpenChange={setShowMenu}>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5">
-                <SlidersHorizontal className="w-4 h-4" />
+                <SlidersHorizontal className="size-4" />
                 <span className="hidden sm:inline">{currentSortLabel}</span>
               </Button>
             </DropdownMenuTrigger>

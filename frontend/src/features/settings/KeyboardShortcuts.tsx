@@ -111,7 +111,7 @@ function ShortcutRow({ action, keys, isDirect, display, isRecording, currentKeys
               className="p-1 text-muted-foreground hover:text-destructive transition-colors"
               title={t('settingsPanels.shortcuts.clearShortcut')}
             >
-              <X className="w-4 h-4" />
+              <X className="size-4" />
             </button>
           )}
         </div>

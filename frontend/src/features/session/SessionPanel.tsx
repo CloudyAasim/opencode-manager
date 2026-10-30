@@ -190,7 +190,7 @@ export function SessionPanel({
                   className={cn('gap-1 px-2 rounded-r-none', visibleIds.length > 1 && 'rounded-r-none')}
                   onClick={() => setActiveId(id)}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="size-3.5" />
                   {t(tab.labelKey)}
                 </Button>
                 {visibleIds.length > 1 && (
@@ -200,7 +200,7 @@ export function SessionPanel({
                     aria-label={t('navigation.remove')}
                     className="h-7 rounded-r-md px-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 max-sm:opacity-100"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="size-3" />
                   </button>
                 )}
               </div>
@@ -216,7 +216,7 @@ export function SessionPanel({
                   aria-label={t('navigation.add')}
                   title={t('navigation.add')}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -241,7 +241,7 @@ export function SessionPanel({
             onClick={() => onOpenChange(false)}
             aria-label={t('navigation.close')}
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">{active?.render()}</div>

@@ -209,7 +209,7 @@ export function GitSettings() {
             onClick={saveAll}
             disabled={isSaving || isUpdating}
           >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+            {isSaving ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
             {t('settingsPanels.git.saveChanges')}
           </Button>
         ) : undefined
@@ -218,7 +218,7 @@ export function GitSettings() {
         <div className="grid grid-cols-1 gap-4 p-4 sm:gap-6 sm:p-6 @min-[1000px]:grid-cols-3 @min-[1000px]:items-start">
           <div className="min-w-0 space-y-4">
             <div className="flex items-center gap-3">
-              <User className="w-4 h-4 shrink-0 text-muted-foreground" />
+              <User className="size-4 shrink-0 text-muted-foreground" />
               <span className="font-medium">{t('settingsPanels.git.identity')}</span>
               <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
                 {gitIdentity.name || gitIdentity.email ? `${gitIdentity.name || t('settingsPanels.git.noName')} <${gitIdentity.email || t('settingsPanels.git.noEmail')}>` : t('settingsPanels.git.notConfigured')}
@@ -259,7 +259,7 @@ export function GitSettings() {
 
           <div className="min-w-0 space-y-4 @min-[1000px]:col-span-2">
             <div className="flex items-center gap-3">
-              <Key className="w-4 h-4 shrink-0 text-muted-foreground" />
+              <Key className="size-4 shrink-0 text-muted-foreground" />
               <span className="font-medium">{t('settingsPanels.git.credentials')}</span>
               <span className="ml-auto text-xs text-muted-foreground">
                 {t('settingsPanels.git.configuredCount', { count: gitCredentials.length })}
@@ -278,7 +278,7 @@ export function GitSettings() {
                  onClick={openAddCredentialDialog}
                  disabled={isSaving}
                >
-                 <Plus className="h-4 w-4 mr-2" />
+                 <Plus className="size-4 mr-2" />
                  {t('settingsPanels.git.add')}
                 </Button>
               </div>
@@ -329,7 +329,7 @@ export function GitSettings() {
                                 disabled={isSaving}
                                 title={t('settingsPanels.git.edit')}
                               >
-                                <Pencil className="h-3.5 w-3.5" />
+                                <Pencil className="size-3.5" />
                               </Button>
                               <Button
                                 type="button"
@@ -340,7 +340,7 @@ export function GitSettings() {
                                 disabled={isSaving}
                                 title={t('settingsPanels.git.delete')}
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash2 className="size-3.5" />
                               </Button>
                             </div>
                           </td>

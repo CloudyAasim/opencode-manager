@@ -119,7 +119,7 @@ export function AgentQuickSelect({
                   </span>
                 )}
               </div>
-              {isSelected && <Check className="h-4 w-4 flex-shrink-0 ml-2" />}
+              {isSelected && <Check className="size-4 flex-shrink-0 ml-2" />}
             </DropdownMenuItem>
           )
         })}

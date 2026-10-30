@@ -58,7 +58,7 @@ export function Setup() {
       {!config.registrationEnabled ? (
         <AuthCard>
           <div className="flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-warning" />
+            <ShieldAlert className="size-5 text-warning" />
             <h1 className="text-xl font-semibold">{t('setup.disabledTitle')}</h1>
           </div>
           <p className="text-sm text-muted-foreground">{t('setup.disabledDescription')}</p>
@@ -104,7 +104,7 @@ export function Setup() {
               busy={isSubmitting}
               busyLabel={t('register.createAdminAccount')}
               idleLabel={t('register.createAdminAccount')}
-              idleIcon={<UserPlus className="h-4 w-4" />}
+              idleIcon={<UserPlus className="size-4" />}
             />
           </form>
         </AuthCard>

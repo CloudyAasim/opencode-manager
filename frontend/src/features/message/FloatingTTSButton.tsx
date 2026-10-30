@@ -100,9 +100,9 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
         disabled={!hasContent && !autoPlay}
       >
         {showStop ? (
-          <VolumeX className="w-5 h-5" />
+          <VolumeX className="size-5" />
         ) : hasContent || autoPlay ? (
-          <Volume2 className="w-5 h-5" />
+          <Volume2 className="size-5" />
         ) : null}
       </Button>
   )

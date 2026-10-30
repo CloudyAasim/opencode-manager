@@ -265,11 +265,11 @@ export function RepoSchedulesView() {
         <div className="flex items-center gap-2">
           <Header.Actions>
             <Button onClick={openNewJob} size="sm" className="hidden sm:flex">
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="size-4 mr-2" />
               {t('schedules.page.newSchedule')}
             </Button>
             <Button onClick={openNewJob} size="icon-lg" className="sm:hidden">
-              <Plus className="w-5 h-5" />
+              <Plus className="size-5" />
             </Button>
           </Header.Actions>
         </div>
@@ -281,14 +281,14 @@ export function RepoSchedulesView() {
             <Card variant="dashed" width="3xl">
               <CardContent className="flex flex-col items-start gap-4 p-8 sm:p-10">
                 <div className="rounded-full border border-border bg-muted/40 p-3">
-                  <CalendarClock className="h-6 w-6 text-muted-foreground" />
+                  <CalendarClock className="size-6 text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
                   <p className="text-xl font-semibold tracking-tight">{t('schedules.page.noSchedulesYet')}</p>
                   <p className="text-sm text-muted-foreground">{t('schedules.page.noSchedulesHint')}</p>
                 </div>
                 <Button onClick={openNewJob}>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="size-4 mr-2" />
                   {t('schedules.page.createFirstSchedule')}
                 </Button>
               </CardContent>

@@ -27,7 +27,7 @@ export function GeneralSettings() {
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>OpenCode Manager</span>
             {isVersionLoading ? (
-              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+              <Loader2 className="size-3 animate-spin text-muted-foreground" />
             ) : versionInfo?.currentVersion ? (
               <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded">
                 {versionInfo.currentVersion}
@@ -160,7 +160,7 @@ export function GeneralSettings() {
 
       {isUpdating && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="size-4 animate-spin" />
           <span>{t('settings.general.saving')}</span>
         </div>
       )}

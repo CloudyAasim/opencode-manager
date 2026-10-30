@@ -32,21 +32,21 @@ function getStatusBadge(status: McpStatus, t: Translate) {
     case 'failed':
       return (
         <Badge variant="destructive" className="flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" />
+          <AlertCircle className="size-3" />
           {t('settingsPanels.mcpServerCard.failed')}
         </Badge>
       )
     case 'needs_auth':
       return (
         <Badge variant="outline-warning" className="flex items-center gap-1">
-          <Key className="h-3 w-3" />
+          <Key className="size-3" />
           {t('settingsPanels.mcpServerCard.authRequired')}
         </Badge>
       )
     case 'needs_client_registration':
       return (
         <Badge variant="outline-warning" className="flex items-center gap-1 text-primary">
-          <AlertCircle className="h-3 w-3" />
+          <AlertCircle className="size-3" />
           {t('settingsPanels.mcpServerCard.registrationRequired')}
         </Badge>
       )
@@ -106,15 +106,15 @@ export function McpServerCard({
 
   const actions: SettingsListRowAction[] = []
   if (showAuthButton && onAuthenticate) {
-    actions.push({ label: t('settingsPanels.mcpServerCard.authenticate'), onClick: () => onAuthenticate(serverId), icon: <Key className="h-4 w-4 mr-2" /> })
+    actions.push({ label: t('settingsPanels.mcpServerCard.authenticate'), onClick: () => onAuthenticate(serverId), icon: <Key className="size-4 mr-2" /> })
   }
   if (connectedWithOAuth && onAuthenticate) {
-    actions.push({ label: t('settingsPanels.mcpServerCard.reauthenticate'), onClick: () => onAuthenticate(serverId), icon: <RefreshCw className="h-4 w-4 mr-2" /> })
+    actions.push({ label: t('settingsPanels.mcpServerCard.reauthenticate'), onClick: () => onAuthenticate(serverId), icon: <RefreshCw className="size-4 mr-2" /> })
   }
   if (connectedWithOAuth && onRemoveAuth) {
-    actions.push({ label: isRemovingAuth ? t('settingsPanels.mcpServerCard.removing') : t('settingsPanels.mcpServerCard.removeAuth'), onClick: () => onRemoveAuth(serverId), icon: <Shield className="h-4 w-4 mr-2" />, disabled: isRemovingAuth })
+    actions.push({ label: isRemovingAuth ? t('settingsPanels.mcpServerCard.removing') : t('settingsPanels.mcpServerCard.removeAuth'), onClick: () => onRemoveAuth(serverId), icon: <Shield className="size-4 mr-2" />, disabled: isRemovingAuth })
   }
-  actions.push({ label: t('settingsPanels.mcpServerCard.deleteServer'), onClick: () => onDeleteServer(serverId, displayName), icon: <Trash2 className="h-4 w-4 mr-2" />, destructive: true, separatorBefore: showAuthButton || connectedWithOAuth })
+  actions.push({ label: t('settingsPanels.mcpServerCard.deleteServer'), onClick: () => onDeleteServer(serverId, displayName), icon: <Trash2 className="size-4 mr-2" />, destructive: true, separatorBefore: showAuthButton || connectedWithOAuth })
 
   return (
     <SettingsListRow
@@ -123,7 +123,7 @@ export function McpServerCard({
         <>
           {connectedWithOAuth && (
             <span title={t('settingsPanels.mcpServerCard.oauthAuthenticated')}>
-              <Shield className="h-3 w-3 text-muted-foreground" />
+              <Shield className="size-3 text-muted-foreground" />
             </span>
           )}
           {status ? getStatusBadge(status, t) : (
@@ -134,7 +134,7 @@ export function McpServerCard({
       description={getServerDescription(serverConfig, t)}
       belowDescription={errorMessage ? (
         <div className="flex items-start gap-1.5 mt-1.5 text-xs text-destructive">
-          <XCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
+          <XCircle className="size-3 flex-shrink-0 mt-0.5" />
           <span className="break-words line-clamp-2">{errorMessage}</span>
         </div>
       ) : undefined}
@@ -146,7 +146,7 @@ export function McpServerCard({
             variant="default"
             size="sm"
           >
-            <Key className="h-3 w-3 mr-1" />
+            <Key className="size-3 mr-1" />
             {t('settingsPanels.mcpServerCard.auth')}
           </Button>
         ) : (

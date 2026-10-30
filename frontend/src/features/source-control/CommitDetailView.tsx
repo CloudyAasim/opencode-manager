@@ -33,7 +33,7 @@ export function CommitDetailView({ repoId, commitHash, onBack, onFileSelect, sel
         detail={error?.message}
         action={
           <Button variant="outline" size="sm" onClick={onBack} className="mt-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="size-4 mr-2" />
             {t('misc.commitDetail.backToCommits')}
           </Button>
         }
@@ -77,7 +77,7 @@ export function CommitDetailView({ repoId, commitHash, onBack, onFileSelect, sel
             onClick={onBack}
             className="flex-shrink-0 mt-0.5"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="size-4" />
           </Button>
           <p className="text-sm font-medium leading-snug">{commit.message}</p>
         </div>

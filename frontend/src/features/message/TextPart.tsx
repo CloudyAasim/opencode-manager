@@ -98,7 +98,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
       <div className="relative my-4">
         <div className="bg-destructive border border-destructive rounded-lg p-4">
           <div className="flex items-center gap-2 text-destructive mb-2">
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="size-4" />
             <span className="text-sm font-medium">{t('message.mermaid.errorTitle')}</span>
           </div>
           <pre className="text-xs text-destructive mb-3 whitespace-pre-wrap">{error}</pre>
@@ -132,7 +132,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
             className="p-1.5 text-muted-foreground"
             title={t('message.actions.expandDiagram')}
           >
-            <Maximize2 className="w-4 h-4" />
+            <Maximize2 className="size-4" />
           </Button>
           <CopyButton content={code} title={t('message.actions.copyCode')} />
         </div>
@@ -154,7 +154,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
               className="absolute top-3 right-3 text-muted-foreground"
               title={t('message.actions.close')}
             >
-              <X className="w-5 h-5" />
+              <X className="size-5" />
             </Button>
             <div 
               className="mermaid-expanded"

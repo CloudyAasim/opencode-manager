@@ -122,9 +122,9 @@ export function DownloadDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isDownloading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="size-5 animate-spin" />
             ) : (
-              <Archive className="w-5 h-5" />
+              <Archive className="size-5" />
             )}
             {title}
           </DialogTitle>
@@ -171,7 +171,7 @@ export function DownloadDialog({
                       onCheckedChange={() => {}}
                     />
                     <span className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Folder className="w-4 h-4" />
+                      <Folder className="size-4" />
                       {path}
                     </span>
                   </div>
@@ -191,7 +191,7 @@ export function DownloadDialog({
           )}
           
           <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
-            <Archive className="w-8 h-8 text-muted-foreground" />
+            <Archive className="size-8 text-muted-foreground" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{isConfirmed ? t('ui.downloadDialog.processing') : itemName}</p>
               {isDownloading && (
@@ -220,7 +220,7 @@ export function DownloadDialog({
                 {t('ui.downloadDialog.cancel')}
               </Button>
               <Button size="touch" type="button" onClick={handleConfirm} className="gap-2 flex-1">
-                <Download className="w-4 h-4" />
+                <Download className="size-4" />
                 {t('ui.downloadDialog.download')}
               </Button>
             </div>

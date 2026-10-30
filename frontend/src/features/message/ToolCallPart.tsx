@@ -155,7 +155,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
       case 'error':
         return <span>✗</span>
       case 'running':
-        return <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        return <Loader2 className="size-3.5 animate-spin" />
       case 'pending':
         return <span className="inline-block w-2 h-2 rounded-full bg-current animate-pulse" />
       default:
@@ -225,7 +225,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
         {isError && <span className="text-destructive text-sm font-medium">✗</span>}
         <span className="font-medium text-foreground truncate">{description}</span>
         <span className="text-2xs font-medium text-primary shrink-0">{t('message.parts.subAgent')}</span>
-        {sessionId && <ExternalLink className="w-3 h-3 shrink-0 text-primary" />}
+        {sessionId && <ExternalLink className="size-3 shrink-0 text-primary" />}
       </div>
     )
 
@@ -348,7 +348,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
               className="text-primary text-xs hover:text-primary dark:hover:text-primary cursor-pointer underline decoration-dotted flex items-center gap-1"
               title={t('message.actions.viewSubagentSession')}
             >
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="size-3" />
               {t('message.actions.viewSession')}
             </span>
           ) : null
@@ -385,7 +385,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
                     <span className="text-success">$</span> {displayCommand ?? ''}
                   </div>
                   <div className={`flex items-center gap-2 mt-2 text-xs ${isWaitingPermission ? 'text-primary' : 'text-warning'}`}>
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <Loader2 className="size-3 animate-spin" />
                     <span>{isWaitingPermission ? t('message.tools.waitingPermission') : t('message.tools.running')}</span>
                   </div>
                 </div>
@@ -394,7 +394,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
                   <div className="text-muted-foreground mb-1">{t('message.tools.input')}</div>
                   <ClickableJson json={part.state.input} onFileClick={onFileClick} />
                   <div className={`flex items-center gap-2 mt-2 text-xs ${isWaitingPermission ? 'text-primary' : 'text-warning'}`}>
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <Loader2 className="size-3 animate-spin" />
                     <span>{isWaitingPermission ? t('message.tools.waitingPermission') : t('message.tools.running')}</span>
                   </div>
                 </div>

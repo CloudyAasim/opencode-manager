@@ -26,11 +26,11 @@ export function OpenCodeConfigSourcesNotice({ config, targetName }: OpenCodeConf
 
   return (
     <Alert variant="primary">
-      <Info className="h-4 w-4 text-primary" />
+      <Info className="size-4 text-primary" />
       <details className="group" open>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
           <AlertTitle className="mb-0">{t('settingsPanels.configSources.mergedTitle')}</AlertTitle>
-          <ChevronDown className="h-4 w-4 shrink-0 text-primary transition-transform group-open:rotate-180" />
+          <ChevronDown className="size-4 shrink-0 text-primary transition-transform group-open:rotate-180" />
         </summary>
         <AlertDescription>
           <p>

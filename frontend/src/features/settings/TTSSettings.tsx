@@ -211,13 +211,13 @@ export function TTSSettings() {
       <>
         {saveStatus === 'saving' && (
         <>
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <Loader2 className="size-4 animate-spin text-muted-foreground" />
         <span className="text-muted-foreground">{t('settingsPanels.tts.saving')}</span>
       </>
             )}
             {saveStatus === 'saved' && (
               <>
-                <CheckCircle2 className="h-4 w-4 text-success" />
+                <CheckCircle2 className="size-4 text-success" />
                 <span className="text-success">{t('settingsPanels.tts.saved')}</span>
               </>
             )}
@@ -290,7 +290,7 @@ export function TTSSettings() {
                   }}
                   className="flex-col items-center justify-center gap-2 p-4"
                 >
-                  <MonitorSpeaker className={`h-6 w-6 ${watchProvider === 'builtin' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <MonitorSpeaker className={`size-6 ${watchProvider === 'builtin' ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={`font-medium ${watchProvider === 'builtin' ? 'text-primary' : ''}`}>
                     {t('settingsPanels.tts.builtin')}
                   </span>
@@ -307,7 +307,7 @@ export function TTSSettings() {
                   }}
                   className="flex-col items-center justify-center gap-2 p-4"
                 >
-                  <Globe className={`h-6 w-6 ${watchProvider === 'external' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <Globe className={`size-6 ${watchProvider === 'external' ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={`font-medium ${watchProvider === 'external' ? 'text-primary' : ''}`}>
                     {t('settingsPanels.tts.external')}
                   </span>
@@ -462,12 +462,12 @@ export function TTSSettings() {
                     >
                       {isRefreshingDiscovery ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <Loader2 className="size-4 animate-spin mr-2" />
                           {t('settingsPanels.tts.refreshing')}
                         </>
                       ) : (
                         <>
-                          <RefreshCw className="h-4 w-4 mr-2" />
+                          <RefreshCw className="size-4 mr-2" />
                           {t('settingsPanels.tts.refresh')}
                         </>
                       )}
@@ -504,7 +504,7 @@ export function TTSSettings() {
                         <FormDescription>
                           {isCheckingBuiltin ? (
                             <span className="flex items-center gap-1">
-                              <Loader2 className="h-3 w-3 animate-spin" />
+                              <Loader2 className="size-3 animate-spin" />
                               {t('settingsPanels.tts.checkingVoices')}
                             </span>
                           ) : browserVoices.length > 0 ? (
@@ -546,12 +546,12 @@ export function TTSSettings() {
                       >
                         {isCheckingBuiltin ? (
                           <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            <Loader2 className="size-4 animate-spin mr-2" />
                             {t('settingsPanels.tts.checking')}
                           </>
                         ) : (
                           <>
-                            <RefreshCw className="h-4 w-4 mr-2" />
+                            <RefreshCw className="size-4 mr-2" />
                             {t('settingsPanels.tts.checkForVoices')}
                           </>
                         )}
@@ -599,13 +599,13 @@ export function TTSSettings() {
                   </p>
                   {ttsError && (
                     <p className="text-sm text-destructive flex items-center gap-1">
-                      <XCircle className="h-4 w-4" />
+                      <XCircle className="size-4" />
                       {ttsError}
                     </p>
                   )}
                   {watchProvider === 'builtin' && !hasWebSpeechSupport && (
                     <p className="text-sm text-destructive flex items-center gap-1">
-                      <XCircle className="h-4 w-4" />
+                      <XCircle className="size-4" />
                       {t('settingsPanels.tts.webSpeechNotAvailable')}
                     </p>
                   )}
@@ -619,17 +619,17 @@ export function TTSSettings() {
                 >
                   {isTTSLoading ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <Loader2 className="size-4 animate-spin mr-2" />
                       {t('settingsPanels.tts.testing')}
                     </>
                   ) : isPlaying ? (
                     <>
-                      <SquareFill className="h-4 w-4 mr-2" />
+                      <SquareFill className="size-4 mr-2" />
                       {t('settingsPanels.tts.stop')}
                     </>
                   ) : (
                     <>
-                      <Volume2 className="h-4 w-4 mr-2" />
+                      <Volume2 className="size-4 mr-2" />
                       {t('settingsPanels.tts.test')}
                     </>
                   )}

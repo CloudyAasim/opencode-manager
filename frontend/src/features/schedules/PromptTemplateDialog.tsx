@@ -119,7 +119,7 @@ export function PromptTemplateDialog({ open, onOpenChange, template, initialValu
         <DialogFooter variant="divided" className="pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} size="touch" className="flex-1 sm:flex-none">{t('schedules.common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={isSaving || !isValid} size="touch" className="flex-1 sm:flex-none">
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             {isSaving ? t('schedules.common.saving') : template ? t('schedules.common.saveChanges') : t('schedules.promptTemplates.dialog.create')}
           </Button>
         </DialogFooter>

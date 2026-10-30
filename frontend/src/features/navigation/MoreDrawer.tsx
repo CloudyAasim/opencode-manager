@@ -142,7 +142,7 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
             </h2>
             {scope === 'project' && currentBranch && (
               <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <GitBranch className="h-3.5 w-3.5 shrink-0" />
+                <GitBranch className="size-3.5 shrink-0" />
                 <span className="truncate">{currentBranch}</span>
               </div>
             )}
@@ -155,7 +155,7 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
             className="-mr-1 shrink-0 text-muted-foreground hover:text-foreground"
             aria-label={t('navigation.close')}
           >
-            <X className="h-5 w-5" />
+            <X className="size-5" />
           </Button>
         </div>
         <SideDrawerContent className="flex flex-col gap-1 pt-2">

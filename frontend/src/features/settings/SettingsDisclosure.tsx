@@ -54,7 +54,7 @@ export function SettingsDisclosure({
           <h3 className="text-sm font-semibold truncate">{title}</h3>
           {meta}
         </div>
-        <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', isOpen && 'rotate-180')} />
+        <ChevronDown className={cn('size-4 shrink-0 transition-transform', isOpen && 'rotate-180')} />
       </button>
       <div id={contentId} className={cn('pt-2', isOpen ? 'block' : 'hidden', contentClassName)}>
         {children}

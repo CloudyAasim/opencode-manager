@@ -24,7 +24,7 @@ export function SessionMoreButton() {
       className="md:hidden text-foreground"
       aria-label={t('navigation.projectMore')}
     >
-      <MoreVertical className="w-5 h-5" />
+      <MoreVertical className="size-5" />
     </Button>
   )
 }

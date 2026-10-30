@@ -161,7 +161,7 @@ export function ServerSettings() {
             spellCheck={false}
           />
           <Button type="button" variant="outline" onClick={check} disabled={checking || probing}>
-            {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Server className="h-4 w-4" />}
+            {checking ? <Loader2 className="size-4 animate-spin" /> : <Server className="size-4" />}
             {t('settingsPanels.connection.check')}
           </Button>
         </div>
@@ -195,7 +195,7 @@ export function ServerSettings() {
 
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={() => void apply()} disabled={!canSave || saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          {saving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
           {t('settingsPanels.connection.save')}
         </Button>
         {dirty && (
@@ -203,7 +203,7 @@ export function ServerSettings() {
             variant="ghost"
             onClick={() => { setDraft(null); setSaved(false); setCheckError(null) }}
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
             {t('common.cancel')}
           </Button>
         )}
@@ -214,7 +214,7 @@ export function ServerSettings() {
       {recent.length > 0 && (
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">
-            <History className="h-3.5 w-3.5" />
+            <History className="size-3.5" />
             {t('settingsPanels.connection.recent')}
           </Label>
           <div className="flex flex-wrap gap-2">

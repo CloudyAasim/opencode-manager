@@ -178,7 +178,7 @@ export function OAuthAuthorizeDialog({
                     className="flex-1 justify-start min-w-0"
                     variant={selectedMethodIndex === index ? 'default' : 'outline'}
                   >
-                    <ExternalLink className="h-4 w-4 mr-2 shrink-0" />
+                    <ExternalLink className="size-4 mr-2 shrink-0" />
                     <span className="truncate">{isLoading && selectedMethodIndex === index ? t('settingsPanels.oauthAuthorize.authorizing') : method.label}</span>
                   </Button>
                   {isBrowserLocal && (

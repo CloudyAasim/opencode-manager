@@ -26,7 +26,7 @@ export function ScheduleTabMenu({ activeTab, onTabChange, className }: ScheduleT
           variant="bar"
           className="flex-1 flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground data-[state=active]:text-primary"
         >
-          <CalendarClock className="h-5 w-5" />
+          <CalendarClock className="size-5" />
           <span>{t('schedules.tabs.jobs')}</span>
         </TabsTrigger>
         <TabsTrigger
@@ -34,7 +34,7 @@ export function ScheduleTabMenu({ activeTab, onTabChange, className }: ScheduleT
           variant="bar"
           className="flex-1 flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground data-[state=active]:text-primary"
         >
-          <Info className="h-5 w-5" />
+          <Info className="size-5" />
           <span>{t('schedules.tabs.detail')}</span>
         </TabsTrigger>
         <TabsTrigger
@@ -42,7 +42,7 @@ export function ScheduleTabMenu({ activeTab, onTabChange, className }: ScheduleT
           variant="bar"
           className="flex-1 flex flex-col items-center gap-1 px-2 py-2 text-muted-foreground data-[state=active]:text-primary"
         >
-          <History className="h-5 w-5" />
+          <History className="size-5" />
           <span>{t('schedules.tabs.runs')}</span>
         </TabsTrigger>
       </TabsList>

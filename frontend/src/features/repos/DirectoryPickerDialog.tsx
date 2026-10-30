@@ -84,7 +84,7 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
                     onClick={() => navigateTo(data.parentPath!)}
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-muted-foreground hover:bg-accent"
                   >
-                    <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
                     ..
                   </button>
                 </li>
@@ -108,9 +108,9 @@ export function DirectoryPickerDialog({ open, onOpenChange, onSelect, title }: D
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground hover:bg-accent"
                   >
                     {entry.isGitRepo ? (
-                      <FolderGit2 className="h-4 w-4 shrink-0 text-primary" />
+                      <FolderGit2 className="size-4 shrink-0 text-primary" />
                     ) : (
-                      <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Folder className="size-4 shrink-0 text-muted-foreground" />
                     )}
                     <span className="truncate">{entry.name}</span>
                     {entry.isGitRepo && <span className="ml-auto text-xs text-primary">{t('repo.directoryPicker.git')}</span>}

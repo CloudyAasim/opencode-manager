@@ -32,7 +32,7 @@ export function NotificationSettings() {
     return (
       <SettingsPanel title={t("settingsPanels.notifications.title")}>
         <div className="flex items-center gap-3 text-muted-foreground">
-          <BellOff className="h-5 w-5" />
+          <BellOff className="size-5" />
           <p className="text-sm">
             {t("settingsPanels.notifications.unsupported")}
           </p>
@@ -45,7 +45,7 @@ export function NotificationSettings() {
     return (
       <SettingsPanel title={t("settingsPanels.notifications.title")}>
         <div className="flex items-center gap-3 text-muted-foreground">
-          <BellOff className="h-5 w-5" />
+          <BellOff className="size-5" />
           <p className="text-sm">
             {t("settingsPanels.notifications.unavailable")}
           </p>
@@ -58,7 +58,7 @@ export function NotificationSettings() {
     return (
       <SettingsPanel title={t("settingsPanels.notifications.title")}>
         <div className="flex items-center gap-3 text-warning">
-          <BellOff className="h-5 w-5" />
+          <BellOff className="size-5" />
           <p className="text-sm">
             {t("settingsPanels.notifications.denied")}
           </p>
@@ -219,9 +219,9 @@ export function NotificationSettings() {
                   disabled={isTesting || subscriptions.length === 0}
                 >
                   {isTesting ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <Loader2 className="size-4 animate-spin mr-2" />
                   ) : (
-                    <Send className="h-4 w-4 mr-2" />
+                    <Send className="size-4 mr-2" />
                   )}
                   {t("settingsPanels.notifications.sendTest")}
                 </Button>
@@ -250,7 +250,7 @@ export function NotificationSettings() {
                     className="flex items-center justify-between rounded-lg border border-border p-3"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <Monitor className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <Monitor className="size-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">
                           {sub.deviceName ?? (sub.endpoint.length > 60 ? sub.endpoint.slice(0, 60) + "..." : sub.endpoint)}
@@ -270,7 +270,7 @@ export function NotificationSettings() {
                       aria-label={t('common.delete')}
                       title={t('common.delete')}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </div>
                 ))}

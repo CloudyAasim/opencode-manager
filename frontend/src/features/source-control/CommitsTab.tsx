@@ -73,7 +73,7 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
             onClick={() => onSelectCommit?.(commit.hash)}
           >
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent flex items-center justify-center mt-0.5">
-              <GitCommit className="w-4 h-4 text-muted-foreground" />
+              <GitCommit className="size-4 text-muted-foreground" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium line-clamp-2">{commit.message}</p>
@@ -85,7 +85,7 @@ export function CommitsTab({ repoId, branch, onSelectCommit }: CommitsTabProps) 
                 <span className="flex-shrink-0">{formatRelativeTime(commit.date)}</span>
                 {commit.unpushed && (
                   <span className={cn('flex items-center gap-0.5 px-1 rounded', GIT_UI_COLORS.unpushed)}>
-                    <ArrowUp className="w-3 h-3" />
+                    <ArrowUp className="size-3" />
                     {t('misc.commitsTab.local')}
                   </span>
                 )}

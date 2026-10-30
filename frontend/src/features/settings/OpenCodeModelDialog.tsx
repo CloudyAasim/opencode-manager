@@ -569,7 +569,7 @@ export function OpenCodeModelDialog({
                           disabled={isLoadingModels}
                           className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
                         >
-                          {isLoadingModels ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                          {isLoadingModels ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
                           {discoveredModels.length > 0 ? t('settingsPanels.modelDialog.refresh') : t('settingsPanels.modelDialog.discover')}
                         </button>
                       )}

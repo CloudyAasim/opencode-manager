@@ -86,7 +86,7 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
             className="gap-1"
             onClick={onNew}
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="size-3" />
             {t('schedules.promptTemplates.new')}
           </Button>
           <Button
@@ -96,7 +96,7 @@ export function PromptsTab({ promptDialog, templateId, onNew, onEdit, onDelete, 
             className="gap-1"
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className="h-3 w-3" />
+            <Upload className="size-3" />
             {t('schedules.promptTemplates.importMd')}
           </Button>
         </div>

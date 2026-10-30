@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, stripComments, tagAt, variantsOf } from './source-text'
+import { classListOfAttrs, cvaBase, elementTree, iconNames, stripComments, tagAt, variantsOf } from './source-text'
 
 /**
  * 按钮的脸，是它那一档的事。
@@ -233,6 +233,54 @@ describe('按钮的脸，是它那一档的事', () => {
         '状态不是脸——`hover:` 那一类不算；形状也不是脸——`rounded-l-none` 那一类不算。',
       ].join('\n'),
     ).toEqual([])
+  })
+
+  it('图标说大小，只说 `size-N`', () => {
+    // 共享按钮的底子上有 `[&_svg:not([class*='size-'])]:size-4` ✓ ——
+    // 图标写 `w-5 h-5` ✗ **在按钮里不算数** ✗：那条规则排在 `w-5` ✓
+    // **后面** ✓、更具体 ✓，所以按钮里的图标一律被压成 16px ✓。
+    //
+    // 而那条规则**故意**留着 `[class*='size-']` ✓ —— 意思就是：
+    // **图标要另一个大小 ✓，就说 `size-5` ✓**（那条规则就不碰它 ✓）。
+    //
+    // 按钮外面 ✗ 写 `w-5 h-5` ✓ 倒也画得出来 ✓，
+    // 可那样 ✗ 全应用就有了**两套话** ✗ —— 副的不该有 ✗，要的是一副 ✓。
+    //
+    // 所以这一轮：**图标说大小，只说 `size-N`** ✓。
+    const offenders: string[] = []
+    for (const source of SOURCES) {
+      const icons = iconNames(source.text)
+      if (icons.size === 0) continue
+      for (const element of elementTree(source.text)) {
+        // 图标是**从图标库进来的那个名字** ✓，不是"碰巧首字母大写" ✓。
+        if (!icons.has(element.name)) continue
+        const classes = element.classes
+        if (!/(?:^|\s)(?:[a-z0-9-]+:)?(?:w|h)-\d/.test(classes)) continue
+        const line = source.text.slice(0, element.start).split('\n').length
+        offenders.push(`${source.rel}:${line}  ${element.name}  ${classes}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些图标用 w- h- 说大小：${offenders.length} 处`,
+        ...offenders,
+        '图标说大小，只说 `size-N` ✓——`w-` `h-` 那套话，共享按钮认都不认 ✓。',
+      ].join('\n'),
+    ).toEqual([])
+
+    // 共享按钮的底子 ✓：默认 **16px** ✓，并且**留着后门** ✓——
+    // 没有那个后门 ✓，图标说多大都不算 ✓。
+    const base = cvaBase(
+      SOURCES.find((candidate) => candidate.rel === SHARED_BUTTON)?.text ?? '',
+      'buttonVariants',
+    )
+    expect(base, '共享的按钮读不出自己的底子').toContain('size-4')
+    expect(
+      base,
+      '共享的按钮不再给图标留后门了——图标说多大都不算了',
+    ).toContain("[class*='size-']")
   })
 
   it('被点名的那些，理由都写清楚了，而且都还在', () => {

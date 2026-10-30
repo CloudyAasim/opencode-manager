@@ -148,7 +148,7 @@ export function OpenCodeModelsEditor({ providers, onChange }: OpenCodeModelsEdit
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" onClick={() => openCreateDialog()}>
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="size-4 mr-1" />
               {t('settingsPanels.modelsEditor.addModel')}
             </Button>
           </DialogTrigger>
@@ -180,7 +180,7 @@ export function OpenCodeModelsEditor({ providers, onChange }: OpenCodeModelsEdit
             return (
               <div key={providerId} className="space-y-2">
                 <div className="flex items-center gap-2 px-1 text-xs font-medium text-muted-foreground">
-                  <Box className="h-3.5 w-3.5" />
+                  <Box className="size-3.5" />
                   <span>{providerName}</span>
                   <span>{t('settingsPanels.modelsEditor.models', { count: modelEntries.length })}</span>
                 </div>

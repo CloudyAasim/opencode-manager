@@ -24,7 +24,7 @@ export function BackButton({ to = "/", className = "" }: BackButtonProps) {
       aria-label={t('ui.backButton.goBack')}
       className={`text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 ${className}`}
     >
-      <ArrowLeft className="w-4 h-4" />
+      <ArrowLeft className="size-4" />
     </Button>
   );
 }

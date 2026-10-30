@@ -119,7 +119,7 @@ export function OAuthCallbackDialog({
                   size="sm"
                   className="flex-1"
                 >
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  <ExternalLink className="size-4 mr-2" />
                   {t('settingsPanels.oauthCallback.openAuthPage')}
                 </Button>
                 <CopyButton
@@ -163,12 +163,12 @@ export function OAuthCallbackDialog({
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 mr-2 animate-spin" />
                   {loadingMessage || t('settingsPanels.oauthCallback.completing')}
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <CheckCircle className="size-4 mr-2" />
                   {t('settingsPanels.oauthCallback.completeAuth')}
                 </>
               )}

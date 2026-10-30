@@ -71,7 +71,7 @@ export function RenameRepoDialog({
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-destructive"
               >
-                <X className="w-5 h-5" />
+                <X className="size-5" />
               </Button>
             )}
           </div>
@@ -88,7 +88,7 @@ export function RenameRepoDialog({
               type="submit"
               size="touch" className="flex-1"
             >
-              <Check className="w-4 h-4 mr-2" />
+              <Check className="size-4 mr-2" />
               {t('repo.save')}
             </Button>
           </DialogFooter>

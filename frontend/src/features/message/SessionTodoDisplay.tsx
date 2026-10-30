@@ -86,7 +86,7 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
         onClick={() => setIsCollapsed(false)}
       >
         <div className="flex items-center gap-2">
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="size-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">
             {t('message.todos.progress', { completed: stats.completed, total: stats.total })}
           </span>
@@ -103,7 +103,7 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
             className="ml-1 text-muted-foreground hover:text-foreground"
             aria-label={t('message.todos.dismiss')}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="size-3.5" />
           </Button>
         </div>
       </div>
@@ -116,7 +116,7 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
         className="flex items-center gap-2 px-3 py-2 bg-muted/50 cursor-pointer select-none"
         onClick={() => setIsCollapsed(true)}
       >
-        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        <ChevronDown className="size-4 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">
           {t('message.todos.progress', { completed: stats.completed, total: stats.total })}
         </span>
@@ -133,7 +133,7 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
           className="ml-1 text-muted-foreground hover:text-foreground"
           aria-label={t('message.todos.dismiss')}
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="size-3.5" />
         </Button>
       </div>
       <div data-testid="todo-expanded-list" className="max-h-[80px] sm:max-h-[160px] overflow-y-auto p-1.5 sm:p-2 bg-muted/30">

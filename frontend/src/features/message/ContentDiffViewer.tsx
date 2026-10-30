@@ -134,8 +134,8 @@ export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
                 </div>
               )}
               <div className="w-4 flex-shrink-0 flex items-center justify-center">
-                {isAdd && <Plus className="w-2.5 h-2.5 text-success" />}
-                {isRemove && <Minus className="w-2.5 h-2.5 text-destructive" />}
+                {isAdd && <Plus className="size-2.5 text-success" />}
+                {isRemove && <Minus className="size-2.5 text-destructive" />}
               </div>
               <pre
                 className={cn(
@@ -156,7 +156,7 @@ export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
           onClick={() => setShowMore(true)}
           className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
-          <ChevronDown className="w-3 h-3" />
+          <ChevronDown className="size-3" />
           {t('message.files.moreLines', { lines: hiddenCount })}
         </button>
       )}
@@ -166,7 +166,7 @@ export function ContentDiffViewer({ before, after }: ContentDiffViewerProps) {
           onClick={() => setShowMore(false)}
           className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
-          <ChevronUp className="w-3 h-3" />
+          <ChevronUp className="size-3" />
           {t('message.actions.showLess')}
         </button>
       )}

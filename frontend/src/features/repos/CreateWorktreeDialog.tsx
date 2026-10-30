@@ -99,7 +99,7 @@ export function CreateWorktreeDialog({
       <DialogContent width="md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <GitBranch className="w-4 h-4" />
+            <GitBranch className="size-4" />
             {t('repo.worktreeCreation.title')}
           </DialogTitle>
           <DialogDescription>
@@ -110,7 +110,7 @@ export function CreateWorktreeDialog({
         <div className="space-y-4">
           {!canCreate ? (
             <div className="flex items-start gap-2 bg-warning border border-warning rounded p-3">
-              <AlertCircle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
+              <AlertCircle className="size-4 text-warning mt-0.5 flex-shrink-0" />
               <p className="text-sm text-warning">
                 {t('repo.worktreeCreation.needsRemote')}
               </p>
@@ -142,7 +142,7 @@ export function CreateWorktreeDialog({
                         {localBranches.map((branch) => (
                           <SelectItem key={`local-${branch.name}`} value={branch.name}>
                             <div className="flex items-center gap-2">
-                              <GitBranch className="w-3.5 h-3.5" />
+                              <GitBranch className="size-3.5" />
                               <span>{branch.name}</span>
                               {branch.current && (
                                 <span className="text-xs text-muted-foreground">{t('repo.worktreeCreation.current')}</span>
@@ -155,7 +155,7 @@ export function CreateWorktreeDialog({
                     {remoteBranches.map((branch) => (
                       <SelectItem key={`remote-${branch.name}`} value={branch.shortName}>
                         <div className="flex items-center gap-2">
-                          <GitBranch className="w-3.5 h-3.5 text-primary" />
+                          <GitBranch className="size-3.5 text-primary" />
                           <span>{branch.shortName}</span>
                           <span className="text-xs text-muted-foreground">{t('repo.worktreeCreation.remote')}</span>
                         </div>
@@ -172,7 +172,7 @@ export function CreateWorktreeDialog({
 
           {error && (
             <div className="flex items-start gap-2 bg-destructive border border-destructive rounded p-3">
-              <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+              <AlertCircle className="size-4 text-destructive mt-0.5 flex-shrink-0" />
               <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
@@ -193,7 +193,7 @@ export function CreateWorktreeDialog({
             >
               {worktreeMutation.isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 mr-2 animate-spin" />
                   {t('repo.creating')}
                 </>
               ) : (

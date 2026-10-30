@@ -133,7 +133,7 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                             {formatDate(release.publishedAt)}
                           </div>
                         </div>
-                        {isSelected && <Check className="h-4 w-4 text-primary" />}
+                        {isSelected && <Check className="size-4 text-primary" />}
                       </div>
                     </Button>
                   )
@@ -157,9 +157,9 @@ export function VersionSelectDialog({ open, onOpenChange }: VersionSelectDialogP
                 className="min-w-[120px]"
               >
                 {installMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="size-4 mr-2 animate-spin" />
                 ) : (
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="size-4 mr-2" />
                 )}
                 {selectedVersion ? t('settingsPanels.versionSelect.install') : t('settingsPanels.versionSelect.selectVersion')}
               </Button>

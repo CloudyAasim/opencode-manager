@@ -85,7 +85,7 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <FolderOpen className="w-5 h-5" />
+              <FolderOpen className="size-5" />
               {showPath ? controller.currentPath || '/' : 'Files'}
             </CardTitle>
             <Button
@@ -93,7 +93,7 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
               size="sm"
               onClick={() => void controller.loadFiles(controller.currentPath)}
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="size-4" />
             </Button>
           </div>
           {controller.error && (
@@ -118,7 +118,7 @@ export const FileBrowserView = forwardRef<FileBrowserHandle, FileBrowserViewProp
           {controller.isDragging && (
             <div className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center pointer-events-none">
               <div className="text-center">
-                <Upload className="w-12 h-12 mx-auto mb-2 text-primary" />
+                <Upload className="size-12 mx-auto mb-2 text-primary" />
                 <p className="text-lg font-semibold text-primary">{t('repo.fileBrowser.dropHere')}</p>
               </div>
             </div>

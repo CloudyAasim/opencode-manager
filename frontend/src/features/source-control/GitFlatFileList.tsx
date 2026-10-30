@@ -137,12 +137,12 @@ export function GitFlatFileList({
             >
               {staged ? (
                 <>
-                  <Minus className="w-3 h-3 mr-1" />
+                  <Minus className="size-3 mr-1" />
                   {t('misc.fileList.unstageAll')}
                 </>
               ) : (
                 <>
-                  <Plus className="w-3 h-3 mr-1" />
+                  <Plus className="size-3 mr-1" />
                   {t('misc.fileList.stageAll')}
                 </>
               )}
@@ -162,9 +162,9 @@ export function GitFlatFileList({
               onClick={() => toggleGroup(status)}
             >
               {isCollapsed ? (
-                <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                <ChevronRight className="size-3 text-muted-foreground" />
               ) : (
-                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                <ChevronDown className="size-3 text-muted-foreground" />
               )}
               <span className={cn('text-xs font-medium', GIT_STATUS_COLORS[status])}>
                 {GIT_STATUS_LABELS[status]}

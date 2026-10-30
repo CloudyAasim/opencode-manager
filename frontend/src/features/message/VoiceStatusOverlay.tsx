@@ -58,11 +58,11 @@ export function VoiceStatusOverlay({ show, label, state }: VoiceStatusOverlayPro
             state === 'processing' ? (
               <WaveformBars />
             ) : (
-              <LoaderCircle className="h-6 w-6 animate-spin" />
+              <LoaderCircle className="size-6 animate-spin" />
             )
           ) : (
             <>
-              <ArrowUp className="h-8 w-8 animate-bounce" />
+              <ArrowUp className="size-8 animate-bounce" />
               <div className="flex flex-col items-center text-2xs font-bold uppercase leading-none tracking-tight">
                 {actionWords.map((word) => (
                   <span key={word}>{word}</span>
@@ -72,7 +72,7 @@ export function VoiceStatusOverlay({ show, label, state }: VoiceStatusOverlayPro
           )}
         </div>
         {!isLoading && (
-          <X className="relative h-4 w-4" />
+          <X className="relative size-4" />
         )}
       </div>
     </div>

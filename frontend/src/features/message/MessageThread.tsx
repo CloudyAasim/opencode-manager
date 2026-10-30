@@ -264,7 +264,7 @@ const MessageRow = memo(function MessageRow({
                 className="text-muted-foreground hover:text-foreground"
                 title={t('message.actions.editMessage')}
               >
-                <Pencil className="w-3.5 h-3.5" />
+                <Pencil className="size-3.5" />
               </Button>
             )}
             {isQueued && (

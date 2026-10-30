@@ -71,7 +71,7 @@ export function RunHistoryTab({
           onClick={onClearHistory}
           disabled={clearHistoryPending || !runs?.length}
         >
-          {clearHistoryPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+          {clearHistoryPending ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
           {t('schedules.runs.clearHistory')}
         </Button>
       </div>

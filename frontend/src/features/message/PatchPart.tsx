@@ -37,7 +37,7 @@ export function PatchPart({ part, onFileClick }: PatchPartProps) {
           </span>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-muted-foreground text-xs font-mono">{part.hash.slice(0, 8)}</span>
-            {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            {expanded ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
           </div>
         </button>
       </Card>
@@ -58,7 +58,7 @@ export function PatchPart({ part, onFileClick }: PatchPartProps) {
             onClick={() => setExpanded(true)}
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
           >
-            <ChevronDown className="w-3 h-3" />
+            <ChevronDown className="size-3" />
             {t('message.files.more', { count: hiddenCount })}
           </button>
         )}
@@ -68,7 +68,7 @@ export function PatchPart({ part, onFileClick }: PatchPartProps) {
             onClick={() => setExpanded(false)}
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
           >
-            <ChevronUp className="w-3 h-3" />
+            <ChevronUp className="size-3" />
             {t('message.actions.showLess')}
           </button>
         )}

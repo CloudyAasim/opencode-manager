@@ -147,7 +147,7 @@ function HeaderEditableTitle({ value, onChange, subtitle, subtitleRepeatsProject
             aria-label={t('common.cancel')}
             title={t('common.cancel')}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="size-3.5" />
           </Button>
         </form>
       ) : (
@@ -188,7 +188,7 @@ function HeaderSettingsButton() {
       aria-label={t('ui.header.settings')}
       className="text-muted-foreground hover:text-foreground transition-all duration-200"
     >
-      <Settings className="w-4 h-4" />
+      <Settings className="size-4" />
     </Button>
   );
 }

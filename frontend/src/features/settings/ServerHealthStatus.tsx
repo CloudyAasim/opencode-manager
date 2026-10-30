@@ -26,7 +26,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
   if (!health) {
     return (
       <div className="flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <Loader2 className="size-4 animate-spin text-muted-foreground" />
         <span className="text-sm text-muted-foreground">{t('settingsPanels.serverHealth.loading')}</span>
       </div>
     )
@@ -68,9 +68,9 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             disabled={upgradeOpenCodeMutation.isPending}
           >
             {upgradeOpenCodeMutation.isPending ? (
-              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+              <Loader2 className="size-3 sm:size-4 animate-spin" />
             ) : (
-              <ArrowUpCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              <ArrowUpCircle className="size-3 sm:size-4" />
             )}
             <span className="text-sm">{t('settingsPanels.serverHealth.update')}</span>
           </Button>
@@ -81,9 +81,9 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             disabled={restartServerMutation.isPending}
           >
             {restartServerMutation.isPending ? (
-              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+              <Loader2 className="size-3 sm:size-4 animate-spin" />
             ) : (
-              <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
+              <RotateCcw className="size-3 sm:size-4" />
             )}
             <span className="text-sm">{t('settingsPanels.serverHealth.restart')}</span>
           </Button>
@@ -92,7 +92,7 @@ export function ServerHealthStatus({ onOpenVersionDialog }: ServerHealthStatusPr
             size="compact"
             onClick={onOpenVersionDialog}
           >
-            <History className="h-3 w-3 sm:h-4 sm:w-4" />
+            <History className="size-3 sm:size-4" />
             <span className="text-sm">{t('settingsPanels.serverHealth.versions')}</span>
           </Button>
         </div>

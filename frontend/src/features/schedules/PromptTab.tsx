@@ -51,7 +51,7 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
       <p className="mt-3 line-clamp-3 text-xs text-muted-foreground">{template.suggestedDescription}</p>
       {selected && (
         <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary">
-          <Check className="h-3 w-3 text-primary-foreground" />
+          <Check className="size-3 text-primary-foreground" />
         </div>
       )}
     </>
@@ -75,7 +75,7 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
           aria-label={t('common.edit')}
           title={t('common.edit')}
         >
-          <Pencil className="h-3 w-3" />
+          <Pencil className="size-3" />
         </Button>
         <Button
           type="button"
@@ -86,7 +86,7 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
           aria-label={t('common.delete')}
           title={t('common.delete')}
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash2 className="size-3" />
         </Button>
       </div>
     </div>
@@ -118,7 +118,7 @@ export function PromptTab({
               className="gap-1"
               onClick={onNewTemplate}
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="size-3" />
               {t('schedules.promptTemplates.new')}
             </Button>
           </div>

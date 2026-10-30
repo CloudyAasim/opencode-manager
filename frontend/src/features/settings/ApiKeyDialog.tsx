@@ -68,7 +68,7 @@ export function ApiKeyDialog({
       <DialogContent width="md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
+            <Key className="size-5" />
             {isEditMode ? t('misc.apiKey.updateTitle', { provider: provider.name }) : t('misc.apiKey.connectTitle', { provider: provider.name })}
           </DialogTitle>
           <DialogDescription>
@@ -111,7 +111,7 @@ export function ApiKeyDialog({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ExternalLink className="h-3 w-3" />
+              <ExternalLink className="size-3" />
               {t('misc.apiKey.getApiKey')}
             </a>
           )}
@@ -124,7 +124,7 @@ export function ApiKeyDialog({
           <Button size="touch" onClick={handleSubmit} disabled={!apiKey.trim() || isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
                 {isEditMode ? t('misc.apiKey.updating') : t('misc.apiKey.connecting')}
               </>
             ) : (

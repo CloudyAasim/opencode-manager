@@ -116,7 +116,7 @@ export const SessionCard = ({
           className="h-full w-full flex items-center justify-center text-white hover:bg-destructive"
           onClick={handleDeleteClick}
         >
-          <Trash2 className="w-5 h-5" />
+          <Trash2 className="size-5" />
         </button>
       </div>
       <div ref={cardRef} style={swipeStyles} className={isDragging ? 'opacity-40' : undefined}>
@@ -157,14 +157,14 @@ export const SessionCard = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    {isPinned && <Pin className="w-3 h-3 text-warning shrink-0" />}
+                    {isPinned && <Pin className="size-3 text-warning shrink-0" />}
                     <h3 className="text-base font-semibold text-primary truncate">
                       {displaySessionTitle(session.title, t)}
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="size-3" />
                       {formatDistanceToNow(new Date(session.time.updated), {
                         addSuffix: true,
                       })}
@@ -179,7 +179,7 @@ export const SessionCard = ({
               <>
                 <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    {isPinned && <Pin className="w-3 h-3 text-warning shrink-0" />}
+                    {isPinned && <Pin className="size-3 text-warning shrink-0" />}
                     {isRenaming ? (
                       <div className="flex items-center gap-1 flex-1 min-w-0">
                         <input
@@ -204,7 +204,7 @@ export const SessionCard = ({
                           className="shrink-0"
                           onClick={(e) => { e.stopPropagation(); commitRename() }}
                         >
-                          <Check className="w-4 h-4" />
+                          <Check className="size-4" />
                         </Button>
                         <Button
                           size="icon-xs"
@@ -213,7 +213,7 @@ export const SessionCard = ({
                           className="shrink-0"
                           onClick={(e) => { e.stopPropagation(); setIsRenaming(false) }}
                         >
-                          <X className="w-4 h-4" />
+                          <X className="size-4" />
                         </Button>
                       </div>
                     ) : (
@@ -224,7 +224,7 @@ export const SessionCard = ({
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                     <span className="flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
+                      <Clock className="size-3 mr-1" />
                       {formatDistanceToNow(new Date(session.time.updated), {
                         addSuffix: true,
                       })}
@@ -244,7 +244,7 @@ export const SessionCard = ({
                         className="shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <MoreVertical className="w-4 h-4" />
+                        <MoreVertical className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -255,13 +255,13 @@ export const SessionCard = ({
                     >
                       {onTogglePin && (
                         <DropdownMenuItem onClick={() => onTogglePin()}>
-                          {isPinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
+                          {isPinned ? <PinOff className="size-4 mr-2" /> : <Pin className="size-4 mr-2" />}
                           {isPinned ? t('session.card.unpin') : t('session.card.pinToTop')}
                         </DropdownMenuItem>
                       )}
                       {onRename && (
                         <DropdownMenuItem onClick={startRename}>
-                          <Pencil className="w-4 h-4 mr-2" />
+                          <Pencil className="size-4 mr-2" />
                           {t('session.card.rename')}
                         </DropdownMenuItem>
                       )}
@@ -269,7 +269,7 @@ export const SessionCard = ({
                         className="text-destructive focus:text-destructive"
                         onClick={handleDeleteClick}
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="size-4 mr-2" />
                         {t('session.list.delete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -287,7 +287,7 @@ export const SessionCard = ({
                   onDelete(e);
                 }}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="size-4" />
               </Button>
             )}
           </div>

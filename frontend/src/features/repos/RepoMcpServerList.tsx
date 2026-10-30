@@ -80,7 +80,7 @@ export function RepoMcpServerList({
       case 'failed':
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" />
+            <AlertCircle className="size-3" />
             {t('repo.mcp.failed')}
           </Badge>
         )
@@ -104,7 +104,7 @@ export function RepoMcpServerList({
           detail={statusError.message}
           action={
             <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
-              <RefreshCw className="h-3 w-3 mr-1" />
+              <RefreshCw className="size-3 mr-1" />
               {t('common.retry')}
             </Button>
           }
@@ -154,17 +154,17 @@ export function RepoMcpServerList({
                           >
                             {status?.status === 'connected' && (
                               <span className="text-xs bg-success text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                {t('repo.mcp.connected')}<ChevronDown className="h-3 w-3" />
+                                {t('repo.mcp.connected')}<ChevronDown className="size-3" />
                               </span>
                             )}
                             {status?.status === 'needs_auth' && (
                               <span className="text-xs border border-warning text-warning px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                {t('repo.mcp.needsAuth')}<ChevronDown className="h-3 w-3" />
+                                {t('repo.mcp.needsAuth')}<ChevronDown className="size-3" />
                               </span>
                             )}
                             {status?.status === 'failed' && (
                               <span className="text-xs bg-destructive text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                <AlertCircle className="h-3 w-3" />{t('repo.mcp.failed')}<ChevronDown className="h-3 w-3" />
+                                <AlertCircle className="size-3" />{t('repo.mcp.failed')}<ChevronDown className="size-3" />
                               </span>
                             )}
                           </Button>
@@ -172,13 +172,13 @@ export function RepoMcpServerList({
                         <DropdownMenuContent align="start">
                           {showAuthButton && (
                             <DropdownMenuItem onClick={() => onAuthClick(serverId)}>
-                              <Key className="h-4 w-4 mr-2" />
+                              <Key className="size-4 mr-2" />
                               {t('repo.mcp.authenticate')}
                             </DropdownMenuItem>
                           )}
                           {connectedWithOAuth && (
                             <DropdownMenuItem onClick={() => onAuthClick(serverId)}>
-                              <RefreshCw className="h-4 w-4 mr-2" />
+                              <RefreshCw className="size-4 mr-2" />
                               {t('repo.mcp.reauthenticate')}
                             </DropdownMenuItem>
                           )}
@@ -189,7 +189,7 @@ export function RepoMcpServerList({
                                 onClick={() => onRemoveAuthClick(serverId)}
                                 disabled={removeAuthMutation.isPending}
                               >
-                                <Shield className="h-4 w-4 mr-2" />
+                                <Shield className="size-4 mr-2" />
                                 {removeAuthMutation.isPending ? t('repo.mcp.removing') : t('repo.mcp.removeAuth')}
                               </DropdownMenuItem>
                             </>
@@ -205,7 +205,7 @@ export function RepoMcpServerList({
                   </p>
                   {failed && status.status === 'failed' && (
                     <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
-                      <XCircle className="w-3 h-3 flex-shrink-0" />
+                      <XCircle className="size-3 flex-shrink-0" />
                       <span className="truncate">{status.error}</span>
                     </div>
                   )}
@@ -219,7 +219,7 @@ export function RepoMcpServerList({
                       variant="default"
                       size="sm"
                     >
-                      <Key className="h-3 w-3 mr-1" />
+                      <Key className="size-3 mr-1" />
                       {t('repo.mcp.auth')}
                     </Button>
                   ) : (

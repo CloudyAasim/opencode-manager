@@ -166,7 +166,7 @@ export function SettingsListRow({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="ghost" size="icon-sm" className="[[data-opencode-settings]_&]:max-sm:h-11 [[data-opencode-settings]_&]:max-sm:w-11" aria-label={actionsLabel}>
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

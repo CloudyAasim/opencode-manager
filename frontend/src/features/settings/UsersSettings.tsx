@@ -142,9 +142,9 @@ export function UsersSettings() {
         actions={
           <Button variant="outline" size="sm" onClick={() => usersQuery.refetch()} disabled={usersQuery.isFetching}>
             {usersQuery.isFetching ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 size-4 animate-spin" />
             ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 size-4" />
             )}
             {t('settings.users.refresh')}
           </Button>
@@ -153,14 +153,14 @@ export function UsersSettings() {
 
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="size-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
         <Alert variant="success">
-          <CheckCircle className="h-4 w-4" />
+          <CheckCircle className="size-4" />
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
@@ -168,7 +168,7 @@ export function UsersSettings() {
       <Card variant="flat">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" />
+            <UserPlus className="size-4 sm:size-5" />
             {t('settings.users.createUser')}
           </CardTitle>
         </CardHeader>
@@ -228,9 +228,9 @@ export function UsersSettings() {
           <div className="mt-3 flex justify-end">
             <Button size="wide" onClick={handleCreate} disabled={!canSubmit || isSubmitting}>
               {isSubmitting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
               ) : (
-                <UserPlus className="mr-2 h-4 w-4" />
+                <UserPlus className="mr-2 size-4" />
               )}
               {t('settings.users.create')}
             </Button>
@@ -241,7 +241,7 @@ export function UsersSettings() {
       <Card variant="flat">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+            <ShieldCheck className="size-4 sm:size-5" />
             {t('settings.users.memberCount', { count: users.length })}
           </CardTitle>
           <CardDescription>{t('settings.users.description')}</CardDescription>
@@ -325,7 +325,7 @@ export function UsersSettings() {
                       }}
                       disabled={rowBusy}
                     >
-                      <KeyRound className="h-3.5 w-3.5" />
+                      <KeyRound className="size-3.5" />
                     </Button>
 
                     <Button
@@ -339,9 +339,9 @@ export function UsersSettings() {
                       aria-label={t('settings.users.deleteUser')}
                     >
                       {deleteMutation.isPending && deleteMutation.variables === managedUser.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="size-4 animate-spin" />
                       ) : (
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="size-4 text-destructive" />
                       )}
                     </Button>
                   </div>
@@ -381,7 +381,7 @@ export function UsersSettings() {
               }}
               disabled={resetMutation.isPending || resetPasswordValue.length < 8}
             >
-              {resetMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {resetMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
               {t('settings.users.resetPassword')}
             </Button>
           </DialogFooter>

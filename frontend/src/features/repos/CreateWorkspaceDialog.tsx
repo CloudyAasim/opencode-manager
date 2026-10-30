@@ -17,7 +17,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, onCreate, isCreating
       <DialogContent width="md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-primary" />
+            <Layers className="size-4 text-primary" />
             {t('repo.createWorkspace')}
           </DialogTitle>
           <DialogDescription>
@@ -26,7 +26,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, onCreate, isCreating
         </DialogHeader>
         <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
           <div className="flex items-center gap-2 font-medium">
-            <GitBranch className="h-4 w-4 text-primary" />
+            <GitBranch className="size-4 text-primary" />
             {t('repo.worktree')}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -40,7 +40,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, onCreate, isCreating
           <Button size="touch" onClick={() => { void onCreate(); }} disabled={isCreating}>
             {isCreating ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 mr-2 animate-spin" />
                 {t('repo.creating')}
               </>
             ) : (

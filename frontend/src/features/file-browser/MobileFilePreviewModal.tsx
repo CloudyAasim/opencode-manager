@@ -108,7 +108,7 @@ export const MobileFilePreviewModal = memo(function MobileFilePreviewModal({
             aria-label={t('ui.filePreview.close')}
             className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-10 text-muted-foreground"
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </Button>
         )}
       </FullscreenSheet>

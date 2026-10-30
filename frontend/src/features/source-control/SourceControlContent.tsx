@@ -109,19 +109,19 @@ export function SourceControlContent({
       <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
-            <GitBranch className={cn('w-4 h-4', GIT_UI_COLORS.current)} />
+            <GitBranch className={cn('size-4', GIT_UI_COLORS.current)} />
             <span className={cn('text-sm font-medium', GIT_UI_COLORS.current)}>{displayBranch}</span>
           </div>
           {status && (status.ahead > 0 || status.behind > 0) && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               {status.ahead > 0 && (
                 <span className={`flex items-center gap-0.5 ${GIT_UI_COLORS.ahead}`}>
-                  <ArrowUp className="w-3 h-3" />{status.ahead}
+                  <ArrowUp className="size-3" />{status.ahead}
                 </span>
               )}
               {status.behind > 0 && (
                 <span className={`flex items-center gap-0.5 ${GIT_UI_COLORS.behind}`}>
-                  <ArrowDown className="w-3 h-3" />{status.behind}
+                  <ArrowDown className="size-3" />{status.behind}
                 </span>
               )}
             </div>
@@ -136,9 +136,9 @@ export function SourceControlContent({
             title={t('misc.sourceControl.fetchFromRemote')}
           >
             {git.fetch.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="size-4" />
             )}
           </Button>
           <Button
@@ -149,9 +149,9 @@ export function SourceControlContent({
             title={t('misc.sourceControl.pull')}
           >
             {git.pull.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <ArrowDownFromLine className="w-4 h-4" />
+              <ArrowDownFromLine className="size-4" />
             )}
           </Button>
           <Button
@@ -162,9 +162,9 @@ export function SourceControlContent({
             title={t('misc.sourceControl.push')}
           >
             {git.push.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Upload className="w-4 h-4" />
+              <Upload className="size-4" />
             )}
           </Button>
         </div>

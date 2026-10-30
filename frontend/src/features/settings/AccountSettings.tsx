@@ -149,14 +149,14 @@ export function AccountSettings() {
     <div className="space-y-4 sm:space-y-6">
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="size-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
         <Alert variant="success">
-          <CheckCircle className="h-4 w-4" />
+          <CheckCircle className="size-4" />
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
@@ -167,12 +167,12 @@ export function AccountSettings() {
             <CardHeader className="pb-3 sm:pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <User className="size-4 sm:size-5" />
                   <CardTitle>{t('settingsPanels.account.profile')}</CardTitle>
                 </div>
                 {!editingProfile && (
                   <Button variant="ghost" size="sm" onClick={() => setEditingProfile(true)}>
-                    <Edit2 className="h-3.5 w-3.5" />
+                    <Edit2 className="size-3.5" />
                   </Button>
                 )}
               </div>
@@ -210,7 +210,7 @@ export function AccountSettings() {
           <Card variant="flat">
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2">
-                <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Lock className="size-4 sm:size-5" />
                 {t('settingsPanels.account.changePassword')}
               </CardTitle>
               <CardDescription>{t('settingsPanels.account.changePasswordDescription')}</CardDescription>
@@ -221,7 +221,7 @@ export function AccountSettings() {
                   variant="outline"
                   onClick={() => setShowChangePassword(true)}
                 >
-                  <Lock className="mr-2 h-4 w-4" />
+                  <Lock className="mr-2 size-4" />
                   {t('settingsPanels.account.changePassword')}
                 </Button>
               ) : (
@@ -252,9 +252,9 @@ export function AccountSettings() {
                       disabled={changePasswordMutation.isPending || !currentPassword || !newPassword}
                     >
                       {changePasswordMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 size-4 animate-spin" />
                       ) : (
-                        <Lock className="mr-2 h-4 w-4" />
+                        <Lock className="mr-2 size-4" />
                       )}
                       {t('settingsPanels.account.changePassword')}
                     </Button>
@@ -275,7 +275,7 @@ export function AccountSettings() {
           <Card variant="flat">
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2">
-                <KeyRound className="h-4 w-4 sm:h-5 sm:w-5" />
+                <KeyRound className="size-4 sm:size-5" />
                 {t('settingsPanels.account.passkeys')}
               </CardTitle>
               <CardDescription>{t('settingsPanels.account.passkeysDescription')}</CardDescription>
@@ -293,9 +293,9 @@ export function AccountSettings() {
                   className="whitespace-nowrap"
                 >
                   {addPasskeyMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                   ) : (
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="mr-2 size-4" />
                   )}
                   {t('settingsPanels.account.addPasskey')}
                 </Button>
@@ -326,9 +326,9 @@ export function AccountSettings() {
                         title={t('common.delete')}
                       >
                         {deletePasskeyMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="size-4 animate-spin" />
                         ) : (
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="size-4 text-destructive" />
                         )}
                       </Button>
                     </div>
@@ -349,14 +349,14 @@ export function AccountSettings() {
 
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <LogOut className="h-4 w-4 shrink-0 text-destructive" />
+          <LogOut className="size-4 shrink-0 text-destructive" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-destructive">{t('settingsPanels.account.signOut')}</p>
             <p className="text-xs text-muted-foreground">{t('settingsPanels.account.signOutDescription')}</p>
           </div>
         </div>
         <Button size="wide" variant="destructive" onClick={logout} className="shrink-0">
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 size-4" />
           {t('settingsPanels.account.signOut')}
         </Button>
       </div>

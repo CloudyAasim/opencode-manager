@@ -200,7 +200,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                    aria-label={t('common.close')}
                    className="text-muted-foreground hover:text-foreground"
                  >
-                   <X className="w-4 h-4" />
+                   <X className="size-4" />
                  </Button>
                </Header.Actions>
              )}
@@ -249,7 +249,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                     onClick={handleSettingsBack}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    <ChevronLeft className="w-6 h-6" />
+                    <ChevronLeft className="size-6" />
                   </Button>
                 )}
                <Header.Title className="items-center">
@@ -265,7 +265,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                      aria-label={t('common.close')}
                      className="text-muted-foreground hover:text-foreground flex-shrink-0"
                    >
-                  <X className="w-6 h-6" />
+                  <X className="size-6" />
                  </Button>
                  </Header.Actions>
                )}

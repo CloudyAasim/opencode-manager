@@ -76,7 +76,7 @@ export function CommandSuggestions({
             onClick={() => touchTapSelect.onClick(command)}
             className="px-3"
           >
-            <Command className={`h-4 w-4 flex-shrink-0 ${isSelected ? 'opacity-90' : 'opacity-70'}`} />
+            <Command className={`size-4 flex-shrink-0 ${isSelected ? 'opacity-90' : 'opacity-70'}`} />
             <div className="flex-1 min-w-0">
               <div className="font-mono text-sm font-medium truncate">{displayName}</div>
               {command.description && (

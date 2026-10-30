@@ -70,18 +70,18 @@ export function UploadFolderButton({ kind }: UploadFolderButtonProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button size="sm" variant="outline" disabled={isUploading}>
-            <Upload className="h-4 w-4 mr-1" />
+            <Upload className="size-4 mr-1" />
             {isUploading ? t('settingsPanels.uploadFolder.uploading') : t('settingsPanels.uploadFolder.upload')}
-            <ChevronDown className="h-4 w-4 ml-1" />
+            <ChevronDown className="size-4 ml-1" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => openPicker(fileInputRef)}>
-            <FileUp className="h-4 w-4 mr-2" />
+            <FileUp className="size-4 mr-2" />
             {t('settingsPanels.uploadFolder.uploadFile')}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => openPicker(folderInputRef)}>
-            <FolderUp className="h-4 w-4 mr-2" />
+            <FolderUp className="size-4 mr-2" />
             {t('settingsPanels.uploadFolder.uploadFolder')}
           </DropdownMenuItem>
         </DropdownMenuContent>

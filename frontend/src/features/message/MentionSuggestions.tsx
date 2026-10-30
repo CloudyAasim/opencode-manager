@@ -77,9 +77,9 @@ export function MentionSuggestions({
           className="px-3"
         >
           {item.type === 'agent' ? (
-            <Bot className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <Bot className="size-4 mt-0.5 flex-shrink-0" />
           ) : (
-            <FileText className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <FileText className="size-4 mt-0.5 flex-shrink-0" />
           )}
           <div className="flex-1 min-w-0">
             <div className="font-mono text-sm font-medium truncate">

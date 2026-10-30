@@ -76,7 +76,7 @@ function SortableRepoCard({
             {...attributes}
             className="absolute left-0 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing touch-none p-1 rounded hover:bg-accent/80"
           >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
+            <GripVertical className="size-4 text-muted-foreground" />
           </div>
         )}
         <div className={isManualSort ? 'pl-8' : ''}>

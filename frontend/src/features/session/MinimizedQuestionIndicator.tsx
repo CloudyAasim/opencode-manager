@@ -38,7 +38,7 @@ export function MinimizedQuestionIndicator({
           aria-label={t('navigation.close')}
           className="shrink-0 text-muted-foreground"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="size-3.5" />
         </Button>
       </div>
     </div>

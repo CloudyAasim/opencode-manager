@@ -225,7 +225,7 @@ const DialogContent = React.forwardRef<
               top: 'calc(env(safe-area-inset-top, 0px) + var(--dialog-margin, 1rem))',
             } : undefined}
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
             <span className="sr-only">{t('ui.dialog.close')}</span>
           </DialogPrimitive.Close>
         )}

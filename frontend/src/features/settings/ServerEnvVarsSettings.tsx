@@ -90,7 +90,7 @@ export function ServerEnvVarsSettings() {
     >
       {needsRestart && (
         <Alert>
-          <RotateCcw className="h-4 w-4" />
+          <RotateCcw className="size-4" />
           <AlertDescription>
             {t('settingsPanels.serverEnv.restartRequired')}
           </AlertDescription>
@@ -150,7 +150,7 @@ export function ServerEnvVarsSettings() {
                 title={t('common.delete')}
                 className="shrink-0"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
               </Button>
             </div>
           )
@@ -164,7 +164,7 @@ export function ServerEnvVarsSettings() {
 
       <div className="flex gap-2 pt-1">
         <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
-          <Plus className="h-3 w-3 mr-1" />
+          <Plus className="size-3 mr-1" />
           {t('settingsPanels.serverEnv.addVariable')}
         </Button>
         <Button

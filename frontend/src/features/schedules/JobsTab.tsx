@@ -35,8 +35,8 @@ export function JobsTab({ jobs, selectedJobId, onSelectJob }: JobsTabProps) {
             <Badge className={getJobStatusTone(job)}>{job.enabled ? t('schedules.common.enabled') : t('schedules.common.paused')}</Badge>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> {formatScheduleShortLabel(t, job)}</span>
-            <span className="inline-flex items-center gap-1"><Bot className="h-3.5 w-3.5" /> {job.agentSlug ?? t('schedules.common.defaultAgent')}</span>
+            <span className="inline-flex items-center gap-1"><Clock3 className="size-3.5" /> {formatScheduleShortLabel(t, job)}</span>
+            <span className="inline-flex items-center gap-1"><Bot className="size-3.5" /> {job.agentSlug ?? t('schedules.common.defaultAgent')}</span>
           </div>
         </button>
         </Card>

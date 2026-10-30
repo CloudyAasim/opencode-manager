@@ -166,16 +166,16 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
                       aria-label={t('repo.download.label')}
                       title={t('repo.download.label')}
                     >
-                      <Download className="w-5 h-5" />
+                      <Download className="size-5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => openDownloadDialog('directory')}>
-                      <Download className="w-4 h-4 mr-2" />
+                      <Download className="size-4 mr-2" />
                       {t('repo.download.currentDirectory')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openDownloadDialog('repository')}>
-                      <Download className="w-4 h-4 mr-2" />
+                      <Download className="size-4 mr-2" />
                       {t('repo.download.entireRepository')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -190,7 +190,7 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
                   title={t('common.close')}
                   className="text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="size-5" />
                 </Button>
               )}
             </div>

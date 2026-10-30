@@ -195,7 +195,7 @@ export function Combobox({
             className="absolute right-7 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             tabIndex={-1}
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="size-3.5" />
           </button>
         )}
         <button
@@ -213,7 +213,7 @@ export function Combobox({
           )}
           tabIndex={-1}
         >
-          <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
+          <ChevronDown className={cn('size-4 transition-transform', isOpen && 'rotate-180')} />
         </button>
       </div>
 

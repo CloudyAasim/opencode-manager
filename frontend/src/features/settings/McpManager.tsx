@@ -216,13 +216,13 @@ export function McpManager({ config, onUpdate }: McpManagerProps) {
           onClick={() => refetchStatus()}
           disabled={isLoadingStatus}
         >
-          <RefreshCw className={`h-3 w-3 mr-1 ${isLoadingStatus ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`size-3 mr-1 ${isLoadingStatus ? 'animate-spin' : ''}`} />
           {t('settingsPanels.mcpManager.refresh')}
         </Button>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="size-4 mr-1" />
               {t('settingsPanels.mcpManager.addServer')}
             </Button>
           </DialogTrigger>

@@ -149,17 +149,17 @@ function FileBrowserHeader({ repoName, path, workspaceRoot, repoId, basePath }: 
                 aria-label={t('repo.download.label')}
                 title={t('repo.download.label')}
               >
-                <Download className="w-4 h-4" />
+                <Download className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setDownloadDialog({ type: 'directory' })}>
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="size-4 mr-2" />
                 {t('repo.download.currentDirectory')}
               </DropdownMenuItem>
               {repoId != null && (
                 <DropdownMenuItem onClick={() => setDownloadDialog({ type: 'repository' })}>
-                  <Download className="w-4 h-4 mr-2" />
+                  <Download className="size-4 mr-2" />
                   {t('repo.download.entireRepository')}
                 </DropdownMenuItem>
               )}

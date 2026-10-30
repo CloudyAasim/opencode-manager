@@ -117,9 +117,9 @@ export function AgentsMdEditor() {
             className="flex-1 sm:flex-none"
           >
             {resetToDefaultMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              <Loader2 className="size-4 mr-1 animate-spin" />
             ) : (
-              <RotateCcw className="h-4 w-4 mr-1" />
+              <RotateCcw className="size-4 mr-1" />
             )}
             {t('settingsPanels.agentsMd.resetButton')}
           </Button>
@@ -130,9 +130,9 @@ export function AgentsMdEditor() {
             className="flex-1 sm:flex-none"
           >
             {updateMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              <Loader2 className="size-4 mr-1 animate-spin" />
             ) : (
-              <Save className="h-4 w-4 mr-1" />
+              <Save className="size-4 mr-1" />
             )}
             {t('settingsPanels.agentsMd.save')}
           </Button>

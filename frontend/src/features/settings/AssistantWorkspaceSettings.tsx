@@ -127,9 +127,9 @@ export function AssistantWorkspaceSettings() {
               disabled={contentsQuery.isFetching}
             >
               {contentsQuery.isFetching ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="mr-2 size-4" />
               )}
               {t('settings.assistantWorkspace.refresh')}
             </Button>
@@ -139,7 +139,7 @@ export function AssistantWorkspaceSettings() {
               className="text-destructive"
               onClick={() => setResetOpen(true)}
             >
-              <RotateCcw className="mr-2 h-4 w-4" />
+              <RotateCcw className="mr-2 size-4" />
               {t('settings.assistantWorkspace.reset')}
             </Button>
           </>
@@ -147,7 +147,7 @@ export function AssistantWorkspaceSettings() {
       />
 
       <Alert>
-        <AlertTriangle className="h-4 w-4" />
+        <AlertTriangle className="size-4" />
         <AlertDescription>{t('settings.assistantWorkspace.projectsHint')}</AlertDescription>
       </Alert>
 
@@ -191,9 +191,9 @@ export function AssistantWorkspaceSettings() {
               {entries.map((entry) => (
                 <li key={entry.path} className="flex items-center gap-3 py-2">
                   {entry.isDirectory ? (
-                    <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <Folder className="size-4 shrink-0 text-muted-foreground" />
                   ) : (
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <FileText className="size-4 shrink-0 text-muted-foreground" />
                   )}
                   <span className="min-w-0 flex-1 truncate text-sm" title={entry.name}>
                     {entry.name}
@@ -217,7 +217,7 @@ export function AssistantWorkspaceSettings() {
                         setDraft(null)
                       }}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="size-4" />
                     </Button>
                   )}
                   <Button
@@ -227,7 +227,7 @@ export function AssistantWorkspaceSettings() {
                     aria-label={t('settings.assistantWorkspace.deleteFor', { name: entry.name })}
                     onClick={() => setPendingDelete(entry)}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Trash2 className="size-4 text-destructive" />
                   </Button>
                 </li>
               ))}

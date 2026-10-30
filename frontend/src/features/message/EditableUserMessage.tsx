@@ -111,7 +111,7 @@ export const EditableUserMessage = memo(function EditableUserMessage({
             disabled={refreshMessage.isPending}
             className="gap-1"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" />
             {t('message.actions.cancel')}
           </Button>
 
@@ -123,9 +123,9 @@ export const EditableUserMessage = memo(function EditableUserMessage({
             className="gap-1"
           >
             {refreshMessage.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Send className="w-4 h-4" />
+              <Send className="size-4" />
             )}
             {t('message.actions.resend')}
           </Button>
@@ -165,7 +165,7 @@ export const ClickableUserMessage = memo(function ClickableUserMessage({
       title={t('message.actions.clickToEditAndResend')}
     >
       <span className="flex-1">{content}</span>
-      <Pencil className={`w-4 h-4 flex-shrink-0 mt-0.5 text-muted-foreground transition-all ${isMobile ? 'opacity-100' : 'opacity-50 group-hover/edit:opacity-100 group-hover/edit:text-primary'}`} />
+      <Pencil className={`size-4 flex-shrink-0 mt-0.5 text-muted-foreground transition-all ${isMobile ? 'opacity-100' : 'opacity-50 group-hover/edit:opacity-100 group-hover/edit:text-primary'}`} />
     </Row>
   )
 })

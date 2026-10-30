@@ -206,7 +206,7 @@ export function OpenCodeConfigEditor({
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
               <span className="text-sm font-medium">{t('settingsPanels.configEditor.fileDetails')}</span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open/file-details:rotate-180" />
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open/file-details:rotate-180" />
             </summary>
             <div className="space-y-2 pb-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -238,7 +238,7 @@ export function OpenCodeConfigEditor({
                   disabled={isSaving}
                   className="shrink-0"
                 >
-                  <Download className="h-3.5 w-3.5 mr-1" />
+                  <Download className="size-3.5 mr-1" />
                   {t('settingsPanels.configEditor.download')}
                 </Button>
               </div>
@@ -333,7 +333,7 @@ export function OpenCodeConfigEditor({
               disabled={isSaving || !editConfigContent.trim()}
               className="flex-1 sm:flex-none"
             >
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSaving && <Loader2 className="mr-2 size-4 animate-spin" />}
               {t('settingsPanels.configEditor.update')}
             </Button>
           </DialogFooter>

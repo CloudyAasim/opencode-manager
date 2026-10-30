@@ -65,7 +65,7 @@ export function CommandsEditor({ commands, directoryCommands = [], onChange }: C
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="size-4 mr-1" />
               {t('settingsPanels.commandsEditor.addCommand')}
             </Button>
           </DialogTrigger>

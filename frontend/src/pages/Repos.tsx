@@ -24,7 +24,7 @@ export function Repos() {
           <Button
             onClick={() => setAddRepoOpen(true)}
           >
-            <Plus className="w-4 h-4 sm:mr-1" />
+            <Plus className="size-4 sm:mr-1" />
             <span className="hidden sm:inline">{t('navigation.newRepo')}</span>
           </Button>
         </Header.Actions>

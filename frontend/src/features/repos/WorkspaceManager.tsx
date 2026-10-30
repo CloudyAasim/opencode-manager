@@ -126,7 +126,7 @@ export function WorkspaceManager({
                   onCreateWorkspace()
                 }}
               >
-                <Plus className="h-3.5 w-3.5 mr-1" />
+                <Plus className="size-3.5 mr-1" />
                 {t('repo.new')}
               </Button>
               {manageMode ? (
@@ -139,7 +139,7 @@ export function WorkspaceManager({
                     disabled={selectedCount === 0 || isDeleting}
                     onClick={() => setConfirmOpen(true)}
                   >
-                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    <Trash2 className="size-3.5 mr-1" />
                     {t('repo.delete')}
                   </Button>
                   <Button
@@ -168,7 +168,7 @@ export function WorkspaceManager({
             </div>
 
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 size="lg"
                 value={searchQuery}
@@ -200,7 +200,7 @@ export function WorkspaceManager({
                     }}
                     aria-pressed={isActive}
                   >
-                    <GitBranch className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    <GitBranch className="size-3.5 text-primary flex-shrink-0" />
                     <span className={isActive ? 'truncate text-primary' : 'truncate'}>{label}</span>
                     {isActive && <span className="text-xs text-primary">{t('repo.workspaceManager.selected')}</span>}
                     {workspace.fullPath && (
@@ -222,7 +222,7 @@ export function WorkspaceManager({
                     onCheckedChange={(checked) => toggle(workspaceId, checked === true)}
                     aria-label={t('repo.workspaceManager.selectWorkspaceAria', { name: label })}
                   />
-                  <GitBranch className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                  <GitBranch className="size-3.5 text-primary flex-shrink-0" />
                   <span className="truncate">{label}</span>
                   {workspace.fullPath && (
                     <span className="ml-auto hidden truncate text-xs text-muted-foreground md:block md:max-w-[45%]">

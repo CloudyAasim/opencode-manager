@@ -74,7 +74,7 @@ export function AgentsEditor({ agents, directoryAgents = [], onChange }: AgentsE
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="size-4 mr-1" />
               {t('settingsPanels.agentsEditor.addAgent')}
             </Button>
           </DialogTrigger>

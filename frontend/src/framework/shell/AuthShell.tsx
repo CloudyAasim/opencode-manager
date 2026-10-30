@@ -41,7 +41,7 @@ export function AuthError({ message }: { message: string | null }) {
   if (!message) return null
   return (
     <Alert variant="destructive">
-      <AlertCircle className="h-4 w-4" />
+      <AlertCircle className="size-4" />
       <AlertDescription>{message}</AlertDescription>
     </Alert>
   )

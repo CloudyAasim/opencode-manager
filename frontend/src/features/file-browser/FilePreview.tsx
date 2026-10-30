@@ -407,7 +407,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMarkdownPreview(!markdownPreview) }}
                   title={markdownPreview ? t('repo.fileBrowser.showRawMarkdown') : t('repo.fileBrowser.previewRenderedMarkdown')}
                 >
-                  {markdownPreview ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {markdownPreview ? <Code className="size-3" /> : <Eye className="size-3" />}
                 </Button>
               )}
               
@@ -418,37 +418,37 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
                   onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLineWrap(!lineWrap) }}
                   title={lineWrap ? t('repo.fileBrowser.disableLineWrap') : t('repo.fileBrowser.enableLineWrap')}
                 >
-                  <WrapText className="w-3 h-3" />
+                  <WrapText className="size-3" />
                 </Button>
               )}
               
               {isTextFile && viewMode !== 'edit' && (
                 <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEdit() }}>
-                  <Edit3 className="w-3 h-3" />
+                  <Edit3 className="size-3" />
                 </Button>
               )}
               
               {showSaveButton && (
                 <Button variant="default" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); if (shouldVirtualize) { handleVirtualizedSaveClick(); } else { handleSave(); } }} disabled={isSaving || (shouldVirtualize && !hasVirtualizedChanges)}>
-                  <Save className="w-3 h-3" />
+                  <Save className="size-3" />
                 </Button>
               )}
               
               {showCancelButton && (
                 <Button variant="outline-destructive" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCancel() }}>
-                  <XIcon className="w-3 h-3" />
+                  <XIcon className="size-3" />
                 </Button>
               )}
               
               {viewMode !== 'edit' && (
                 <Button variant="outline" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDownload() }}>
-                  <Download className="w-3 h-3" />
+                  <Download className="size-3" />
                 </Button>
               )}
               
               {viewMode !== 'edit' && isMobileModal && onCloseModal && (
                 <Button variant="outline-destructive" size="icon-xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onCloseModal() }}>
-                  <X className="w-3 h-3" />
+                  <X className="size-3" />
                 </Button>
               )}
             </div>
