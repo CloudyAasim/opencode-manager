@@ -184,7 +184,7 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
                 selected={current}
                 className="items-center gap-3 p-3"
               >
-                <item.icon className={cn('w-5 h-5 shrink-0', current ? 'text-foreground' : 'text-muted-foreground')} />
+                <item.icon className={cn('size-5 shrink-0', current ? 'text-foreground' : 'text-muted-foreground')} />
                 <span className="font-medium text-foreground">{item.labelKey ? t(item.labelKey) : item.label}</span>
               </Row>
             )

@@ -225,7 +225,7 @@ export function SessionPanel({
                   return (
                     <DropdownMenuItem key={tab.id} onClick={() => addTab(tab.id)}>
                       <span className="mr-2">
-                        <Icon className="h-3.5 w-3.5" />
+                        <Icon className="size-3.5" />
                       </span>
                       {t(tab.labelKey)}
                     </DropdownMenuItem>

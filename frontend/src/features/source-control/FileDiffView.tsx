@@ -289,7 +289,7 @@ export function FileDiffView({
             <ArrowLeft className="size-4" />
           </Button>
         )}
-        <Icon className={cn("w-4 h-4 flex-shrink-0", config.color)} />
+        <Icon className={cn("size-4 flex-shrink-0", config.color)} />
         <div className="flex-1 min-w-0">
           {onOpenFile ? (
             <button

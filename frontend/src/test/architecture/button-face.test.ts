@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImportGraph, relativeTo } from './import-graph'
-import { classListOfAttrs, cvaBase, elementTree, iconNames, stripComments, tagAt, variantsOf } from './source-text'
+import { classListOfAttrs, cvaBase, elementTree, iconNames, isIconName, stripComments, tagAt, variantsOf } from './source-text'
 
 /**
  * 按钮的脸，是它那一档的事。
@@ -252,8 +252,9 @@ describe('按钮的脸，是它那一档的事', () => {
       const icons = iconNames(source.text)
       if (icons.size === 0) continue
       for (const element of elementTree(source.text)) {
-        // 图标是**从图标库进来的那个名字** ✓，不是"碰巧首字母大写" ✓。
-        if (!icons.has(element.name)) continue
+        // 图标是**从图标库进来的那个名字** ✓，或者**自己就说自己是图标**
+        // ✓（`Icon` ✓、`item.icon` ✓）——不是"碰巧首字母大写" ✓。
+        if (!isIconName(element.name, icons)) continue
         const classes = element.classes
         if (!/(?:^|\s)(?:[a-z0-9-]+:)?(?:w|h)-\d/.test(classes)) continue
         const line = source.text.slice(0, element.start).split('\n').length

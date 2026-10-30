@@ -615,6 +615,20 @@ export function iconNames(text: string): Set<string> {
 }
 
 /**
+ * Whether a name is an icon.
+ *
+ * Two ways to know, and a rule needs both: a name that came in from the icon
+ * library, and a name that says so itself - `Icon`, or a member of something
+ * that ends in `.icon`. The second one is how icons arrive as a prop, and a
+ * rule that only knew the library would not see them at all.
+ */
+export function isIconName(name: string, icons: Set<string>): boolean {
+  if (icons.has(name)) return true
+  if (name === 'Icon') return true
+  return (name.split('.').pop() ?? '') === 'icon'
+}
+
+/**
  * The size `field-text` asks for on a phone.
  *
  * It is the floor for anything you can type into: a phone enlarges an input

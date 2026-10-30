@@ -190,7 +190,7 @@ export function SourceControlContent({
                   variant="bar"
                   className="flex items-center gap-1.5 px-3 py-2 -mb-px text-muted-foreground data-[state=active]:text-foreground"
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="size-4" />
                   <span>{tab.label}</span>
                   {tab.id === 'changes' && changesCount > 0 && (
                     <span className="text-xs px-1.5 py-0.5 rounded-full bg-accent">

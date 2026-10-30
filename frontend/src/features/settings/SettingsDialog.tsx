@@ -219,7 +219,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                   value={item.id}
                   className="shrink-0 justify-start gap-2 px-3 py-2 text-muted-foreground transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                 >
-                  <item.icon className="h-4 w-4 shrink-0" />
+                  <item.icon className="size-4 shrink-0" />
                   {item.label}
                 </TabsTrigger>
               ))}
@@ -289,7 +289,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                     >
                      <div className="flex items-center gap-4">
                        <div className="p-3 bg-accent rounded-lg">
-                         <item.icon className="w-6 h-6 text-primary" />
+                         <item.icon className="size-6 text-primary" />
                        </div>
                        <div className="flex-1 min-w-0">
                          <h3 className="text-base font-semibold text-foreground mb-1">{item.label}</h3>
