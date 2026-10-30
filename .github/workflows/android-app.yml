@@ -147,15 +147,38 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -l /dev/kvm
 
+      # The emulator needs a device to run, and `avdmanager` is the only way
+      # to make one. Without it the emulator starts, finds nothing to run, and
+      # exits at once - which is what this workflow did: `adb wait-for-device`
+      # then waited for a device that was never coming, until the job ran out
+      # of time and said nothing about why.
+      - name: Create the device the tests run on
+        run: |
+          # `avdmanager` asks whether it should build a custom hardware
+          # profile; the answer is no, because the default one is what the
+          # tests need and a custom one is one more thing to go wrong.
+          echo no | avdmanager create avd \
+            --force \
+            --name opencode \
+            --package "system-images;android-34;google_apis;x86_64" \
+            --abi x86_64 \
+            --device "pixel_6"
+          avdmanager list avd
+
       # `-accel on` because the step above gave the runner KVM on purpose: the
       # emulator ran with `-no-accel` before, which is software emulation, and
-      # a software-emulated Android does not boot in the five minutes the wait
-      # below allows. `on` rather than the default `auto` so that a runner
-      # without KVM fails here, with a message about KVM, instead of booting
-      # slowly and failing later with a message about a timeout.
+      # a software-emulated Android does not boot in the time the wait below
+      # allows. `on` rather than the default `auto` so that a runner without
+      # KVM fails here, with a message about KVM, instead of booting slowly
+      # and failing later with a message about a timeout.
+      #
+      # `setsid` because the emulator is a *background* process and the step
+      # has to be able to end: without it the runner waits for the emulator to
+      # exit, and the emulator never does.
       - name: Start the emulator
         run: |
-          $ANDROID_HOME/emulator/emulator \
+          setsid $ANDROID_HOME/emulator/emulator \
+            -avd opencode \
             -no-window -no-audio -no-boot-anim -no-snapshot \
             -gpu swiftshader_indirect -accel on -enable-hw-keyboard \
             -qemu -m 2048M -camera-back none -camera-front none -wipe-data \
@@ -166,9 +189,17 @@ jobs:
           # would then install the APK onto a half-booted system and fail in
           # a way that says nothing about the test. So wait for the property
           # that means "booted", not for the device to appear.
-          adb wait-for-device
-          for attempt in $(seq 1 60); do
-            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+          #
+          # Both waits are bounded, and both say what went wrong: a device
+          # that never arrives must fail here, with the emulator's own log
+          # beside it, rather than hang until the job times out.
+          timeout 120 adb wait-for-device || {
+            echo "the device never showed up" >&2
+            tail -50 /tmp/emulator.log >&2 || true
+            exit 1
+          }
+          for attempt in $(seq 1 120); do
+            if [ "$(timeout 20 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
               echo "the emulator finished booting"
               exit 0
             fi
