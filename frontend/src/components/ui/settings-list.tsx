@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 export const RowActionsMenuContext = createContext(false)
 
@@ -121,6 +122,7 @@ export function SettingsListRow({
 }: SettingsListRowProps) {
   const inSettingsScope = useContext(RowActionsMenuContext)
   const isDesktop = useMediaQuery(DESKTOP_MEDIA_QUERY)
+  const { schedule } = useCancellableTimer()
   const actionsInMenu = inSettingsScope && !isDesktop
   const overflowActions = primaryAction && actionsInMenu
     ? [
@@ -175,7 +177,7 @@ export function SettingsListRow({
                   {action.separatorBefore && i > 0 && <DropdownMenuSeparator />}
                   <DropdownMenuItem
                     disabled={action.disabled}
-                    onSelect={() => setTimeout(action.onClick, 0)}
+                    onSelect={() => schedule(action.onClick, 0)}
                     className={action.destructive ? 'text-destructive focus:text-destructive' : undefined}
                   >
                     {action.icon}

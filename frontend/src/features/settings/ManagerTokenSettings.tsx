@@ -8,6 +8,7 @@ import { SettingsDisclosure } from './SettingsDisclosure'
 import { useI18n } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/error-toast'
 import { showToast } from '@/lib/toast'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 interface ManagerTokenSettingsProps {
   isOpen?: boolean
@@ -21,6 +22,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
   const [copied, setCopied] = useState(false)
   const [confirmRotate, setConfirmRotate] = useState(false)
   const [uncontrolledOpen, setUncontrolledOpen] = useState(true)
+  const { schedule } = useCancellableTimer()
   const isOpen = controlledOpen ?? uncontrolledOpen
   const handleToggle = onToggle ?? (() => setUncontrolledOpen((open) => !open))
 
@@ -29,7 +31,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
     try {
       await navigator.clipboard.writeText(token)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      schedule(() => setCopied(false), 2000)
     } catch (error) {
       showErrorToast(error, t('settingsPanels.managerToken.copyFailed'))
     }
@@ -38,7 +40,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
   const handleRotate = () => {
     if (!confirmRotate) {
       setConfirmRotate(true)
-      setTimeout(() => setConfirmRotate(false), 4000)
+      schedule(() => setConfirmRotate(false), 4000)
       return
     }
     rotate.mutate(undefined, {

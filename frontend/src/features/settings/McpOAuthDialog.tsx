@@ -10,6 +10,7 @@ import { Loader2, ExternalLink, Key, XCircle, ChevronDown, ChevronUp, CheckCircl
 import type { McpAuthStartResponse } from '@/api/mcp'
 import { mcpApi } from '@/api/mcp'
 import { useI18n } from '@/lib/i18n'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 interface McpOAuthDialogProps {
   open: boolean
@@ -41,6 +42,7 @@ export function McpOAuthDialog({
   const [authCode, setAuthCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showManualEntry, setShowManualEntry] = useState(false)
+  const { schedule } = useCancellableTimer()
   const flowIdRef = useRef<string | null>(null)
   const flowPollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const statusPollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -74,10 +76,10 @@ export function McpOAuthDialog({
     }
     setStep('success')
     onSuccess?.()
-    setTimeout(() => {
+    schedule(() => {
       onOpenChange(false)
     }, 1500)
-  }, [stopAllPolling, onOpenChange, onSuccess])
+  }, [stopAllPolling, onOpenChange, onSuccess, schedule])
 
   const resetState = useCallback(() => {
     setStep('loading')

@@ -6,6 +6,7 @@ import type { QuestionRequest, QuestionInfo } from '@/api/types'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 interface QuestionPromptProps {
   question: QuestionRequest
@@ -27,6 +28,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
   const [confirmedCustoms, setConfirmedCustoms] = useState<string[]>(() => questions.map(() => ''))
   const [expandedOther, setExpandedOther] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { schedule } = useCancellableTimer()
   const [touchStartY, setTouchStartY] = useState<number | null>(null)
 
   const handleMinimize = useCallback(() => {
@@ -96,10 +98,10 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
       if (isSingleSelect) {
         handleSubmitSingle(label)
       } else {
-        setTimeout(() => goToNext(), 150)
+        schedule(() => goToNext(), 150)
       }
     }
-  }, [questions, isSingleSelect, goToNext, handleSubmitSingle])
+  }, [questions, isSingleSelect, goToNext, handleSubmitSingle, schedule])
 
   const handleCustomInput = useCallback((questionIndex: number, value: string) => {
     setCustomInputs(prev => {
@@ -144,7 +146,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
       } else {
         updated[questionIndex] = [value]
         if (!isSingleSelect) {
-          setTimeout(() => goToNext(), 150)
+          schedule(() => goToNext(), 150)
         }
       }
       return updated
@@ -160,7 +162,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
     if (isSingleSelect) {
       handleSubmitSingle(value)
     }
-  }, [customInputs, confirmedCustoms, questions, isSingleSelect, goToNext, handleSubmitSingle])
+  }, [customInputs, confirmedCustoms, questions, isSingleSelect, goToNext, handleSubmitSingle, schedule])
 
   const handleNext = useCallback(() => {
     if (expandedOther === currentIndex) {

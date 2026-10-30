@@ -10,6 +10,7 @@ import { VirtualizedTextView, type VirtualizedTextViewHandle } from '@/component
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { useI18n } from '@/lib/i18n'
 import { showToast } from '@/lib/toast'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 
 const VIRTUALIZATION_THRESHOLD_BYTES = 50_000
@@ -37,6 +38,8 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
   const [markdownPreview, setMarkdownPreview] = useState(isMarkdownFile)
   const [isLoadingAllContent, setIsLoadingAllContent] = useState(false)
   const [fullContentLoaded, setFullContentLoaded] = useState(false)
+  const { schedule: scheduleScroll } = useCancellableTimer()
+  const { schedule: scheduleHighlight } = useCancellableTimer()
   const [fullContent, setFullContent] = useState<string | null>(null)
   const [localMdContent, setLocalMdContent] = useState<string | null>(null)
   const virtualizedRef = useRef<VirtualizedTextViewHandle>(null)
@@ -78,14 +81,14 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       const lineHeight = 20
       const scrollPosition = (initialLineNumber - 1) * lineHeight
       setHighlightedLine(initialLineNumber)
-      setTimeout(() => {
+      scheduleScroll(() => {
         contentRef.current?.scrollTo({ top: scrollPosition, behavior: 'smooth' })
       }, 100)
-      setTimeout(() => {
+      scheduleHighlight(() => {
         setHighlightedLine(undefined)
       }, 3000)
     }
-  }, [initialLineNumber, shouldVirtualize, file.content])
+  }, [initialLineNumber, shouldVirtualize, file.content, scheduleScroll, scheduleHighlight])
   
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return `0 ${t('repo.fileBrowser.units.bytes')}`

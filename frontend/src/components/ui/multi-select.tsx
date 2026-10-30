@@ -5,6 +5,7 @@ import { useI18n } from '@/lib/i18n'
 import { Input } from '@/components/ui/input'
 import { Row } from '@/components/ui/row'
 import { PanelMessage } from '@/components/ui/panel-message'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 export interface MultiSelectOption {
   value: string
@@ -43,6 +44,7 @@ export function MultiSelect({
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
+  const { schedule } = useCancellableTimer()
 
   const filteredOptions = options.filter(option =>
     option.label.toLowerCase().includes(search.toLowerCase()) ||
@@ -84,7 +86,7 @@ export function MultiSelect({
   const handleOpen = () => {
     if (disabled) return
     setIsOpen(true)
-    setTimeout(() => inputRef.current?.focus(), 0)
+    schedule(() => inputRef.current?.focus(), 0)
   }
 
   const handleTriggerKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -92,13 +94,13 @@ export function MultiSelect({
       e.preventDefault()
       if (!isOpen) {
         setIsOpen(true)
-        setTimeout(() => inputRef.current?.focus(), 0)
+        schedule(() => inputRef.current?.focus(), 0)
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false)
       setSearch('')
     }
-  }, [isOpen])
+  }, [isOpen, schedule])
 
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {

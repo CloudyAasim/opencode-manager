@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 interface CopyButtonProps {
   content: string
@@ -23,13 +24,14 @@ export function CopyButton({
   const { t } = useI18n()
   const resolvedTitle = title ?? t('ui.copyButton.copy')
   const [copied, setCopied] = useState(false)
+  const { schedule } = useCancellableTimer()
 
   const handleCopy = async () => {
     if (!content.trim()) return
     try {
       await navigator.clipboard.writeText(content)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      schedule(() => setCopied(false), 2000)
       onCopy?.()
     } catch {
       const textArea = document.createElement('textarea')
@@ -42,7 +44,7 @@ export function CopyButton({
         const successful = document.execCommand('copy')
         if (successful) {
           setCopied(true)
-          setTimeout(() => setCopied(false), 2000)
+          schedule(() => setCopied(false), 2000)
           onCopy?.()
         }
       } finally {

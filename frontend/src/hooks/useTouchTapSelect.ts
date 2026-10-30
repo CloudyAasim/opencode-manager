@@ -1,4 +1,5 @@
 import { useCallback, useRef, type TouchEvent } from 'react'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 const TOUCH_TAP_MOVE_THRESHOLD = 8
 const TOUCH_CLICK_SUPPRESS_MS = 400
@@ -7,13 +8,14 @@ export function useTouchTapSelect<T>(onSelect: (item: T) => void) {
   const touchStartRef = useRef<{ x: number, y: number } | null>(null)
   const hasTouchMovedRef = useRef(false)
   const suppressClickRef = useRef(false)
+  const { schedule } = useCancellableTimer()
 
   const suppressNextClick = useCallback(() => {
     suppressClickRef.current = true
-    setTimeout(() => {
+    schedule(() => {
       suppressClickRef.current = false
     }, TOUCH_CLICK_SUPPRESS_MS)
-  }, [])
+  }, [schedule])
 
   const onTouchStart = useCallback((event: TouchEvent<HTMLElement>) => {
     const touch = event.touches[0]

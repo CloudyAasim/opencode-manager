@@ -17,6 +17,7 @@ import { useUIState } from '@/stores/uiStateStore'
 import { useSendErrorStore } from '@/stores/sendErrorStore'
 import { useMobile } from '@/hooks/useMobile'
 import { useI18n } from '@/lib/i18n'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 import { usePermissions } from '@/contexts/EventContext'
 import { ArrowDown, Upload, X, Mic, MicOff } from 'lucide-react'
@@ -99,6 +100,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
   onPromptChange
 }, ref) {
   const { t } = useI18n()
+  const { schedule } = useCancellableTimer()
   const [prompt, setPrompt] = useState('')
   const [isBashMode, setIsBashMode] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -438,7 +440,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       
       setPrompt(cleanedTemplate)
       
-      setTimeout(() => {
+      schedule(() => {
         if (textareaRef.current) {
           textareaRef.current.focus()
           textareaRef.current.setSelectionRange(cleanedTemplate.length, cleanedTemplate.length)
@@ -455,7 +457,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       
       setPrompt(newPrompt)
       
-      setTimeout(() => {
+      schedule(() => {
         if (textareaRef.current) {
           const newCursorPos = beforeCommand.length + command.name.length + 2
           textareaRef.current.focus()
@@ -464,7 +466,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
         }
       }, 0)
     }
-  }, [prompt])
+  }, [prompt, schedule])
 
   useEffect(() => {
     if (!pendingPromptCommand) return
@@ -495,7 +497,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       return next
     })
 
-    setTimeout(() => {
+    schedule(() => {
       if (textareaRef.current) {
         const newCursorPos = beforeMention.length + filename.length + 2
         textareaRef.current.focus()
@@ -503,7 +505,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
         textareaRef.current.scrollTop = textareaRef.current.scrollHeight
       }
     }, 0)
-  }, [directory, mentionRange, prompt])
+  }, [directory, mentionRange, prompt, schedule])
 
   useEffect(() => {
     if (!pendingPromptFile) return
@@ -522,7 +524,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       setPrompt(newPrompt)
       setSelectedAgent(item.value)
       
-      setTimeout(() => {
+      schedule(() => {
         if (textareaRef.current) {
           const newCursorPos = beforeMention.length + item.value.length + 2
           textareaRef.current.focus()

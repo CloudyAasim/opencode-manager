@@ -2,6 +2,7 @@ import { useId, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { scrollSectionIntoView } from '@/lib/settingsScroll'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 interface SettingsDisclosureProps {
   title: string
@@ -26,6 +27,7 @@ export function SettingsDisclosure({
   const isOpen = controlledOpen ?? uncontrolledOpen
   const contentId = useId()
   const headerRef = useRef<HTMLButtonElement>(null)
+  const { schedule } = useCancellableTimer()
 
   const handleToggle = () => {
     const nextOpen = !isOpen
@@ -35,7 +37,7 @@ export function SettingsDisclosure({
       setUncontrolledOpen(nextOpen)
     }
     if (nextOpen) {
-      setTimeout(() => scrollSectionIntoView(headerRef.current), 0)
+      schedule(() => scrollSectionIntoView(headerRef.current), 0)
     }
   }
 

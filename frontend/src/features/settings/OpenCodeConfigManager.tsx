@@ -1,6 +1,7 @@
 import { useState, useRef, useId } from 'react'
 import { PanelLoading } from '@/components/ui/panel-loading'
 import { cn } from '@/lib/utils'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 import { Loader2, Edit, Download, RotateCcw, FileText, ChevronDown, AlertTriangle } from 'lucide-react'
 import { PanelMessage } from '@/components/ui/panel-message'
 import { Button } from '@/components/ui/button'
@@ -91,6 +92,7 @@ export function OpenCodeConfigManager() {
   })
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isVersionDialogOpen, setIsVersionDialogOpen] = useState(false)
+  const { schedule } = useCancellableTimer()
   const {
     restartServerMutation,
     confirmOpen: isRestartPromptOpen,
@@ -138,7 +140,7 @@ export function OpenCodeConfigManager() {
     const isExpanding = !expandedSections[section]
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
     if (isExpanding) {
-      setTimeout(() => scrollSectionIntoView(ref?.current ?? null), 0)
+      schedule(() => scrollSectionIntoView(ref?.current ?? null), 0)
     }
   }
 

@@ -16,6 +16,7 @@ import { Combobox } from '@/components/ui/combobox'
 import { useI18n, i18n } from '@/lib/i18n'
 import { DEFAULT_STT_CONFIG } from '@/api/types/settings'
 import { Button } from '@/components/ui/button'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 const sttFormSchema = z.object({
   enabled: z.boolean(),
@@ -47,6 +48,7 @@ export function STTSettings() {
 
   const [isTesting, setIsTesting] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
+  const { schedule } = useCancellableTimer()
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'failed'>('idle')
   const [availableModels, setAvailableModels] = useState<string[]>(['whisper-1'])
   const [modelsSourceIsDefault, setModelsSourceIsDefault] = useState(false)
@@ -139,7 +141,7 @@ export function STTSettings() {
       if (transcript) {
         setTestTranscript(transcript)
         setTestResult('success')
-        setTimeout(() => {
+        schedule(() => {
           setIsTesting(false)
         }, 1000)
       } else if (sttError) {
@@ -150,7 +152,7 @@ export function STTSettings() {
         setIsTesting(false)
       }
     }
-  }, [isTesting, isRecording, isProcessing, transcript, sttError])
+  }, [isTesting, isRecording, isProcessing, transcript, sttError, schedule])
 
   useEffect(() => {
     if (isTesting && interimTranscript && interimTranscript !== 'Processing...' && interimTranscript !== 'Recording...') {
