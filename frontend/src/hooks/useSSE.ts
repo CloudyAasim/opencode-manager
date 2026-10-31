@@ -13,6 +13,7 @@ import type { EventStreamSubscription } from '@/lib/opencode-event-stream'
 import { parseOpenCodeError } from '@/lib/opencode-errors'
 import { createPartsBatcher } from '@/lib/partsBatcher'
 import { i18n, useI18n } from '@/lib/i18n'
+import { useCancellableTimer } from './use-cancellable-timer'
 
 const STATUS_POLL_INTERVAL_MS = 15000
 
@@ -20,36 +21,6 @@ const getEventDirectory = (event: SSEEvent): string | undefined => {
   const directory = (event as { directory?: unknown }).directory
   return typeof directory === 'string' ? directory : undefined
 }
-
-const handleRestartServer = async () => {
-  showToast.loading(i18n.t('session.actions.serverRestarting'), {
-    id: 'restart-server',
-  })
-
-  try {
-    const result = await settingsApi.reloadOpenCodeConfig()
-    if (result.success) {
-      showToast.success(result.message || 'OpenCode server restarted', {
-        id: 'restart-server',
-        duration: 3000,
-      })
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
-    } else {
-      showToast.error(result.message || 'Failed to restart OpenCode server', {
-        id: 'restart-server',
-        duration: 5000,
-      })
-    }
-  } catch (error) {
-    showToast.error(error instanceof Error ? error.message : 'Failed to restart OpenCode server', {
-      id: 'restart-server',
-      duration: 5000,
-    })
-  }
-}
-
 
 export const useSSE = (opcodeUrl: string | null | undefined, directory?: string | string[], currentSessionId?: string) => {
   const { t } = useI18n()
@@ -75,6 +46,44 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
   const replaceSessionStatuses = useSessionStatus((state) => state.replaceStatuses)
   const setSessionTodos = useSessionTodos((state) => state.setTodos)
   const batcherRef = useRef<ReturnType<typeof createPartsBatcher> | null>(null)
+  const { schedule } = useCancellableTimer()
+
+  /*
+   * The page reloads a couple of seconds after the server restarted, so that
+   * the new build is the one running.
+   *
+   * The wait belongs to this page: if the user walks away before it fires,
+   * reloading the page they walked to would be rude, and the update waits for
+   * the next reload instead.
+   */
+  const handleRestartServer = useCallback(async () => {
+    showToast.loading(i18n.t('session.actions.serverRestarting'), {
+      id: 'restart-server',
+    })
+
+    try {
+      const result = await settingsApi.reloadOpenCodeConfig()
+      if (result.success) {
+        showToast.success(result.message || 'OpenCode server restarted', {
+          id: 'restart-server',
+          duration: 3000,
+        })
+        schedule('reload', () => {
+          window.location.reload()
+        }, 2000)
+      } else {
+        showToast.error(result.message || 'Failed to restart OpenCode server', {
+          id: 'restart-server',
+          duration: 5000,
+        })
+      }
+    } catch (error) {
+      showToast.error(error instanceof Error ? error.message : 'Failed to restart OpenCode server', {
+        id: 'restart-server',
+        duration: 5000,
+      })
+    }
+  }, [schedule])
 
   useEffect(() => {
     if (!opcodeUrl) {
@@ -356,7 +365,7 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
       default:
         break
     }
-  }, [t, queryClient, opcodeUrl, directorySet, resolveCacheDirectory, setSessionStatus, setSessionTodos, currentSessionId])
+  }, [t, queryClient, opcodeUrl, directorySet, resolveCacheDirectory, setSessionStatus, setSessionTodos, currentSessionId, handleRestartServer])
 
   const fetchInitialData = useCallback(async () => {
     if (!client || !primaryDirectory || !mountedRef.current) return

@@ -25,8 +25,13 @@ import { stripComments } from './source-text'
  * **它并不比零件活得久** ✓ —— 所以它没有理由 ✗ **不归那个零件管** ✗。
  *
  * 于是现在 ✗ **只有一副** ✓：零件里的等待 ✓ 只从共享零件来 ✓。
- * 零件之外的等待 ✓（页面自己刷新 ✓、service worker ✓、
- * 一个普通的模块 ✓）**不归这条管** ✓。
+ *
+ * 而**零件之外** ✗ 还有一半 ✓：**普通模块** ✓（一个 store ✓、
+ * 一个 API 包装 ✓、一个 service worker ✓）—— 它们**自己就是自己的寿命** ✓，
+ * 所以它们**可以自己安排定时器** ✓，但是 ✗
+ * **要么这个模块清得掉它** ✓（它有 `clearTimeout(` ✓），
+ * **要么它点着名** ✓（它**非取消不可** ✓）。
+ * **一件白扔掉的话** ✗ —— 没有人记得它 ✗，也就没有人能把它收回来 ✗。
  */
 
 const FRONTEND_SRC = path.resolve(__dirname, '../..')
@@ -49,24 +54,34 @@ const SHARED_TIMER = 'hooks/use-cancellable-timer.ts'
 const EXCEPTIONS: ReadonlyArray<readonly [string, string, string]> = [
   [
     'hooks/use-cancellable-timer.ts',
-    'setTimeout',
+    'setTimeout(() => {',
     '**它就是那个零件** ✓ —— 全应用 ✗ 只有这里 ✗ 允许自己安排定时器 ✓',
   ],
   [
-    'hooks/useSSE.ts',
-    'setTimeout',
-    '它等的是**页面自己刷新** ✓（重启服务器之后两秒 ✓）——页面反正要走 ✓，零件没了也没关系 ✓',
+    'stores/sessionStatusStore.ts',
+    'setTimeout(() => {',
+    '它是一个 **store** ✓ —— 它的等待 ✓ 是**这个 store 自己的** ✓（store 的寿命 ✓ 就是应用的寿命 ✓）',
   ],
   [
-    'stores/sessionStatusStore.ts',
-    'setTimeout',
-    '它是一个 **store** ✓ —— 它的等待 ✓ 是**这个 store 自己的** ✓（store 的寿命 ✓ 就是应用的寿命 ✓）',
+    'lib/download.ts',
+    'URL.revokeObjectURL',
+    '它要**收回一个 object URL** ✓ —— 早一步 ✗ 下载就断了 ✓，所以它**非取消不可** ✓',
+  ],
+  [
+    'sw.ts',
+    'DEFERRED_BATCH_PAUSE_MS',
+    'service worker ✗ **批与批之间歇一下** ✓ —— 它**非取消不可** ✓',
+  ],
+  [
+    'sw.ts',
+    'setTimeout(() => {',
+    'service worker ✗ **延后开始缓存** ✓ —— 它**非取消不可** ✓',
   ],
 ]
 
 /** 这一处被点名了吗 ✗。 */
-function excused(rel: string, token: string): boolean {
-  return EXCEPTIONS.some(([file, marked]) => file === rel && marked === token)
+function excused(rel: string, line: string): boolean {
+  return EXCEPTIONS.some(([file, token]) => file === rel && line.includes(token))
 }
 
 /**
@@ -74,8 +89,8 @@ function excused(rel: string, token: string): boolean {
  *
  * 零件 ✗ 就是 **React 的组件与钩子** ✓ —— 它有寿命 ✓，
  * 所以它的等待 ✗ 需要一个主人 ✓。而一个普通的模块 ✓
- * （service worker ✓、一个 store ✓、一个 API 包装 ✓）
- * **自己就是自己的寿命** ✓，它的等待 ✗ **不归这条管** ✓。
+ * （一个 store ✓、一个 API 包装 ✓、一个 service worker ✓）
+ * **自己就是自己的寿命** ✓。
  */
 function isPart(text: string): boolean {
   return /\buse[A-Z]\w*\s*\(/.test(text)
@@ -93,16 +108,45 @@ function shadowsSetTimeout(text: string): boolean {
   return /\[\s*[^,\]]+\s*,\s*setTimeout\s*\]/.test(text)
 }
 
+interface Timer {
+  at: number
+  line: string
+  lineNumber: number
+  /** 它是不是一句白扔掉的话 ✓——句柄扔了 ✗ 就没人记得它 ✓。 */
+  bare: boolean
+}
+
 /** 全局的那一个定时器 ✗，在哪儿 ✓。 */
-function timerCalls(text: string): number[] {
-  const found: number[] = []
-  const bare = /(?<![\w$.])setTimeout\s*\(/g
-  const qualified = /(?:window|globalThis)\.setTimeout\s*\(/g
-  let match: RegExpExecArray | null
-  while ((match = bare.exec(text)) !== null) found.push(match.index)
-  bare.lastIndex = 0
-  while ((match = qualified.exec(text)) !== null) found.push(match.index)
-  return found.sort((a, b) => a - b)
+function timersOf(text: string): Timer[] {
+  const found: Timer[] = []
+  const patterns = [
+    /(?<![\w$.])setTimeout\s*\(/g,
+    /(?:window|globalThis)\.setTimeout\s*\(/g,
+  ]
+
+  for (const pattern of patterns) {
+    let match: RegExpExecArray | null
+    while ((match = pattern.exec(text)) !== null) {
+      const before = text.slice(0, match.index)
+      const lineStart = before.lastIndexOf('\n') + 1
+      const lineEnd = text.indexOf('\n', match.index)
+      const line = text.slice(lineStart, lineEnd < 0 ? text.length : lineEnd)
+      const lineNumber = before.split('\n').length
+      // 句柄在不在 ✓ —— 也就是 ✗ **它有没有被接住** ✓：
+      // 交给了某个变量 ✓（`const timer = setTimeout(…)` ✓，
+      // 哪怕中间隔着一个三元 ✓），或者存进了某个地方 ✓（`timers.set(id, …)` ✓）。
+      const boundary = Math.max(
+        before.lastIndexOf(';'),
+        before.lastIndexOf('{'),
+        before.lastIndexOf('}'),
+      )
+      const statement = before.slice(boundary + 1)
+      const assigned = /[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\s*=/.test(statement)
+      const stored = /\.\w+\s*\(/.test(statement)
+      found.push({ at: match.index, line, lineNumber, bare: !assigned && !stored })
+    }
+  }
+  return found.sort((a, b) => a.at - b.at)
 }
 
 /** 每一把等待 ✗ 都要有名字 ✓。 */
@@ -122,10 +166,13 @@ describe('定时器只有一个零件', () => {
     const parts = SOURCES.filter((source) => isPart(source.text))
     expect(parts.length, '一个零件都没扫到，这道门禁多半没在看').toBeGreaterThan(50)
 
+    const modules = SOURCES.filter((source) => !isPart(source.text))
+    expect(modules.length, '一个普通模块都没扫到，这道门禁多半没在看').toBeGreaterThan(50)
+
     const shared = SOURCES.find((source) => source.rel === SHARED_TIMER)
     expect(shared, '共享的定时器零件不见了').toBeDefined()
     expect(
-      timerCalls(shared!.text).length,
+      timersOf(shared!.text).length,
       '共享的定时器零件自己没有安排定时器，这道门禁多半没在看',
     ).toBeGreaterThan(0)
   })
@@ -135,17 +182,12 @@ describe('定时器只有一个零件', () => {
 
     for (const source of SOURCES) {
       if (!isPart(source.text)) continue
-      if (shadowsSetTimeout(source.text) && source.rel !== SHARED_TIMER) {
-        // 这个文件里的 `setTimeout` ✗ **是那个字段的 setter** ✗，不是定时器 ✓。
-        const shadowed = /(?<![\w$.])setTimeout\s*\(/.test(source.text)
-        if (shadowed && !/(?:window|globalThis)\.setTimeout\s*\(/.test(source.text)) continue
-      }
+      if (shadowsSetTimeout(source.text)) continue
 
-      for (const at of timerCalls(source.text)) {
-        if (excused(source.rel, 'setTimeout')) continue
-        const line = source.text.slice(0, at).split('\n').length
+      for (const timer of timersOf(source.text)) {
+        if (excused(source.rel, timer.line)) continue
         offenders.push(
-          `${source.rel}:${line}  零件里不许自己安排定时器——它只从共享的定时器零件来`,
+          `${source.rel}:${timer.lineNumber}  零件里不许自己安排定时器——它只从共享的定时器零件来`,
         )
       }
     }
@@ -156,6 +198,61 @@ describe('定时器只有一个零件', () => {
         `这些零件自己安排了定时器：${offenders.length} 处`,
         ...offenders,
         '等待只从 `@/hooks/use-cancellable-timer` 来。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('普通模块里的等待，要么清得掉，要么点着名', () => {
+    const offenders: string[] = []
+
+    for (const source of SOURCES) {
+      if (isPart(source.text)) continue
+      if (shadowsSetTimeout(source.text)) continue
+      const timers = timersOf(source.text)
+      if (!timers.length) continue
+
+      const canCancel = /clearTimeout\s*\(/.test(source.text)
+      if (canCancel) continue
+
+      for (const timer of timers) {
+        if (excused(source.rel, timer.line)) continue
+        offenders.push(
+          `${source.rel}:${timer.lineNumber}  这个模块的定时器没人能清掉——它要么有把手并被清掉，要么点着名`,
+        )
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些等待没人能清掉：${offenders.length} 处`,
+        ...offenders,
+        '一个模块要么清得掉它的定时器，要么点名说明它非取消不可。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('一件白扔掉的话，谁也不许有', () => {
+    // 一个句柄 ✗ 就是"有人记得它" ✓。没有句柄的定时器 ✓
+    // 收不回来 ✗，也说不清它属于谁 ✗。
+    const offenders: string[] = []
+
+    for (const source of SOURCES) {
+      if (shadowsSetTimeout(source.text)) continue
+
+      for (const timer of timersOf(source.text)) {
+        if (!timer.bare) continue
+        if (excused(source.rel, timer.line)) continue
+        offenders.push(`${source.rel}:${timer.lineNumber}  这句定时器没有句柄——没有人记得它`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些定时器没有句柄：${offenders.length} 处`,
+        ...offenders,
+        '一个句柄就是"有人记得它"——没有句柄的定时器，收不回来。',
       ].join('\n'),
     ).toEqual([])
   })
@@ -185,13 +282,13 @@ describe('定时器只有一个零件', () => {
     // 而是**一条没人读的第二种做法** ✓。
     const offenders: string[] = []
 
-    for (const [file] of EXCEPTIONS) {
+    for (const [file, token] of EXCEPTIONS) {
       const source = SOURCES.find((candidate) => candidate.rel === file)
       if (!source) {
         offenders.push(`${file}  点名的那个地方不在了`)
         continue
       }
-      const count = timerCalls(source.text).length
+      const count = timersOf(source.text).filter((timer) => timer.line.includes(token)).length
       if (count !== 1) {
         offenders.push(`${file}  点名的那个例外放过了 ${count} 处`)
       }
