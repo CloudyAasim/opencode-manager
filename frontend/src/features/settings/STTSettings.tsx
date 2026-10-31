@@ -48,7 +48,7 @@ export function STTSettings() {
 
   const [isTesting, setIsTesting] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
-  const { schedule } = useCancellableTimer()
+  const { schedule, cancel } = useCancellableTimer()
   const [testResult, setTestResult] = useState<'idle' | 'success' | 'failed'>('idle')
   const [availableModels, setAvailableModels] = useState<string[]>(['whisper-1'])
   const [modelsSourceIsDefault, setModelsSourceIsDefault] = useState(false)
@@ -109,12 +109,12 @@ export function STTSettings() {
 
   useEffect(() => {
     if (watchProvider === 'external' && watchEndpoint) {
-      const timer = setTimeout(() => {
+      schedule('models', () => {
         fetchModels()
       }, 500)
-      return () => clearTimeout(timer)
+      return () => cancel('models')
     }
-  }, [watchProvider, watchEndpoint, fetchModels])
+  }, [watchProvider, watchEndpoint, fetchModels, schedule, cancel])
 
   const handleTest = async () => {
     if (isTesting || isRecording) {
@@ -141,7 +141,7 @@ export function STTSettings() {
       if (transcript) {
         setTestTranscript(transcript)
         setTestResult('success')
-        schedule(() => {
+        schedule('test', () => {
           setIsTesting(false)
         }, 1000)
       } else if (sttError) {

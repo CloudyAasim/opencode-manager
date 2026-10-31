@@ -86,7 +86,7 @@ export function MultiSelect({
   const handleOpen = () => {
     if (disabled) return
     setIsOpen(true)
-    schedule(() => inputRef.current?.focus(), 0)
+    schedule('focus', () => inputRef.current?.focus(), 0)
   }
 
   const handleTriggerKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -94,7 +94,7 @@ export function MultiSelect({
       e.preventDefault()
       if (!isOpen) {
         setIsOpen(true)
-        schedule(() => inputRef.current?.focus(), 0)
+        schedule('focus', () => inputRef.current?.focus(), 0)
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false)

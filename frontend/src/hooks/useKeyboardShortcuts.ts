@@ -3,13 +3,14 @@ import { useSettings } from './useSettings'
 import { DEFAULT_DIRECT_SHORTCUTS, DEFAULT_LEADER_KEY } from '@/api/types/settings'
 import { matchesUserShortcut, normalizeShortcut, parseEventShortcut } from '@/framework/commands/shortcutMatch'
 import { getShortcutAction } from '@/framework/commands/shortcutRegistry'
+import { useCancellableTimer } from './use-cancellable-timer'
 
 const LEADER_TIMEOUT = 1500
 
 export function useKeyboardShortcuts(actions: Record<string, (() => void) | undefined> = {}) {
   const { preferences } = useSettings()
   const [leaderActive, setLeaderActive] = useState(false)
-  const leaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { schedule, cancel } = useCancellableTimer()
   const preferencesRef = useRef(preferences)
   preferencesRef.current = preferences
 
@@ -17,11 +18,8 @@ export function useKeyboardShortcuts(actions: Record<string, (() => void) | unde
   actionsRef.current = actions
 
   const clearLeaderTimeout = useCallback(() => {
-    if (leaderTimeoutRef.current) {
-      clearTimeout(leaderTimeoutRef.current)
-      leaderTimeoutRef.current = null
-    }
-  }, [])
+    cancel('leader')
+  }, [cancel])
 
   const executeAction = useCallback((action: string, e: KeyboardEvent) => {
     const run = actionsRef.current[action] ?? getShortcutAction(action)
@@ -70,7 +68,7 @@ export function useKeyboardShortcuts(actions: Record<string, (() => void) | unde
       e.preventDefault()
       setLeaderActive(true)
       clearLeaderTimeout()
-      leaderTimeoutRef.current = setTimeout(() => {
+      schedule('leader', () => {
         setLeaderActive(false)
       }, LEADER_TIMEOUT)
       return
@@ -85,7 +83,7 @@ export function useKeyboardShortcuts(actions: Record<string, (() => void) | unde
     if (directAction) {
       executeAction(directAction, e)
     }
-  }, [leaderActive, clearLeaderTimeout, executeAction])
+  }, [leaderActive, clearLeaderTimeout, executeAction, schedule])
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown)

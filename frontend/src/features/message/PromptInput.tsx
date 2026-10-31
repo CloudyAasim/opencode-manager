@@ -440,7 +440,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       
       setPrompt(cleanedTemplate)
       
-      schedule(() => {
+      schedule('focus', () => {
         if (textareaRef.current) {
           textareaRef.current.focus()
           textareaRef.current.setSelectionRange(cleanedTemplate.length, cleanedTemplate.length)
@@ -457,7 +457,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       
       setPrompt(newPrompt)
       
-      schedule(() => {
+      schedule('focus', () => {
         if (textareaRef.current) {
           const newCursorPos = beforeCommand.length + command.name.length + 2
           textareaRef.current.focus()
@@ -497,7 +497,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       return next
     })
 
-    schedule(() => {
+    schedule('focus', () => {
       if (textareaRef.current) {
         const newCursorPos = beforeMention.length + filename.length + 2
         textareaRef.current.focus()
@@ -524,7 +524,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       setPrompt(newPrompt)
       setSelectedAgent(item.value)
       
-      schedule(() => {
+      schedule('focus', () => {
         if (textareaRef.current) {
           const newCursorPos = beforeMention.length + item.value.length + 2
           textareaRef.current.focus()

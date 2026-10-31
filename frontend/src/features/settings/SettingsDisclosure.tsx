@@ -37,7 +37,7 @@ export function SettingsDisclosure({
       setUncontrolledOpen(nextOpen)
     }
     if (nextOpen) {
-      schedule(() => scrollSectionIntoView(headerRef.current), 0)
+      schedule('section', () => scrollSectionIntoView(headerRef.current), 0)
     }
   }
 

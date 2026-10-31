@@ -177,7 +177,7 @@ export function SettingsListRow({
                   {action.separatorBefore && i > 0 && <DropdownMenuSeparator />}
                   <DropdownMenuItem
                     disabled={action.disabled}
-                    onSelect={() => schedule(action.onClick, 0)}
+                    onSelect={() => schedule('action', action.onClick, 0)}
                     className={action.destructive ? 'text-destructive focus:text-destructive' : undefined}
                   >
                     {action.icon}

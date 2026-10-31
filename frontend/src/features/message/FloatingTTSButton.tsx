@@ -6,6 +6,7 @@ import { showToast } from '@/lib/toast'
 import { DEFAULT_TTS_CONFIG } from '@opencode-manager/shared'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 interface FloatingTTSButtonProps {
   messageId: string
@@ -21,23 +22,20 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
 
   const autoPlay = preferences?.tts?.autoPlay ?? false
   const [isLongPressVisual, setIsLongPressVisual] = useState(false)
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const didLongPressFireRef = useRef(false)
+  const { schedule, cancel } = useCancellableTimer()
 
   const isAnyPlaybackActive = isPlaying || isLoading
   const hasContent = content.trim().length > 0
 
   const clearLongPressTimer = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current)
-      longPressTimerRef.current = null
-    }
-  }, [])
+    cancel('long-press')
+  }, [cancel])
 
   const handlePointerDown = useCallback(() => {
     clearLongPressTimer()
     didLongPressFireRef.current = false
-    longPressTimerRef.current = setTimeout(() => {
+    schedule('long-press', () => {
       const nextAutoPlay = !autoPlay
 
       didLongPressFireRef.current = true
@@ -48,7 +46,7 @@ export function FloatingTTSButton({ messageId, content }: FloatingTTSButtonProps
         duration: 1800,
       })
     }, LONG_PRESS_DURATION)
-  }, [autoPlay, updateSettings, preferences?.tts, clearLongPressTimer, t])
+  }, [autoPlay, updateSettings, preferences?.tts, clearLongPressTimer, t, schedule])
 
   const handlePointerUp = useCallback(() => {
     clearLongPressTimer()

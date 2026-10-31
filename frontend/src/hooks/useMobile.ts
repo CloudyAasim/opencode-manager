@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, type CSSProperties } from 're
 import { useSwipeNavigation } from '@/contexts/SwipeNavigationContext'
 import { useMediaQuery } from './useMediaQuery'
 import { MEDIA } from '@/framework/shell/breakpoints'
+import { useCancellableTimer } from './use-cancellable-timer'
 
 export function useMobile(): boolean {
   return !useMediaQuery(MEDIA.layoutUp)
@@ -73,6 +74,7 @@ function useSwipeHandlers(
   const [swipeDeltaPx, setSwipeDeltaPx] = useState(0)
   const [dismissing, setDismissing] = useState(false)
   const dismissingRef = useRef(false)
+  const { schedule } = useCancellableTimer()
   dismissingRef.current = dismissing
 
   useEffect(() => {
@@ -193,7 +195,7 @@ function useSwipeHandlers(
 
         if (deltaY >= threshold || velocity >= velocityThreshold) {
           setDismissing(true)
-          setTimeout(() => {
+          schedule('dismiss', () => {
             if (state.canBackAtStart && canBack?.()) {
               onBack?.()
             } else {
@@ -231,7 +233,7 @@ function useSwipeHandlers(
       blockedByScroll: false,
       canBackAtStart: true,
     }
-  }, [enabled, isMobile, threshold, direction, velocityThreshold, onClose, canBack, onBack])
+  }, [enabled, isMobile, threshold, direction, velocityThreshold, onClose, canBack, onBack, schedule])
 
   const bind = useCallback((element: HTMLElement | null) => {
     if (!element || !enabled || !isMobile) return undefined

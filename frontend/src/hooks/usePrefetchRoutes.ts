@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { prefetchLoaders } from '@/routes'
+import { useCancellableTimer } from './use-cancellable-timer'
 
 const PREFETCH_START_DELAY_MS = 5000
 
@@ -16,12 +17,13 @@ function shouldSkipPrefetch(): boolean {
 }
 
 export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): void {
+  const { schedule, cancel } = useCancellableTimer()
+
   useEffect(() => {
     if (!isAuthenticated || typeof window === 'undefined' || shouldSkipPrefetch()) return
 
     let cancelled = false
     let idleHandle: number | undefined
-    let timer: number | undefined
 
     const run = async (loaders: Array<() => Promise<unknown>>) => {
       // One at a time on purpose. Firing them all at once pulls every chunk in
@@ -48,16 +50,17 @@ export function usePrefetchRoutes(isAuthenticated: boolean, isAdmin: boolean): v
       if (typeof window.requestIdleCallback === 'function') {
         idleHandle = window.requestIdleCallback(warmAll, { timeout: 5000 })
       } else {
-        timer = window.setTimeout(warmAll, 2000)
+        schedule('warm', warmAll, 2000)
       }
     }
 
-    timer = window.setTimeout(start, PREFETCH_START_DELAY_MS)
+    schedule('start', start, PREFETCH_START_DELAY_MS)
 
     return () => {
       cancelled = true
-      if (timer !== undefined) window.clearTimeout(timer)
+      cancel('start')
+      cancel('warm')
       if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle)
     }
-  }, [isAuthenticated, isAdmin])
+  }, [isAuthenticated, isAdmin, schedule, cancel])
 }

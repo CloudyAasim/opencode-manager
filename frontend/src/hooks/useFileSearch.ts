@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchWrapper } from '@/api/fetchWrapper'
+import { useCancellableTimer } from './use-cancellable-timer'
 
 export interface FileSearchResult {
   files: string[]
@@ -15,11 +16,12 @@ export function useFileSearch(
   directory?: string
 ): FileSearchResult {
   const [debouncedQuery, setDebouncedQuery] = useState(query)
+  const { schedule, cancel } = useCancellableTimer()
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query), 300)
-    return () => clearTimeout(timer)
-  }, [query])
+    schedule('debounce', () => setDebouncedQuery(query), 300)
+    return () => cancel('debounce')
+  }, [query, schedule, cancel])
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['file-search', opcodeUrl, debouncedQuery, directory],

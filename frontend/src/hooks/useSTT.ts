@@ -5,6 +5,7 @@ import { AudioRecorder } from '@/lib/audioRecorder'
 import { sttApi } from '@/api/stt'
 import { FetchError } from '@/api/fetchWrapper'
 import { DEFAULT_STT_CONFIG } from '@/api/types/settings'
+import { useCancellableTimer } from './use-cancellable-timer'
 
 const STT_START_TIMEOUT_MS = 10_000
 
@@ -22,10 +23,9 @@ export function useSTT(userId = 'default') {
   const audioRecorder = useRef<AudioRecorder | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const userIdRef = useRef(userId)
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastProcessedBlobRef = useRef<Blob | null>(null)
-  const startupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startOpIdRef = useRef(0)
+  const { schedule, cancel } = useCancellableTimer()
   const recorderConfiguredRef = useRef(false)
   const interimRafRef = useRef<number | null>(null)
   const pendingInterimRef = useRef<string>('')
@@ -45,13 +45,11 @@ export function useSTT(userId = 'default') {
   const flashError = useCallback((message: string) => {
     setIsError(true)
     setError(message)
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current)
-    errorTimeoutRef.current = setTimeout(() => {
+    schedule('error', () => {
       setIsError(false)
       setError(null)
-      errorTimeoutRef.current = null
     }, 3000)
-  }, [])
+  }, [schedule])
 
   const resetToIdle = useCallback((clearInterim = false) => {
     setIsRecording(false)
@@ -198,11 +196,8 @@ export function useSTT(userId = 'default') {
   }, [isEnabled, isExternalProvider, disposeAudioRecorder])
 
   const clearStartupTimeout = useCallback(() => {
-    if (startupTimeoutRef.current) {
-      clearTimeout(startupTimeoutRef.current)
-      startupTimeoutRef.current = null
-    }
-  }, [])
+    cancel('startup')
+  }, [cancel])
 
   const abortAndResetOnTimeout = useCallback(() => {
     if (isExternalProvider) {
@@ -220,7 +215,7 @@ export function useSTT(userId = 'default') {
       try {
         const startupPromise = startup()
         const timeoutPromise = new Promise<never>((_, reject) => {
-          startupTimeoutRef.current = setTimeout(() => {
+          schedule('startup', () => {
             if (startOpIdRef.current !== startOpId) return
             reject(new Error('Microphone start timed out'))
           }, STT_START_TIMEOUT_MS)
@@ -243,7 +238,7 @@ export function useSTT(userId = 'default') {
         return false
       }
     },
-    [clearStartupTimeout, abortAndResetOnTimeout],
+    [clearStartupTimeout, abortAndResetOnTimeout, schedule],
   )
 
   const startRecording = useCallback(async (): Promise<boolean> => {
@@ -332,7 +327,8 @@ export function useSTT(userId = 'default') {
 
   useEffect(() => {
     return () => {
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current)
+      // The shared timer part cancels its waits when the part goes away, so
+      // there is nothing left to clear here.
       clearStartupTimeout()
     }
   }, [clearStartupTimeout])

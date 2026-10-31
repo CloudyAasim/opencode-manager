@@ -16,6 +16,7 @@ import { RefreshCw, Loader2 } from 'lucide-react'
 import { settingsApi } from '@/api/settings'
 import { useI18n, i18n } from '@/lib/i18n'
 import type { ModelConfig, ProviderConfig } from '@/api/types/settings'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 type ConfigModel = Partial<ModelConfig> & {
   limit?: {
@@ -275,6 +276,7 @@ export function OpenCodeModelDialog({
     : `create-${selectedProviderId || availableProviders[0] || ''}`
 
   const [discoveredModels, setDiscoveredModels] = useState<string[]>([])
+  const { schedule, cancel } = useCancellableTimer()
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const [discoveryError, setDiscoveryError] = useState<string | null>(null)
   const [discoveryApiKey, setDiscoveryApiKey] = useState('')
@@ -320,11 +322,11 @@ export function OpenCodeModelDialog({
       return
     }
     if (createNewProvider && newProviderType !== 'api') return
-    const timer = setTimeout(() => {
+    schedule('discover', () => {
       void discoverModels()
     }, 600)
-    return () => clearTimeout(timer)
-  }, [open, discoveryBaseUrl, createNewProvider, newProviderType, discoverModels])
+    return () => cancel('discover')
+  }, [open, discoveryBaseUrl, createNewProvider, newProviderType, discoverModels, schedule, cancel])
 
   const handleDiscoveredModelSelect = useCallback((modelId: string) => {
     const currentModelId = form.getValues('modelId')

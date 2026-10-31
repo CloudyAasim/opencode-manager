@@ -140,7 +140,7 @@ export function OpenCodeConfigManager() {
     const isExpanding = !expandedSections[section]
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
     if (isExpanding) {
-      schedule(() => scrollSectionIntoView(ref?.current ?? null), 0)
+      schedule('section', () => scrollSectionIntoView(ref?.current ?? null), 0)
     }
   }
 

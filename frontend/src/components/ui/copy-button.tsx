@@ -31,7 +31,7 @@ export function CopyButton({
     try {
       await navigator.clipboard.writeText(content)
       setCopied(true)
-      schedule(() => setCopied(false), 2000)
+      schedule('copied', () => setCopied(false), 2000)
       onCopy?.()
     } catch {
       const textArea = document.createElement('textarea')
@@ -44,7 +44,7 @@ export function CopyButton({
         const successful = document.execCommand('copy')
         if (successful) {
           setCopied(true)
-          schedule(() => setCopied(false), 2000)
+          schedule('copied', () => setCopied(false), 2000)
           onCopy?.()
         }
       } finally {

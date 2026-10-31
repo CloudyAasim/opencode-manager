@@ -156,8 +156,7 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
   const [viewportHeight, setViewportHeight] = useState(600)
   const [containerWidth, setContainerWidth] = useState(0)
   const [highlightedLine, setHighlightedLine] = useState<number | undefined>(initialLineNumber)
-  const { schedule: scheduleScroll } = useCancellableTimer()
-  const { schedule: scheduleHighlight } = useCancellableTimer()
+  const { schedule } = useCancellableTimer()
   const heightCacheRef = useRef<Map<number, number>>(new Map())
   const lineOffsetsRef = useRef<{ offsets: Map<number, { height: number; top: number }>; totalHeight: number } | null>(null)
   const lastContainerWidthRef = useRef(0)
@@ -383,14 +382,14 @@ export const VirtualizedTextView = forwardRef<VirtualizedTextViewHandle, Virtual
       const offsetData = lineOffsets?.offsets.get(initialLineNumber - 1)
       const scrollPosition = offsetData?.top ?? (initialLineNumber - 1) * lineHeight
       setHighlightedLine(initialLineNumber)
-      scheduleScroll(() => {
+      schedule('scroll', () => {
         containerRef.current?.scrollTo({ top: scrollPosition, behavior: 'smooth' })
       }, 100)
-      scheduleHighlight(() => {
+      schedule('highlight', () => {
         setHighlightedLine(undefined)
       }, 3000)
     }
-  }, [initialLineNumber, lineHeight, lineOffsets, scheduleScroll, scheduleHighlight])
+  }, [initialLineNumber, lineHeight, lineOffsets, schedule])
   
   const visibleLines = useMemo(() => {
     const result: Array<{ lineNum: number; content: string; isEdited: boolean; height: number; top: number; isLoaded: boolean }> = []

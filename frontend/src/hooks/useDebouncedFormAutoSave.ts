@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCancellableTimer } from './use-cancellable-timer'
 
 export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -26,25 +27,21 @@ export function useDebouncedFormAutoSave<T>({
   enabled = true,
 }: UseDebouncedFormAutoSaveOptions<T>): AutoSaveStatus {
   const [status, setStatus] = useState<AutoSaveStatus>('idle')
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSavedRef = useRef<T | null>(null)
+  const { schedule, cancel } = useCancellableTimer()
 
   const scheduleFeedbackReset = useCallback(() => {
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current)
-    }
-    feedbackTimeoutRef.current = setTimeout(() => {
+    schedule('feedback', () => {
       setStatus('idle')
     }, feedbackDuration)
-  }, [feedbackDuration])
+  }, [feedbackDuration, schedule])
 
   useEffect(() => {
     if (!enabled || !isDirty || !isValid) {
       return
     }
 
-    const timer = setTimeout(() => {
+    schedule('save', () => {
       const values = getValues()
       if (skipIfUnchanged && lastSavedRef.current !== null) {
         if (JSON.stringify(values) === JSON.stringify(lastSavedRef.current)) {
@@ -75,19 +72,11 @@ export function useDebouncedFormAutoSave<T>({
         scheduleFeedbackReset()
       }
     }, delay)
-    saveTimeoutRef.current = timer
 
     return () => {
-      clearTimeout(timer)
+      cancel('save')
     }
-  }, [watchedValues, isDirty, isValid, enabled, delay, getValues, onSave, skipIfUnchanged, scheduleFeedbackReset])
-
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current)
-    }
-  }, [])
+  }, [watchedValues, isDirty, isValid, enabled, delay, getValues, onSave, skipIfUnchanged, scheduleFeedbackReset, schedule, cancel])
 
   return status
 }

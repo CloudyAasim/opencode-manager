@@ -12,7 +12,7 @@ export function useTouchTapSelect<T>(onSelect: (item: T) => void) {
 
   const suppressNextClick = useCallback(() => {
     suppressClickRef.current = true
-    schedule(() => {
+    schedule('suppress', () => {
       suppressClickRef.current = false
     }, TOUCH_CLICK_SUPPRESS_MS)
   }, [schedule])

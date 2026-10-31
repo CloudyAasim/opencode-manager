@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { MODAL_TRANSITION_MS } from '@/lib/utils'
 import { useSwipeDismiss } from '@/hooks/useMobile'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 export interface BottomSheetProps {
   isOpen: boolean
@@ -23,6 +24,7 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const [shouldRender, setShouldRender] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const { schedule, cancel } = useCancellableTimer()
 
   const { bind, swipeStyles } = useSwipeDismiss(onClose, {
     enabled: isOpen,
@@ -37,10 +39,10 @@ export function BottomSheet({
     if (isOpen) {
       setShouldRender(true)
     } else {
-      const timer = setTimeout(() => setShouldRender(false), MODAL_TRANSITION_MS)
-      return () => clearTimeout(timer)
+      schedule('hide', () => setShouldRender(false), MODAL_TRANSITION_MS)
+      return () => cancel('hide')
     }
-  }, [isOpen])
+  }, [isOpen, schedule, cancel])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

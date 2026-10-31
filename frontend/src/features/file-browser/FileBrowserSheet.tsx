@@ -9,6 +9,7 @@ import { DownloadDialog } from '@/components/ui/download-dialog'
 import { X, Download } from 'lucide-react'
 import { GPU_ACCELERATED_STYLE, MODAL_TRANSITION_MS } from '@/lib/utils'
 import { useSwipeBack } from '@/hooks/useMobile'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 import { downloadDirectoryAsZip } from '@/api/files'
 import { downloadRepo } from '@/api/repos'
 import type { FileInfo } from '@/types/files'
@@ -46,6 +47,7 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
   const [displayPath, setDisplayPath] = useState<string>('/')
   const [workspaceRoot, setWorkspaceRoot] = useState<string | undefined>(undefined)
   const [shouldRender, setShouldRender] = useState(false)
+  const { schedule, cancel } = useCancellableTimer()
   const [currentPath, setCurrentPath] = useState<string>(basePath || '.')
   const [downloadDialog, setDownloadDialog] = useState<{ type: 'directory' | 'repository' } | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
@@ -75,10 +77,10 @@ export const FileBrowserSheet = memo(function FileBrowserSheet({
       setShouldRender(true)
     } else {
       setIsPreviewOpen(false)
-      const timer = setTimeout(() => setShouldRender(false), MODAL_TRANSITION_MS)
-      return () => clearTimeout(timer)
+      schedule('hide', () => setShouldRender(false), MODAL_TRANSITION_MS)
+      return () => cancel('hide')
     }
-  }, [isOpen])
+  }, [isOpen, schedule, cancel])
 
   const handleDirectoryLoad = useCallback(
     (info: { workspaceRoot?: string; currentPath: string }) => {

@@ -38,8 +38,7 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
   const [markdownPreview, setMarkdownPreview] = useState(isMarkdownFile)
   const [isLoadingAllContent, setIsLoadingAllContent] = useState(false)
   const [fullContentLoaded, setFullContentLoaded] = useState(false)
-  const { schedule: scheduleScroll } = useCancellableTimer()
-  const { schedule: scheduleHighlight } = useCancellableTimer()
+  const { schedule, cancel } = useCancellableTimer()
   const [fullContent, setFullContent] = useState<string | null>(null)
   const [localMdContent, setLocalMdContent] = useState<string | null>(null)
   const virtualizedRef = useRef<VirtualizedTextViewHandle>(null)
@@ -69,10 +68,10 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
           setIsLoadingAllContent(false)
         }
       }
-      const timer = setTimeout(loadContent, 0)
-      return () => clearTimeout(timer)
+      schedule('load', loadContent, 0)
+      return () => cancel('load')
     }
-  }, [shouldVirtualize, isMarkdownFile, markdownPreview, isMarkdownTooLarge, fullContentLoaded])
+  }, [shouldVirtualize, isMarkdownFile, markdownPreview, isMarkdownTooLarge, fullContentLoaded, schedule, cancel])
   
   
 
@@ -81,14 +80,14 @@ export const FilePreview = memo(function FilePreview({ file, hideHeader = false,
       const lineHeight = 20
       const scrollPosition = (initialLineNumber - 1) * lineHeight
       setHighlightedLine(initialLineNumber)
-      scheduleScroll(() => {
+      schedule('scroll', () => {
         contentRef.current?.scrollTo({ top: scrollPosition, behavior: 'smooth' })
       }, 100)
-      scheduleHighlight(() => {
+      schedule('highlight', () => {
         setHighlightedLine(undefined)
       }, 3000)
     }
-  }, [initialLineNumber, shouldVirtualize, file.content, scheduleScroll, scheduleHighlight])
+  }, [initialLineNumber, shouldVirtualize, file.content, schedule])
   
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return `0 ${t('repo.fileBrowser.units.bytes')}`

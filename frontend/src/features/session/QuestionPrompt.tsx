@@ -98,7 +98,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
       if (isSingleSelect) {
         handleSubmitSingle(label)
       } else {
-        schedule(() => goToNext(), 150)
+        schedule('next', () => goToNext(), 150)
       }
     }
   }, [questions, isSingleSelect, goToNext, handleSubmitSingle, schedule])
@@ -146,7 +146,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
       } else {
         updated[questionIndex] = [value]
         if (!isSingleSelect) {
-          schedule(() => goToNext(), 150)
+          schedule('next', () => goToNext(), 150)
         }
       }
       return updated

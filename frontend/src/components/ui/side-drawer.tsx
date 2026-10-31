@@ -4,6 +4,7 @@ import { MODAL_TRANSITION_MS } from '@/lib/utils'
 import { X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 /**
  * 抽屉有多宽。
@@ -47,15 +48,16 @@ export function SideDrawer({
   ariaLabel,
 }: SideDrawerProps) {
   const [shouldRender, setShouldRender] = useState(false)
+  const { schedule, cancel } = useCancellableTimer()
 
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true)
     } else {
-      const timer = setTimeout(() => setShouldRender(false), MODAL_TRANSITION_MS)
-      return () => clearTimeout(timer)
+      schedule('hide', () => setShouldRender(false), MODAL_TRANSITION_MS)
+      return () => cancel('hide')
     }
-  }, [isOpen])
+  }, [isOpen, schedule, cancel])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

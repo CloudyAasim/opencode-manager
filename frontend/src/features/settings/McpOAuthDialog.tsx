@@ -76,7 +76,7 @@ export function McpOAuthDialog({
     }
     setStep('success')
     onSuccess?.()
-    schedule(() => {
+    schedule('close', () => {
       onOpenChange(false)
     }, 1500)
   }, [stopAllPolling, onOpenChange, onSuccess, schedule])

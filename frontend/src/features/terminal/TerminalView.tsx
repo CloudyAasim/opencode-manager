@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n'
 import { toDisplayPath } from '@/lib/display-path'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 type TerminalStatus = 'connecting' | 'ready' | 'closed' | 'error'
 
@@ -48,8 +49,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
   const eventSourceRef = useRef<EventSource | null>(null)
   const lastSeqRef = useRef(0)
   const pendingInputRef = useRef('')
-  const inputTimerRef = useRef<number | null>(null)
-  const resizeTimerRef = useRef<number | null>(null)
+  const { schedule, cancel, pending } = useCancellableTimer()
   const lastDimensionsRef = useRef<{ cols: number; rows: number } | null>(null)
   const disposedRef = useRef(false)
   const tRef = useRef(t)
@@ -94,7 +94,6 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
     fitRef.current = fit
 
     const flushInput = () => {
-      inputTimerRef.current = null
       const chunk = pendingInputRef.current
       pendingInputRef.current = ''
       const sessionId = sessionIdRef.current
@@ -104,8 +103,8 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
 
     const queueInput = (data: string) => {
       pendingInputRef.current += data
-      if (inputTimerRef.current == null) {
-        inputTimerRef.current = window.setTimeout(flushInput, INPUT_FLUSH_MS)
+      if (!pending('input')) {
+        schedule('input', flushInput, INPUT_FLUSH_MS)
       }
     }
 
@@ -115,13 +114,10 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
       const previous = lastDimensionsRef.current
       if (previous && previous.cols === cols && previous.rows === rows) return
       lastDimensionsRef.current = { cols, rows }
-      if (resizeTimerRef.current != null) window.clearTimeout(resizeTimerRef.current)
-      resizeTimerRef.current = window.setTimeout(() => {
-        resizeTimerRef.current = null
+      schedule('resize', () => {
         const sessionId = sessionIdRef.current
         if (sessionId) void terminalApi.resize(sessionId, cols, rows).catch(() => {})
-      }, RESIZE_DEBOUNCE_MS)
-    }
+      }, RESIZE_DEBOUNCE_MS)    }
 
     const handleContainerResize = () => {
       try {
@@ -136,7 +132,6 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(handleContainerResize) : null
     observer?.observe(container)
 
-    let reconnectTimer: number | null = null
     let sessionClosed = false
 
     const connectStream = (sessionId: string) => {
@@ -184,7 +179,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
         eventSourceRef.current = null
         if (disposedRef.current || sessionClosed) return
         setStatus('connecting')
-        reconnectTimer = window.setTimeout(() => connectStream(sessionId), RECONNECT_DELAY_MS)
+        schedule('reconnect', () => connectStream(sessionId), RECONNECT_DELAY_MS)
       }
     }
 
@@ -210,9 +205,9 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
       disposedRef.current = true
       dataDisposable.dispose()
       observer?.disconnect()
-      if (inputTimerRef.current != null) window.clearTimeout(inputTimerRef.current)
-      if (resizeTimerRef.current != null) window.clearTimeout(resizeTimerRef.current)
-      if (reconnectTimer != null) window.clearTimeout(reconnectTimer)
+      if (pending('input')) cancel('input')
+      if (pending('resize')) cancel('resize')
+      if (pending('reconnect')) cancel('reconnect')
       eventSourceRef.current?.close()
       eventSourceRef.current = null
       const sessionId = sessionIdRef.current
@@ -222,7 +217,7 @@ export function TerminalView({ className, cwd }: { className?: string; cwd?: str
       termRef.current = null
       fitRef.current = null
     }
-  }, [restartKey, writeNotice, cwd])
+  }, [restartKey, writeNotice, cwd, schedule, cancel, pending])
 
   const handleReconnect = () => {
     setRestartKey((key) => key + 1)

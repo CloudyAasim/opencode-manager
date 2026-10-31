@@ -31,7 +31,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
     try {
       await navigator.clipboard.writeText(token)
       setCopied(true)
-      schedule(() => setCopied(false), 2000)
+      schedule('copied', () => setCopied(false), 2000)
     } catch (error) {
       showErrorToast(error, t('settingsPanels.managerToken.copyFailed'))
     }
@@ -40,7 +40,7 @@ export function ManagerTokenSettings({ isOpen: controlledOpen, onToggle }: Manag
   const handleRotate = () => {
     if (!confirmRotate) {
       setConfirmRotate(true)
-      schedule(() => setConfirmRotate(false), 4000)
+      schedule('rotate', () => setConfirmRotate(false), 4000)
       return
     }
     rotate.mutate(undefined, {
