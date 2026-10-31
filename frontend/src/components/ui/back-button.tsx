@@ -22,7 +22,7 @@ export function BackButton({ to = "/", className = "" }: BackButtonProps) {
       size="sm"
       onClick={handleBack}
       aria-label={t('ui.backButton.goBack')}
-      className={`text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 ${className}`}
+      className={`text-muted-foreground transition-all duration-200 hover:scale-105 ${className}`}
     >
       <ArrowLeft className="size-4" />
     </Button>

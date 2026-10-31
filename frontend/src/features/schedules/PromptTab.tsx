@@ -79,9 +79,9 @@ export function PromptTemplateCard({ template, selected = false, onApply, onEdit
         </Button>
         <Button
           type="button"
-          variant="ghost"
+          variant="ghost-destructive"
           size="icon-2xs"
-          className="text-destructive hover:text-destructive"
+          className="text-destructive"
           onClick={(e) => { e.stopPropagation(); onDelete(template.id) }}
           aria-label={t('common.delete')}
           title={t('common.delete')}

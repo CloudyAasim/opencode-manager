@@ -799,7 +799,7 @@ export function SessionDetail() {
                 variant="ghost"
                 size="xs"
                 onClick={handleParentSessionClick}
-                className="text-muted-foreground hover:text-foreground px-2 gap-1"
+                className="text-muted-foreground px-2 gap-1"
                 title={t('session.header.backToParent')}
               >
                 <CornerUpLeft className="size-3.5" />
@@ -984,10 +984,10 @@ export function SessionDetail() {
                 </DropdownMenu>
                 {hasPromptContent && !isSessionActive && (
                   <Button
-                    variant="ghost"
+                    variant="ghost-destructive"
                     
                     onClick={handleClearPrompt}
-                    className="shrink-0 gap-1 px-2 sm:h-7 text-destructive hover:bg-destructive/10"
+                    className="shrink-0 gap-1 px-2 sm:h-7 text-destructive"
                     aria-label={t('session.header.clear')}
                   >
                     <X className="size-3.5" />

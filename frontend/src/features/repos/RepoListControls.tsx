@@ -98,21 +98,21 @@ export function RepoListControls({
             {allVisibleSelected ? t("repo.list.unselectAll") : t("repo.list.selectAll")}
           </Button>
           <Button
-            variant="ghost"
+            variant="ghost-destructive"
             onClick={onDelete}
-            className="shrink-0 text-destructive hover:text-destructive"
+            className="shrink-0 text-destructive"
             
           >
             <Trash2 className="size-3 mr-1" />
             {getDeleteLabel()}
           </Button>
           <Button
-            variant="ghost"
+            variant="ghost-destructive"
             size="icon"
             onClick={onClearSelection}
             aria-label={t('common.close')}
             title={t('common.close')}
-            className="shrink-0 ml-auto text-destructive hover:text-destructive"
+            className="shrink-0 ml-auto text-destructive"
           >
             <X className="size-4" />
           </Button>

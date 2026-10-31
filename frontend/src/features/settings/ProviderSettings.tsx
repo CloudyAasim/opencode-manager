@@ -345,11 +345,11 @@ export function ProviderSettings() {
                             </Button>
                             <Button
                               size="icon-sm"
-                              variant="ghost"
+                              variant="ghost-destructive"
                               onClick={() => handleDeleteCredential(provider.id)}
                               disabled={deleteCredentialMutation.isPending}
                               aria-label={t('settingsPanels.provider.removeCredentialsFor', { name: provider.name || provider.id })}
-                              className="text-destructive hover:text-destructive"
+                              className="text-destructive"
                             >
                               <Trash2 className="size-3.5" />
                             </Button>

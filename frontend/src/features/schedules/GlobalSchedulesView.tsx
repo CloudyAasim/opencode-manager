@@ -640,9 +640,8 @@ export function GlobalSchedulesView() {
                           <Pencil className="size-3.5" />
                         </Button>
                         <Button
-                          variant="outline"
+                          variant="outline-destructive"
                           size="icon-sm"
-                          className="text-destructive hover:text-destructive"
                           aria-label={t('schedules.global.deleteSchedule')}
                             onClick={(e) => {
                               e.stopPropagation()

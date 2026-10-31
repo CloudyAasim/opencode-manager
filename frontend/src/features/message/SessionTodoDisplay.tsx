@@ -100,7 +100,7 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
             variant="ghost"
             size="icon-2xs"
             onClick={handleDismiss}
-            className="ml-1 text-muted-foreground hover:text-foreground"
+            className="ml-1 text-muted-foreground"
             aria-label={t('message.todos.dismiss')}
           >
             <X className="size-3.5" />
@@ -130,7 +130,7 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
           variant="ghost"
           size="icon-2xs"
           onClick={handleDismiss}
-          className="ml-1 text-muted-foreground hover:text-foreground"
+          className="ml-1 text-muted-foreground"
           aria-label={t('message.todos.dismiss')}
         >
           <X className="size-3.5" />

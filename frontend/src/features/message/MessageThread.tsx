@@ -261,7 +261,7 @@ const MessageRow = memo(function MessageRow({
                 variant="ghost"
                 size="icon-2xs"
                 onClick={() => handleStartEditUserMessage(msg.id, nextAssistantMsg.id)}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground"
                 title={t('message.actions.editMessage')}
               >
                 <Pencil className="size-3.5" />

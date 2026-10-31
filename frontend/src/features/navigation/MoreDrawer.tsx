@@ -152,7 +152,7 @@ export function MoreDrawer({ isOpen, onClose, scope }: MoreDrawerProps) {
             variant="ghost"
             size="icon-sm"
             onClick={onClose}
-            className="-mr-1 shrink-0 text-muted-foreground hover:text-foreground"
+            className="-mr-1 shrink-0 text-muted-foreground"
             aria-label={t('navigation.close')}
           >
             <X className="size-5" />

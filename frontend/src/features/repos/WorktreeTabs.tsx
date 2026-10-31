@@ -64,7 +64,7 @@ export function WorktreeTabs({
         variant="ghost"
         size="sm"
         onClick={onCreateWorkspace}
-        className="shrink-0 gap-1 text-muted-foreground hover:text-foreground"
+        className="shrink-0 gap-1 text-muted-foreground"
         title={t('repo.newWorkspace')}
         aria-label={t('repo.newWorkspace')}
       >

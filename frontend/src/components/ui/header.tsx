@@ -186,7 +186,7 @@ function HeaderSettingsButton() {
       size="icon-sm"
       onClick={() => navigate('/settings')}
       aria-label={t('ui.header.settings')}
-      className="text-muted-foreground hover:text-foreground transition-all duration-200"
+      className="text-muted-foreground transition-all duration-200"
     >
       <Settings className="size-4" />
     </Button>

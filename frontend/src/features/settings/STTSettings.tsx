@@ -318,7 +318,7 @@ export function STTSettings() {
                             size="xs"
                             onClick={() => fetchModels(true)}
                             disabled={isLoadingModels || !watchEndpoint}
-                            className="gap-1 text-muted-foreground hover:text-foreground"
+                            className="gap-1 text-muted-foreground"
                           >
                             <RefreshCw className={`size-3 ${isLoadingModels ? 'animate-spin' : ''}`} />
                             {t('settingsPanels.stt.refresh')}

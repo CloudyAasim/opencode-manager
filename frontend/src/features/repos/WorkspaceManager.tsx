@@ -133,9 +133,9 @@ export function WorkspaceManager({
                 <>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="ghost-destructive"
                     size="xs"
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive"
                     disabled={selectedCount === 0 || isDeleting}
                     onClick={() => setConfirmOpen(true)}
                   >

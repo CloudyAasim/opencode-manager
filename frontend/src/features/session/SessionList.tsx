@@ -306,22 +306,22 @@ export const SessionList = ({
               {allVisibleSelected ? t('session.list.unselectAll') : t('session.list.selectAll')}
             </Button>
             <Button
-              variant="ghost"
+              variant="ghost-destructive"
               onClick={handleBulkDelete}
               disabled={selectedSessions.size === 0}
-              className="shrink-0 text-destructive hover:text-destructive"
+              className="shrink-0 text-destructive"
               
             >
               <Trash2 className="size-3 mr-1" />
               {t('session.list.delete')}
             </Button>
             <Button
-              variant="ghost"
+              variant="ghost-destructive"
               size="icon"
               onClick={() => { setSelectedSessions(new Set()); setManageMode(false); }}
               aria-label={t('common.close')}
               title={t('common.close')}
-              className="shrink-0 ml-auto text-destructive hover:text-destructive"
+              className="shrink-0 ml-auto text-destructive"
             >
               <X className="size-4" />
             </Button>

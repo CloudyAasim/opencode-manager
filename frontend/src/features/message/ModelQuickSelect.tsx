@@ -499,7 +499,7 @@ export function ModelQuickSelect({
               event.stopPropagation()
               removeRecentModel({ providerID: item.providerID, modelID: item.modelID })
             }}
-            className="text-muted-foreground/60 hover:text-foreground/80"
+            className="text-muted-foreground/60"
             aria-label={t('misc.modelQuickSelect.removeFromRecent')}
           >
             <Trash2 className="size-3.5 text-destructive" />
@@ -513,7 +513,7 @@ export function ModelQuickSelect({
             event.stopPropagation()
             toggleFavorite({ providerID: item.providerID, modelID: item.modelID })
           }}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground"
           aria-label={isFavorite ? t('misc.modelQuickSelect.removeFromFavorites') : t('misc.modelQuickSelect.addToFavorites')}
         >
           <Star className={`size-4 ${isFavorite ? 'fill-warning text-warning' : ''}`} />

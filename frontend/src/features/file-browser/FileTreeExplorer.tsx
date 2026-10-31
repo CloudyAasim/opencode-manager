@@ -156,7 +156,7 @@ export const FileTreeExplorer = memo(function FileTreeExplorer({
           variant="ghost"
           size="icon-2xs"
           onClick={() => void load()}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground"
           aria-label={t('repo.fileBrowser.refresh')}
         >
           <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />

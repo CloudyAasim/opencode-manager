@@ -263,9 +263,9 @@ export function NotificationSettings() {
                       </div>
                     </div>
                     <Button
-                      variant="ghost"
+                      variant="ghost-destructive"
                       size="icon"
-                      className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                      className="text-muted-foreground flex-shrink-0"
                       onClick={() => removeDevice(sub.id)}
                       aria-label={t('common.delete')}
                       title={t('common.delete')}

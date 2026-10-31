@@ -333,9 +333,9 @@ export function GitSettings() {
                               </Button>
                               <Button
                                 type="button"
-                                variant="ghost"
+                                variant="ghost-destructive"
                                 size="icon-xs"
-                                className="text-destructive hover:text-destructive"
+                                className="text-destructive"
                                 onClick={(e) => handleDeleteClick(e, gitCredentials.indexOf(cred))}
                                 disabled={isSaving}
                                 title={t('settingsPanels.git.delete')}

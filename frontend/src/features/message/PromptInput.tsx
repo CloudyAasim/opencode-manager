@@ -1312,7 +1312,7 @@ return (
                 variant="ghost"
                 size="icon-2xs"
                 onClick={() => removeImageAttachment(attachment.id)}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground"
               >
                 <X className="size-3" />
               </Button>
@@ -1365,7 +1365,7 @@ return (
 <Button
                       variant="muted"
                       size="default"
-                      className="px-2.5 py-0.5 md:px-3 min-w-0 font-medium text-muted-foreground hover:border-foreground/30 transition-colors flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center overflow-hidden"
+                      className="px-2.5 py-0.5 md:px-3 min-w-0 font-medium text-muted-foreground transition-colors flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center overflow-hidden"
                     >
                       <span className="truncate w-full text-left">{displayModelName || t('message.actions.selectModel')}</span>
 {hasVariants && currentVariant && (

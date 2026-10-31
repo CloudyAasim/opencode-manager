@@ -305,10 +305,10 @@ export function RepoRowActions({
               <Button
                 aria-label={deleteLabel}
                 size="icon-sm"
-                variant="ghost"
+                variant="ghost-destructive"
                 onClick={() => onDelete(repo.id)}
                 disabled={isDeleting}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="text-destructive"
                 title={deleteLabel}
               >
                 {isDeleting ? (

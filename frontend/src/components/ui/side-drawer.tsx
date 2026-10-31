@@ -144,7 +144,7 @@ export function SideDrawerHeader({ title, onClose, meta }: SideDrawerHeaderProps
         variant="ghost"
         size="icon-xs"
         onClick={onClose}
-        className="shrink-0 text-muted-foreground hover:text-foreground"
+        className="shrink-0 text-muted-foreground"
         aria-label={t('ui.sideDrawer.close')}
       >
         <X className="size-5" />

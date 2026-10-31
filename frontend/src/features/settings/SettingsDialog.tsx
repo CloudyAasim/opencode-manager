@@ -198,7 +198,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                    size="icon"
                    onClick={close}
                    aria-label={t('common.close')}
-                   className="text-muted-foreground hover:text-foreground"
+                   className="text-muted-foreground"
                  >
                    <X className="size-4" />
                  </Button>
@@ -247,7 +247,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                     variant="ghost"
                     size="icon-touch"
                     onClick={handleSettingsBack}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground"
                   >
                     <ChevronLeft className="size-6" />
                   </Button>
@@ -263,7 +263,7 @@ export function SettingsDialog({ variant = 'dialog' }: SettingsDialogProps = {})
                      size="icon-touch"
                      onClick={close}
                      aria-label={t('common.close')}
-                     className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                     className="text-muted-foreground flex-shrink-0"
                    >
                   <X className="size-6" />
                  </Button>

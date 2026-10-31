@@ -56,7 +56,10 @@ const VARIANTS = variantsOf(
  * 脸上那几类 ✓。
  *
  * **没有前缀的** ✓才是脸本身 ✓——带前缀的那一句 ✗ 是**状态** ✗
- * （`hover:bg-muted` ✓ 是悬停时变灰 ✓），不是另一张脸 ✗。
+ * （`focus:bg-muted` ✓ 是聚焦时变灰 ✓），不是另一张脸 ✗。
+ *
+ * **悬停色是唯一的例外** ✗ —— 那一类 ✗ **归那一档管** ✓，
+ * 另一道门禁盯着它 ✓（"调用点不许自己写悬停色" ✓）。
  */
 const FACE_TOKEN = /^(?:rounded|bg|border|shadow)(?:-|$)/
 
@@ -67,6 +70,14 @@ const FACE_TOKEN = /^(?:rounded|bg|border|shadow)(?:-|$)/
  * 它们说的还是**这一副脸** ✓，只是它的边 ✗。
  */
 const SHAPE_TOKEN = /^(?:rounded|border)-(?:[lrtybxy]{1,2})(?:-|$)/
+
+/**
+ * **悬停色** ✓ —— 那是**那一档的话** ✓，不是调用点的话 ✓。
+ *
+ * `hover:text-foreground` ✗ `hover:bg-muted` ✗ `hover:border-…` ✗
+ * —— 这一类 ✗ **归那一档管** ✓。
+ */
+const HOVER_COLOUR = /^(?:[a-z0-9-]+:)*hover:(?:text|bg|border)-/
 
 /**
  * 一次性的那几处，各有理由。
@@ -208,11 +219,43 @@ describe('按钮的脸，是它那一档的事', () => {
     ).toEqual([])
   })
 
+  it('调用点不许自己写悬停色', () => {
+    // 悬停色 ✓ **也是那一档的事** ✓。
+    //
+    // 以前 ✗ 这一类不算"脸" ✗（"带前缀的那一句是状态" ✓）—— 于是 ✗
+    // **九处小图标键 ✗ 各自写了一句** ✓ `hover:text-foreground` ✓，
+    // 而 `ghost` 那一档 ✗ **说的是 `hover:text-accent-foreground`** ✓。
+    // 两句都在 ✓，**后写的赢** ✓ —— 于是那些键 ✗
+    // **蓝底 ✗ 暗字** ✓（accent 的底 ✓ + foreground 的字 ✗）✗ **对比度坏了** ✗。
+    //
+    // 而**另外七十二个** ghost 键 ✓ 本来就用的是那一副脸 ✓ ——
+    // **不一致的是那九处** ✓，不是那七十二处 ✓。
+    const offenders: string[] = []
+    for (const site of CALL_SITES) {
+      for (const token of site.list.split(/\s+/)) {
+        if (!token) continue
+        if (!HOVER_COLOUR.test(token)) continue
+        if (excused(site.rel, token)) continue
+        offenders.push(`${site.rel}:${site.line}（${site.variant}）  ${token}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些地方自己写了悬停色：${offenders.length} 处`,
+        ...offenders,
+        '悬停色是那一档的事：要哪一副脸，就说哪一档（`variant="ghost-destructive"`）。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
   it('调用点不许自己写脸上那几类', () => {
     // 脸只有一副 ✓。调用点自己写一个背景 ✗、一道边框 ✗、一个圆角 ✗、
     // 一道阴影 ✗，就是**另一张脸** ✗。
-    // **带前缀的那一句不算** ✓——那是**状态** ✗（`hover:bg-muted` ✓ 是悬停时变灰 ✓）。
+    // **带前缀的那一句不算** ✓——那是**状态** ✗（`focus:bg-muted` ✓ 是聚焦时变灰 ✓）。
     // **哪一边的那一句也不算** ✓——那是**形状** ✗（`rounded-l-none` ✓）。
+    // **悬停色 ✗ 也不算脸** ✗ —— 它**归那一档管** ✓，另一道门禁盯着 ✓。
     const offenders: string[] = []
     for (const site of CALL_SITES) {
       for (const token of site.list.split(/\s+/)) {
