@@ -290,7 +290,7 @@ export function AccountSettings() {
                 <Button size="wide"
                   onClick={handleAddPasskey}
                   disabled={addPasskeyMutation.isPending}
-                  className="whitespace-nowrap"
+
                 >
                   {addPasskeyMutation.isPending ? (
                     <Loader2 className="mr-2 size-4 animate-spin" />
@@ -355,7 +355,7 @@ export function AccountSettings() {
             <p className="text-xs text-muted-foreground">{t('settingsPanels.account.signOutDescription')}</p>
           </div>
         </div>
-        <Button size="wide" variant="destructive" onClick={logout} className="shrink-0">
+        <Button size="wide" variant="destructive" onClick={logout}>
           <LogOut className="mr-2 size-4" />
           {t('settingsPanels.account.signOut')}
         </Button>

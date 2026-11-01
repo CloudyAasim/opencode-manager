@@ -118,7 +118,7 @@ export function TopBar() {
             <Button
               variant="ghost"
               size="sm"
-              className="shrink-0 gap-1 px-2 text-muted-foreground"
+              className="gap-1 px-2 text-muted-foreground"
               aria-label={t('navigation.more')}
             >
               <MoreHorizontal className="size-4" />
@@ -142,7 +142,6 @@ export function TopBar() {
           variant="ghost"
           size="icon-lg"
           aria-label={t('navigation.more')}
-          className="shrink-0"
           onClick={() => open('more')}
         >
           <Menu className="size-4" />

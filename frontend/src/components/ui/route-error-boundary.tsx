@@ -79,7 +79,7 @@ export function RouteErrorBoundary() {
           <WifiOff className="size-6" />
           <span>{title}</span>
         </div>
-        <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
+        <Button variant="outline" onClick={() => window.location.reload()}>
           <RefreshCw className="size-4" />
           {t('ui.routeErrorBoundary.reload')}
         </Button>
@@ -102,7 +102,7 @@ export function RouteErrorBoundary() {
           </Button>
         )}
         {isRetryable && (
-          <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
+          <Button variant="outline" onClick={() => window.location.reload()}>
             <RefreshCw className="size-4" />
             {t('common.retry')}
           </Button>

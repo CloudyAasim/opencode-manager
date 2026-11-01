@@ -92,7 +92,7 @@ export function RepoListControls({
           <Button
             variant="ghost"
             onClick={onSelectAll}
-            className="shrink-0"
+
             
           >
             {allVisibleSelected ? t("repo.list.unselectAll") : t("repo.list.selectAll")}
@@ -100,7 +100,7 @@ export function RepoListControls({
           <Button
             variant="ghost-destructive"
             onClick={onDelete}
-            className="shrink-0 text-destructive"
+            className="text-destructive"
             
           >
             <Trash2 className="size-3 mr-1" />
@@ -112,7 +112,7 @@ export function RepoListControls({
             onClick={onClearSelection}
             aria-label={t('common.close')}
             title={t('common.close')}
-            className="shrink-0 ml-auto text-destructive"
+            className="ml-auto text-destructive"
           >
             <X className="size-4" />
           </Button>
@@ -184,7 +184,7 @@ export function RepoListControls({
         ) : (
           <DropdownMenu open={showMenu} onOpenChange={setShowMenu}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5">
+              <Button variant="outline" size="sm">
                 <SlidersHorizontal className="size-4" />
                 <span className="hidden sm:inline">{currentSortLabel}</span>
               </Button>
@@ -223,7 +223,7 @@ export function RepoListControls({
                 variant={filterMode === option.value ? "default" : "ghost"}
                 size="sm"
                 onClick={() => onFilterModeChange(option.value)}
-                className="shrink-0 gap-1.5"
+
               >
                 {t(option.labelKey)}
                 {count !== undefined && count > 0 && (

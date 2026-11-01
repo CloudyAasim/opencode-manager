@@ -369,7 +369,7 @@ export function GlobalSchedulesView() {
               />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon-sm" aria-label={t('schedules.global.filters')} className="sm:hidden shrink-0 relative">
+                  <Button variant="outline" size="icon-sm" aria-label={t('schedules.global.filters')} className="sm:hidden relative">
                     <SlidersHorizontal className="size-3.5" />
                     {(statusFilter !== 'all' || scheduleModeFilter !== 'all') && (
                       <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
@@ -464,7 +464,7 @@ export function GlobalSchedulesView() {
                       variant={statusFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setStatusFilter(opt.value as StatusFilter)}
-                      className="px-3"
+
                     >
                       {opt.label}
                     </Button>
@@ -480,7 +480,7 @@ export function GlobalSchedulesView() {
                       variant={scheduleModeFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setScheduleModeFilter(opt.value as ScheduleModeFilter)}
-                      className="px-3"
+
                     >
                       {opt.label}
                     </Button>
@@ -496,7 +496,7 @@ export function GlobalSchedulesView() {
                       variant={sortOption === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setSortOption(opt.value as SortOption)}
-                      className="px-3"
+
                     >
                       {opt.label}
                     </Button>
@@ -672,7 +672,7 @@ export function GlobalSchedulesView() {
               />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon-sm" aria-label={t('schedules.global.filters')} className="sm:hidden shrink-0 relative">
+                  <Button variant="outline" size="icon-sm" aria-label={t('schedules.global.filters')} className="sm:hidden relative">
                     <SlidersHorizontal className="size-3.5" />
                     {(runStatusFilter !== 'all' || runTriggerFilter !== 'all' || runSortOption !== 'startedAt') && (
                       <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
@@ -767,7 +767,7 @@ export function GlobalSchedulesView() {
                       variant={runStatusFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunStatusFilter(opt.value)}
-                      className="px-3"
+
                     >
                       {opt.label}
                     </Button>
@@ -783,7 +783,7 @@ export function GlobalSchedulesView() {
                       variant={runTriggerFilter === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunTriggerFilter(opt.value)}
-                      className="px-3"
+
                     >
                       {opt.label}
                     </Button>
@@ -799,7 +799,7 @@ export function GlobalSchedulesView() {
                       variant={runSortOption === opt.value ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setRunSortOption(opt.value as 'startedAt' | 'jobName' | 'duration')}
-                      className="px-3"
+
                     >
                       {opt.label}
                     </Button>

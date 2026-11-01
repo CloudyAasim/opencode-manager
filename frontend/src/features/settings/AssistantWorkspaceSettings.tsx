@@ -210,7 +210,7 @@ export function AssistantWorkspaceSettings() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="shrink-0"
+
                       aria-label={t('settings.assistantWorkspace.editFor', { name: entry.name })}
                       onClick={() => {
                         setEditing(entry)
@@ -223,7 +223,7 @@ export function AssistantWorkspaceSettings() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="shrink-0"
+
                     aria-label={t('settings.assistantWorkspace.deleteFor', { name: entry.name })}
                     onClick={() => setPendingDelete(entry)}
                   >

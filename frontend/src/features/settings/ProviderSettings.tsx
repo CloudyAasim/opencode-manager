@@ -290,7 +290,7 @@ export function ProviderSettings() {
             size="default"
             onClick={() => setConnectedExpanded(!connectedExpanded)}
             aria-expanded={connectedExpanded}
-            className="w-full justify-start py-2 px-1"
+            className="w-full justify-start px-1"
           >
             {connectedExpanded ? (
               <ChevronDown className="size-4 text-muted-foreground" />
@@ -370,7 +370,7 @@ export function ProviderSettings() {
             size="default"
             onClick={() => setAvailableExpanded(!availableExpanded)}
             aria-expanded={availableExpanded}
-            className="w-full justify-start py-2 px-1"
+            className="w-full justify-start px-1"
           >
             {availableExpanded ? (
               <ChevronDown className="size-4 text-muted-foreground" />

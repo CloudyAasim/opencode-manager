@@ -189,7 +189,7 @@ export function CreateWorktreeDialog({
               onClick={handleCreate}
               disabled={!canCreate || !branchName.trim() || !baseBranch || worktreeMutation.isPending}
               size="touch"
-              className="disabled:opacity-50"
+
             >
               {worktreeMutation.isPending ? (
                 <>

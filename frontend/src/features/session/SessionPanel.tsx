@@ -212,7 +212,7 @@ export function SessionPanel({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  className="shrink-0"
+
                   aria-label={t('navigation.add')}
                   title={t('navigation.add')}
                 >
@@ -237,7 +237,7 @@ export function SessionPanel({
           <Button
             variant="ghost"
             size="icon-xs"
-            className="ml-auto shrink-0"
+            className="ml-auto"
             onClick={() => onOpenChange(false)}
             aria-label={t('navigation.close')}
           >

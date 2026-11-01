@@ -236,7 +236,7 @@ export function OpenCodeConfigEditor({
                   size="sm"
                   onClick={() => downloadOpenCodeConfigSource(draftSource)}
                   disabled={isSaving}
-                  className="shrink-0"
+
                 >
                   <Download className="size-3.5 mr-1" />
                   {t('settingsPanels.configEditor.download')}

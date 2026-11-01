@@ -149,7 +149,6 @@ export function RepoMcpServerList({
                           <Button
                             variant="ghost"
                             size="2xs"
-                            className="cursor-pointer"
                             title={t('repo.mcp.optionsTitle')}
                           >
                             {status?.status === 'connected' && (

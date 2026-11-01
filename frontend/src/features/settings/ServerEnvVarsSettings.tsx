@@ -148,7 +148,7 @@ export function ServerEnvVarsSettings() {
                 onClick={() => handleRemove(index)}
                 aria-label={t('common.delete')}
                 title={t('common.delete')}
-                className="shrink-0"
+
               >
                 <Trash2 className="size-4" />
               </Button>

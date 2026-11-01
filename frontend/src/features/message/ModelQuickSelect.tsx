@@ -597,7 +597,7 @@ export function ModelQuickSelect({
                 variant="muted"
                 size="icon-circle"
                 onClick={handleMoreModelsBack}
-                className="shrink-0 text-foreground"
+                className="text-foreground"
                 aria-label={t('misc.modelQuickSelect.backToQuickModels')}
               >
                 <ChevronLeft className="size-5" />
@@ -753,7 +753,6 @@ export function ModelQuickSelect({
   size="sm"
   icon={<Search />}
   title={t('misc.modelQuickSelect.noProvidersFound')}
-
   detail={t('misc.modelQuickSelect.noProvidersFoundHint')}
   className="py-10"
 />

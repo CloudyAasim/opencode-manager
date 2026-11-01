@@ -220,7 +220,7 @@ export function OpenCodeConfigManager() {
              size="sm"
              onClick={requestRestart}
              disabled={restartServerMutation.isPending}
-             className="shrink-0"
+
            >
              {restartServerMutation.isPending ? (
                <Loader2 className="size-3 mr-1 animate-spin" />

@@ -302,14 +302,14 @@ export const SessionList = ({
             <span className="text-sm font-medium text-foreground shrink-0">
               {t('session.list.selected', { count: selectedSessions.size })}
             </span>
-            <Button variant="ghost" onClick={toggleSelectAll} className="shrink-0" >
+            <Button variant="ghost" onClick={toggleSelectAll} >
               {allVisibleSelected ? t('session.list.unselectAll') : t('session.list.selectAll')}
             </Button>
             <Button
               variant="ghost-destructive"
               onClick={handleBulkDelete}
               disabled={selectedSessions.size === 0}
-              className="shrink-0 text-destructive"
+              className="text-destructive"
               
             >
               <Trash2 className="size-3 mr-1" />
@@ -321,7 +321,7 @@ export const SessionList = ({
               onClick={() => { setSelectedSessions(new Set()); setManageMode(false); }}
               aria-label={t('common.close')}
               title={t('common.close')}
-              className="shrink-0 ml-auto text-destructive"
+              className="ml-auto text-destructive"
             >
               <X className="size-4" />
             </Button>
@@ -345,7 +345,6 @@ export const SessionList = ({
               size="icon"
               aria-label={t('session.list.newSessionAria')}
               title={t('session.list.newSession')}
-              className="shrink-0"
               disabled={!sessionCreateDirectory || createSession.isPending}
               onClick={() => {
                 createSession.mutate({ agent: undefined });
@@ -357,7 +356,6 @@ export const SessionList = ({
               variant="outline"
               size="icon"
               aria-label={t('session.list.manageAria')}
-              className="shrink-0"
               onClick={() => {
                 setManageMode(true);
               }}

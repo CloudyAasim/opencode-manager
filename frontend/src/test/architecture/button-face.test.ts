@@ -118,10 +118,44 @@ function saidBy(variant: string): Set<string> {
   return words
 }
 
+/**
+ * **底子**说过的每一个词 ✓ —— 那一副脸的另一半 ✓。
+ *
+ * `buttonVariants` 的第一个参数 ✓ —— 它是共享 Button 自己的底 ✓，
+ * **每一档都站在它上面** ✓。所以它说的话 ✓ **也是那一副脸说的话** ✓。
+ */
+const BASE_WORDS: Set<string> = new Set(
+  cvaBase(
+    SOURCES.find((source) => source.rel === SHARED_BUTTON)?.text ?? '',
+    'buttonVariants',
+  )
+    .split(/\s+/)
+    .filter(Boolean),
+)
+
+/** 每一个尺寸档说了什么 ✓。 */
+const SIZES = variantsOf(
+  SOURCES.find((source) => source.rel === SHARED_BUTTON)?.text ?? '',
+  'size',
+)
+
+/**
+ * 一个类名去掉变体前缀与数字 ✓ —— 剩下的就是它管的那个工具 ✓。
+ *
+ * `gap-2` ✓ 与 `gap-1.5` ✓ **是同一个工具** ✓ —— 它们互相覆盖 ✓，
+ * 而 `gap-2` ✓ 与 `shrink-0` ✓ **不是** ✓。
+ */
+function utilityOf(token: string): string {
+  const parts = token.split(':')
+  const last = parts[parts.length - 1]!
+  return last.replace(/-[^-]+$/, '')
+}
+
 interface CallSite {
   rel: string
   line: number
   variant: string
+  size: string
   list: string
 }
 
@@ -137,6 +171,7 @@ function callSites(): CallSite[] {
         rel: source.rel,
         line: source.text.slice(0, match.index).split('\n').length,
         variant: /(?:^|\s)variant="([^"]*)"/.exec(attrs)?.[1] ?? 'default',
+        size: /(?:^|\s)size="([^"]*)"/.exec(attrs)?.[1] ?? 'default',
         list: classListOfAttrs(attrs) ?? '',
       })
     }
@@ -162,6 +197,8 @@ describe('按钮的脸，是它那一档的事', () => {
     const outline = saidBy('outline')
     expect(outline.has('border-border'), '认不出 outline 那一档的边框').toBe(true)
     expect(outline.has('hover:bg-accent'), '认不出 outline 那一档的悬停').toBe(true)
+    expect(SIZES.size, '认不出那些尺寸档').toBeGreaterThan(5)
+    expect(SIZES.get('touch') ?? '', '认不出 touch 那一档').toContain('h-11')
     expect(saidBy('default').has('bg-primary'), '认不出 default 那一档的背景').toBe(true)
     // **绿色不是按钮的** ✓：绿色是**标记** ✓ 和**消息** ✓ 的 ✓——
     // 按钮**不许**有那一副脸 ✓。
@@ -197,14 +234,33 @@ describe('按钮的脸，是它那一档的事', () => {
     expect(FACE_TOKEN.test('hover:bg-muted'), '把一个状态当成了脸').toBe(false)
   })
 
-  it('调用点不许重复它那一档说过的话', () => {
+  it('调用点不许重复它那一副脸说过的话', () => {
     // 同一句话说了两遍 ✗，就等于有两个地方能改它 ✗。
+    //
+    // **底子说的话 ✗ 也算数** ✓ —— 底子 ✓ 是那一副脸的一半 ✓
+    // （`disabled:opacity-50` ✓、`shrink-0` ✓、`gap-2` ✓、`rounded-lg` ✓ …）。
+    // 以前 ✗ **只查那一档** ✓，于是底子那半 ✗ **没人管** ✓ ——
+    // 一个调用点写 `disabled:opacity-50` ✗ 就是**同一句说了两遍** ✗。
+    //
+    // ⚠️ **但底子那半 ✗ 不是无条件的** ✓ —— **只有当** ✗
+    // **那一档 ✓ 与那个尺寸档 ✓ 都没提过那个工具时** ✓ 它才算重复 ✓。
+    // 否则 ✗ 那是在**覆盖** ✗，不是重复 ✗ —— 尺寸档把底子的 `gap-2` ✓
+    // 改成了 `gap-1.5` ✓，调用点又写回 `gap-2` ✗ —— **那是另一回事** ✗。
     const offenders: string[] = []
     for (const site of CALL_SITES) {
       const said = saidBy(site.variant)
+      const sizeWords = new Set(
+        (SIZES.get(site.size) ?? '').split(/\s+/).filter(Boolean),
+      )
+      const overrides = new Set([...said, ...sizeWords].map(utilityOf))
       for (const token of site.list.split(/\s+/)) {
         if (!token) continue
-        if (!said.has(token)) continue
+        if (said.has(token) || sizeWords.has(token)) {
+          offenders.push(`${site.rel}:${site.line}（${site.variant}）  ${token}`)
+          continue
+        }
+        if (!BASE_WORDS.has(token)) continue
+        if (overrides.has(utilityOf(token))) continue
         offenders.push(`${site.rel}:${site.line}（${site.variant}）  ${token}`)
       }
     }
@@ -212,9 +268,33 @@ describe('按钮的脸，是它那一档的事', () => {
     expect(
       offenders,
       [
-        `这些地方把那一档的话又说了一遍：${offenders.length} 处`,
+        `这些地方把那一副脸的话又说了一遍：${offenders.length} 处`,
         ...offenders,
-        '按钮的脸是它那一档的事：要哪一副脸，就说哪一档（`variant="outline"`）。',
+        '按钮的脸是它那一副的事：要哪一副脸，就说哪一档（`variant="outline"`）。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('调用点不许自己写禁用时什么样', () => {
+    // 禁用态 ✓ **是共享件底子的事** ✓（`disabled:pointer-events-none`
+    // ✓ `disabled:opacity-50` ✓）—— **整个键淡下去** ✓，
+    // **指针也进不去** ✓。调用点再写一副 ✗ 就是**另一副禁用脸** ✗。
+    const offenders: string[] = []
+    for (const site of CALL_SITES) {
+      for (const token of site.list.split(/\s+/)) {
+        if (!token) continue
+        if (!/^(?:[a-z0-9-]+:)?disabled:(?!pointer-events-none$|opacity-50$)/.test(token)) continue
+        if (excused(site.rel, token)) continue
+        offenders.push(`${site.rel}:${site.line}（${site.variant}）  ${token}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这些地方自己写了一副禁用脸：${offenders.length} 处`,
+        ...offenders,
+        '禁用时是共享件底子的事：整个键淡下去，指针也进不去。',
       ].join('\n'),
     ).toEqual([])
   })

@@ -201,7 +201,6 @@ export const SessionCard = ({
                           size="icon-xs"
                           variant="ghost"
                           aria-label={t('common.save')}
-                          className="shrink-0"
                           onClick={(e) => { e.stopPropagation(); commitRename() }}
                         >
                           <Check className="size-4" />
@@ -210,7 +209,6 @@ export const SessionCard = ({
                           size="icon-xs"
                           variant="ghost"
                           aria-label={t('common.cancel')}
-                          className="shrink-0"
                           onClick={(e) => { e.stopPropagation(); setIsRenaming(false) }}
                         >
                           <X className="size-4" />
@@ -241,7 +239,6 @@ export const SessionCard = ({
                         aria-label={t('session.card.actionsAria')}
                         size="icon-xs"
                         variant="ghost"
-                        className="shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <MoreVertical className="size-4" />

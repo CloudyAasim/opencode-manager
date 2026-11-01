@@ -288,7 +288,7 @@ export function TTSSettings() {
                     form.setValue('apiKey', '', { shouldDirty: true })
                     form.setValue('endpoint', '', { shouldDirty: true })
                   }}
-                  className="flex-col items-center justify-center gap-2 p-4"
+                  className="flex-col p-4"
                 >
                   <MonitorSpeaker className={`size-6 ${watchProvider === 'builtin' ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={`font-medium ${watchProvider === 'builtin' ? 'text-primary' : ''}`}>
@@ -305,7 +305,7 @@ export function TTSSettings() {
                   onClick={() => {
                     form.setValue('provider', 'external', { shouldDirty: true })
                   }}
-                  className="flex-col items-center justify-center gap-2 p-4"
+                  className="flex-col p-4"
                 >
                   <Globe className={`size-6 ${watchProvider === 'external' ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={`font-medium ${watchProvider === 'external' ? 'text-primary' : ''}`}>

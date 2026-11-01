@@ -219,7 +219,7 @@ export function DownloadDialog({
               <Button type="button" size="touch" variant="outline" onClick={handleCancel} className="flex-1">
                 {t('ui.downloadDialog.cancel')}
               </Button>
-              <Button size="touch" type="button" onClick={handleConfirm} className="gap-2 flex-1">
+              <Button size="touch" type="button" onClick={handleConfirm} className="flex-1">
                 <Download className="size-4" />
                 {t('ui.downloadDialog.download')}
               </Button>

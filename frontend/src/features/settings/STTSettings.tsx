@@ -443,7 +443,7 @@ export function STTSettings() {
                   size="default"
                   onClick={handleTest}
                   disabled={!canTest && !isRecording && !isProcessing}
-                  className="gap-2 cursor-not-allowed"
+                  className="cursor-not-allowed"
                 >
                   {isRecording ? (
                     <>

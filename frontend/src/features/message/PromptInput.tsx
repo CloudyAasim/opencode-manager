@@ -1365,7 +1365,7 @@ return (
 <Button
                       variant="muted"
                       size="default"
-                      className="px-2.5 py-0.5 md:px-3 min-w-0 font-medium text-muted-foreground transition-colors flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start justify-center overflow-hidden"
+                      className="px-2.5 py-0.5 md:px-3 min-w-0 text-muted-foreground flex-1 md:flex-initial md:w-auto max-w-[110px] md:max-w-[220px] dark:border-white/30 flex flex-col items-start overflow-hidden"
                     >
                       <span className="truncate w-full text-left">{displayModelName || t('message.actions.selectModel')}</span>
 {hasVariants && currentVariant && (
@@ -1429,7 +1429,7 @@ return (
               size="default"
               onClick={handleSubmitPress}
               disabled={hasPendingPermissionForSession ? false : ((!prompt.trim() && imageAttachments.length === 0) || (isPromptSubmitPending && !isStreamingResponse))}
-              className="px-4 md:px-5 flex-shrink-0 min-w-[52px] disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+              className="md:px-5 flex-shrink-0 min-w-[52px]"
               title={hasPendingPermissionForSession ? t('message.actions.viewPendingPermission') : (isStreamingResponse ? t('message.actions.queueMessage') : t('message.actions.send'))}
             >
               <span className="whitespace-nowrap">{hasPendingPermissionForSession ? t('message.actions.view') : (isStreamingResponse ? t('message.actions.queue') : t('message.actions.send'))}</span>

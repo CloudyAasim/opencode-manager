@@ -145,7 +145,7 @@ function FileBrowserHeader({ repoName, path, workspaceRoot, repoId, basePath }: 
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="shrink-0"
+
                 aria-label={t('repo.download.label')}
                 title={t('repo.download.label')}
               >
