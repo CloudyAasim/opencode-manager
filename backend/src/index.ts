@@ -412,6 +412,18 @@ app.route('/api/mcp-oauth-proxy', createMcpOauthProxyRoutes(openCodeClient, requ
 app.route('/api/internal', createInternalRoutes(db, scheduleService, notificationService, settingsService, openCodeClient))
 app.route('/api/opencode-proxy', createOpenCodeProxyRoutes(db, settingsService))
 
+// Mounted here, above the rest of `/api`, because the versioned API brings
+// its own gate: the same session rule, but answering in the versioned
+// shape. Registered before the protected API below, so that this gate is
+// the one that answers - the protected API's gate covers everything under
+// `/api`, and whichever is registered first is the one that gets to say
+// no.
+app.route('/api/v1', createApiV1Routes(providerRegistry, {
+  name: 'opencode-manager',
+  version: getAppVersion,
+  auth,
+}))
+
 const protectedApi = new Hono<{ Variables: { session: Session['session']; user: Session['user'] } }>()
 protectedApi.use('/*', requireAuth)
 protectedApi.use('/*', async (c, next) => {
@@ -442,10 +454,6 @@ protectedApi.route('/prompt-templates', createPromptTemplateRoutes(db))
 protectedApi.route('/session-pins', createSessionPinRoutes(db))
 protectedApi.route('/schedules', createScheduleRoutes(scheduleService, db))
 protectedApi.route('/logs', createLogRoutes())
-protectedApi.route('/v1', createApiV1Routes(providerRegistry, {
-  name: 'opencode-manager',
-  version: getAppVersion,
-}))
 
 app.route('/api', protectedApi)
 

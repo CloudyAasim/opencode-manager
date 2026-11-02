@@ -194,4 +194,15 @@ describe('版本化 API 的形状', () => {
       'docs/api/v1.schema.json 与 shared/src/api/v1.ts 对不上了，重新生成：bun scripts/generate-v1-schema.ts',
     ).toBe(expected)
   })
+
+  it('v1 挂在受保护的那一摊前面', () => {
+    const source = read(path.join(repoRoot, 'backend/src/index.ts'))
+    const v1At = source.indexOf("app.route('/api/v1'")
+    const protectedAt = source.indexOf("app.route('/api', protectedApi)")
+
+    expect(
+      v1At > -1 && protectedAt > -1 && v1At < protectedAt,
+      'v1 必须挂在受保护那一摊前面：两道闸都说"不"，先挂的那道先说，而后挂的受保护那一摊用的是服务器自己的信封',
+    ).toBe(true)
+  })
 })

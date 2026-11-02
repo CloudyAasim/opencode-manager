@@ -3,14 +3,31 @@ import { Hono } from 'hono'
 import { createApiV1Routes } from './index'
 import { ProviderRegistry } from '../../providers/registry'
 import { ProviderUnavailableError } from '../../providers/contract'
+import { createAuthMiddleware } from '../../auth/middleware'
+import type { AuthInstance } from '../../auth'
 import { FakeAgentProvider, makeMessage, makeSession } from '../../../test/helpers/fake-agent-provider'
 import type { Session } from '@opencode-manager/shared/api/v1'
+
+function authThatFinds(session: unknown): AuthInstance {
+  return {
+    api: { getSession: async () => session },
+  } as unknown as AuthInstance
+}
+
+const signedIn = authThatFinds({
+  session: { id: 'session-1', userId: 'user-1' },
+  user: { id: 'user-1', name: 'user', email: 'user@example.com' },
+})
+const signedOut = authThatFinds(null)
 
 function createApp(providers: FakeAgentProvider[]): { app: Hono; registry: ProviderRegistry } {
   const registry = new ProviderRegistry()
   for (const provider of providers) registry.register(provider, { default: true })
   const app = new Hono()
-  app.route('/api/v1', createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1.2.3' }))
+  app.route(
+    '/api/v1',
+    createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1.2.3', auth: signedIn }),
+  )
   return { app, registry }
 }
 
@@ -238,7 +255,10 @@ describe('版本化 API', () => {
     registry.register(alpha, { default: true })
     registry.register(beta)
     const app = new Hono()
-    app.route('/api/v1', createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1' }))
+    app.route(
+      '/api/v1',
+      createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1', auth: signedIn }),
+    )
 
     const res = await app.request('/api/v1/sessions?agent=beta')
 
@@ -250,7 +270,10 @@ describe('版本化 API', () => {
     const registry = new ProviderRegistry()
     registry.register(new FakeAgentProvider({ id: 'alpha' }), { default: true })
     const protectedApi = new Hono()
-    protectedApi.route('/v1', createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1' }))
+    protectedApi.route(
+      '/v1',
+      createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1', auth: signedIn }),
+    )
     const app = new Hono()
     app.route('/api', protectedApi)
 
@@ -258,5 +281,44 @@ describe('版本化 API', () => {
 
     expect(res.status).toBe(200)
     expect(((await res.json()) as { agents: unknown[] }).agents).toHaveLength(1)
+  })
+
+  it('没登录的时候，闸门说的是 v1 的话', async () => {
+    const registry = new ProviderRegistry()
+    registry.register(new FakeAgentProvider({ id: 'alpha' }), { default: true })
+    const app = new Hono()
+    app.route(
+      '/api/v1',
+      createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1', auth: signedOut }),
+    )
+
+    const res = await app.request('/api/v1/agents')
+
+    expect(res.status).toBe(401)
+    expect(await res.json()).toEqual({
+      error: { code: 'unauthorized', message: 'No session' },
+    })
+  })
+
+  it('闸门排在前面的时候，说不的是它', async () => {
+    const registry = new ProviderRegistry()
+    registry.register(new FakeAgentProvider({ id: 'alpha' }), { default: true })
+    const app = new Hono()
+    // The versioned API is registered first, the way the server registers it:
+    // its own gate is the one that answers, and the other gate never gets
+    // the chance to say no in a different shape.
+    app.route(
+      '/api/v1',
+      createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1', auth: signedOut }),
+    )
+    const protectedApi = new Hono()
+    protectedApi.use('/*', createAuthMiddleware(signedOut))
+    app.route('/api', protectedApi)
+
+    const res = await app.request('/api/v1/agents')
+
+    expect(res.status).toBe(401)
+    const body = (await res.json()) as { error: { code?: string } }
+    expect(body.error?.code).toBe('unauthorized')
   })
 })

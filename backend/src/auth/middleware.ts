@@ -1,8 +1,20 @@
 import { createMiddleware } from 'hono/factory'
+import type { Context } from 'hono'
 import type { AuthInstance, Session } from './index'
 import { logger } from '../utils/logger'
 
-export function createAuthMiddleware(auth: AuthInstance) {
+/**
+ * How the gate answers when it says no. The rule itself is the same
+ * everywhere - one session, or no session - but a versioned API has to
+ * answer in its own shape, and a second copy of the rule would be free to
+ * disagree with the first one about what a session is.
+ */
+export interface AuthErrorResponses {
+  unauthorized: (c: Context) => Response
+  internalError: (c: Context) => Response
+}
+
+export function createAuthMiddleware(auth: AuthInstance, responses?: AuthErrorResponses) {
   return createMiddleware<{
     Variables: {
       session: Session['session']
@@ -25,12 +37,14 @@ export function createAuthMiddleware(auth: AuthInstance) {
       })
     } catch (error) {
       logger.error('Session lookup failed', { error })
+      if (responses) return responses.internalError(c)
       return c.json({ error: 'Internal Server Error' }, 500)
     }
 
     logger.debug(`Session result: ${session ? 'found' : 'not found'}`)
 
     if (!session) {
+      if (responses) return responses.unauthorized(c)
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
