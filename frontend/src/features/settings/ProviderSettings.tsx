@@ -279,9 +279,6 @@ export function ProviderSettings() {
         <div className="min-w-0 space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-2">{t('settingsPanels.provider.apiKeys')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t('settingsPanels.provider.apiKeysDescription')}
-            </p>
           </div>
 
         <div className="space-y-3">

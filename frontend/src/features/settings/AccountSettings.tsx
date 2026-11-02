@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PanelMessage } from '@/components/ui/panel-message'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
@@ -211,9 +211,8 @@ export function AccountSettings() {
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2">
                 <Lock className="size-4 sm:size-5" />
-                {t('settingsPanels.account.changePassword')}
+                {t('settingsPanels.account.password')}
               </CardTitle>
-              <CardDescription>{t('settingsPanels.account.changePasswordDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               {!showChangePassword ? (
@@ -278,7 +277,6 @@ export function AccountSettings() {
                 <KeyRound className="size-4 sm:size-5" />
                 {t('settingsPanels.account.passkeys')}
               </CardTitle>
-              <CardDescription>{t('settingsPanels.account.passkeysDescription')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex flex-col sm:flex-row gap-2">
@@ -347,19 +345,10 @@ export function AccountSettings() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <LogOut className="size-4 shrink-0 text-destructive" />
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-destructive">{t('settingsPanels.account.signOut')}</p>
-            <p className="text-xs text-muted-foreground">{t('settingsPanels.account.signOutDescription')}</p>
-          </div>
-        </div>
-        <Button size="wide" variant="destructive" onClick={logout}>
-          <LogOut className="mr-2 size-4" />
-          {t('settingsPanels.account.signOut')}
-        </Button>
-      </div>
+      <Button size="wide" variant="destructive" onClick={logout}>
+        <LogOut className="mr-2 size-4" />
+        {t('settingsPanels.account.signOut')}
+      </Button>
 
       <DeleteDialog
         open={deletePasskeyId !== null}

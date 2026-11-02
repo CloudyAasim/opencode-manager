@@ -312,7 +312,7 @@ export function AddRepoDialog({ open, onOpenChange }: AddRepoDialogProps) {
                 {repoType === 'local' ? t('repo.addDialog.linking') : repoType === 'folder' ? t('repo.addDialog.discovering') : t('repo.cloning')}
               </>
             ) : (
-              repoType === 'folder' ? t('repo.addDialog.discoverRepositories') : t('repo.addRepository')
+              repoType === 'folder' ? t('repo.addDialog.discoverRepositories') : t('common.add')
             )}
           </Button>
           {mutation.isError && (

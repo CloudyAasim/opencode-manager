@@ -197,7 +197,7 @@ export function CreateWorktreeDialog({
                   {t('repo.creating')}
                 </>
               ) : (
-                t('repo.worktreeCreation.title')
+                t('common.create')
               )}
             </Button>
           </DialogFooter>

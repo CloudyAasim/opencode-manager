@@ -81,3 +81,36 @@ describe('deleting a passkey', () => {
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
   })
 })
+
+/**
+ * The panel says what each card is about, and the buttons say what they do.
+ * A card whose title is repeated by its own button says the same thing twice,
+ * and a card with a line under it that says what the title already said takes
+ * up a line to say nothing.
+ */
+describe('the panel says each thing once', () => {
+  it('the card names the thing', () => {
+    renderPanel()
+
+    expect(screen.getByText('Password')).toBeInTheDocument()
+  })
+
+  it('the button names the action, and names it once', () => {
+    renderPanel()
+
+    expect(screen.getAllByText('Change Password').length).toBe(1)
+  })
+
+  it('signing out is named once', () => {
+    renderPanel()
+
+    expect(screen.getAllByText('Sign Out').length).toBe(1)
+  })
+
+  it('the passkeys card has no line under it that says what the title said', () => {
+    renderPanel()
+
+    expect(screen.getByText('Passkeys')).toBeInTheDocument()
+    expect(screen.queryByText('Manage passkeys for passwordless sign-in')).toBeNull()
+  })
+})

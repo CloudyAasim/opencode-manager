@@ -17,6 +17,8 @@ export const en = {
     close: 'Close',
     confirm: 'Confirm',
     save: 'Save',
+    add: 'Add',
+    create: 'Create',
     back: 'Back',
     unknown: 'Unknown',
     retry: 'Retry',

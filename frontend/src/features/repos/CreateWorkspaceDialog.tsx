@@ -44,7 +44,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, onCreate, isCreating
                 {t('repo.creating')}
               </>
             ) : (
-              t('repo.createWorkspace')
+              t('common.create')
             )}
           </Button>
         </DialogFooter>
