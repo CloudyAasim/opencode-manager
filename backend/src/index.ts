@@ -19,7 +19,7 @@ import { createFileRoutes } from './routes/files'
 import { createFilesystemRoutes } from './routes/filesystem'
 import { createScheduleRoutes } from './routes/schedules'
 
-async function getAppVersion(): Promise<string> {
+async function readAppVersion(): Promise<string> {
   try {
     const packageUrl = new URL('../../package.json', import.meta.url)
     const packageJsonRaw = await readFile(packageUrl, 'utf-8')
@@ -28,6 +28,13 @@ async function getAppVersion(): Promise<string> {
   } catch {
     return 'unknown'
   }
+}
+
+let appVersion: Promise<string> | null = null
+
+function getAppVersion(): Promise<string> {
+  if (!appVersion) appVersion = readAppVersion()
+  return appVersion
 }
 import { createProvidersRoutes } from './routes/providers'
 import { createOAuthRoutes } from './routes/oauth'
@@ -55,6 +62,9 @@ import { createInternalRoutes } from './routes/internal'
 import { sweepStaleUploadSessions } from './services/uploads/mirror-staging'
 import { createOpenCodeProxyRoutes } from './routes/opencode-proxy'
 import { createAuthenticatedOpenCodeProxyRoutes } from './routes/opencode-auth-proxy'
+import { createApiV1Routes } from './routes/api-v1'
+import { ProviderRegistry } from './providers/registry'
+import { OpenCodeProvider } from './providers/opencode/adapter'
 import { sseAggregator } from './services/sse-aggregator'
 import { ensureDirectoryExists, writeFileContent, fileExists } from './services/file-operations'
 import { SettingsService } from './services/settings'
@@ -190,6 +200,18 @@ const terminalManager = new TerminalManager(db)
 const openCodeClient = createOpenCodeClient(
   () => new SettingsService(db).getOpenCodeServerPassword(),
   () => opencodeServerManager.getEffectiveServerHost(),
+)
+
+// The versioned API talks to agents through the registry, so the words it
+// uses are its own and not any agent's. Which agents are registered is the
+// registry's business; the API only asks for "the agent that answers when
+// nobody says" and for a list.
+const providerRegistry = new ProviderRegistry()
+providerRegistry.register(
+  new OpenCodeProvider(openCodeClient, {
+    isReady: () => opencodeServerManager.isLifecycleInitialized(),
+  }),
+  { default: true },
 )
 
 import { DEFAULT_AGENTS_MD } from './constants'
@@ -420,6 +442,10 @@ protectedApi.route('/prompt-templates', createPromptTemplateRoutes(db))
 protectedApi.route('/session-pins', createSessionPinRoutes(db))
 protectedApi.route('/schedules', createScheduleRoutes(scheduleService, db))
 protectedApi.route('/logs', createLogRoutes())
+protectedApi.route('/v1', createApiV1Routes(providerRegistry, {
+  name: 'opencode-manager',
+  version: getAppVersion,
+}))
 
 app.route('/api', protectedApi)
 

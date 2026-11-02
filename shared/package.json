@@ -19,7 +19,10 @@
     "./utils/server-url": "./src/utils/server-url.ts",
     "./utils/tar-local": "./src/utils/tar-local.ts",
     "./notifications": "./src/notifications/index.ts",
-    "./project-id": "./src/project-id-resolver.ts"
+    "./project-id": "./src/project-id-resolver.ts",
+    "./api": "./src/api/index.ts",
+    "./api/v1": "./src/api/v1.ts",
+    "./api/v1-schema": "./src/api/v1-schema.ts"
   },
   "dependencies": {
     "jsonc-parser": "^3.3.1",

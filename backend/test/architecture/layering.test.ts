@@ -6,12 +6,35 @@ const BACKEND_SRC = path.resolve(__dirname, '../../src')
 
 const graph = buildImportGraph(BACKEND_SRC)
 
-const LAYERS = ['routes', 'services', 'db', 'utils', 'auth', 'types', 'middleware'] as const
+const LAYERS = ['routes', 'services', 'providers', 'db', 'utils', 'auth', 'types', 'middleware'] as const
 type Layer = (typeof LAYERS)[number]
 
 const LEGACY_ROUTE_SHELLING: ReadonlySet<string> = new Set<string>()
 
 const FORBIDDEN_ROUTE_SHELLING = new Set(['child_process', 'node:child_process'])
+
+/**
+ * The provider layer talks to agents, not to HTTP. A provider that imported
+ * the web framework would be able to answer a request itself, and then the
+ * versioned API above it would no longer be the only thing that decides what
+ * a request means.
+ */
+const FORBIDDEN_PROVIDER_FRAMEWORKS = ['hono', '@hono/node-server']
+
+function providerFrameworkFiles(): string[] {
+  return graph.files
+    .filter((file) => layerOf(file) === 'providers')
+    .filter((file) =>
+      graph.external.some((edge) =>
+        edge.from === file &&
+        FORBIDDEN_PROVIDER_FRAMEWORKS.some(
+          (framework) => edge.spec === framework || edge.spec.startsWith(`${framework}/`),
+        ),
+      ),
+    )
+    .map(fileRel)
+    .sort()
+}
 
 function routeShellingFiles(): string[] {
   return graph.files
@@ -92,25 +115,45 @@ describe('backend 分层契约', () => {
     expect(offenders, render('services -> routes', offenders)).toEqual([])
   })
 
+  it('services 不得依赖 providers', () => {
+    const lookedAt = expectLayerIsPopulated('services')
+    const offenders = offendingLayers('services', ['providers'])
+    expect(offenders.length + lookedAt).toBeGreaterThan(0)
+    expect(offenders, render('services -> providers', offenders)).toEqual([])
+  })
+
+  it('providers 不得依赖 routes 或 middleware', () => {
+    const lookedAt = expectLayerIsPopulated('providers')
+    const offenders = offendingLayers('providers', ['routes', 'middleware'])
+    expect(offenders.length + lookedAt).toBeGreaterThan(0)
+    expect(offenders, render('providers -> routes|middleware', offenders)).toEqual([])
+  })
+
+  it('providers 不得依赖 HTTP 框架', () => {
+    expectLayerIsPopulated('providers')
+    const offenders = providerFrameworkFiles()
+    expect(offenders, render('providers -> hono', offenders)).toEqual([])
+  })
+
   it('db 不得依赖 services 或 routes', () => {
     const lookedAt = expectLayerIsPopulated('db')
-    const offenders = offendingLayers('db', ['services', 'routes'])
+    const offenders = offendingLayers('db', ['services', 'routes', 'providers'])
     expect(offenders.length + lookedAt).toBeGreaterThan(0)
-    expect(offenders, render('db -> services|routes', offenders)).toEqual([])
+    expect(offenders, render('db -> services|routes|providers', offenders)).toEqual([])
   })
 
   it('utils 不得依赖业务层', () => {
     const lookedAt = expectLayerIsPopulated('utils')
-    const offenders = offendingLayers('utils', ['services', 'routes', 'db', 'auth'])
+    const offenders = offendingLayers('utils', ['services', 'routes', 'db', 'auth', 'providers'])
     expect(offenders.length + lookedAt).toBeGreaterThan(0)
-    expect(offenders, render('utils -> services|routes|db|auth', offenders)).toEqual([])
+    expect(offenders, render('utils -> services|routes|db|auth|providers', offenders)).toEqual([])
   })
 
   it('types 不得依赖业务层', () => {
     const lookedAt = expectLayerIsPopulated('types')
-    const offenders = offendingLayers('types', ['services', 'routes', 'db'])
+    const offenders = offendingLayers('types', ['services', 'routes', 'db', 'providers'])
     expect(offenders.length + lookedAt).toBeGreaterThan(0)
-    expect(offenders, render('types -> services|routes|db', offenders)).toEqual([])
+    expect(offenders, render('types -> services|routes|db|providers', offenders)).toEqual([])
   })
 
   it('middleware 不得依赖 routes', () => {

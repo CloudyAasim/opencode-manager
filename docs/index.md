@@ -74,6 +74,7 @@ OpenCode Manager runs as a pnpm workspace:
 
 - [Installation Guide](getting-started/installation.md) - Detailed setup instructions
 - [Quick Start](getting-started/quickstart.md) - Get up and running fast
+- [Versioned JSON API](api/v1.md) - The `/api/v1` contract, for native clients and tooling
 - [Development Setup](development/setup.md) - Local environment, scripts, and testing
 - [Contributing](development/contributing.md) - How to contribute to OpenCode Manager
 - [Features Overview](features/overview.md) - Explore all features

@@ -47,6 +47,8 @@ nav:
     - Web Terminal: features/terminal.md
     - Mobile & PWA: features/mobile.md
     - Windows Desktop Client: features/desktop.md
+  - API:
+    - Versioned JSON API (v1): api/v1.md
   - Configuration:
     - Environment Variables: configuration/environment.md
     - Authentication: configuration/authentication.md
