@@ -54,6 +54,7 @@ export function toPart(raw: unknown): MessagePart {
         name: asString(record?.tool) ?? '',
         state: toolStateOf(state),
         title: asString(state?.title) ?? null,
+        output: asString(state?.output) ?? null,
       },
     }
   }

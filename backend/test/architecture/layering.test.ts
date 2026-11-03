@@ -14,6 +14,13 @@ const LEGACY_ROUTE_SHELLING: ReadonlySet<string> = new Set<string>()
 const FORBIDDEN_ROUTE_SHELLING = new Set(['child_process', 'node:child_process'])
 
 /**
+ * The agents that are not servers are programs on this machine, and starting
+ * a program is the one thing that cannot be done from inside a request
+ * handler safely. So there is one layer where it happens, and only there.
+ */
+const PROCESS_SPAWNING = new Set(['child_process', 'node:child_process'])
+
+/**
  * The provider layer talks to agents, not to HTTP. A provider that imported
  * the web framework would be able to answer a request itself, and then the
  * versioned API above it would no longer be the only thing that decides what
@@ -133,6 +140,28 @@ describe('backend 分层契约', () => {
     expectLayerIsPopulated('providers')
     const offenders = providerFrameworkFiles()
     expect(offenders, render('providers -> hono', offenders)).toEqual([])
+  })
+
+  it('启动程序只有 provider 里的 cli 层能做', () => {
+    expectLayerIsPopulated('providers')
+    const offenders: string[] = []
+    for (const file of graph.files) {
+      const rel = fileRel(file)
+      if (!rel.startsWith('providers/')) continue
+      if (rel.startsWith('providers/cli/')) continue
+      const spawns = graph.external.some(
+        (edge) => edge.from === file && PROCESS_SPAWNING.has(edge.spec),
+      )
+      if (spawns) offenders.push(rel)
+    }
+    expect(
+      offenders,
+      [
+        `这些 provider 自己启动程序：${offenders.length} 处`,
+        ...offenders,
+        '只有 providers/cli/ 知道怎么把一个 agent 跑起来，也只有它知道怎么把它停下来。',
+      ].join('\n'),
+    ).toEqual([])
   })
 
   it('db 不得依赖 services 或 routes', () => {

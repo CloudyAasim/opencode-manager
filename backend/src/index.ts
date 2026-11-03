@@ -65,6 +65,9 @@ import { createAuthenticatedOpenCodeProxyRoutes } from './routes/opencode-auth-p
 import { createApiV1Routes } from './routes/api-v1'
 import { ProviderRegistry } from './providers/registry'
 import { OpenCodeProvider } from './providers/opencode/adapter'
+import { ClaudeCodeProvider } from './providers/cli/claude-code'
+import { PiProvider } from './providers/cli/pi'
+import { HermesProvider } from './providers/hermes/adapter'
 import { sseAggregator } from './services/sse-aggregator'
 import { ensureDirectoryExists, writeFileContent, fileExists } from './services/file-operations'
 import { SettingsService } from './services/settings'
@@ -213,6 +216,12 @@ providerRegistry.register(
   }),
   { default: true },
 )
+// The agents that are not servers: a program on this machine, and one API
+// server on this machine. They are registered like any other, and they say
+// for themselves whether they are there today.
+providerRegistry.register(new ClaudeCodeProvider())
+providerRegistry.register(new PiProvider())
+providerRegistry.register(new HermesProvider())
 
 import { DEFAULT_AGENTS_MD } from './constants'
 import { formatPersistenceWarning, readMountInfo, reportPersistence } from './services/persistence-check'

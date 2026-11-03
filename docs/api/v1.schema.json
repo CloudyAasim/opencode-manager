@@ -274,12 +274,23 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "output": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "required": [
                       "name",
                       "state",
-                      "title"
+                      "title",
+                      "output"
                     ],
                     "additionalProperties": false
                   },
@@ -409,12 +420,23 @@
                       "type": "null"
                     }
                   ]
+                },
+                "output": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
                 "name",
                 "state",
-                "title"
+                "title",
+                "output"
               ],
               "additionalProperties": false
             },
@@ -457,12 +479,23 @@
               "type": "null"
             }
           ]
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
         "name",
         "state",
-        "title"
+        "title",
+        "output"
       ],
       "additionalProperties": false
     },
@@ -800,12 +833,23 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "output": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
                           "required": [
                             "name",
                             "state",
-                            "title"
+                            "title",
+                            "output"
                           ],
                           "additionalProperties": false
                         },

@@ -87,6 +87,11 @@ export const ToolCallSchema = z.object({
   name: z.string(),
   state: ToolCallStateSchema,
   title: z.string().nullable(),
+  /**
+   * What the tool said when it was done. A call without its result is half
+   * of the story, and the half that says whether the work actually worked.
+   */
+  output: z.string().nullable(),
 })
 export type ToolCall = z.infer<typeof ToolCallSchema>
 
