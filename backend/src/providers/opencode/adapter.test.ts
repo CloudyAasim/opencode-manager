@@ -114,7 +114,7 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
       id: 'p3',
       type: 'tool',
       text: null,
-      tool: { name: 'bash', state: 'completed', title: 'ls' },
+      tool: { name: 'bash', state: 'completed', title: 'ls', output: null },
     })
 
     expect(toPart({ id: 'p4', type: 'file', filename: 'a.txt' })).toEqual({
@@ -139,7 +139,7 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
       id: 'p6',
       type: 'tool',
       text: null,
-      tool: { name: 'bash', state: 'pending', title: null },
+      tool: { name: 'bash', state: 'pending', title: null, output: null },
     })
   })
 })
