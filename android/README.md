@@ -70,6 +70,35 @@ cd android
   That is a *Gradle* property. `-Dorg.gradle.java.installations.paths=...` on the
   command line is silently ignored.
 
+### When the build says it cannot read the cache
+
+```
+> Could not read workspace metadata from
+  ~/.gradle/caches/<version>/kotlin-dsl/scripts/<hash>/metadata.bin
+> compileSdkVersion is not specified. Please add it to build.gradle
+```
+
+The second line is a lie: the build script is fine, and the first line is the
+real one. Gradle keeps the compiled form of every Kotlin DSL script in that
+cache, and it writes a `metadata.bin` beside it saying "this entry is
+complete". Two Gradle builds at once - a daemon and a command line, or two
+projects sharing one `GRADLE_USER_HOME` - can leave that file half-written,
+and after that every build of that project fails in a way that reads like a
+missing `compileSdk`.
+
+The cache is keyed by the hash of the script, so an entry that is broken
+cannot be repaired by editing the file: Gradle will not rebuild an entry it
+believes it has. Delete or move the whole `kotlin-dsl` directory and let it
+compile the scripts again:
+
+```sh
+rm -rf ~/.gradle/caches/<version>/kotlin-dsl
+```
+
+The same thing can happen to the Kotlin compiler's own cache inside the
+project, which shows up later as `NoSuchFileException: app/build/kotlin/...`;
+deleting `android/app/build/kotlin` clears that one.
+
 | Command | Needs |
 |---|---|
 | `./gradlew :proxy:test` | a JDK 17 toolchain only - no SDK |
