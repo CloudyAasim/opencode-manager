@@ -100,7 +100,7 @@ export class HermesProvider implements AgentProvider {
       body: JSON.stringify({ title: input.title ?? '', cwd: input.directory }),
     })
     if (!response.ok) {
-      throw new ProviderUnavailableError(this.id, `Hermes answered ${response.status} for a new session`)
+      throw new ProviderUnavailableError(this.id, await this.reason(response, 'a new session'))
     }
     return this.toSession((await response.json()) as unknown)
   }
@@ -183,8 +183,28 @@ export class HermesProvider implements AgentProvider {
     }
   }
 
+  /**
+   * What the server said, when it said something.
+   *
+   * Hermes has rules of its own - a title has to be unique, for one - and a
+   * client that answers "400" without saying which rule was broken leaves the
+   * person guessing.
+   */
+  private async reason(response: Response, what: string): Promise<string> {
+    const body = await response.text().catch(() => '')
+    const detail = recordOf(safeJson(body)).detail ?? recordOf(safeJson(body)).error
+    const message = typeof detail === 'string' && detail ? detail : body.slice(0, 160)
+    return message
+      ? `Hermes answered ${response.status} for ${what}: ${message}`
+      : `Hermes answered ${response.status} for ${what}`
+  }
+
   private toSession(raw: unknown): Session {
-    const record = recordOf(raw)
+    // A session comes back inside an envelope - {"object": "hermes.session",
+    // "session": {…}} - but a list of them is a list of the inner thing, so
+    // both are read here.
+    const envelope = recordOf(raw)
+    const record = recordOf(envelope.session ?? raw)
     const id = stringOf(record.id) ?? stringOf(record.session_id) ?? ''
     return {
       id,
@@ -201,41 +221,46 @@ export class HermesProvider implements AgentProvider {
 
   private toMessage(raw: unknown): Message {
     const record = recordOf(raw)
+    const id = stringOf(record.id) ?? (typeof record.id === 'number' ? String(record.id) : '')
     const parts: MessagePart[] = []
     const content = record.content
 
     if (typeof content === 'string') {
-      parts.push({ id: stringOf(record.id) ?? '', type: 'text', text: content, tool: null })
+      parts.push({ id, type: 'text', text: content, tool: null })
     } else if (Array.isArray(content)) {
       for (const [index, block] of content.entries()) {
         const entry = recordOf(block)
         const type = stringOf(entry.type)
         if (type === 'text' || type === 'output_text') {
           parts.push({
-            id: `${stringOf(record.id) ?? ''}-${index}`,
+            id: `${id}-${index}`,
             type: 'text',
             text: stringOf(entry.text) ?? '',
             tool: null,
-          })
-        } else if (type === 'tool_call' || type === 'tool_use') {
-          const call = recordOf(entry.function)
-          parts.push({
-            id: stringOf(entry.id) ?? '',
-            type: 'tool',
-            text: null,
-            tool: {
-              name: stringOf(entry.name) ?? stringOf(call.name) ?? '',
-              state: 'completed',
-              title: null,
-              output: null,
-            },
           })
         }
       }
     }
 
+    // The tool calls sit in their own column, as a JSON string, in the shape
+    // the OpenAI API uses.
+    for (const call of toolCallsOf(record.tool_calls)) {
+      const function_ = recordOf(call.function)
+      parts.push({
+        id: stringOf(call.id) ?? '',
+        type: 'tool',
+        text: null,
+        tool: {
+          name: stringOf(call.name) ?? stringOf(function_.name) ?? '',
+          state: 'completed',
+          title: null,
+          output: null,
+        },
+      })
+    }
+
     return {
-      id: stringOf(record.id) ?? '',
+      id,
       sessionId: stringOf(record.session_id) ?? '',
       role: roleOf(record.role),
       createdAt: numberOf(record.timestamp) ?? 0,
@@ -247,8 +272,34 @@ export class HermesProvider implements AgentProvider {
   }
 }
 
+/**
+ * The tool calls of a message, which arrive as a JSON string in one column
+ * and as an array in another.
+ */
+function toolCallsOf(value: unknown): Array<Record<string, unknown>> {
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown
+      return Array.isArray(parsed) ? parsed.map(recordOf) : []
+    } catch {
+      return []
+    }
+  }
+  if (!Array.isArray(value)) return []
+  return value.map(recordOf)
+}
+
 function recordOf(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+}
+
+/** A body that is JSON, or nothing at all. */
+function safeJson(body: string): unknown {
+  try {
+    return JSON.parse(body) as unknown
+  } catch {
+    return null
+  }
 }
 
 /**

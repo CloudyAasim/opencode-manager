@@ -119,4 +119,80 @@ describe('Hermes', () => {
 
     await expect(provider.listSessions({})).rejects.toThrow('503')
   })
+
+  it('会话是裹在信封里的', async () => {
+    // The shape a real Hermes answers with: the session is inside an
+    // envelope, and a list of them is a list of the inner thing.
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        object: 'hermes.session',
+        session: {
+          id: 'api_1793846853_0850a3e9',
+          source: 'api_server',
+          title: 'Adapter check',
+          started_at: 1793846853.8952541,
+          ended_at: null,
+          parent_session_id: null,
+          archived: false,
+        },
+      }),
+    )
+    const provider = new HermesProvider({ apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch })
+
+    const session = await provider.createSession({ title: 'Adapter check' })
+
+    expect(session.id).toBe('api_1793846853_0850a3e9')
+    expect(session.title).toBe('Adapter check')
+    expect(session.createdAt).toBeCloseTo(1793846853.895, 2)
+  })
+
+  it('消息的 id 是数字，角色也不总是那三个', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        object: 'list',
+        session_id: 'api_1',
+        data: [
+          {
+            id: 1,
+            session_id: 'api_1',
+            role: 'session_meta',
+            content: null,
+            tool_call_id: null,
+            tool_calls: null,
+            tool_name: null,
+            timestamp: 1793846093.9920332,
+          },
+          {
+            id: 2,
+            session_id: 'api_1',
+            role: 'assistant',
+            content: 'here you go',
+            tool_calls: '[{"id":"call_1","function":{"name":"bash","arguments":"{}"}}]',
+            timestamp: 1793846094.1,
+          },
+        ],
+        pagination: { limit: 500, offset: 0, order: 'latest', returned: 2 },
+      }),
+    )
+    const provider = new HermesProvider({ apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch })
+
+    const messages = await provider.listMessages('api_1', {})
+
+    expect(messages).toHaveLength(2)
+    expect(messages[0]?.id).toBe('1')
+    expect(messages[0]?.role).toBe('system')
+    expect(messages[1]?.parts[0]?.text).toBe('here you go')
+    expect(messages[1]?.parts[1]?.tool?.name).toBe('bash')
+  })
+
+  it('服务端说的话要带出来', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ detail: 'a session with this title already exists' }, 400),
+    )
+    const provider = new HermesProvider({ apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch })
+
+    await expect(provider.createSession({ title: 'Adapter check' })).rejects.toThrow(
+      'a session with this title already exists',
+    )
+  })
 })
