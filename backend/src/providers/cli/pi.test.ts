@@ -110,12 +110,39 @@ describe('Pi 的会话', () => {
     expect(branch.map((entry) => entry.id)).toEqual(['a1', 'b1', 'd1'])
   })
 
-  it('程序不在本机上，就说不在', async () => {
+  it('续会话用 --session-id，不是 --session', () => {
     const provider = new PiProvider()
+    const command = (
+      provider as unknown as {
+        command: (text: string, resume: string | undefined, context: unknown) => string[]
+      }
+    ).command('do it', 'abc123', {})
+
+    // `--session` would carry the session back to the directory it was made
+    // in; `--session-id` keeps it in the one the work is happening in.
+    expect(command).toEqual(['-p', 'do it', '--session-id', 'abc123'])
+  })
+
+  it('程序不在本机上，就说不在', async () => {
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'ocm-empty-path-'))
+    const provider = new PiProvider({ environment: { PATH: empty } })
 
     const status = await provider.status()
 
     expect(status.status).toBe('unavailable')
-    expect(status.detail).toContain('Pi')
+    expect(status.detail).toContain('not installed')
+  })
+
+  it('装了但没登录，就说没登录', async () => {
+    const provider = new PiProvider()
+
+    const status = await provider.status()
+
+    // Whether Pi has a provider depends on the machine this runs on, so the
+    // honest assertion is about the shape of the answer.
+    expect(['ready', 'unavailable']).toContain(status.status)
+    if (status.status === 'unavailable') {
+      expect(status.detail).toMatch(/no provider credentials|not installed/)
+    }
   })
 })

@@ -74,7 +74,21 @@ export abstract class CliAgentProvider implements AgentProvider {
     if (!binary) {
       return { status: 'unavailable', detail: `${this.label} is not installed on this machine` }
     }
+    const readiness = await this.readiness()
+    if (readiness) return readiness
     return { status: 'ready' }
+  }
+
+  /**
+   * Whether the agent can do anything at all.
+   *
+   * A program being on this machine is not the same as the agent being able
+   * to work: one of them is installed and the other is signed in. An agent
+   * that says it is ready and then cannot answer a prompt is worse than one
+   * that says it is not signed in.
+   */
+  protected async readiness(): Promise<ProviderStatus | null> {
+    return null
   }
 
   async listSessions(context: ProviderContext): Promise<Session[]> {

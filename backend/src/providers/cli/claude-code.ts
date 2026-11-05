@@ -3,7 +3,8 @@ import os from 'node:os'
 import path from 'node:path'
 import type { Message, MessagePart } from '@opencode-manager/shared/api/v1'
 import { CliAgentProvider, type CliSession } from './cli-agent'
-import { jsonlLines } from './cli-process'
+import { jsonlLines, runCli } from './cli-process'
+import type { ProviderStatus } from '../contract'
 
 /**
  * Claude Code, as a program on this machine.
@@ -30,6 +31,7 @@ interface ClaudeLine {
   sessionId?: string
   cwd?: string
   timestamp?: string
+  isMeta?: boolean
   message?: {
     role?: string
     content?: unknown
@@ -64,6 +66,25 @@ export class ClaudeCodeProvider extends CliAgentProvider {
       if (typeof sessionId === 'string' && sessionId) return sessionId
     }
     return null
+  }
+
+  /**
+   * Claude Code knows whether it is signed in, and says so in one command.
+   * A program on the machine is not the same as an agent that can work.
+   */
+  protected override async readiness(): Promise<ProviderStatus | null> {
+    const binary = this.findBinary()
+    if (!binary) return null
+
+    const result = await runCli(binary, ['auth', 'status'], { timeoutMs: 20_000 })
+    const json = firstJsonObject(result.stdout)
+    if (!json) return null
+
+    if (json.loggedIn === true) return { status: 'ready' }
+    return {
+      status: 'unavailable',
+      detail: 'Claude Code is installed but not signed in; run "claude" and then /login',
+    }
   }
 
   protected readSessions(): CliSession[] {
@@ -114,13 +135,17 @@ export function readClaudeSession(file: string, fallbackId: string): CliSession 
   if (records.length === 0) return null
 
   const messages = toClaudeMessages(records)
-  const first = records.find((record) => record.sessionId || record.cwd)
+  // The first lines of a transcript are bookkeeping - the mode, the
+  // permission mode, a snapshot of the files - and only the messages
+  // themselves say where the session was.
+  const withDirectory = records.find((record) => typeof record.cwd === 'string')
+  const withSession = records.find((record) => typeof record.sessionId === 'string')
   const stats = fs.statSync(file)
 
   return {
-    id: first?.sessionId ?? fallbackId,
+    id: withSession?.sessionId ?? fallbackId,
     title: titleOf(messages),
-    directory: first?.cwd ?? null,
+    directory: withDirectory?.cwd ?? null,
     createdAt: stats.birthtimeMs || stats.mtimeMs,
     updatedAt: stats.mtimeMs,
     messages,
@@ -145,6 +170,11 @@ export function toClaudeMessages(records: ClaudeLine[]): Message[] {
     const id = record.uuid ?? ''
 
     if (typeof content === 'string') {
+      // Claude Code writes its own bookkeeping into the transcript as user
+      // messages: the caveat that a slash command was run locally, the
+      // command itself, and what it printed. None of that was said to the
+      // agent, so none of it belongs in the conversation.
+      if (record.isMeta || isLocalCommand(content)) continue
       messages.push({
         id,
         sessionId: record.sessionId ?? '',
@@ -209,6 +239,32 @@ function titleOf(messages: Message[]): string {
   const text = firstUser?.parts.find((part) => part.type === 'text')?.text ?? ''
   const line = text.split(/\r?\n/).find((entry) => entry.trim().length > 0)
   return line ? line.trim() : ''
+}
+
+/**
+ * The wrappers Claude Code puts around a command that was run locally
+ * rather than said to the agent.
+ */
+export function isLocalCommand(content: string): boolean {
+  const trimmed = content.trim()
+  return trimmed.startsWith('<command-') || trimmed.startsWith('<local-command-')
+}
+
+/**
+ * The first JSON object in a program's output. A program that prints a
+ * banner before its answer still has an answer in it.
+ */
+export function firstJsonObject(output: string): Record<string, unknown> | null {
+  const start = output.indexOf('{')
+  if (start < 0) return null
+  const end = output.lastIndexOf('}')
+  if (end <= start) return null
+  try {
+    const parsed = JSON.parse(output.slice(start, end + 1)) as unknown
+    return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
 }
 
 function textOf(content: unknown): string | null {

@@ -4,6 +4,7 @@ import path from 'node:path'
 import type { Message, MessagePart } from '@opencode-manager/shared/api/v1'
 import { CliAgentProvider, type CliSession } from './cli-agent'
 import { jsonlLines } from './cli-process'
+import type { ProviderStatus } from '../contract'
 
 /**
  * Pi, as a program on this machine.
@@ -61,8 +62,44 @@ export class PiProvider extends CliAgentProvider {
   protected readonly binary = 'pi'
 
   protected command(text: string, resume: string | undefined): string[] {
-    if (resume) return ['-p', text, '--session', resume]
+    // `--session-id` is the one that keeps the session in the directory the
+    // work is happening in; `--session` would carry it back to wherever it
+    // was made.
+    if (resume) return ['-p', text, '--session-id', resume]
     return ['--mode', 'json', text]
+  }
+
+  /**
+   * Pi keeps the credentials it has in one file. An empty one means the
+   * agent has no provider, and a provider with no credentials means it
+   * cannot answer either.
+   */
+  protected override async readiness(): Promise<ProviderStatus | null> {
+    const auth = this.authFile()
+    if (!fs.existsSync(auth)) {
+      return {
+        status: 'unavailable',
+        detail: 'Pi has no provider credentials on this machine; run "pi" and then /login',
+      }
+    }
+    try {
+      const parsed = JSON.parse(fs.readFileSync(auth, 'utf8')) as unknown
+      const providers = Object.keys(
+        typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {},
+      )
+      if (providers.length === 0) {
+        return {
+          status: 'unavailable',
+          detail: 'Pi has no provider credentials on this machine; run "pi" and then /login',
+        }
+      }
+    } catch {
+      return {
+        status: 'unavailable',
+        detail: 'Pi has a credentials file that could not be read',
+      }
+    }
+    return { status: 'ready' }
   }
 
   protected readSessionId(output: string): string | null {
@@ -109,9 +146,17 @@ export class PiProvider extends CliAgentProvider {
   private sessionsRoot(): string {
     const override = process.env.PI_CODING_AGENT_SESSION_DIR
     if (override) return override
-    const agentDirectory = process.env.PI_CODING_AGENT_DIR
-    const base = agentDirectory ?? path.join(os.homedir(), '.pi', 'agent')
-    return path.join(base, 'sessions')
+    return path.join(this.agentRoot(), 'sessions')
+  }
+
+  private authFile(): string {
+    return path.join(this.agentRoot(), 'auth.json')
+  }
+
+  private agentRoot(): string {
+    const override = process.env.PI_CODING_AGENT_DIR
+    if (override) return override
+    return path.join(os.homedir(), '.pi', 'agent')
   }
 }
 
