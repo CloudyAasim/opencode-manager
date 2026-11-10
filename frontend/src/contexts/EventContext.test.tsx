@@ -482,7 +482,7 @@ describe('EventProvider questions', () => {
 
     // Seed infinite-query shaped data into session-list cache
     queryClient.setQueryData(
-      ['opencode', 'sessions', 'http://localhost:5551', '/repo', { search: undefined, limit: 25 }],
+      ['bff', 'sessions', 'http://localhost:5551', '/repo', { search: undefined, limit: 25 }],
       {
         pages: [{
           items: [
@@ -533,7 +533,7 @@ describe('EventProvider questions', () => {
 
     // Seed infinite-query data with a session that has directory field
     queryClient.setQueryData(
-      ['opencode', 'sessions', 'http://localhost:5551', '/repo', { search: undefined, limit: 25 }],
+      ['bff', 'sessions', 'http://localhost:5551', '/repo', { search: undefined, limit: 25 }],
       {
         pages: [{
           items: [

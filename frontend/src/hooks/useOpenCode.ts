@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useEffect, useCallback } from "react";
 import { OpenCodeClient } from "../api/opencode";
+import { createBffClient } from "../api/bff";
 import { FetchError } from "../api/fetchWrapper";
 import type {
   Message,
@@ -14,7 +15,7 @@ import { showToast } from "../lib/toast";
 import { useI18n } from "../lib/i18n";
 import { useSendErrorStore } from "../stores/sendErrorStore";
 import { useSessionStatus } from "../stores/sessionStatusStore";
-import { invalidateSessionListCaches, messagesQueryKey, stopQueries } from "../lib/queryInvalidation";
+import { invalidateSessionListCaches, messagesQueryKey, sessionListQueryKey, stopQueries } from "../lib/queryInvalidation";
 import { reconcileConfirmedPrompt } from "../lib/sendErrorReconcile";
 import { buildSessionKey } from "../lib/sessionKey";
 import { toggleSessionPin } from "../api/sessionPins";
@@ -52,8 +53,17 @@ interface UseSessionsAcrossDirectoriesOptions {
 
 type SessionPageParam = Record<string, string>
 
+/**
+ * The sessions of every working directory, in one answer.
+ *
+ * The client used to ask the agent for one page per directory and merge the
+ * answers itself, keeping a cursor per directory so it could ask for the next
+ * page of each in turn. That is a server's job: it moved to the layer the
+ * client talks to, and what comes back is one list with one cursor per
+ * directory in it.
+ */
 export const useSessionsAcrossDirectories = (
-  opcodeUrl: string | null | undefined,
+  serverUrl: string | null | undefined,
   directories: string[],
   options?: UseSessionsAcrossDirectoriesOptions,
 ) => {
@@ -66,44 +76,14 @@ export const useSessionsAcrossDirectories = (
   const directoryKey = uniqueDirectories.join('|');
 
   const query = useInfiniteQuery({
-    queryKey: ['opencode', 'sessions', opcodeUrl, directoryKey, { search: normalizedSearch, limit }],
+    queryKey: sessionListQueryKey(serverUrl, directoryKey, { search: normalizedSearch, limit }),
     queryFn: async ({ pageParam }) => {
-      if (!pageParam) {
-        const pages = await Promise.all(
-          uniqueDirectories.map((directory) =>
-            new OpenCodeClient(opcodeUrl!, directory).listSessionsPage({
-              limit,
-              order: 'desc',
-              search: normalizedSearch,
-            }),
-          ),
-        );
-        const cursors: SessionPageParam = {};
-        const items: Array<components['schemas']['Session']> = [];
-        for (let i = 0; i < pages.length; i++) {
-          items.push(...pages[i].items);
-          if (pages[i].nextCursor) {
-            cursors[uniqueDirectories[i]] = pages[i].nextCursor!;
-          }
-        }
-        return { items, cursors };
-      }
-
-      const entries = Object.entries(pageParam);
-      const pages = await Promise.all(
-        entries.map(([directory, cursor]) =>
-          new OpenCodeClient(opcodeUrl!, directory).listSessionsPage({ cursor }),
-        ),
-      );
-      const cursors: SessionPageParam = {};
-      const items: Array<components['schemas']['Session']> = [];
-      for (let i = 0; i < pages.length; i++) {
-        items.push(...pages[i].items);
-        if (pages[i].nextCursor) {
-          cursors[entries[i][0]] = pages[i].nextCursor!;
-        }
-      }
-      return { items, cursors };
+      const page = await createBffClient(serverUrl!).listSessions(uniqueDirectories, {
+        limit,
+        search: normalizedSearch,
+        cursors: pageParam,
+      });
+      return { items: page.sessions, cursors: page.cursors };
     },
     initialPageParam: undefined as SessionPageParam | undefined,
     getNextPageParam: (lastPage) => {
@@ -112,7 +92,10 @@ export const useSessionsAcrossDirectories = (
       }
       return undefined;
     },
-    enabled: !!opcodeUrl && uniqueDirectories.length > 0,
+    // An empty address is not a missing one: it means "the server that served
+    // this page". Disabling the list for it would leave the list empty on
+    // every deployment that sits behind its own address.
+    enabled: serverUrl !== undefined && serverUrl !== null && uniqueDirectories.length > 0,
     staleTime: 10000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
@@ -188,7 +171,7 @@ export const useCreateSession = (
       return client.createSession(data);
     },
     onSuccess: (session) => {
-      invalidateSessionListCaches(queryClient, opcodeUrl);
+      invalidateSessionListCaches(queryClient);
       onSuccess?.(session);
     },
     onError: (error) => {
@@ -294,7 +277,7 @@ export const useDeleteSession = (opcodeUrl: string | null | undefined, directory
       showToast.error(t('session.actions.deleteFailed'));
     },
     onSettled: (_data, _error, variables) => {
-      invalidateSessionListCaches(queryClient, opcodeUrl);
+      invalidateSessionListCaches(queryClient);
       cleanupSessionPins(queryClient, variables, primaryDirectory);
     },
   });
@@ -334,7 +317,7 @@ export const useUpdateSession = (opcodeUrl: string | null | undefined, directory
     onSuccess: (_, variables) => {
       const { sessionID } = variables;
       queryClient.invalidateQueries({ queryKey: ["opencode", "session", opcodeUrl, sessionID, directory] });
-      invalidateSessionListCaches(queryClient, opcodeUrl);
+      invalidateSessionListCaches(queryClient);
     },
   });
 };
@@ -541,7 +524,7 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
       // that only from the SSE session.updated event, so a session created and
       // then written to could stay invisible - the list is not on screen while
       // you type, and if that event is missed nothing else refetches it.
-      invalidateSessionListCaches(queryClient, opcodeUrl);
+      invalidateSessionListCaches(queryClient);
     },
   });
 };

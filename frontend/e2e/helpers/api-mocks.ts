@@ -63,6 +63,29 @@ function sessionShape(session: SessionSummary) {
 }
 
 /**
+ * The same session, as the layer the client talks to hands it over.
+ *
+ * The list comes from there now, and the two shapes say different things: the
+ * agent's own session has a time and a project, the layer's has the working
+ * directory and the time of the last change.
+ */
+function bffSessionShape(session: SessionSummary) {
+  const updated = session.created ?? Date.now()
+  return {
+    id: session.id,
+    agentId: 'opencode',
+    title: session.title ?? 'Untitled Session',
+    directory: session.directory,
+    workspaceId: null,
+    parentId: null,
+    createdAt: updated,
+    updatedAt: updated,
+    archived: false,
+    status: 'idle',
+  }
+}
+
+/**
  * Installs a deterministic API surface so specs can exercise routing and
  * timing without a backend. Latency is injectable on purpose: the bugs this
  * suite exists to catch (a redirect firing before the session list resolves,
@@ -123,11 +146,25 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
     return json(route, [])
   })
 
-  await page.route(/.*\/api\/opencode\/api\/session(\?.*)?$/, async (route) => {
+  // The layer the client talks to for its list. It is asked once for every
+  // directory, and it answers with the list and one cursor per directory.
+  await page.route('**/api/bff/sessions', async (route) => {
     if (state.latency.sessionsMs) await sleep(state.latency.sessionsMs)
-    const directory = new URL(route.request().url()).searchParams.get('directory') ?? ''
-    const sessions = state.sessionsByDirectory[directory] ?? []
-    return json(route, { data: sessions.map(sessionShape) })
+    const directories = new URL(route.request().url()).searchParams.getAll('directories')
+    const sessions = directories.flatMap((directory) => state.sessionsByDirectory[directory] ?? [])
+    return json(route, { sessions: sessions.map(bffSessionShape), cursors: {} })
+  })
+
+  // The client used to ask the agent for its list and merge the answers
+  // itself. It must not do that any more: merging pages and keeping a cursor
+  // per directory is the server's job, and a mock that quietly answered the
+  // old call would hide a client that went back to doing it.
+  //
+  // Only the reading of it. Creating a session still goes to the agent - that
+  // is not the list, and it did not move.
+  await page.route(/.*\/api\/opencode\/(api\/)?session(\?.*)?$/, (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    throw new Error('The client asked the agent for its session list; it must ask the layer instead')
   })
 
   await page.route(/.*\/api\/opencode\/session\/[^/?]+(\?.*)?$/, async (route) => {
@@ -139,12 +176,6 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
     const all = Object.values(state.sessionsByDirectory).flat()
     const match = all.find((session) => session.id === id)
     return json(route, sessionShape(match ?? { id, directory: DEFAULT_REPO.fullPath }))
-  })
-
-  await page.route(/.*\/api\/opencode\/session(\?.*)?$/, (route) => {
-    const directory = new URL(route.request().url()).searchParams.get('directory') ?? ''
-    const sessions = state.sessionsByDirectory[directory] ?? []
-    return json(route, sessions.map(sessionShape))
   })
 
   return state

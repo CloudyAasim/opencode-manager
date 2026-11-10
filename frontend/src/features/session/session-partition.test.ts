@@ -1,19 +1,23 @@
 import { describe, it, expect } from 'vitest'
 import { partitionSessions, parseSessionOrder, formatSessionOrder } from './session-partition'
-import type { Session } from '@/api/types'
+import type { Session } from '@opencode-manager/shared/api/v1'
 
 function createSession(id: string, updated: number, directory = '/test'): Session {
   return {
     id,
-    projectID: 'proj-1',
+    agentId: 'opencode',
     directory,
     title: `Session ${id}`,
-    version: '1',
-    time: { created: updated - 10000, updated },
+    workspaceId: null,
+    parentId: null,
+    createdAt: updated - 10000,
+    updatedAt: updated,
+    archived: false,
+    status: 'idle',
   }
 }
 
-const keyFn = (s: { id: string; directory?: string }) =>
+const keyFn = (s: { id: string; directory?: string | null }) =>
   `${s.directory ?? ''}:${s.id}`
 
 describe('partitionSessions', () => {
@@ -143,7 +147,7 @@ describe('partitionSessions', () => {
 
 
 /**
- * The list was sorted by time.updated, descending. Recency is a fine default
+ * The list was sorted by the session's last change, descending. Recency is a fine default
  * and a bad permanent answer - there was no way to put the session you actually
  * work on at the top, and no way to keep it there.
  *
@@ -159,12 +163,17 @@ describe('会话顺序', () => {
     ({
       id,
       directory,
-      projectID: 'p',
+      agentId: 'opencode',
       title: `Session ${id}`,
-      time: { created: updated - 10_000, updated },
-    } as unknown as Session)
+      workspaceId: null,
+      parentId: null,
+      createdAt: updated - 10_000,
+      updatedAt: updated,
+      archived: false,
+      status: 'idle',
+    })
 
-  const orderKey = (s: { id: string; directory?: string }) => `${s.directory ?? '/w/a'}:${s.id}`
+  const orderKey = (s: { id: string; directory?: string | null }) => `${s.directory ?? '/w/a'}:${s.id}`
 
   it('存下来的顺序原样读回来', () => {
     expect(parseSessionOrder('/w/a:s2,/w/a:s1')).toEqual(['/w/a:s2', '/w/a:s1'])

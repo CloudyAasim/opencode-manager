@@ -1,4 +1,4 @@
-import type { Session } from '@/api/types'
+import type { Session } from '@opencode-manager/shared/api/v1'
 
 export interface PartitionedSessions {
   pinned: Session[]
@@ -44,14 +44,14 @@ function applyUserOrder(sessions: Session[], order: string[], keyFn: (s: Session
 export function partitionSessions(
   sessions: Session[],
   pinnedKeys: Set<string>,
-  keyFn: (session: { id: string; directory?: string }) => string,
+  keyFn: (session: { id: string; directory?: string | null }) => string,
   now: number = Date.now(),
   userOrder: string[] = [],
 ): PartitionedSessions {
   const startOfDay = new Date(now)
   startOfDay.setHours(0, 0, 0, 0)
   const startMs = startOfDay.getTime()
-  const byUpdatedDesc = (a: Session, b: Session) => b.time.updated - a.time.updated
+  const byUpdatedDesc = (a: Session, b: Session) => b.updatedAt - a.updatedAt
 
   const pinned: Session[] = []
   const today: Session[] = []
@@ -59,7 +59,7 @@ export function partitionSessions(
   for (const s of sessions) {
     if (pinnedKeys.has(keyFn(s))) {
       pinned.push(s)
-    } else if (s.time.updated >= startMs) {
+    } else if (s.updatedAt >= startMs) {
       today.push(s)
     } else {
       older.push(s)

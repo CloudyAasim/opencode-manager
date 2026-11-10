@@ -130,7 +130,7 @@ export const useSSE = (opcodeUrl: string | null | undefined, directory?: string 
         break
 
       case 'session.deleted':
-        invalidateSessionListCaches(queryClient, opcodeUrl)
+        invalidateSessionListCaches(queryClient)
         if ('sessionID' in event.properties) {
           queryClient.invalidateQueries({
             queryKey: sessionQueryKey(opcodeUrl, event.properties.sessionID, cacheDirectory)

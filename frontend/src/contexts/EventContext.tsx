@@ -9,7 +9,7 @@ import { showToast } from '@/lib/toast'
 import { openCodeEventStream, type EventStreamHealthState } from '@/lib/opencode-event-stream'
 import { OPENCODE_API_ENDPOINT } from '@/config'
 import { addToSessionKeyedState, removeFromSessionKeyedState } from '@/lib/sessionKeyedState'
-import { invalidateRepoGitCachesDebounced } from '@/lib/queryInvalidation'
+import { invalidateRepoGitCachesDebounced, isSessionListQueryKey } from '@/lib/queryInvalidation'
 import { optimisticallyErrorToolPart } from '@/lib/optimisticToolError'
 import { useI18n } from '@/lib/i18n'
 
@@ -209,21 +209,21 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
     for (const query of queries) {
       const key = query.queryKey
-      if (key[0] === 'opencode' && key[1] === 'sessions' && key.length >= 4) {
+      if (isSessionListQueryKey(key)) {
         const sessionsData = query.state.data
         if (!sessionsData) continue
 
         if (Array.isArray(sessionsData)) {
           const found = sessionsData.find((s: { id: string }) => s.id === sessionID)
           if (found) {
-            const directory = (found as { directory?: string }).directory || (key[3] as string)
+            const directory = (found as { directory?: string | null }).directory
             if (directory) return directory
           }
           continue
         }
 
         if (typeof sessionsData === 'object' && 'pages' in sessionsData) {
-          const infiniteData = sessionsData as { pages: Array<{ items: Array<{ id: string; directory?: string }> }> }
+          const infiniteData = sessionsData as { pages: Array<{ items: Array<{ id: string; directory?: string | null }> }> }
           for (const page of infiniteData.pages) {
             if (!page.items) continue
             const found = page.items.find(s => s.id === sessionID)

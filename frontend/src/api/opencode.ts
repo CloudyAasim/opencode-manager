@@ -1,11 +1,7 @@
 import type { paths } from './opencode-types'
 import { fetchWrapper, fetchWrapperVoid } from './fetchWrapper'
 
-type SessionListResponse = paths['/session']['get']['responses']['200']['content']['application/json']
 type SessionResponse = paths['/session/{sessionID}']['get']['responses']['200']['content']['application/json']
-type SessionListParams = NonNullable<paths['/session']['get']['parameters']['query']> & {
-  roots?: boolean
-}
 type CreateSessionRequest = NonNullable<paths['/session']['post']['requestBody']>['content']['application/json']
 type MessageListResponse = paths['/session/{sessionID}/message']['get']['responses']['200']['content']['application/json']
 type SendPromptAsyncRequest = NonNullable<paths['/session/{sessionID}/prompt_async']['post']['requestBody']>['content']['application/json']
@@ -19,72 +15,6 @@ type PermissionListResponse = paths['/permission']['get']['responses']['200']['c
 type QuestionListResponse = paths['/question']['get']['responses']['200']['content']['application/json']
 type LspStatusResponse = paths['/lsp']['get']['responses']['200']['content']['application/json']
 type LspStatus = LspStatusResponse[number]
-
-type LegacySession = SessionListResponse[number]
-
-type SessionV2InfoV1 = {
-  id: string
-  parentID?: string
-  projectID: string
-  workspaceID?: string
-  title: string
-  time: { created: number; updated: number; compacting?: number; archived?: number }
-  path?: unknown
-}
-
-type SessionV2InfoV2 = {
-  id: string
-  parentID?: string
-  projectID: string
-  title: string
-  time: { created: number; updated: number; archived?: number }
-  location: { directory: string; workspaceID?: string }
-  agent?: string
-  model?: { id: string; providerID: string; variant?: string }
-  cost: number
-  tokens: { input: number; output: number; reasoning: number; cache: { read: number; write: number } }
-  subpath?: string
-}
-
-type SessionV2Info = SessionV2InfoV1 | SessionV2InfoV2
-type SessionPageCursor = { previous?: string; next?: string }
-
-type SessionPageResponse = {
-  data?: SessionV2InfoV2[]
-  items?: SessionV2InfoV1[]
-  cursor?: SessionPageCursor
-}
-type SessionPageParams = { limit?: number; order?: 'asc' | 'desc'; search?: string; cursor?: string }
-type SessionPage = { items: LegacySession[]; nextCursor?: string }
-
-function isNewSession(session: SessionV2Info): session is SessionV2InfoV2 {
-  return 'location' in session && session.location !== undefined
-}
-
-function toLegacySession(session: SessionV2Info, directory?: string): LegacySession {
-  if (isNewSession(session)) {
-    return {
-      id: session.id,
-      projectID: session.projectID,
-      workspaceID: session.location.workspaceID,
-      directory: directory ?? session.location.directory ?? '',
-      parentID: session.parentID,
-      title: session.title || 'Untitled Session',
-      version: 'v2',
-      time: session.time,
-    } as LegacySession
-  }
-  return {
-    id: session.id,
-    projectID: session.projectID,
-    workspaceID: session.workspaceID,
-    directory: directory ?? '',
-    parentID: session.parentID,
-    title: session.title || 'Untitled Session',
-    version: 'v2',
-    time: session.time,
-  } as LegacySession
-}
 
 export type { SendCommandResponse, LspStatus }
 
@@ -104,31 +34,6 @@ export class OpenCodeClient {
   private getParams(params?: Record<string, string | number | boolean | undefined>) {
     if (!this.directory) return params
     return { ...params, directory: this.directory }
-  }
-
-  async listSessions(params?: SessionListParams) {
-    return fetchWrapper<SessionListResponse>(`${this.baseURL}/session`, {
-      params: this.getParams(params),
-    })
-  }
-
-  async listSessionsPage(params?: SessionPageParams): Promise<SessionPage> {
-    const isCursorRequest = params?.cursor !== undefined
-    const queryParams = isCursorRequest
-      ? { cursor: params.cursor }
-      : this.getParams({
-          ...(params?.limit !== undefined && { limit: params.limit }),
-          ...(params?.order !== undefined && { order: params.order }),
-          ...(params?.search !== undefined && { search: params.search }),
-        })
-    const response = await fetchWrapper<SessionPageResponse>(`${this.baseURL}/api/session`, {
-      params: queryParams,
-    })
-    const rawItems = response.data ?? response.items ?? []
-    return {
-      items: rawItems.map((item) => toLegacySession(item, this.directory)),
-      nextCursor: response.cursor?.next,
-    }
   }
 
   async getSession(sessionID: string) {

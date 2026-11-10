@@ -217,24 +217,38 @@ export function invalidateRepoGitCachesDebounced(queryClient: QueryClient, repoI
   )
 }
 
+/**
+ * The session list, as it is cached.
+ *
+ * The list comes from the layer the client talks to, so the key says so. It
+ * used to be filed under the agent's own name, which is where the list went
+ * to be asked for before it moved to the layer.
+ */
+export function sessionListQueryKey(
+  serverUrl: string | null | undefined,
+  directories: string,
+  options: { search?: string; limit?: number },
+) {
+  return ['bff', 'sessions', serverUrl, directories, options]
+}
+
+/** Whether a query key belongs to a session list. */
+export function isSessionListQueryKey(key: readonly unknown[]): boolean {
+  return key[0] === 'bff' && key[1] === 'sessions'
+}
+
 export function invalidateSessionCaches(queryClient: QueryClient) {
   queryClient.invalidateQueries({
     predicate: (query) =>
-      query.queryKey[0] === 'opencode' &&
-      (query.queryKey[1] === 'sessions' ||
-        query.queryKey[1] === 'session' ||
-        query.queryKey[1] === 'messages'),
+      (isSessionListQueryKey(query.queryKey) ||
+        (query.queryKey[0] === 'opencode' &&
+          (query.queryKey[1] === 'session' || query.queryKey[1] === 'messages'))),
   })
 }
 
-export function invalidateSessionListCaches(queryClient: QueryClient, opcodeUrl?: string | null) {
+export function invalidateSessionListCaches(queryClient: QueryClient) {
   queryClient.invalidateQueries({
-    predicate: (query) => {
-      if (query.queryKey[0] !== 'opencode') return false
-      if (query.queryKey[1] !== 'sessions') return false
-      if (opcodeUrl && query.queryKey[2] !== opcodeUrl) return false
-      return true
-    },
+    predicate: (query) => isSessionListQueryKey(query.queryKey),
   })
 }
 

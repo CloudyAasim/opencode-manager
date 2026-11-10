@@ -5,17 +5,43 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { SessionList } from './SessionList'
 
+/**
+ * A session, as the layer the client talks to hands it over.
+ *
+ * The list comes from there now, so the fixtures say what it says: the
+ * working directory, the time of the last change, and the working area when
+ * the agent has one.
+ */
+const makeSession = (
+  id: string,
+  title: string,
+  directory: string,
+  updatedAt: number,
+  extra: { workspaceId?: string; parentId?: string } = {},
+) => ({
+  id,
+  title,
+  directory,
+  workspaceId: extra.workspaceId ?? null,
+  parentId: extra.parentId ?? null,
+  agentId: 'opencode',
+  createdAt: updatedAt,
+  updatedAt,
+  archived: false,
+  status: 'idle' as const,
+})
+
 const { createSessionMock, deleteSessionMock, sessionsData, createSessionState, fetchNextPageMock, hasNextPageRef, isFetchingNextPageRef, isFetchNextPageErrorRef, useRealSessionsHookRef, lastSessionsHookArgs, sessionPinsData, togglePinMock, renameSessionMock } = vi.hoisted(() => ({
   createSessionMock: vi.fn(),
   deleteSessionMock: vi.fn(),
-  sessionsData: [] as Array<{ id: string; title: string; directory: string; workspaceID?: string; parentID?: string; time: { updated: number } }>,
+  sessionsData: [] as Array<{ id: string; title: string; directory: string; workspaceId?: string | null; parentId?: string | null; updatedAt: number }>,
   createSessionState: { directory: undefined as string | undefined },
   fetchNextPageMock: vi.fn(),
   hasNextPageRef: { current: false },
   isFetchingNextPageRef: { current: false },
   isFetchNextPageErrorRef: { current: false },
   useRealSessionsHookRef: { current: false },
-  lastSessionsHookArgs: { current: undefined as { opcodeUrl: string; directories: string[]; options?: { search?: string; limit?: number } } | undefined },
+  lastSessionsHookArgs: { current: undefined as { serverUrl: string; directories: string[]; options?: { search?: string; limit?: number } } | undefined },
   sessionPinsData: [] as Array<{ sessionId: string; directory: string; pinnedAt: number }>,
   togglePinMock: vi.fn(),
   renameSessionMock: vi.fn(),
@@ -25,11 +51,11 @@ vi.mock('@/hooks/useOpenCode', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useOpenCode')>()
   return {
     ...actual,
-    useSessionsAcrossDirectories: (opcodeUrl: string, directories: string[], options?: { search?: string; limit?: number }) => {
+    useSessionsAcrossDirectories: (serverUrl: string, directories: string[], options?: { search?: string; limit?: number }) => {
       if (useRealSessionsHookRef.current) {
-        return actual.useSessionsAcrossDirectories(opcodeUrl, directories, options)
+        return actual.useSessionsAcrossDirectories(serverUrl, directories, options)
       }
-      lastSessionsHookArgs.current = { opcodeUrl, directories, options }
+      lastSessionsHookArgs.current = { serverUrl, directories, options }
       const data = options?.search ? [] : sessionsData
       return {
         data,
@@ -59,9 +85,9 @@ vi.mock('@/hooks/useSessionPins', () => ({
 describe('SessionList', () => {
   beforeEach(() => {
     sessionsData.splice(0, sessionsData.length,
-      { id: 'ses_same', title: 'audit: mic-warmup 1/2 #2', directory: '/w/a', workspaceID: 'wrk_a', time: { updated: Date.now() } },
-      { id: 'ses_same', title: 'audit: mic-warmup 1/2 #2', directory: '/w/b', workspaceID: 'wrk_b', time: { updated: Date.now() } },
-      { id: 'ses_same', title: 'audit: mic-warmup 1/2 #2', directory: '/w/c', workspaceID: 'wrk_c', time: { updated: Date.now() } },
+      makeSession('ses_same', 'audit: mic-warmup 1/2 #2', '/w/a', Date.now(), { workspaceId: 'wrk_a' }),
+      makeSession('ses_same', 'audit: mic-warmup 1/2 #2', '/w/b', Date.now(), { workspaceId: 'wrk_b' }),
+      makeSession('ses_same', 'audit: mic-warmup 1/2 #2', '/w/c', Date.now(), { workspaceId: 'wrk_c' }),
     )
     createSessionMock.mockReset()
     createSessionState.directory = undefined
@@ -119,9 +145,9 @@ describe('SessionList', () => {
   it('deduplicates repeated session records from the same workspace directory', async () => {
     const user = userEvent.setup()
     sessionsData.splice(0, sessionsData.length,
-      { id: 'ses_same', title: 'audit: mic-warmup 1/2 #2', directory: '/w/a', time: { updated: Date.now() } },
-      { id: 'ses_same', title: 'audit: mic-warmup 1/2 #2', directory: '/w/a', time: { updated: Date.now() } },
-      { id: 'ses_same', title: 'audit: mic-warmup 1/2 #2', directory: '/w/a', time: { updated: Date.now() } },
+      makeSession('ses_same', 'audit: mic-warmup 1/2 #2', '/w/a', Date.now()),
+      makeSession('ses_same', 'audit: mic-warmup 1/2 #2', '/w/a', Date.now()),
+      makeSession('ses_same', 'audit: mic-warmup 1/2 #2', '/w/a', Date.now()),
     )
 
     render(
@@ -281,8 +307,8 @@ describe('SessionList', () => {
 
   it('auto-fetches next page when all visible sessions are filtered out as child sessions', async () => {
     sessionsData.splice(0, sessionsData.length,
-      { id: 'child1', title: 'child session', directory: '/w/a', parentID: 'parent1', time: { updated: Date.now() } },
-      { id: 'child2', title: 'child session 2', directory: '/w/a', parentID: 'parent2', time: { updated: Date.now() } },
+      makeSession('child1', 'child session', '/w/a', Date.now(), { parentId: 'parent1' }),
+      makeSession('child2', 'child session 2', '/w/a', Date.now(), { parentId: 'parent2' }),
     )
     hasNextPageRef.current = true
     isFetchingNextPageRef.current = false
@@ -302,17 +328,13 @@ describe('SessionList', () => {
 
   it('auto-fetches next page when filtered sessions underfill the scroll viewport', async () => {
     sessionsData.splice(0, sessionsData.length,
-      { id: 'root1', title: 'root session 1', directory: '/w/a', time: { updated: 4 } },
-      { id: 'root2', title: 'root session 2', directory: '/w/a', time: { updated: 3 } },
-      { id: 'root3', title: 'root session 3', directory: '/w/a', time: { updated: 2 } },
-      { id: 'root4', title: 'root session 4', directory: '/w/a', time: { updated: 1 } },
-      ...Array.from({ length: 21 }, (_, index) => ({
-        id: `child${index}`,
-        title: `child session ${index}`,
-        directory: '/w/a',
-        parentID: `root${index}`,
-        time: { updated: index },
-      })),
+      makeSession('root1', 'root session 1', '/w/a', 4),
+      makeSession('root2', 'root session 2', '/w/a', 3),
+      makeSession('root3', 'root session 3', '/w/a', 2),
+      makeSession('root4', 'root session 4', '/w/a', 1),
+      ...Array.from({ length: 21 }, (_, index) =>
+        makeSession(`child${index}`, `child session ${index}`, '/w/a', index, { parentId: `root${index}` }),
+      ),
     )
     hasNextPageRef.current = true
     const scrollHeightDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight')
@@ -350,7 +372,7 @@ describe('SessionList', () => {
     const pinnedTime = Date.now()
     sessionPinsData.push({ sessionId: 'ses_a', directory: '/w/a', pinnedAt: pinnedTime })
     sessionsData.splice(0, sessionsData.length,
-      { id: 'ses_a', title: 'pinned session', directory: '/w/a', time: { updated: pinnedTime } },
+      makeSession('ses_a', 'pinned session', '/w/a', pinnedTime),
     )
 
     render(
@@ -370,7 +392,7 @@ describe('SessionList', () => {
   it('calls togglePinMock with correct args when Pin to top is clicked', async () => {
     const user = userEvent.setup()
     sessionsData.splice(0, sessionsData.length,
-      { id: 'ses_x', title: 'test session', directory: '/w/a', time: { updated: Date.now() } },
+      makeSession('ses_x', 'test session', '/w/a', Date.now()),
     )
 
     render(
@@ -456,19 +478,12 @@ describe('SessionList', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const pageOneItems = [
-      ...Array.from({ length: 4 }, (_, index) => ({
-        id: `root${index}`,
-        projectID: 'proj_1',
-        title: `root session ${index}`,
-        time: { created: 100 + index, updated: 100 + index },
-      })),
-      ...Array.from({ length: 21 }, (_, index) => ({
-        id: `child${index}`,
-        projectID: 'proj_1',
-        parentID: `root${index}`,
-        title: `child session ${index}`,
-        time: { created: index, updated: index },
-      })),
+      ...Array.from({ length: 4 }, (_, index) =>
+        makeSession(`root${index}`, `root session ${index}`, '/w/a', 100 + index),
+      ),
+      ...Array.from({ length: 21 }, (_, index) =>
+        makeSession(`child${index}`, `child session ${index}`, '/w/a', index, { parentId: `root${index}` }),
+      ),
     ]
 
     let cursorAttempts = 0
@@ -476,7 +491,7 @@ describe('SessionList', () => {
     let resolveRecovery: ((response: Response) => void) | undefined
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = String(input)
-      if (url.includes('cursor=cursor_next')) {
+      if (url.includes('cursor_next')) {
         cursorAttempts += 1
         if (!recovered) {
           return Promise.resolve(new Response(JSON.stringify({ error: 'persistent failure' }), {
@@ -489,8 +504,8 @@ describe('SessionList', () => {
         })
       }
       return Promise.resolve(new Response(JSON.stringify({
-        items: pageOneItems,
-        cursor: { next: 'cursor_next' },
+        sessions: pageOneItems,
+        cursors: { '/w/a': 'cursor_next' },
       }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     })
 
@@ -542,7 +557,8 @@ describe('SessionList', () => {
       expect(screen.queryByText('child session 0')).toBeNull()
 
       resolveRecovery?.(new Response(JSON.stringify({
-        items: [{ id: 'older_root', projectID: 'proj_1', title: 'older root session', time: { created: 1, updated: 1 } }],
+        sessions: [makeSession('older_root', 'older root session', '/w/a', 1)],
+        cursors: {},
       }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
 
       await waitFor(() => {

@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SessionStatusIndicator } from "@/components/ui/session-status-indicator";
 import { Trash2, Clock, MoreVertical, Pin, PinOff, Pencil, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import type { Session } from "@/api/types";
+import type { Session } from '@opencode-manager/shared/api/v1';
 import { useSwipe } from "@/hooks/useSwipe";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -165,7 +165,7 @@ export const SessionCard = ({
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="size-3" />
-                      {formatDistanceToNow(new Date(session.time.updated), {
+                      {formatDistanceToNow(new Date(session.updatedAt), {
                         addSuffix: true,
                       })}
                     </span>
@@ -223,7 +223,7 @@ export const SessionCard = ({
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                     <span className="flex items-center">
                       <Clock className="size-3 mr-1" />
-                      {formatDistanceToNow(new Date(session.time.updated), {
+                      {formatDistanceToNow(new Date(session.updatedAt), {
                         addSuffix: true,
                       })}
                     </span>
