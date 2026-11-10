@@ -92,12 +92,15 @@ describe('ScheduleWorktreeManager', () => {
     nonGitDir = path.join(tmpDir, 'non-git-dir')
     mkdirSync(nonGitDir, { recursive: true })
 
-    // Init bare origin and clone a working base repo
+    // Init bare origin and a working base repo on an explicitly named branch.
+    // Cloning would take the branch name from the bare repository's HEAD, and
+    // that HEAD comes from the machine's `init.defaultBranch` setting - so a
+    // fixture that clones answers differently depending on who runs it.
     execSync(`git init --bare "${originRepoPath}"`, { env })
-    execSync(`git clone "${originRepoPath}" "${baseRepoPath}"`, { env })
+    execSync(`git init -b main "${baseRepoPath}"`, { env })
+    execSync(`git -C "${baseRepoPath}" remote add origin "${originRepoPath}"`, { env })
     execSync(`git -C "${baseRepoPath}" config user.email test@test.com`, { env })
     execSync(`git -C "${baseRepoPath}" config user.name Test`, { env })
-    execSync(`git -C "${baseRepoPath}" branch -m master main`, { env })
     execSync(`git -C "${baseRepoPath}" commit --allow-empty -m "Initial commit"`, { env })
     execSync(`git -C "${baseRepoPath}" push origin main`, { env })
     execSync(`git -C "${originRepoPath}" symbolic-ref HEAD refs/heads/main`, { env })
@@ -317,8 +320,15 @@ describe('ScheduleWorktreeManager', () => {
     const cleanup = async () => {
       const { removeWorktree } = await import('../../src/services/repo')
       await removeWorktree(baseRepoPath, directory)
-      // Also remove any leftover branch the test might have created
-      execSync(`git -C "${baseRepoPath}" branch -D "${tempBranch}" 2>/dev/null || true`, { env })
+      // Also remove any leftover branch the test might have created. The
+      // branch is often already gone, and `2>/dev/null || true` is a shell
+      // phrase that only a POSIX shell understands - `execSync` runs cmd.exe
+      // on Windows, which reads it as two separate commands to fail.
+      try {
+        execSync(`git -C "${baseRepoPath}" branch -D "${tempBranch}"`, { env, stdio: 'ignore' })
+      } catch {
+        // Nothing to delete.
+      }
     }
     return { directory, cleanup }
   }

@@ -34,7 +34,14 @@ export default defineConfig({
       PORT: '3001',
       DATABASE_PATH: ':memory:',
       AUTH_SECRET: 'test-secret-for-encryption',
-      WORKSPACE_PATH: '/tmp/test-workspace',
+      // The workspace this suite writes into belongs to the package, not to
+      // the root of a disk. A POSIX absolute path is resolved against the
+      // current drive on Windows, so `/tmp/test-workspace` is
+      // `D:\tmp\test-workspace` - a directory created at the top of the drive
+      // by a test run, owned by nobody and outside the repository it is
+      // testing. A path under the package keeps every file the suite writes
+      // inside the repository it is testing.
+      WORKSPACE_PATH: path.resolve(__dirname, '.test-workspace'),
     },
   },
   resolve: {

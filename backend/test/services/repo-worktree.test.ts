@@ -36,15 +36,18 @@ describe('repo worktree helpers', () => {
     // Init bare origin
     execSync(`git init --bare "${originRepoPath}"`, { env })
 
-    // Clone origin to get a working base repo (default branch is "master" in bare repos)
-    execSync(`git clone "${originRepoPath}" "${baseRepoPath}"`, { env })
+    // A working base repo on an explicitly named branch. Cloning would take
+    // the branch name from the bare repository's HEAD, and that HEAD comes
+    // from the machine's `init.defaultBranch` setting - so a fixture that
+    // clones answers differently depending on who runs it.
+    execSync(`git init -b main "${baseRepoPath}"`, { env })
+    execSync(`git -C "${baseRepoPath}" remote add origin "${originRepoPath}"`, { env })
 
     // Set git config for commits
     execSync(`git -C "${baseRepoPath}" config user.email test@test.com`, { env })
     execSync(`git -C "${baseRepoPath}" config user.name Test`, { env })
 
-    // Rename default branch to "main" and push
-    execSync(`git -C "${baseRepoPath}" branch -m master main`, { env })
+    // Commit on "main" and push
     execSync(`git -C "${baseRepoPath}" commit --allow-empty -m "Initial commit"`, { env })
     execSync(`git -C "${baseRepoPath}" push origin main`, { env })
 
@@ -101,7 +104,7 @@ describe('repo worktree helpers', () => {
     })
   })
 
-  // The `rm -rf` at the end of removeWorktree runs against whatever path the
+  // The removal at the end of removeWorktree runs against whatever path the
   // caller hands over, and one caller hands it the `directory` field of an
   // OpenCode workspace API response verbatim. These are the shapes such a
   // response could carry, and what has to survive them.

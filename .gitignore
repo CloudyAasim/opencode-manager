@@ -29,6 +29,10 @@ temp/
 __pycache__/
 *.pyc
 
+# The workspace the backend test suite writes into. It lives inside the
+# package so that a test run never creates a directory at the root of a disk.
+backend/.test-workspace/
+
 
 frontend/e2e-results/
 frontend/playwright-report/

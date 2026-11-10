@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFile, writeFile, mkdir, rm } from 'fs/promises'
-import { dirname } from 'path'
+import { dirname, join } from 'path'
 import type { MiddlewareHandler } from 'hono'
 import type { Database } from 'bun:sqlite'
 import { createMcpOauthProxyRoutes } from '../../src/routes/mcp-oauth-proxy'
@@ -18,8 +18,16 @@ vi.mock('../../src/utils/logger', () => ({
   },
 }))
 
-const WORKSPACE_PATH = '/tmp/test-workspace'
-const MCP_AUTH_PATH = `${WORKSPACE_PATH}/.opencode/state/opencode/mcp-auth.json`
+/**
+ * The route writes the tokens where the workspace says they live, so the
+ * fixture has to look there too. The workspace comes from the environment,
+ * and the environment points it inside the package: a POSIX literal like
+ * `/tmp/test-workspace` is resolved against the root of the current drive on
+ * Windows, which is a directory at the top of the disk rather than one
+ * belonging to the repository.
+ */
+const WORKSPACE_PATH = process.env.WORKSPACE_PATH as string
+const MCP_AUTH_PATH = join(WORKSPACE_PATH, '.opencode', 'state', 'opencode', 'mcp-auth.json')
 const SERVER_URL = 'https://mcp.example.com'
 const AUTHORIZATION_ENDPOINT = `${SERVER_URL}/authorize`
 const TOKEN_ENDPOINT = `${SERVER_URL}/token`

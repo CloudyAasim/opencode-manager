@@ -1,11 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { spawnSync } from 'child_process'
 import { mkdirSync, writeFileSync, rmSync, chmodSync, existsSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { tmpdir } from 'os'
 import { repoRoot } from '../helpers/repo-root'
+import { resolveHostBash } from '../helpers/host-bash'
 
 const libPath = join(repoRoot, 'scripts/lib/container-user.sh')
+
+/**
+ * A machine with no bash that can see the host filesystem has nothing this
+ * suite can say about the library, so it is skipped rather than reported as
+ * a wall of failures.
+ */
+const hostBash = resolveHostBash(dirname(libPath))
+const describeWithBash = hostBash ? describe : describe.skip
 
 let stubDir: string
 let logPath: string
@@ -51,14 +60,24 @@ afterEach(() => {
   rmSync(stubDir, { recursive: true, force: true })
 })
 
+/**
+ * The stub directory goes on the PATH *inside* bash, not through the
+ * environment.
+ *
+ * A shell started on Windows is handed a PATH that its own runtime has
+ * already rewritten - the MSYS2 tools come first, the inherited Windows
+ * entries come after - so a stub directory that is first in the environment
+ * is not first where the lookup happens, and the real `id` answers instead
+ * of the stub. Prepending inside the shell is the only place the order is
+ * still ours to decide, and it is the same order on every platform.
+ */
 const runScript = (snippet: string, env: Record<string, string> = {}) =>
-  spawnSync('bash', ['-c', 'set -e\nsource "$1"\neval "$2"', '--', libPath, snippet], {
+  spawnSync(hostBash as string, ['-c', 'set -e\nstub_dir="$(cd "$1" && pwd)"\nexport PATH="$stub_dir:$PATH"\nsource "$2"\neval "$3"', '--', stubDir, libPath, snippet], {
     encoding: 'utf-8',
     env: {
       ...process.env,
       PUID: '',
       PGID: '',
-      PATH: `${stubDir}:${process.env.PATH}`,
       OCM_STUB_LOG: logPath,
       ...env,
     },
@@ -69,7 +88,7 @@ const stubCalls = () => {
   return readFileSync(logPath, 'utf-8').split('\n').filter(Boolean)
 }
 
-describe('resolve_target_ids', () => {
+describeWithBash('resolve_target_ids', () => {
   it('defaults PUID/PGID to 1000 when unset', () => {
     const res = runScript('unset PUID PGID; resolve_target_ids; echo "uid=$OCM_TARGET_UID gid=$OCM_TARGET_GID"')
     expect(res.status).toBe(0)
@@ -105,7 +124,7 @@ describe('resolve_target_ids', () => {
   })
 })
 
-describe('align_container_user', () => {
+describeWithBash('align_container_user', () => {
   it('is a no-op when ids already match', () => {
     const res = runScript('align_container_user node', {
       OCM_STUB_NODE_UID: '1000', OCM_STUB_NODE_GID: '1000', PUID: '1000', PGID: '1000',
@@ -178,7 +197,7 @@ describe('align_container_user', () => {
   })
 })
 
-describe('align_container_user id collisions', () => {
+describeWithBash('align_container_user id collisions', () => {
   it('aborts before mutating anything when the gid is held by another group', () => {
     const res = runScript('align_container_user node', {
       OCM_STUB_NODE_UID: '1000',
@@ -258,7 +277,7 @@ describe('align_container_user id collisions', () => {
   })
 })
 
-describe('warn_if_workspace_owner_differs', () => {
+describeWithBash('warn_if_workspace_owner_differs', () => {
   it('is silent when the path does not exist', () => {
     const res = runScript(`warn_if_workspace_owner_differs "${join(stubDir, 'does-not-exist')}" 1000 1000`)
     expect(res.status).toBe(0)

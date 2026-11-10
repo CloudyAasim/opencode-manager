@@ -1,15 +1,23 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, statSync, existsSync } from 'fs'
-import { execSync } from 'child_process'
+import { spawnSync } from 'child_process'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { repoRoot } from '../helpers/repo-root'
+import { resolveHostBash } from '../helpers/host-bash'
 
 const entrypointPath = join(repoRoot, 'scripts/docker-entrypoint.sh')
 const dockerfilePath = join(repoRoot, 'Dockerfile')
 const composePath = join(repoRoot, 'docker-compose.yml')
 const envExamplePath = join(repoRoot, '.env.example')
 const dockerDocsPath = join(repoRoot, 'docs/configuration/docker.md')
+
+/**
+ * The recipe below is a shell script, so it needs a shell that can see the
+ * host filesystem - see `resolveHostBash`. A machine with none has nothing
+ * this block can say about the recipe.
+ */
+const hostBash = resolveHostBash(repoRoot)
 
 const read = (path: string) => readFileSync(path, 'utf-8')
 
@@ -279,15 +287,18 @@ describe('the frontend build is memory-bounded', () => {
   })
 })
 
-describe('named-volume migration recipe', () => {
+describe.skipIf(!hostBash)('named-volume migration recipe', () => {
+  /** The script runs inside the shell, so the paths it is handed are POSIX paths. */
+  const forShell = (hostPath: string) => hostPath.replace(/\\/g, '/')
+
   const runMigrationShell = (src: string, dst: string) => {
     const scriptDir = mkdtempSync(join(tmpdir(), 'migrate-script-'))
     const scriptPath = join(scriptDir, 'migrate.sh')
     writeFileSync(
       scriptPath,
       `set -eu
-src=${JSON.stringify(src)}
-dst=${JSON.stringify(dst)}
+src=${JSON.stringify(forShell(src))}
+dst=${JSON.stringify(forShell(dst))}
 mkdir -p "$dst"
 if [ -n "$(ls -A "$dst")" ]; then
   echo "destination '$dst' is not empty; aborting migration" >&2
@@ -298,7 +309,11 @@ chown -R "$(id -u):$(id -g)" "$dst"
 `,
     )
     try {
-      return execSync(`bash ${JSON.stringify(scriptPath)}`, { stdio: 'pipe' })
+      const result = spawnSync(hostBash as string, [forShell(scriptPath)], { encoding: 'utf-8' })
+      if (result.status !== 0) {
+        throw new Error(`migration recipe failed: ${result.stderr || result.stdout || result.error?.message}`)
+      }
+      return result.stdout
     } finally {
       rmSync(scriptDir, { recursive: true, force: true })
     }

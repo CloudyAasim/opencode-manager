@@ -1,38 +1,51 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import * as fs from 'fs/promises'
 
-vi.mock('@opencode-manager/shared/config/env', () => ({
-  getWorkspacePath: vi.fn(() => '/tmp/ssh-key-test-workspace'),
-  getReposPath: vi.fn(() => '/tmp/ssh-key-test-workspace/repos'),
-  getOpenCodeConfigFilePath: vi.fn(() => '/tmp/ssh-key-test-workspace/.config/opencode.json'),
-  getAgentsMdPath: vi.fn(() => '/tmp/ssh-key-test-workspace/AGENTS.md'),
-  getDatabasePath: vi.fn(() => ':memory:'),
-  getConfigPath: vi.fn(() => '/tmp/ssh-key-test-workspace/config'),
-  ENV: {
-    SERVER: { PORT: 5003, HOST: '0.0.0.0', NODE_ENV: 'test' },
-    AUTH: { TRUSTED_ORIGINS: 'http://localhost:5173', SECRET: 'test-secret-for-encryption-key-32c' },
-    WORKSPACE: { BASE_PATH: '/tmp/ssh-key-test-workspace', REPOS_DIR: 'repos', CONFIG_DIR: 'config', AUTH_FILE: 'auth.json' },
-    OPENCODE: { PORT: 5551, HOST: '127.0.0.1' },
-    DATABASE: { PATH: ':memory:' },
+/**
+ * The workspace this file writes into is a native temporary directory, not a
+ * POSIX literal: `path.join` keeps the separator it is given, so on Windows
+ * `/tmp/ssh-key-test-workspace` is a path under the root of the current drive
+ * - a place the test creates on somebody else's disk. `os.tmpdir()` is the
+ * directory the operating system set aside for exactly this.
+ */
+vi.mock('@opencode-manager/shared/config/env', async () => {
+  const os = await import('node:os')
+  const path = await import('node:path')
+  const root = path.join(os.tmpdir(), 'ocm-ssh-key-test-workspace')
+  return {
+    getWorkspacePath: vi.fn(() => root),
+    getReposPath: vi.fn(() => path.join(root, 'repos')),
+    getOpenCodeConfigFilePath: vi.fn(() => path.join(root, '.config', 'opencode.json')),
+    getAgentsMdPath: vi.fn(() => path.join(root, 'AGENTS.md')),
+    getDatabasePath: vi.fn(() => ':memory:'),
+    getConfigPath: vi.fn(() => path.join(root, 'config')),
+    ENV: {
+      SERVER: { PORT: 5003, HOST: '0.0.0.0', NODE_ENV: 'test' },
+      AUTH: { TRUSTED_ORIGINS: 'http://localhost:5173', SECRET: 'test-secret-for-encryption-key-32c' },
+      WORKSPACE: { BASE_PATH: root, REPOS_DIR: 'repos', CONFIG_DIR: 'config', AUTH_FILE: 'auth.json' },
+      OPENCODE: { PORT: 5551, HOST: '127.0.0.1' },
+      DATABASE: { PATH: ':memory:' },
+      FILE_LIMITS: {
+        MAX_SIZE_BYTES: 1024 * 1024,
+        MAX_UPLOAD_SIZE_BYTES: 10 * 1024 * 1024,
+      },
+    },
     FILE_LIMITS: {
       MAX_SIZE_BYTES: 1024 * 1024,
       MAX_UPLOAD_SIZE_BYTES: 10 * 1024 * 1024,
     },
-  },
-  FILE_LIMITS: {
-    MAX_SIZE_BYTES: 1024 * 1024,
-    MAX_UPLOAD_SIZE_BYTES: 10 * 1024 * 1024,
-  },
-}))
+  }
+})
 
 import { parseSSHHost, normalizeHostPort, parseHostPort, writeTemporarySSHKey, cleanupSSHKey, cleanupAllSSHKeys } from '../../src/utils/ssh-key-manager'
+import { getWorkspacePath } from '@opencode-manager/shared/config/env'
 
 beforeAll(async () => {
-  await fs.mkdir('/tmp/ssh-key-test-workspace', { recursive: true })
+  await fs.mkdir(getWorkspacePath(), { recursive: true })
 })
 
 afterAll(async () => {
-  await fs.rm('/tmp/ssh-key-test-workspace', { recursive: true, force: true })
+  await fs.rm(getWorkspacePath(), { recursive: true, force: true })
 })
 
 describe('SSH Host Parsing', () => {

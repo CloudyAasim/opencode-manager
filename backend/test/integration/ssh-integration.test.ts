@@ -4,29 +4,41 @@ import * as crypto from 'crypto'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 
-vi.mock('@opencode-manager/shared/config/env', () => ({
-  getWorkspacePath: vi.fn(() => '/tmp/test-workspace'),
-  getReposPath: vi.fn(() => '/tmp/test-repos'),
-  getOpenCodeConfigFilePath: vi.fn(() => '/tmp/test-workspace/.config/opencode.json'),
-  getAgentsMdPath: vi.fn(() => '/tmp/test-workspace/AGENTS.md'),
-  getDatabasePath: vi.fn(() => ':memory:'),
-  getConfigPath: vi.fn(() => '/tmp/test-workspace/config'),
-  ENV: {
-    SERVER: { PORT: 5003, HOST: '0.0.0.0', NODE_ENV: 'test' },
-    AUTH: { TRUSTED_ORIGINS: 'http://localhost:5173', SECRET: 'test-secret-for-encryption-key-32c' },
-    WORKSPACE: { BASE_PATH: '/tmp/test-workspace', REPOS_DIR: 'repos', CONFIG_DIR: 'config', AUTH_FILE: 'auth.json' },
-    OPENCODE: { PORT: 5551, HOST: '127.0.0.1' },
-    DATABASE: { PATH: ':memory:' },
+/**
+ * The workspace this suite writes into belongs to the repository it is
+ * testing. A POSIX literal like `/tmp/test-workspace` is resolved against
+ * the root of the current drive on Windows, so the suite would create
+ * `D:\tmp\test-workspace` - a directory at the top of the disk, outside the
+ * repository and outside the temporary directory the operating system set
+ * aside. `WORKSPACE_PATH` points inside the package instead.
+ */
+vi.mock('@opencode-manager/shared/config/env', async () => {
+  const path = await import('node:path')
+  const root = path.join(process.env.WORKSPACE_PATH as string, 'ssh-integration')
+  return {
+    getWorkspacePath: vi.fn(() => root),
+    getReposPath: vi.fn(() => path.join(root, 'repos')),
+    getOpenCodeConfigFilePath: vi.fn(() => path.join(root, '.config', 'opencode.json')),
+    getAgentsMdPath: vi.fn(() => path.join(root, 'AGENTS.md')),
+    getDatabasePath: vi.fn(() => ':memory:'),
+    getConfigPath: vi.fn(() => path.join(root, 'config')),
+    ENV: {
+      SERVER: { PORT: 5003, HOST: '0.0.0.0', NODE_ENV: 'test' },
+      AUTH: { TRUSTED_ORIGINS: 'http://localhost:5173', SECRET: 'test-secret-for-encryption-key-32c' },
+      WORKSPACE: { BASE_PATH: root, REPOS_DIR: 'repos', CONFIG_DIR: 'config', AUTH_FILE: 'auth.json' },
+      OPENCODE: { PORT: 5551, HOST: '127.0.0.1' },
+      DATABASE: { PATH: ':memory:' },
+      FILE_LIMITS: {
+        MAX_SIZE_BYTES: 1024 * 1024,
+        MAX_UPLOAD_SIZE_BYTES: 10 * 1024 * 1024,
+      },
+    },
     FILE_LIMITS: {
       MAX_SIZE_BYTES: 1024 * 1024,
       MAX_UPLOAD_SIZE_BYTES: 10 * 1024 * 1024,
     },
-  },
-  FILE_LIMITS: {
-    MAX_SIZE_BYTES: 1024 * 1024,
-    MAX_UPLOAD_SIZE_BYTES: 10 * 1024 * 1024,
-  },
-}))
+  }
+})
 
 vi.mock('../../src/utils/logger', () => ({
   logger: {
@@ -36,7 +48,7 @@ vi.mock('../../src/utils/logger', () => ({
   }
 }))
 
-let testWorkspacePath: string = '/tmp/test-workspace'
+let testWorkspacePath: string = ''
 
 const mockPrepare = vi.fn()
 const mockExec = vi.fn()
@@ -58,7 +70,7 @@ describe('SSH Integration Tests', () => {
      vi.clearAllMocks()
 
      const uniqueId = crypto.randomUUID()
-     testWorkspacePath = `/tmp/test-workspace-${uniqueId}`
+     testWorkspacePath = path.join(process.env.WORKSPACE_PATH as string, 'ssh-integration', uniqueId)
 
      mockPrepare.mockReturnValue({
       run: vi.fn(),
