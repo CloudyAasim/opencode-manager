@@ -18,6 +18,21 @@ vi.mock('@opencode-manager/shared/config/env', async (importOriginal) => ({
   getOpenCodeConfigFilePath: () => paths.configFile,
 }))
 
+// The migration looks for an existing `opencode.json` under the user's home
+// directory, and on Windows `os.homedir()` answers with the real profile no
+// matter what `HOME` says. A test that leaves that to the machine is a test
+// whose result depends on whether the person running it happens to have an
+// OpenCode configuration - so the home directory is pinned here too, and the
+// answer stops depending on who is asking.
+vi.mock('node:os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:os')>()
+  return {
+    ...actual,
+    default: { ...actual, homedir: () => paths.workDir },
+    homedir: () => paths.workDir,
+  }
+})
+
 const originalHome = process.env.HOME
 const originalImportConfigPath = process.env.OPENCODE_IMPORT_CONFIG_PATH
 
