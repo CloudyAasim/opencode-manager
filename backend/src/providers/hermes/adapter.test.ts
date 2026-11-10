@@ -49,29 +49,31 @@ describe('Hermes', () => {
     )
     const provider = new HermesProvider({ apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch })
 
-    const sessions = await provider.listSessions({})
+    const page = await provider.listSessions({})
 
-    expect(sessions).toHaveLength(1)
-    expect(sessions[0]).toEqual({
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]).toEqual({
       id: 'sess_1',
       agentId: 'hermes',
       title: 'Fixing the parser',
       directory: '/work/demo',
+      workspaceId: null,
       parentId: null,
       createdAt: 1000,
       updatedAt: 2000,
       archived: false,
       status: 'idle',
     })
+    expect(page.nextCursor).toBeNull()
   })
 
   it('列表装在别的地方也读得出来', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse([{ session_id: 'sess_2', title: 'Direct' }]))
     const provider = new HermesProvider({ apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch })
 
-    const sessions = await provider.listSessions({})
+    const page = await provider.listSessions({})
 
-    expect(sessions[0]?.id).toBe('sess_2')
+    expect(page.items[0]?.id).toBe('sess_2')
   })
 
   it('消息读出来就是消息', async () => {

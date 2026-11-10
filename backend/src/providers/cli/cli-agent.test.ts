@@ -17,6 +17,9 @@ class FakeAgentProvider extends CliAgentProvider {
   readonly label = 'Fake Agent'
   protected readonly binary = 'fake-agent'
 
+  /** The sessions the program left behind, for the tests that need some. */
+  sessions: CliSession[] = []
+
   protected command(text: string): string[] {
     return ['--say', text]
   }
@@ -30,7 +33,7 @@ class FakeAgentProvider extends CliAgentProvider {
   }
 
   protected readSessions(): CliSession[] {
-    return []
+    return this.sessions
   }
 
   protected sessionFile(): string | null {
@@ -92,5 +95,28 @@ describe('把一个程序变成 agent', () => {
 
     await expect(provider.createSession({ title: 'x' })).rejects.toThrow('did not report a session')
     fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('文件里没写目录的时候，用问的那个目录', async () => {
+    const provider = new FakeAgentProvider({})
+    provider.sessions = [
+      { id: 'ses_1', title: 'One', directory: null, createdAt: 1, updatedAt: 2, messages: [] },
+    ]
+
+    const page = await provider.listSessions({ directory: '/work' })
+
+    // 程序答的是"这个目录的会话"，所以会话就是这个目录的。
+    expect(page.items[0]?.directory).toBe('/work')
+  })
+
+  it('文件里写了目录的时候，就用它自己的', async () => {
+    const provider = new FakeAgentProvider({})
+    provider.sessions = [
+      { id: 'ses_1', title: 'One', directory: '/elsewhere', createdAt: 1, updatedAt: 2, messages: [] },
+    ]
+
+    const page = await provider.listSessions({ directory: '/work' })
+
+    expect(page.items[0]?.directory).toBe('/elsewhere')
   })
 })

@@ -5,9 +5,11 @@ import {
   type AgentKind,
   type AgentProvider,
   type CreateSessionInput,
+  type ListSessionsParams,
   type ProviderContext,
   type ProviderStatus,
   type SendPromptInput,
+  type SessionPage,
 } from '../contract'
 import { findExecutable, runCli, stopChild, type CliEnvironment } from './cli-process'
 
@@ -91,13 +93,20 @@ export abstract class CliAgentProvider implements AgentProvider {
     return null
   }
 
-  async listSessions(context: ProviderContext): Promise<Session[]> {
-    return this.readSessions(context).map((session) => toSession(session, this.id))
+  async listSessions(context: ProviderContext, _params?: ListSessionsParams): Promise<SessionPage> {
+    // A program on this machine keeps its sessions in files, and reading all
+    // of them is how it has always worked. There is no cursor to hand back:
+    // this list is the last page, and it says so rather than pretending there
+    // is more.
+    return {
+      items: this.readSessions(context).map((session) => toSession(session, this.id, context.directory)),
+      nextCursor: null,
+    }
   }
 
   async getSession(id: string, context: ProviderContext): Promise<Session | null> {
     const found = this.readSessions(context).find((session) => session.id === id)
-    return found ? toSession(found, this.id) : null
+    return found ? toSession(found, this.id, context.directory) : null
   }
 
   async listMessages(sessionId: string, context: ProviderContext): Promise<Message[]> {
@@ -198,12 +207,18 @@ export abstract class CliAgentProvider implements AgentProvider {
   }
 }
 
-function toSession(session: CliSession, agentId: string): Session {
+function toSession(session: CliSession, agentId: string, fallbackDirectory?: string): Session {
   return {
     id: session.id,
     agentId,
     title: session.title,
-    directory: session.directory,
+    // The directory the session was worked on, or the one it was asked about.
+    // A file on disk does not always say where it was written, and a session
+    // with no place belongs to nobody.
+    directory: session.directory ?? fallbackDirectory ?? null,
+    // A program on this machine has no working areas beyond the directory it
+    // was run in, and it says so rather than inventing one.
+    workspaceId: null,
     parentId: null,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,

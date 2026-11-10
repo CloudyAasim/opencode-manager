@@ -8,9 +8,11 @@ import {
   type AgentKind,
   type AgentProvider,
   type CreateSessionInput,
+  type ListSessionsParams,
   type ProviderContext,
   type ProviderStatus,
   type SendPromptInput,
+  type SessionPage,
 } from '../contract'
 
 const AGENT_ID = 'opencode'
@@ -100,7 +102,12 @@ export function toMessage(raw: unknown, agentId: string): Message {
   }
 }
 
-export function toSession(raw: unknown, agentId: string, status: SessionStatus = 'unknown'): Session {
+export function toSession(
+  raw: unknown,
+  agentId: string,
+  status: SessionStatus = 'unknown',
+  fallbackDirectory?: string,
+): Session {
   const record = asRecord(raw)
   const id = asString(record?.id)
 
@@ -109,17 +116,52 @@ export function toSession(raw: unknown, agentId: string, status: SessionStatus =
   }
 
   const time = asRecord(record?.time)
+  // Two shapes, one session. The older endpoint puts the working directory on
+  // the session itself; the newer one puts it in a `location` object beside
+  // it. Reading both is not guessing - it is refusing to answer "where was
+  // this worked on" with "nowhere" because the answer moved.
+  const location = asRecord(record?.location)
 
   return {
     id,
     agentId,
     title: asString(record?.title) ?? '',
-    directory: asString(record?.directory) ?? null,
+    directory: asString(location?.directory) ?? asString(record?.directory) ?? fallbackDirectory ?? null,
+    workspaceId: asString(location?.workspaceID) ?? asString(record?.workspaceID) ?? null,
     parentId: asString(record?.parentID) ?? null,
     createdAt: asNumber(time?.created) ?? 0,
     updatedAt: asNumber(time?.updated) ?? 0,
     archived: asNumber(time?.archived) !== null,
     status,
+  }
+}
+
+/**
+ * One page of sessions, read out of whatever shape the agent answered with.
+ *
+ * The newer endpoint answers with an envelope - the items and a cursor that
+ * says where the next page starts - while the older one answers with a bare
+ * list and no way to continue. Both are pages; one of them happens to be the
+ * last.
+ *
+ * `fallbackDirectory` is the directory that was asked about. An agent that
+ * does not say where a session was worked on has still answered "the sessions
+ * of this directory", and a session with no place belongs to nobody - which is
+ * a different answer from "not yours".
+ */
+export function toSessionPage(
+  raw: unknown,
+  agentId: string,
+  fallbackDirectory?: string,
+): SessionPage {
+  const record = asRecord(raw)
+  const payload = Array.isArray(raw) ? raw : (record?.data ?? record?.items ?? [])
+  const items = Array.isArray(payload) ? payload : []
+  const cursor = asRecord(record?.cursor)
+
+  return {
+    items: items.map((item) => toSession(item, agentId, 'unknown', fallbackDirectory)),
+    nextCursor: asString(cursor?.next),
   }
 }
 
@@ -152,20 +194,20 @@ export class OpenCodeProvider implements AgentProvider {
     return { status: 'ready' }
   }
 
-  async listSessions(context: ProviderContext): Promise<Session[]> {
-    const raw = await this.readJson<unknown>('/session', context)
-    const items = Array.isArray(raw) ? raw : []
+  async listSessions(context: ProviderContext, params: ListSessionsParams = {}): Promise<SessionPage> {
+    const raw = await this.readJson<unknown>(this.sessionsPath(params), context)
+    const page = toSessionPage(raw, this.id, context.directory)
     const statuses = await this.readStatuses(context)
-    return items.map((item) => {
-      const session = toSession(item, this.id)
-      return { ...session, status: statuses.get(session.id) ?? 'unknown' }
-    })
+    return {
+      items: page.items.map((session) => ({ ...session, status: statuses.get(session.id) ?? 'unknown' })),
+      nextCursor: page.nextCursor,
+    }
   }
 
   async getSession(id: string, context: ProviderContext): Promise<Session | null> {
     try {
       const raw = await this.readJson<unknown>(this.sessionPath(id), context, id)
-      return toSession(raw, this.id)
+      return toSession(raw, this.id, 'unknown', context.directory)
     } catch (error) {
       if (error instanceof SessionNotFoundError) return null
       throw error
@@ -180,7 +222,7 @@ export class OpenCodeProvider implements AgentProvider {
     } catch (error) {
       throw this.translate(error)
     }
-    return toSession(raw, this.id)
+    return toSession(raw, this.id, 'unknown', input.directory)
   }
 
   async renameSession(id: string, title: string, context: ProviderContext): Promise<Session> {
@@ -192,7 +234,7 @@ export class OpenCodeProvider implements AgentProvider {
       context,
       sessionId: id,
     })
-    return toSession(raw, this.id)
+    return toSession(raw, this.id, 'unknown', context.directory)
   }
 
   async deleteSession(id: string, context: ProviderContext): Promise<void> {
@@ -232,6 +274,19 @@ export class OpenCodeProvider implements AgentProvider {
 
   private sessionPath(id: string): string {
     return `/session/${encodeURIComponent(id)}`
+  }
+
+  /**
+   * The endpoint that pages. The one that lists a single session does not
+   * page, so the two are different requests and not one request with options.
+   */
+  private sessionsPath(params: ListSessionsParams): string {
+    const query = new URLSearchParams()
+    query.set('order', 'desc')
+    if (params.limit !== undefined) query.set('limit', String(params.limit))
+    if (params.cursor) query.set('cursor', params.cursor)
+    if (params.search) query.set('search', params.search)
+    return `/api/session?${query.toString()}`
   }
 
   private async readJson<T>(path: string, context: ProviderContext, sessionId?: string): Promise<T> {

@@ -20,6 +20,11 @@ export type { Agent, AgentCapability, AgentKind, Message, Session }
  * API carries it as a query parameter rather than as part of a session id,
  * because a client that moves a session between workspaces would otherwise
  * have to invent ids.
+ *
+ * A provider that was asked about a directory answers with that directory's
+ * sessions, and a session that does not say where it was worked on is given
+ * the directory it was asked about. A session with no place belongs to nobody,
+ * which is a different answer from "not yours".
  */
 export interface ProviderContext {
   directory?: string
@@ -39,6 +44,30 @@ export interface SendPromptInput {
   text: string
 }
 
+/**
+ * How much of a session list to read, and where to carry on from.
+ *
+ * The cursor is the agent's own, not one of ours. An agent that has no notion
+ * of paging answers with everything it has and no cursor, and the layer above
+ * treats that as the end of the list rather than as a failure.
+ */
+export interface ListSessionsParams {
+  /** How many sessions to return at most. */
+  limit?: number
+  /** Where to continue from, as the agent handed it back. */
+  cursor?: string
+  /** A word to look for among the sessions. */
+  search?: string
+}
+
+/**
+ * One page of sessions, and where the next one starts.
+ */
+export interface SessionPage {
+  items: Session[]
+  nextCursor: string | null
+}
+
 export interface AgentProvider {
   readonly id: string
   readonly label: string
@@ -46,7 +75,7 @@ export interface AgentProvider {
   readonly capabilities: readonly AgentCapability[]
 
   status(): Promise<ProviderStatus>
-  listSessions(context: ProviderContext): Promise<Session[]>
+  listSessions(context: ProviderContext, params?: ListSessionsParams): Promise<SessionPage>
   getSession(id: string, context: ProviderContext): Promise<Session | null>
   createSession(input: CreateSessionInput): Promise<Session>
   renameSession(id: string, title: string, context: ProviderContext): Promise<Session>

@@ -35,6 +35,7 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
       agentId: 'opencode',
       title: 'Hello',
       directory: '/work',
+      workspaceId: null,
       parentId: 'ses_0',
       createdAt: 10,
       updatedAt: 20,
@@ -148,36 +149,110 @@ describe('OpenCode 适配器', () => {
   it('列会话时把每个会话的状态也问一遍', async () => {
     const getJson = vi.fn(async (path: string) => {
       if (path === '/session/status') return { ses_1: { type: 'busy' } }
-      return [{ id: 'ses_1', title: 'One' }]
+      return { data: [{ id: 'ses_1', title: 'One' }] }
     })
     const provider = new OpenCodeProvider(clientWith({ getJson }))
 
-    const sessions = await provider.listSessions({})
+    const page = await provider.listSessions({})
 
-    expect(sessions).toHaveLength(1)
-    expect(sessions[0]?.status).toBe('busy')
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]?.status).toBe('busy')
   })
 
   it('问不到状态的时候，列会话不能跟着失败', async () => {
     const getJson = vi.fn(async (path: string) => {
       if (path === '/session/status') throw new Error('no status')
-      return [{ id: 'ses_1' }]
+      return { data: [{ id: 'ses_1' }] }
     })
     const provider = new OpenCodeProvider(clientWith({ getJson }))
 
-    const sessions = await provider.listSessions({})
+    const page = await provider.listSessions({})
 
-    expect(sessions).toHaveLength(1)
-    expect(sessions[0]?.status).toBe('unknown')
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]?.status).toBe('unknown')
   })
 
   it('工作目录要跟着请求一起走', async () => {
-    const getJson = vi.fn(async () => [])
+    const getJson = vi.fn(async () => ({ data: [] }))
     const provider = new OpenCodeProvider(clientWith({ getJson }))
 
     await provider.listSessions({ directory: '/work' })
 
-    expect(getJson).toHaveBeenCalledWith('/session', { directory: '/work' })
+    expect(getJson).toHaveBeenCalledWith('/api/session?order=desc', { directory: '/work' })
+  })
+
+  it('游标、条数、搜索都要原样交给上游', async () => {
+    const getJson = vi.fn(async () => ({ data: [] }))
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    await provider.listSessions({}, { limit: 25, cursor: 'cur_1', search: 'deploy' })
+
+    expect(getJson).toHaveBeenCalledWith(
+      '/api/session?order=desc&limit=25&cursor=cur_1&search=deploy',
+      { directory: undefined },
+    )
+  })
+
+  it('下一页的位置要照上游说的那样传回来', async () => {
+    const getJson = vi.fn(async (path: string) => {
+      if (path === '/session/status') return {}
+      return { data: [{ id: 'ses_1' }], cursor: { next: 'cur_2' } }
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const page = await provider.listSessions({})
+
+    expect(page.nextCursor).toBe('cur_2')
+  })
+
+  it('没有下一页的时候要说没有，不能装作还有', async () => {
+    const getJson = vi.fn(async (path: string) => {
+      if (path === '/session/status') return {}
+      return { data: [{ id: 'ses_1' }] }
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const page = await provider.listSessions({})
+
+    expect(page.nextCursor).toBeNull()
+  })
+
+  it('工作目录在新的形状里换了个位置，也照样读得出来', async () => {
+    const getJson = vi.fn(async (path: string) => {
+      if (path === '/session/status') return {}
+      return { data: [{ id: 'ses_1', location: { directory: 'C:\\work\\demo' } }] }
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const page = await provider.listSessions({})
+
+    expect(page.items[0]?.directory).toBe('C:\\work\\demo')
+  })
+
+  it('上游没说会话是在哪儿写的，就用问的那个目录', async () => {
+    const getJson = vi.fn(async (path: string) => {
+      if (path === '/session/status') return {}
+      return { data: [{ id: 'ses_1' }] }
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const page = await provider.listSessions({ directory: '/work' })
+
+    // 上游答的是"这个目录的会话"，所以会话就是这个目录的。没有地方的会话
+    // 属于谁，是另一个答案。
+    expect(page.items[0]?.directory).toBe('/work')
+  })
+
+  it('上游说了在哪儿，就不用问的那个目录盖过去', async () => {
+    const getJson = vi.fn(async (path: string) => {
+      if (path === '/session/status') return {}
+      return { data: [{ id: 'ses_1', directory: '/elsewhere' }] }
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const page = await provider.listSessions({ directory: '/work' })
+
+    expect(page.items[0]?.directory).toBe('/elsewhere')
   })
 
   it('没有这样的会话就是没有，不是错误', async () => {

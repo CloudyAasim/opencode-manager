@@ -2,9 +2,11 @@ import type { Message, Session } from '@opencode-manager/shared/api/v1'
 import type {
   AgentProvider,
   CreateSessionInput,
+  ListSessionsParams,
   ProviderContext,
   ProviderStatus,
   SendPromptInput,
+  SessionPage,
 } from '../../src/providers/contract'
 
 export interface FakeProviderOptions {
@@ -14,6 +16,7 @@ export interface FakeProviderOptions {
   status?: ProviderStatus
   sessions?: Session[]
   messages?: Record<string, Message[]>
+  nextCursor?: string | null
 }
 
 export interface FakeProviderCall {
@@ -38,6 +41,7 @@ export class FakeAgentProvider implements AgentProvider {
   messages: Record<string, Message[]>
   statusValue: ProviderStatus
   failWith: Error | null = null
+  nextCursor: string | null
 
   constructor(options: FakeProviderOptions = {}) {
     this.id = options.id ?? 'fake'
@@ -46,6 +50,7 @@ export class FakeAgentProvider implements AgentProvider {
     this.statusValue = options.status ?? { status: 'ready' }
     this.sessions = options.sessions ?? []
     this.messages = options.messages ?? {}
+    this.nextCursor = options.nextCursor ?? null
   }
 
   private record(method: string, ...args: unknown[]): void {
@@ -58,9 +63,9 @@ export class FakeAgentProvider implements AgentProvider {
     return this.statusValue
   }
 
-  async listSessions(context: ProviderContext): Promise<Session[]> {
-    this.record('listSessions', context)
-    return this.sessions
+  async listSessions(context: ProviderContext, params?: ListSessionsParams): Promise<SessionPage> {
+    this.record('listSessions', context, params)
+    return { items: this.sessions, nextCursor: this.nextCursor }
   }
 
   async getSession(id: string, _context: ProviderContext): Promise<Session | null> {
@@ -75,6 +80,7 @@ export class FakeAgentProvider implements AgentProvider {
       agentId: this.id,
       title: input.title ?? '',
       directory: input.directory ?? null,
+      workspaceId: null,
       parentId: null,
       createdAt: 1,
       updatedAt: 1,
@@ -119,6 +125,7 @@ export function makeSession(overrides: Partial<Session> = {}): Session {
     agentId: 'fake',
     title: 'A session',
     directory: '/work',
+    workspaceId: null,
     parentId: null,
     createdAt: 1000,
     updatedAt: 2000,

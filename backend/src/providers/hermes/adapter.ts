@@ -5,9 +5,11 @@ import {
   type AgentKind,
   type AgentProvider,
   type CreateSessionInput,
+  type ListSessionsParams,
   type ProviderContext,
   type ProviderStatus,
   type SendPromptInput,
+  type SessionPage,
 } from '../contract'
 
 /**
@@ -76,13 +78,18 @@ export class HermesProvider implements AgentProvider {
     }
   }
 
-  async listSessions(_context: ProviderContext): Promise<Session[]> {
+  async listSessions(_context: ProviderContext, _params?: ListSessionsParams): Promise<SessionPage> {
     const response = await this.call('/api/sessions')
     if (!response.ok) {
       throw new ProviderUnavailableError(this.id, `Hermes answered ${response.status} for its sessions`)
     }
     const body = (await response.json()) as unknown
-    return itemsOf(body, 'sessions').map((entry) => this.toSession(entry))
+    // The API server hands over the whole list and no way to ask for the next
+    // part of it, so this page is the last one.
+    return {
+      items: itemsOf(body, 'sessions').map((entry) => this.toSession(entry)),
+      nextCursor: null,
+    }
   }
 
   async getSession(id: string, _context: ProviderContext): Promise<Session | null> {
@@ -211,6 +218,8 @@ export class HermesProvider implements AgentProvider {
       agentId: this.id,
       title: stringOf(record.title) ?? '',
       directory: stringOf(record.cwd) ?? null,
+      // Hermes works in a directory and knows of no working areas beyond it.
+      workspaceId: null,
       parentId: stringOf(record.parent_session_id) ?? null,
       createdAt: numberOf(record.started_at) ?? 0,
       updatedAt: numberOf(record.ended_at) ?? numberOf(record.started_at) ?? 0,
