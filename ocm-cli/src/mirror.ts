@@ -12,6 +12,18 @@ import type { ManagerApi } from './manager-api.js'
 import { ManagerApiError } from './manager-api.js'
 
 const HARDCODED_EXCLUDES = ['node_modules', 'dist', '.next', '.venv', '__pycache__', '.turbo', '.DS_Store', '._*']
+
+/**
+ * Git reads `core.autocrlf` from the repository's own config and from the
+ * user's global one when it writes a working tree, so a Windows host with
+ * `autocrlf=true` rewrites every text file to CRLF on the way out of the
+ * object database. A mirror is not allowed to do that: the tree it produces
+ * has to be the tree the server holds, byte for byte, or the patch the CLI
+ * sends back up no longer applies to it. These two commands write the tree,
+ * so they carry the setting that keeps the bytes as they are - for this
+ * command only, leaving the user's own repository configuration alone.
+ */
+const EXACT_WORKING_TREE = ['-c', 'core.autocrlf=false']
 const PART_RETRIES = 3
 const PART_BACKOFF_MS = [500, 2000, 8000]
 const MIRROR_GZIP = true
@@ -384,7 +396,7 @@ export async function mirrorUpPatch(
 
 function applyPatch(repoRoot: string, patch: string): void {
   if (!patch) return
-  const child = spawnSync('git', ['apply', '--binary', '--whitespace=nowarn', '-'], {
+  const child = spawnSync('git', [...EXACT_WORKING_TREE, 'apply', '--binary', '--whitespace=nowarn', '-'], {
     cwd: repoRoot,
     input: patch,
     encoding: 'utf-8',
@@ -490,9 +502,9 @@ function importLocalBundle(repoRoot: string, bundlePath: string, branch: string 
       if (currentBranch !== branch) {
         const checkoutArgs = force ? ['-f'] : []
         if (listLocalBranches(repoRoot).has(branch)) {
-          runGit(repoRoot, ['checkout', ...checkoutArgs, branch])
+          runGit(repoRoot, [...EXACT_WORKING_TREE, 'checkout', ...checkoutArgs, branch])
         } else {
-          runGit(repoRoot, ['checkout', ...checkoutArgs, '-b', branch, incomingSha])
+          runGit(repoRoot, [...EXACT_WORKING_TREE, 'checkout', ...checkoutArgs, '-b', branch, incomingSha])
         }
       }
     }
@@ -510,7 +522,7 @@ function importLocalBundle(repoRoot: string, bundlePath: string, branch: string 
 
     if (branch) {
       const targetSha = incoming.get(branch)!
-      runGit(repoRoot, ['reset', '--hard', targetSha])
+      runGit(repoRoot, [...EXACT_WORKING_TREE, 'reset', '--hard', targetSha])
       runGit(repoRoot, ['clean', '-fd'])
     }
   } finally {

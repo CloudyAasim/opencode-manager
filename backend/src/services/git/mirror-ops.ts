@@ -10,6 +10,18 @@ import { swallow } from '../../utils/swallow'
 import { getStagingRoot } from '../uploads/mirror-staging'
 import { safeGitOut } from './git-commands'
 
+/**
+ * Git reads `core.autocrlf` from the repository's own config and from the
+ * user's global one when it writes a working tree, so a Windows host with
+ * `autocrlf=true` rewrites every text file to CRLF on the way out of the
+ * object database. A mirror is not allowed to do that: the tree it produces
+ * has to be the tree the client holds, byte for byte, or the patch the client
+ * sends back no longer applies to it. These two commands write the tree, so
+ * they carry the setting that keeps the bytes as they are - for this command
+ * only, leaving the repository's own configuration alone.
+ */
+const EXACT_WORKING_TREE = ['-c', 'core.autocrlf=false']
+
 function gitRaw(repoPath: string, args: string[], env: NodeJS.ProcessEnv = process.env, input?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn('git', args, { cwd: repoPath, env: childEnvFor('git', env) })
@@ -50,7 +62,7 @@ export async function createMirrorPatch(fullPath: string): Promise<string> {
 
 export async function applyMirrorPatch(fullPath: string, patch: string): Promise<void> {
   if (!patch) return
-  await gitRaw(fullPath, ['apply', '--binary', '--whitespace=nowarn', '-'], process.env, patch)
+  await gitRaw(fullPath, [...EXACT_WORKING_TREE, 'apply', '--binary', '--whitespace=nowarn', '-'], process.env, patch)
 }
 
 async function branchesCheckedOutElsewhere(fullPath: string): Promise<Set<string>> {
@@ -110,9 +122,9 @@ export async function importBundle(fullPath: string, bundlePath: string, branch:
       if (actualBranch !== branch) {
         const checkoutArgs = force ? ['-f'] : []
         if ((await listLocalBranchNames(fullPath)).has(branch)) {
-          await gitRaw(fullPath, ['checkout', ...checkoutArgs, branch])
+          await gitRaw(fullPath, [...EXACT_WORKING_TREE, 'checkout', ...checkoutArgs, branch])
         } else {
-          await gitRaw(fullPath, ['checkout', ...checkoutArgs, '-b', branch, incomingSha])
+          await gitRaw(fullPath, [...EXACT_WORKING_TREE, 'checkout', ...checkoutArgs, '-b', branch, incomingSha])
         }
       }
     }
@@ -128,7 +140,7 @@ export async function importBundle(fullPath: string, bundlePath: string, branch:
     }
 
     if (branch && targetSha !== undefined) {
-      await gitRaw(fullPath, ['reset', '--hard', targetSha])
+      await gitRaw(fullPath, [...EXACT_WORKING_TREE, 'reset', '--hard', targetSha])
       await gitRaw(fullPath, ['clean', '-fd'])
     }
   } finally {
