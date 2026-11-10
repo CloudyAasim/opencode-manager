@@ -5,6 +5,7 @@ import { createRepo, getRepoByLocalPath, updateRepoStatus, deleteRepo, getRepoBy
 import type { Database } from 'bun:sqlite'
 import type { Repo, CreateRepoInput } from '../../types/repo'
 import { logger } from '../../utils/logger'
+import { removeRecursive } from '../../utils/fs-safe'
 import { reposBase } from '../repo-paths'
 import { normalizeRepoDirectoryName, sanitizeRepoDirectoryName, sanitizeBranchForDirectory, normalizeRepoUrlForCompare, isSSHUrl, normalizeSSHUrl, SCP_STYLE_URL_PATTERN } from '@opencode-manager/shared/utils'
 import type { GitAuthService } from '../git-auth'
@@ -124,7 +125,7 @@ export async function initLocalRepo(
 
   const repoLocalPath = normalizedInputPath
   // This value becomes the `local_path` column, which the delete path hands to
-  // `rm -rf`, and the rollback below removes it too. Nothing else stands
+  // the removal, and the rollback below removes it too. Nothing else stands
   // between it and the filesystem, so the escape check happens here - at the
   // only place it can still be cheap.
   const targetPath = resolveRepoPathInsideBase(repoLocalPath, reposBase())
@@ -191,7 +192,7 @@ export async function initLocalRepo(
     
     if (directoryCreated) {
       try {
-        await executeCommand(['rm', '-rf', targetPath])
+        await removeRecursive(targetPath)
         logger.info(`Rolled back directory: ${targetPath}`)
       } catch (fsError: unknown) {
         logger.error(`Failed to rollback directory ${repoLocalPath}:`, getErrorMessage(fsError))

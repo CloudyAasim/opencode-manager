@@ -12,9 +12,9 @@ export function normalizeInputPath(input: string): string {
  * refuses anything that is not plainly a path *inside* it.
  *
  * `local_path` is a SQLite column and the delete path hands it straight to
- * `rm -rf`. Trimming trailing slashes is not a containment check: `../x` and an
- * absolute path both survive it, and either one turns "delete this project"
- * into "delete that directory".
+ * the removal. Trimming trailing slashes is not a containment check: `../x`
+ * and an absolute path both survive it, and either one turns "delete this
+ * project" into "delete that directory".
  *
  * Absolute paths are refused even when they point inside the base. Not because
  * that is where the danger is - the base check already covers that - but

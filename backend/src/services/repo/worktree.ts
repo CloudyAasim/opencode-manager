@@ -3,6 +3,7 @@ import path from 'path'
 import { executeCommand } from '../../utils/process'
 import { swallow } from '../../utils/swallow'
 import { logger } from '../../utils/logger'
+import { removeRecursive } from '../../utils/fs-safe'
 import { resolveDefaultBranch, safeGetCurrentBranch } from './branch'
 import { pathExists } from './paths'
 
@@ -52,12 +53,12 @@ async function gitCommonDir(repoPath: string, env?: Record<string, string>): Pro
 /**
  * Why `worktreePath` must not be deleted, or null when it may be.
  *
- * The `rm -rf` at the end of `removeWorktree` has no idea what it is pointed
+ * The removal at the end of `removeWorktree` has no idea what it is pointed
  * at, and `worktreePath` reaches it from three places: a database column
  * (delete), a mirror plan (mirror), and - the reason this check exists - the
  * `directory` field of an OpenCode workspace API response, used verbatim
  * (schedule-worktree). Whatever that third party hands back is what gets
- * removed, so the path has to earn the `rm -rf` before anything is spawned.
+ * removed, so the path has to earn the removal before anything is spawned.
  *
  * The check is intrinsic on purpose. `assertWithinAccessScope` is the obvious
  * candidate and it is the wrong tool: it returns silently when no scope is
@@ -111,7 +112,7 @@ export async function removeWorktree(
   env?: Record<string, string>,
 ): Promise<RemoveWorktreeResult> {
   // Before anything is spawned. `git worktree remove` failing is not a guard -
-  // it is swallowed just below, and the `rm -rf` that follows runs either way,
+  // it is swallowed just below, and the removal that follows runs either way,
   // so the path has to be checked here or not at all.
   const refusal = await findWorktreeRefusal(baseRepoPath, worktreePath, env)
   if (refusal) {
@@ -131,7 +132,7 @@ export async function removeWorktree(
   } finally {
     await executeCommand(['git', '-C', baseRepoPath, 'worktree', 'prune'], env ? { env } : undefined).catch(swallow)
   }
-  await executeCommand(['rm', '-rf', worktreePath]).catch(swallow)
+  await removeRecursive(worktreePath).catch(swallow)
   return { removed: true }
 }
 

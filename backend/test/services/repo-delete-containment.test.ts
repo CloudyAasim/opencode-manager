@@ -5,10 +5,11 @@ import path from 'node:path'
 import type { Database } from 'bun:sqlite'
 
 /**
- * `deleteRepoFiles` shells out to `rm -rf <localPath>` with the repositories
- * directory as the working directory. `localPath` is a column in SQLite, and
- * the only normalisation ever applied to it is trimming trailing slashes, so
- * anything that can write that column decides what `rm -rf` is pointed at.
+ * `deleteRepoFiles` removes `<localPath>` recursively, with the repositories
+ * directory as the only thing bounding it. `localPath` is a column in SQLite,
+ * and the only normalisation ever applied to it is trimming trailing slashes,
+ * so anything that can write that column decides what the removal is pointed
+ * at.
  *
  * These tests use the real filesystem on purpose, and they check the
  * *consequence* before the error. "the mock was not called" passes just as
@@ -268,7 +269,7 @@ describe('删除项目时目标必须留在项目目录内', () => {
     it('removeWorktree 拒绝时:删行,不动磁盘,并说明原因', async () => {
       // The path clears the containment check - it is inside the repositories
       // directory - but removeWorktree is what knows whether it is a worktree
-      // of the base repository the row names. Falling through to the `rm -rf`
+      // of the base repository the row names. Falling through to the removal
       // after a refusal would delete whatever is really there, which is the
       // entire reason the refusal happened.
       const checkout = path.join(base, 'demo')

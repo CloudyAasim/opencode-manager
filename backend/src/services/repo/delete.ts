@@ -1,10 +1,10 @@
-import { executeCommand } from '../../utils/process'
 import { getRepoById, deleteRepo } from '../../db/queries'
 import type { Database } from 'bun:sqlite'
 import { reposBase } from '../repo-paths'
 import { NotFoundError } from '../../utils/errors'
 import { getErrorMessage } from '../../utils/error-utils'
 import { logger } from '../../utils/logger'
+import { removeRecursive } from '../../utils/fs-safe'
 import { normalizeRepoUrl } from './clone'
 import { resolveRepoPathInsideBase } from './paths'
 import { removeWorktree } from './worktree'
@@ -30,21 +30,22 @@ export async function deleteRepoFiles(
 
   const base = reposBase()
 
-  // Before anything is spawned. This is the check that stands between a
-  // database column and `rm -rf`; without it, whatever wrote that column
-  // decides what gets deleted.
+  // Before anything is removed. This is the check that stands between a
+  // database column and the removal below; without it, whatever wrote that
+  // column decides what gets deleted.
   let target: string
   try {
     target = resolveRepoPathInsideBase(repo.localPath, base)
   } catch (error: unknown) {
-    // The guard exists because this column reaches `rm -rf`. A row that cannot
-    // pass it is corrupt or hostile - but it is still a row the user can see in
-    // their list and asked to have gone. Throwing here would leave them with no
-    // way to clear it from the UI at all, which is a worse outcome than
-    // leaving a directory on disk that they never wanted deleted anyway.
+    // The guard exists because this column decides what gets removed. A row
+    // that cannot pass it is corrupt or hostile - but it is still a row the
+    // user can see in their list and asked to have gone. Throwing here would
+    // leave them with no way to clear it from the UI at all, which is a worse
+    // outcome than leaving a directory on disk that they never wanted deleted
+    // anyway.
     //
     // So: drop the reference, touch nothing on disk, and say so. The whole
-    // danger lived in the `rm -rf`; the row is harmless.
+    // danger lived in the removal; the row is harmless.
     const refusal = getErrorMessage(error)
     logger.error(
       `Repo ${repoId} stores local_path '${repo.localPath}', which is outside '${base}'. ` +
@@ -64,7 +65,7 @@ export async function deleteRepoFiles(
       // `target` cleared the containment check above, so it is inside the
       // repositories directory - but removeWorktree refused it, which means
       // this row does not describe a worktree of the base repository it names.
-      // Falling through to the `rm -rf` below would delete whatever that path
+      // Falling through to the removal below would delete whatever that path
       // actually holds, and a refused path is refused precisely because that
       // is not known. Same handling as the guard above: drop the reference,
       // touch nothing, say why.
@@ -79,7 +80,7 @@ export async function deleteRepoFiles(
 
   // The resolved absolute path, with no cwd: the target no longer depends on
   // where the process happens to be running from.
-  await executeCommand(['rm', '-rf', target])
+  await removeRecursive(target)
   deleteRepo(database, repoId)
   return { filesRemoved: true }
 }

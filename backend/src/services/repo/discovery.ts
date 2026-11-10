@@ -42,7 +42,7 @@ export async function registerExistingLocalRepo(
   // *their* id, so the ownership filter in the route passes it; the row's
   // `source_path` then joins `accessibleRepoOwnerPaths`, and from that moment
   // `GET /api/files` and the OpenCode proxy serve that directory as theirs.
-  // The same value reaches `rm -rf` on the delete path.
+  // The same value reaches the removal on the delete path.
   //
   // A request-scope guard is the right one here because both ways in -
   // `POST /api/repos` with an absolute `localPath`, and `POST /api/repos/discover`

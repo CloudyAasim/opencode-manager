@@ -72,3 +72,16 @@ export function mkdirSyncSafe(dirPath: string, options: MkdirSafeOptions = {}): 
     }
   }
 }
+
+/**
+ * Removes a directory and everything under it, whether or not it is there.
+ *
+ * `rm -rf` is a GNU coreutils program: it is there on Linux, and on Windows
+ * only when something put a Unix toolchain on the PATH - which the manager
+ * cannot count on, because the PATH is the operator's, not the product's.
+ * Node's own removal is the same operation without that dependency, and it
+ * takes the read-only files a git checkout leaves behind in its stride.
+ */
+export async function removeRecursive(target: string): Promise<void> {
+  await fs.rm(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
+}

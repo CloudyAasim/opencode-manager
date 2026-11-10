@@ -209,7 +209,7 @@ export class UserAdminService {
  * whenever some other row already claims that name.
  *
  * Every candidate is checked against `users/` before it is returned. These
- * strings reach `rm -rf`, and `path.join` is not a containment check -
+ * strings reach the removal, and `path.join` is not a containment check -
  * `../../elsewhere` and an absolute path both survive it.
  */
 private userDirectories(user: ManagedUser): string[] {
