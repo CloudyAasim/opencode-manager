@@ -1,6 +1,7 @@
-import { principalIsAdmin, type Principal } from '../auth/ownership'
+import type { Database } from 'bun:sqlite'
+import { principalIsAdmin, resolveAccessRoots, type Principal } from '../auth/ownership'
 import { isWithinRoots } from '../auth/access-scope'
-import type { AgentSession } from './agent-session'
+import { findAgentSessions, type AgentSession } from './agent-session'
 
 /**
  * Which conversations a person may see.
@@ -104,6 +105,26 @@ export function visibleSessions<T extends SessionSummary>(
   return sessions.filter((session) =>
     sessionVisibleTo(session, records.get(session.id), principal, roots),
   )
+}
+
+/**
+ * The conversations of a list that this person may see, worked out from the
+ * ledger without the caller having to assemble the parts.
+ *
+ * Every surface that hands a list of conversations to somebody goes through
+ * here. A layer that assembles the ledger and the roots on its own is a layer
+ * that can forget one of them - and a list of conversations without a filter
+ * is a list of another tenant's work.
+ */
+export function callerVisibleSessions<T extends SessionSummary>(
+  database: Database,
+  sessions: readonly T[],
+  principal: Principal | null,
+): T[] {
+  if (principalIsAdmin(principal)) return [...sessions]
+  const roots = resolveAccessRoots(database, principal)
+  const records = findAgentSessions(database, sessions.map((session) => session.id))
+  return visibleSessions(sessions, records, principal, roots)
 }
 
 /**

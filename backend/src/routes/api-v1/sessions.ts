@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
+import type { Database } from 'bun:sqlite'
 import {
   AcceptedResponseSchema,
   CreateSessionRequestSchema,
@@ -10,8 +11,11 @@ import {
   SessionListResponseSchema,
   SessionResponseSchema,
 } from '@opencode-manager/shared/api/v1'
+import type { Session } from '../../auth'
 import type { ProviderRegistry } from '../../providers/registry'
-import type { ProviderContext } from '../../providers/contract'
+import type { ListSessionsParams, ProviderContext } from '../../providers/contract'
+import { principalFrom } from '../../auth/ownership'
+import { callerVisibleSessions } from '../../services/session-scope'
 import { fail, handle, ok } from './respond'
 
 function agentIdOf(c: Context): string | undefined {
@@ -24,14 +28,41 @@ function contextOf(c: Context): ProviderContext {
   return directory ? { directory } : {}
 }
 
-export function createSessionRoutes(registry: ProviderRegistry) {
-  const app = new Hono()
+/**
+ * How much of the list to read. A limit that is not a number is no limit,
+ * and a cursor that is blank is no cursor: the list starts at its beginning
+ * rather than failing on a query string a browser may have trimmed.
+ */
+function listParamsOf(c: Context): ListSessionsParams {
+  const params: ListSessionsParams = {}
+
+  const limit = c.req.query('limit')
+  if (limit) {
+    const parsed = Number.parseInt(limit, 10)
+    if (Number.isFinite(parsed) && parsed > 0) params.limit = parsed
+  }
+
+  const cursor = c.req.query('cursor')
+  if (cursor && cursor.trim()) params.cursor = cursor
+
+  const search = c.req.query('search')
+  if (search && search.trim()) params.search = search
+
+  return params
+}
+
+export function createSessionRoutes(registry: ProviderRegistry, database: Database) {
+  const app = new Hono<{ Variables: { session: Session['session']; user: Session['user'] } }>()
 
   app.get('/', (c) =>
     handle(c, async () => {
       const provider = registry.resolve(agentIdOf(c))
-      const sessions = await provider.listSessions(contextOf(c))
-      return ok(c, SessionListResponseSchema, { sessions })
+      const page = await provider.listSessions(contextOf(c), listParamsOf(c))
+      // An agent knows about conversations, not about people. The list it
+      // answers with is narrowed here, or it is the whole server's list.
+      const principal = principalFrom(c.get('user'))
+      const sessions = callerVisibleSessions(database, page.items, principal)
+      return ok(c, SessionListResponseSchema, { sessions, nextCursor: page.nextCursor })
     }),
   )
 

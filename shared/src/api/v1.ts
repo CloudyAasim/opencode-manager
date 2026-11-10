@@ -66,6 +66,14 @@ export const SessionSchema = z.object({
   agentId: z.string().min(1),
   title: z.string(),
   directory: z.string().nullable(),
+  /**
+   * The working area this session belongs to, when the agent has such a thing.
+   *
+   * It is not the same as the directory: a directory is a place on this
+   * machine, and two checkouts of one repository are two directories and one
+   * project. An agent that keeps no such thing says null.
+   */
+  workspaceId: z.string().nullable(),
   parentId: z.string().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),
@@ -155,6 +163,14 @@ export type AgentListResponse = z.infer<typeof AgentListResponseSchema>
 
 export const SessionListResponseSchema = z.object({
   sessions: z.array(SessionSchema),
+  /**
+   * Where the next page starts, or null when this page is the last one.
+   *
+   * The key is always there even when the value is not: a client that has to
+   * ask whether the field exists is a client that will eventually forget to
+   * ask, and then it will loop forever over the last page.
+   */
+  nextCursor: z.string().nullable(),
 })
 export type SessionListResponse = z.infer<typeof SessionListResponseSchema>
 

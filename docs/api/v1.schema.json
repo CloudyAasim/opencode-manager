@@ -148,6 +148,16 @@
             }
           ]
         },
+        "workspaceId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "parentId": {
           "anyOf": [
             {
@@ -181,6 +191,7 @@
         "agentId",
         "title",
         "directory",
+        "workspaceId",
         "parentId",
         "createdAt",
         "updatedAt",
@@ -620,6 +631,16 @@
                   }
                 ]
               },
+              "workspaceId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "parentId": {
                 "anyOf": [
                   {
@@ -653,6 +674,7 @@
               "agentId",
               "title",
               "directory",
+              "workspaceId",
               "parentId",
               "createdAt",
               "updatedAt",
@@ -661,10 +683,21 @@
             ],
             "additionalProperties": false
           }
+        },
+        "nextCursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
-        "sessions"
+        "sessions",
+        "nextCursor"
       ],
       "additionalProperties": false
     },
@@ -687,6 +720,16 @@
               "type": "string"
             },
             "directory": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "workspaceId": {
               "anyOf": [
                 {
                   "type": "string"
@@ -729,6 +772,7 @@
             "agentId",
             "title",
             "directory",
+            "workspaceId",
             "parentId",
             "createdAt",
             "updatedAt",

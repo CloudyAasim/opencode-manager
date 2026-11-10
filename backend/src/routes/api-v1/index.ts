@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { Database } from 'bun:sqlite'
 import { ApiDescriptorSchema } from '@opencode-manager/shared/api/v1'
 import type { AuthInstance, Session } from '../../auth'
 import { createAuthMiddleware } from '../../auth/middleware'
@@ -13,7 +14,7 @@ export interface ApiV1Options {
   auth: AuthInstance
 }
 
-export function createApiV1Routes(registry: ProviderRegistry, options: ApiV1Options) {
+export function createApiV1Routes(registry: ProviderRegistry, database: Database, options: ApiV1Options) {
   const app = new Hono<{ Variables: { session: Session['session']; user: Session['user'] } }>()
 
   // The gate is the same gate the rest of the server uses - one session, or
@@ -40,7 +41,7 @@ export function createApiV1Routes(registry: ProviderRegistry, options: ApiV1Opti
   )
 
   app.route('/agents', createAgentRoutes(registry))
-  app.route('/sessions', createSessionRoutes(registry))
+  app.route('/sessions', createSessionRoutes(registry, database))
 
   return app
 }

@@ -1,11 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import { Hono } from 'hono'
+import { Database } from 'bun:sqlite'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { createApiV1Routes } from './index'
 import { ProviderRegistry } from '../../providers/registry'
 import { ProviderUnavailableError } from '../../providers/contract'
 import { createAuthMiddleware } from '../../auth/middleware'
 import type { AuthInstance } from '../../auth'
 import { FakeAgentProvider, makeMessage, makeSession } from '../../../test/helpers/fake-agent-provider'
+import { migrate } from '../../db/migration-runner'
+import { allMigrations } from '../../db/migrations'
 import type { Session } from '@opencode-manager/shared/api/v1'
 
 function authThatFinds(session: unknown): AuthInstance {
@@ -14,11 +20,38 @@ function authThatFinds(session: unknown): AuthInstance {
   } as unknown as AuthInstance
 }
 
+// An administrator runs this server, so it sees everything it hosts. The
+// narrowing that matters is tested with an ordinary user further down.
 const signedIn = authThatFinds({
   session: { id: 'session-1', userId: 'user-1' },
-  user: { id: 'user-1', name: 'user', email: 'user@example.com' },
+  user: { id: 'user-1', name: 'user', email: 'user@example.com', role: 'admin' },
 })
 const signedOut = authThatFinds(null)
+
+let database: Database
+let workspace: string
+let previousWorkspacePath: string | undefined
+
+beforeAll(async () => {
+  // The workspace is a temporary directory because the ledger and the access
+  // roots are read out of it, and a test that reads the real one is a test
+  // whose answer depends on whose machine it ran on.
+  workspace = await mkdtemp(path.join(tmpdir(), 'api-v1-'))
+  previousWorkspacePath = process.env.WORKSPACE_PATH
+  process.env.WORKSPACE_PATH = workspace
+  database = new Database(':memory:')
+  migrate(database, allMigrations)
+})
+
+afterAll(async () => {
+  database.close()
+  if (previousWorkspacePath === undefined) {
+    delete process.env.WORKSPACE_PATH
+  } else {
+    process.env.WORKSPACE_PATH = previousWorkspacePath
+  }
+  await rm(workspace, { recursive: true, force: true })
+})
 
 function createApp(providers: FakeAgentProvider[]): { app: Hono; registry: ProviderRegistry } {
   const registry = new ProviderRegistry()
@@ -26,7 +59,7 @@ function createApp(providers: FakeAgentProvider[]): { app: Hono; registry: Provi
   const app = new Hono()
   app.route(
     '/api/v1',
-    createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1.2.3', auth: signedIn }),
+    createApiV1Routes(registry, database, { name: 'opencode-manager', version: async () => '1.2.3', auth: signedIn }),
   )
   return { app, registry }
 }
@@ -97,6 +130,81 @@ describe('版本化 API', () => {
     const body = (await res.json()) as { sessions: Session[] }
     expect(body.sessions).toHaveLength(1)
     expect(body.sessions[0]?.id).toBe('session-1')
+  })
+
+  it('没有下一页的时候也要说没有，不能装作还有', async () => {
+    const provider = new FakeAgentProvider({ sessions: [makeSession()] })
+    const { app } = createApp([provider])
+
+    const res = await app.request('/api/v1/sessions')
+
+    const body = (await res.json()) as { nextCursor: string | null }
+    expect(body.nextCursor).toBeNull()
+  })
+
+  it('agent 说下一页在哪，就照它说的那样传回去', async () => {
+    const provider = new FakeAgentProvider({ sessions: [makeSession()], nextCursor: 'cur_2' })
+    const { app } = createApp([provider])
+
+    const res = await app.request('/api/v1/sessions')
+
+    const body = (await res.json()) as { nextCursor: string | null }
+    expect(body.nextCursor).toBe('cur_2')
+  })
+
+  it('游标、条数、搜索都要送到 agent 那里', async () => {
+    const provider = new FakeAgentProvider()
+    const { app } = createApp([provider])
+
+    await app.request('/api/v1/sessions?cursor=cur_1&limit=25&search=deploy')
+
+    expect(provider.calls[0]?.args[1]).toEqual({ limit: 25, cursor: 'cur_1', search: 'deploy' })
+  })
+
+  it('条数不是个数的时候，就当没有条数，而不是报错', async () => {
+    const provider = new FakeAgentProvider()
+    const { app } = createApp([provider])
+
+    const res = await app.request('/api/v1/sessions?limit=lots')
+
+    expect(res.status).toBe(200)
+    expect(provider.calls[0]?.args[1]).toEqual({})
+  })
+
+  it('空游标就是没有游标', async () => {
+    const provider = new FakeAgentProvider()
+    const { app } = createApp([provider])
+
+    await app.request('/api/v1/sessions?cursor=%20%20')
+
+    expect(provider.calls[0]?.args[1]).toEqual({})
+  })
+
+  it('别人的会话不该出现在列表里', async () => {
+    // An agent knows about conversations, not about people. The agent answers
+    // with everything in a directory, and the question of whose conversations
+    // those are is answered here, not by the agent.
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ directory: '/somebody/else' })] })
+    const registry = new ProviderRegistry()
+    registry.register(provider, { default: true })
+    const app = new Hono()
+    app.route(
+      '/api/v1',
+      createApiV1Routes(registry, database, {
+        name: 'opencode-manager',
+        version: async () => '1',
+        auth: authThatFinds({
+          session: { id: 'session-2', userId: 'user-2' },
+          user: { id: 'user-2', name: 'other', email: 'other@example.com', role: 'user' },
+        }),
+      }),
+    )
+
+    const res = await app.request('/api/v1/sessions')
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { sessions: Session[] }
+    expect(body.sessions).toEqual([])
   })
 
   it('工作目录要跟着请求一起送到 agent 那里', async () => {
@@ -257,7 +365,7 @@ describe('版本化 API', () => {
     const app = new Hono()
     app.route(
       '/api/v1',
-      createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1', auth: signedIn }),
+      createApiV1Routes(registry, database, { name: 'opencode-manager', version: async () => '1', auth: signedIn }),
     )
 
     const res = await app.request('/api/v1/sessions?agent=beta')
@@ -272,7 +380,7 @@ describe('版本化 API', () => {
     const protectedApi = new Hono()
     protectedApi.route(
       '/v1',
-      createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1', auth: signedIn }),
+      createApiV1Routes(registry, database, { name: 'opencode-manager', version: async () => '1', auth: signedIn }),
     )
     const app = new Hono()
     app.route('/api', protectedApi)
@@ -289,7 +397,7 @@ describe('版本化 API', () => {
     const app = new Hono()
     app.route(
       '/api/v1',
-      createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1', auth: signedOut }),
+      createApiV1Routes(registry, database, { name: 'opencode-manager', version: async () => '1', auth: signedOut }),
     )
 
     const res = await app.request('/api/v1/agents')
@@ -309,7 +417,7 @@ describe('版本化 API', () => {
     // the chance to say no in a different shape.
     app.route(
       '/api/v1',
-      createApiV1Routes(registry, { name: 'opencode-manager', version: async () => '1', auth: signedOut }),
+      createApiV1Routes(registry, database, { name: 'opencode-manager', version: async () => '1', auth: signedOut }),
     )
     const protectedApi = new Hono()
     protectedApi.use('/*', createAuthMiddleware(signedOut))
