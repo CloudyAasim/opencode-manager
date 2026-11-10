@@ -21,6 +21,7 @@
     "./notifications": "./src/notifications/index.ts",
     "./project-id": "./src/project-id-resolver.ts",
     "./api": "./src/api/index.ts",
+    "./api/bff": "./src/api/bff.ts",
     "./api/v1": "./src/api/v1.ts",
     "./api/v1-schema": "./src/api/v1-schema.ts"
   },

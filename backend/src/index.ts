@@ -63,6 +63,7 @@ import { sweepStaleUploadSessions } from './services/uploads/mirror-staging'
 import { createOpenCodeProxyRoutes } from './routes/opencode-proxy'
 import { createAuthenticatedOpenCodeProxyRoutes } from './routes/opencode-auth-proxy'
 import { createApiV1Routes } from './routes/api-v1'
+import { createBffRoutes } from './routes/bff'
 import { ProviderRegistry } from './providers/registry'
 import { OpenCodeProvider } from './providers/opencode/adapter'
 import { ClaudeCodeProvider } from './providers/cli/claude-code'
@@ -427,7 +428,7 @@ app.route('/api/opencode-proxy', createOpenCodeProxyRoutes(db, settingsService))
 // the one that answers - the protected API's gate covers everything under
 // `/api`, and whichever is registered first is the one that gets to say
 // no.
-app.route('/api/v1', createApiV1Routes(providerRegistry, {
+app.route('/api/v1', createApiV1Routes(providerRegistry, db, {
   name: 'opencode-manager',
   version: getAppVersion,
   auth,
@@ -467,6 +468,13 @@ protectedApi.route('/logs', createLogRoutes())
 app.route('/api', protectedApi)
 
 app.route('/api/opencode', createAuthenticatedOpenCodeProxyRoutes(openCodeClient, requireAuth, db))
+
+// The layer the web client talks to, mounted behind the protected API and
+// beside the OpenCode proxy. It is the client's only door: the client asks
+// this for the things it wants, and this asks the layers underneath. The
+// client never reaches for `/api/v1` itself, because that contract is meant
+// to be free to move and a client bound to it would move with it.
+app.route('/api/bff', createBffRoutes(providerRegistry, db, { auth }))
 
 const isProduction = ENV.SERVER.NODE_ENV === 'production'
 
