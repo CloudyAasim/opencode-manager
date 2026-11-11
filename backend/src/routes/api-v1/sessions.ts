@@ -13,20 +13,11 @@ import {
 } from '@opencode-manager/shared/api/v1'
 import type { Session } from '../../auth'
 import type { ProviderRegistry } from '../../providers/registry'
-import type { ListSessionsParams, ProviderContext } from '../../providers/contract'
+import type { ListSessionsParams } from '../../providers/contract'
 import { principalFrom } from '../../auth/ownership'
 import { callerVisibleSessions } from '../../services/session-scope'
 import { fail, handle, ok } from './respond'
-
-function agentIdOf(c: Context): string | undefined {
-  const value = c.req.query('agent')
-  return value && value.trim() ? value : undefined
-}
-
-function contextOf(c: Context): ProviderContext {
-  const directory = c.req.query('directory')
-  return directory ? { directory } : {}
-}
+import { agentIdOf, contextOf } from './params'
 
 /**
  * How much of the list to read. A limit that is not a number is no limit,

@@ -128,6 +128,43 @@ export function callerVisibleSessions<T extends SessionSummary>(
 }
 
 /**
+ * A pending request, as far as ownership goes.
+ *
+ * It is not a conversation, but it hangs on one, and that is enough to decide
+ * whose it is.
+ */
+export interface PendingRequestSummary {
+  sessionId: string
+  directory?: string | null
+}
+
+/**
+ * The pending requests of a list that this person may see.
+ *
+ * The same rule the conversation list follows, and for the same reason: a
+ * permission or a question belongs to a conversation, so the conversation
+ * decides whose it is. The ledger's owner decides; a conversation the ledger
+ * does not know is decided by the directory it was worked on.
+ */
+export function callerVisiblePendingRequests<T extends PendingRequestSummary>(
+  database: Database,
+  requests: readonly T[],
+  principal: Principal | null,
+): T[] {
+  if (principalIsAdmin(principal)) return [...requests]
+  const roots = resolveAccessRoots(database, principal)
+  const records = findAgentSessions(database, requests.map((request) => request.sessionId))
+  return requests.filter((request) =>
+    sessionVisibleTo(
+      { id: request.sessionId, directory: request.directory ?? null },
+      records.get(request.sessionId),
+      principal,
+      roots,
+    ),
+  )
+}
+
+/**
  * Whether a conversation is this person's to touch.
  *
  * The ledger answers when it knows the conversation. When it does not, the

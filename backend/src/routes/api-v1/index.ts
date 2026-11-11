@@ -6,6 +6,7 @@ import { createAuthMiddleware } from '../../auth/middleware'
 import type { ProviderRegistry } from '../../providers/registry'
 import { createAgentRoutes } from './agents'
 import { createSessionRoutes } from './sessions'
+import { createPendingRoutes } from './pending'
 import { fail, handle, ok } from './respond'
 
 export interface ApiV1Options {
@@ -42,6 +43,7 @@ export function createApiV1Routes(registry: ProviderRegistry, database: Database
 
   app.route('/agents', createAgentRoutes(registry))
   app.route('/sessions', createSessionRoutes(registry, database))
+  app.route('/pending', createPendingRoutes(registry, database))
 
   return app
 }
