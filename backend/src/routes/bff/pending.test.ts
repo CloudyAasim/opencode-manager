@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest'
+import { describe, expect, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { Hono } from 'hono'
 import { Database } from 'bun:sqlite'
 import { mkdtemp, rm } from 'node:fs/promises'
@@ -14,6 +14,7 @@ import {
 } from '../../../test/helpers/fake-agent-provider'
 import { migrate } from '../../db/migration-runner'
 import { allMigrations } from '../../db/migrations'
+import { recordAgentSession } from '../../services/agent-session'
 import type { PendingPermission, PendingQuestion } from '@opencode-manager/shared/api/v1'
 
 function authThatFinds(session: unknown): AuthInstance {
@@ -66,6 +67,12 @@ function createApp(
 }
 
 describe('这一层出的待办', () => {
+  beforeEach(() => {
+    // The ledger is shared by the whole file, and a row left behind by one
+    // test would decide another one's answer.
+    database.prepare('DELETE FROM ocm_agent_session').run()
+  })
+
   it('一次请求就能拿到好几个目录的待办', async () => {
     const provider = new FakeAgentProvider({
       pendingPermissions: [makePendingPermission({ id: 'perm-1' })],
@@ -183,5 +190,62 @@ describe('这一层出的待办', () => {
 
     const body = (await res.json()) as { permissions: PendingPermission[] }
     expect(body.permissions[0]?.directory).toBe('/work')
+  })
+
+  it('台账说了算，目录不算', async () => {
+    // The ledger knows the conversation, so the ledger's owner decides. The
+    // request hangs in somebody else's directory, and the directory is not
+    // the answer here: a conversation can sit in one person's checkout and
+    // still belong to another.
+    recordAgentSession(database, {
+      sessionId: 'session-mine',
+      userId: 'user-2',
+      username: 'other',
+      role: 'user',
+      directory: '/somebody/else',
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({
+      pendingPermissions: [
+        makePendingPermission({ id: 'perm-mine', sessionId: 'session-mine', directory: '/somebody/else' }),
+      ],
+    })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const own = path.join(workspace, 'users', 'user-2', 'workspace')
+    const res = await app.request(`/api/bff/pending?directories=${encodeURIComponent(own)}`)
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { permissions: PendingPermission[] }
+    expect(body.permissions.map((item) => item.id)).toEqual(['perm-mine'])
+  })
+
+  it('台账说不是你的，就不是你的', async () => {
+    // The other way round: the request hangs in the caller's own directory,
+    // and the ledger says the conversation belongs to somebody else. The
+    // ledger is the answer, so the request is not in the list.
+    const own = path.join(workspace, 'users', 'user-2', 'workspace')
+    recordAgentSession(database, {
+      sessionId: 'session-theirs',
+      userId: 'user-1',
+      username: 'user',
+      role: 'admin',
+      directory: own,
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({
+      pendingPermissions: [
+        makePendingPermission({ id: 'perm-theirs', sessionId: 'session-theirs', directory: own }),
+      ],
+    })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request(`/api/bff/pending?directories=${encodeURIComponent(own)}`)
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { permissions: PendingPermission[] }
+    expect(body.permissions).toEqual([])
   })
 })
