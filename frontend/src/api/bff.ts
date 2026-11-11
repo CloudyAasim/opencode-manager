@@ -1,4 +1,4 @@
-import type { Session } from '@opencode-manager/shared/api/v1'
+import type { PendingPermission, PendingQuestion, Session } from '@opencode-manager/shared/api/v1'
 import { fetchWrapper } from './fetchWrapper'
 
 /**
@@ -8,6 +8,13 @@ import { fetchWrapper } from './fetchWrapper'
  * its list: the layer the client talks to, not the agent behind it.
  */
 export const BFF_SESSIONS_ENDPOINT = '/api/bff/sessions'
+
+/**
+ * Where the pending requests live.
+ *
+ * The same layer, the same rule: the client asks it, and it asks the agent.
+ */
+export const BFF_PENDING_ENDPOINT = '/api/bff/pending'
 
 /**
  * The layer the client talks to for its session list.
@@ -28,6 +35,14 @@ export interface BffSessionListOptions {
   search?: string
   /** The cursors from a previous answer. */
   cursors?: Record<string, string>
+}
+
+/**
+ * What the agent is waiting for, across the named directories.
+ */
+export interface BffPendingResponse {
+  permissions: PendingPermission[]
+  questions: PendingQuestion[]
 }
 
 export class BffClient {
@@ -53,6 +68,22 @@ export class BffClient {
     }
     return fetchWrapper<BffSessionListResponse>(
       `${this.baseURL}${BFF_SESSIONS_ENDPOINT}?${params.toString()}`,
+    )
+  }
+
+  /**
+   * What the agent is waiting for, across the named directories.
+   *
+   * One request for every directory, the way the session list is one
+   * request for every directory.
+   */
+  async listPending(directories: string[]): Promise<BffPendingResponse> {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    return fetchWrapper<BffPendingResponse>(
+      `${this.baseURL}${BFF_PENDING_ENDPOINT}?${params.toString()}`,
     )
   }
 }

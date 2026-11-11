@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PermissionRequest, QuestionRequest } from '@/api/types'
+import type { PendingPermission, PendingQuestion } from '@opencode-manager/shared/api/v1'
+import type { QuestionRequest } from '@/api/types'
 import { EventProvider, useEventContext, usePermissions, useQuestions, useSSEHealth } from './EventContext'
 
 const mocks = vi.hoisted(() => ({
   listRepos: vi.fn(),
-  listPendingPermissions: vi.fn(),
-  listPendingQuestions: vi.fn(),
+  listPending: vi.fn(),
   replyToQuestion: vi.fn(),
   rejectQuestion: vi.fn(),
   respondToPermission: vi.fn(),
@@ -22,10 +22,17 @@ vi.mock('@/api/repos', () => ({
   listRepos: mocks.listRepos,
 }))
 
+// The client asks the layer for what the agent is waiting for, so that is
+// what this test controls: one answer for every directory, in the versioned
+// dialect the app keeps.
+vi.mock('@/api/bff', () => ({
+  createBffClient: vi.fn(() => ({
+    listPending: mocks.listPending,
+  })),
+}))
+
 vi.mock('@/api/opencode', () => ({
   OpenCodeClient: vi.fn(() => ({
-    listPendingPermissions: mocks.listPendingPermissions,
-    listPendingQuestions: mocks.listPendingQuestions,
     replyToQuestion: mocks.replyToQuestion,
     rejectQuestion: mocks.rejectQuestion,
     respondToPermission: mocks.respondToPermission,
@@ -46,7 +53,82 @@ vi.mock('@/lib/toast', () => ({
   },
 }))
 
-const pendingQuestion: QuestionRequest = {
+/**
+ * What the layer answers: the versioned dialect, the one the app keeps.
+ */
+const pendingQuestion: PendingQuestion = {
+  id: 'question-1',
+  sessionId: 'session-1',
+  directory: '/repo',
+  questions: [
+    {
+      question: 'Continue?',
+      header: 'Confirm',
+      options: [
+        {
+          label: 'Yes',
+          description: 'Continue',
+        },
+      ],
+      multiple: false,
+    },
+  ],
+  tool: null,
+}
+
+const secondPendingQuestion: PendingQuestion = {
+  id: 'question-2',
+  sessionId: 'session-2',
+  directory: '/repo',
+  questions: [
+    {
+      question: 'Deploy?',
+      header: 'Deploy',
+      options: [
+        {
+          label: 'Yes',
+          description: 'Deploy changes',
+        },
+      ],
+      multiple: false,
+    },
+  ],
+  tool: null,
+}
+
+const pendingPermission: PendingPermission = {
+  id: 'permission-1',
+  sessionId: 'session-1',
+  directory: '/repo',
+  permission: 'bash',
+  patterns: ['echo hello'],
+  metadata: {},
+  always: [],
+  tool: {
+    messageId: 'message-1',
+    callId: 'call-1',
+  },
+}
+
+const secondPendingPermission: PendingPermission = {
+  id: 'permission-2',
+  sessionId: 'session-1',
+  directory: '/repo',
+  permission: 'write',
+  patterns: ['/tmp/test.txt'],
+  metadata: {},
+  always: [],
+  tool: {
+    messageId: 'message-2',
+    callId: 'call-2',
+  },
+}
+
+/**
+ * What the stream says: the agent's own dialect, which is the one thing the
+ * app is allowed to hold in the agent's words.
+ */
+const agentQuestionEvent: QuestionRequest = {
   id: 'question-1',
   sessionID: 'session-1',
   questions: [
@@ -62,50 +144,6 @@ const pendingQuestion: QuestionRequest = {
       multiple: false,
     },
   ],
-}
-
-const secondPendingQuestion: QuestionRequest = {
-  id: 'question-2',
-  sessionID: 'session-2',
-  questions: [
-    {
-      question: 'Deploy?',
-      header: 'Deploy',
-      options: [
-        {
-          label: 'Yes',
-          description: 'Deploy changes',
-        },
-      ],
-      multiple: false,
-    },
-  ],
-}
-
-const pendingPermission: PermissionRequest = {
-  id: 'permission-1',
-  sessionID: 'session-1',
-  permission: 'bash',
-  patterns: ['echo hello'],
-  metadata: {},
-  always: [],
-  tool: {
-    messageID: 'message-1',
-    callID: 'call-1',
-  },
-}
-
-const secondPendingPermission: PermissionRequest = {
-  id: 'permission-2',
-  sessionID: 'session-1',
-  permission: 'write',
-  patterns: ['/tmp/test.txt'],
-  metadata: {},
-  always: [],
-  tool: {
-    messageID: 'message-2',
-    callID: 'call-2',
-  },
 }
 
 function Harness() {
@@ -130,8 +168,8 @@ function Harness() {
       <button onClick={navigateToCurrent}>Navigate</button>
       <button onClick={() => { if (current) void reject(current.id).catch(() => {}) }}>Dismiss</button>
       <button onClick={() => { if (current) void reply(current.id, [['Yes']]).catch(() => {}) }}>Reply</button>
-      <button onClick={() => { const p = permissions.current; if (p) void permissions.respond(p.id, p.sessionID, 'allow').catch(() => {}) }}>Allow Permission</button>
-      <button onClick={() => { const p = permissions.current; if (p) void permissions.respond(p.id, p.sessionID, 'reject').catch(() => {}) }}>Reject Permission</button>
+      <button onClick={() => { const p = permissions.current; if (p) void permissions.respond(p.id, p.sessionId, 'allow').catch(() => {}) }}>Allow Permission</button>
+      <button onClick={() => { const p = permissions.current; if (p) void permissions.respond(p.id, p.sessionId, 'reject').catch(() => {}) }}>Reject Permission</button>
     </div>
   )
 }
@@ -156,8 +194,7 @@ describe('EventProvider questions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.listRepos.mockResolvedValue([])
-    mocks.listPendingPermissions.mockResolvedValue([])
-    mocks.listPendingQuestions.mockResolvedValue([])
+    mocks.listPending.mockResolvedValue({ permissions: [], questions: [] })
     mocks.replyToQuestion.mockResolvedValue(undefined)
     mocks.rejectQuestion.mockResolvedValue(undefined)
     // vi.clearAllMocks() keeps implementations, so every mock this block reads
@@ -174,7 +211,7 @@ describe('EventProvider questions', () => {
   })
 
   it('syncs missed pending questions for a session', async () => {
-    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion])
+    mocks.listPending.mockResolvedValue({ permissions: [], questions: [pendingQuestion] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -187,7 +224,7 @@ describe('EventProvider questions', () => {
   })
 
   it('syncs missed pending permissions for a session', async () => {
-    mocks.listPendingPermissions.mockResolvedValue([pendingPermission])
+    mocks.listPending.mockResolvedValue({ permissions: [pendingPermission], questions: [] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -201,9 +238,9 @@ describe('EventProvider questions', () => {
   })
 
   it('clears stale pending permissions for a session', async () => {
-    mocks.listPendingPermissions
-      .mockResolvedValueOnce([pendingPermission])
-      .mockResolvedValueOnce([])
+    mocks.listPending
+      .mockResolvedValueOnce({ permissions: [pendingPermission], questions: [] })
+      .mockResolvedValueOnce({ permissions: [], questions: [] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -222,7 +259,7 @@ describe('EventProvider questions', () => {
   })
 
   it('advances to the remaining permission after rejecting the current one of two in the same session', async () => {
-    mocks.listPendingPermissions.mockResolvedValue([pendingPermission, secondPendingPermission])
+    mocks.listPending.mockResolvedValue({ permissions: [pendingPermission, secondPendingPermission], questions: [] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -244,9 +281,9 @@ describe('EventProvider questions', () => {
   })
 
   it('clears stale pending questions for a session', async () => {
-    mocks.listPendingQuestions
-      .mockResolvedValueOnce([pendingQuestion])
-      .mockResolvedValueOnce([])
+    mocks.listPending
+      .mockResolvedValueOnce({ permissions: [], questions: [pendingQuestion] })
+      .mockResolvedValueOnce({ permissions: [], questions: [] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -265,9 +302,9 @@ describe('EventProvider questions', () => {
   })
 
   it('reconciles pending questions for the whole directory', async () => {
-    mocks.listPendingQuestions
-      .mockResolvedValueOnce([pendingQuestion, secondPendingQuestion])
-      .mockResolvedValueOnce([pendingQuestion])
+    mocks.listPending
+      .mockResolvedValueOnce({ permissions: [], questions: [pendingQuestion, secondPendingQuestion] })
+      .mockResolvedValueOnce({ permissions: [], questions: [pendingQuestion] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -286,7 +323,7 @@ describe('EventProvider questions', () => {
   })
 
   it('resolves pending questions per session independently of the global current', async () => {
-    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion, secondPendingQuestion])
+    mocks.listPending.mockResolvedValue({ permissions: [], questions: [pendingQuestion, secondPendingQuestion] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -304,9 +341,9 @@ describe('EventProvider questions', () => {
 
   it('reconciles stale pending questions after reconnect', async () => {
     mocks.listRepos.mockResolvedValue([{ id: 123, fullPath: '/repo' }])
-    mocks.listPendingQuestions
-      .mockResolvedValueOnce([pendingQuestion])
-      .mockResolvedValueOnce([])
+    mocks.listPending
+      .mockResolvedValueOnce({ permissions: [], questions: [pendingQuestion] })
+      .mockResolvedValueOnce({ permissions: [], questions: [] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -326,7 +363,7 @@ describe('EventProvider questions', () => {
 
   it('navigates to a synced pending question without session query cache', async () => {
     mocks.listRepos.mockResolvedValue([{ id: 123, fullPath: '/repo' }])
-    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion])
+    mocks.listPending.mockResolvedValue({ permissions: [], questions: [pendingQuestion] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -344,7 +381,7 @@ describe('EventProvider questions', () => {
   })
 
   it('clears a pending question after dismiss succeeds', async () => {
-    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion])
+    mocks.listPending.mockResolvedValue({ permissions: [], questions: [pendingQuestion] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -363,7 +400,7 @@ describe('EventProvider questions', () => {
   })
 
   it('clears a pending question after reply succeeds', async () => {
-    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion])
+    mocks.listPending.mockResolvedValue({ permissions: [], questions: [pendingQuestion] })
 
     render(<Harness />, { wrapper: createWrapper() })
 
@@ -384,7 +421,7 @@ describe('EventProvider questions', () => {
   it('dismisses the question before the reply finishes', async () => {
     let release!: () => void
     const inFlight = new Promise<void>((resolve) => { release = resolve })
-    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion])
+    mocks.listPending.mockResolvedValue({ permissions: [], questions: [pendingQuestion] })
     mocks.replyToQuestion.mockReturnValue(inFlight)
 
     render(<Harness />, { wrapper: createWrapper() })
@@ -403,7 +440,7 @@ describe('EventProvider questions', () => {
   })
 
   it('brings the question back when the reply fails', async () => {
-    mocks.listPendingQuestions.mockResolvedValue([pendingQuestion])
+    mocks.listPending.mockResolvedValue({ permissions: [], questions: [pendingQuestion] })
     mocks.replyToQuestion.mockRejectedValue(new Error('offline'))
 
     render(<Harness />, { wrapper: createWrapper() })
@@ -417,7 +454,7 @@ describe('EventProvider questions', () => {
   it('takes the permission off screen before the answer is sent', async () => {
     let release!: () => void
     const inFlight = new Promise<void>((resolve) => { release = resolve })
-    mocks.listPendingPermissions.mockResolvedValue([pendingPermission])
+    mocks.listPending.mockResolvedValue({ permissions: [pendingPermission], questions: [] })
     mocks.respondToPermission.mockReturnValue(inFlight)
 
     render(<Harness />, { wrapper: createWrapper() })
@@ -434,7 +471,7 @@ describe('EventProvider questions', () => {
   })
 
   it('brings the permission back when answering fails', async () => {
-    mocks.listPendingPermissions.mockResolvedValue([pendingPermission])
+    mocks.listPending.mockResolvedValue({ permissions: [pendingPermission], questions: [] })
     mocks.respondToPermission.mockRejectedValue(new Error('offline'))
 
     render(<Harness />, { wrapper: createWrapper() })
@@ -460,7 +497,7 @@ describe('EventProvider questions', () => {
     act(() => {
       onEvent({
         type: 'question.asked',
-        properties: pendingQuestion,
+        properties: agentQuestionEvent,
         directory: '/repo',
       })
     })
@@ -664,9 +701,9 @@ describe('EventProvider questions', () => {
 
     // Wait for the repos query to resolve and the initial fetch to happen.
     await waitFor(() => {
-      expect(mocks.listPendingPermissions.mock.calls.length).toBeGreaterThan(0)
+      expect(mocks.listPending.mock.calls.length).toBeGreaterThan(0)
     })
-    const callsBeforeEdge = mocks.listPendingPermissions.mock.calls.length
+    const callsBeforeEdge = mocks.listPending.mock.calls.length
 
     act(() => {
       onHealthChange({ isConnected: true, isHealthy: true, lastEventAt: 1, isStalled: false })
@@ -677,7 +714,7 @@ describe('EventProvider questions', () => {
     })
 
     await waitFor(() => {
-      expect(mocks.listPendingPermissions.mock.calls.length).toBeGreaterThan(callsBeforeEdge)
+      expect(mocks.listPending.mock.calls.length).toBeGreaterThan(callsBeforeEdge)
     })
   })
 
@@ -700,7 +737,7 @@ describe('EventProvider questions', () => {
     render(<div data-testid="probe" />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(mocks.listPendingPermissions.mock.calls.length).toBeGreaterThan(0)
+      expect(mocks.listPending.mock.calls.length).toBeGreaterThan(0)
     })
 
     act(() => {
@@ -708,9 +745,9 @@ describe('EventProvider questions', () => {
     })
 
     await waitFor(() => {
-      expect(mocks.listPendingPermissions.mock.calls.length).toBeGreaterThan(0)
+      expect(mocks.listPending.mock.calls.length).toBeGreaterThan(0)
     })
-    const afterEdge = mocks.listPendingPermissions.mock.calls.length
+    const afterEdge = mocks.listPending.mock.calls.length
 
     act(() => {
       onHealthChange({ isConnected: true, isHealthy: false, lastEventAt: 2, isStalled: true })
@@ -718,6 +755,6 @@ describe('EventProvider questions', () => {
       onHealthChange({ isConnected: true, isHealthy: false, lastEventAt: 4, isStalled: true })
     })
 
-    expect(mocks.listPendingPermissions.mock.calls.length).toBe(afterEdge)
+    expect(mocks.listPending.mock.calls.length).toBe(afterEdge)
   })
 })

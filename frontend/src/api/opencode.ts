@@ -11,8 +11,6 @@ type CommandRequest = NonNullable<paths['/session/{sessionID}/command']['post'][
 type SendCommandResponse = paths['/session/{sessionID}/command']['post']['responses']['200']['content']['application/json']
 type ShellRequest = NonNullable<paths['/session/{sessionID}/shell']['post']['requestBody']>['content']['application/json']
 type AgentListResponse = paths['/agent']['get']['responses']['200']['content']['application/json']
-type PermissionListResponse = paths['/permission']['get']['responses']['200']['content']['application/json']
-type QuestionListResponse = paths['/question']['get']['responses']['200']['content']['application/json']
 type LspStatusResponse = paths['/lsp']['get']['responses']['200']['content']['application/json']
 type LspStatus = LspStatusResponse[number]
 
@@ -180,12 +178,6 @@ export class OpenCodeClient {
     })
   }
 
-  async listPendingPermissions() {
-    return fetchWrapper<PermissionListResponse>(`${this.baseURL}/permission`, {
-      params: this.getParams(),
-    })
-  }
-
   async replyToQuestion(requestID: string, answers: string[][]) {
     return fetchWrapper(`${this.baseURL}/question/${requestID}/reply`, {
       method: 'POST',
@@ -198,12 +190,6 @@ export class OpenCodeClient {
   async rejectQuestion(requestID: string) {
     return fetchWrapper(`${this.baseURL}/question/${requestID}/reject`, {
       method: 'POST',
-      params: this.getParams(),
-    })
-  }
-
-  async listPendingQuestions() {
-    return fetchWrapper<QuestionListResponse>(`${this.baseURL}/question`, {
       params: this.getParams(),
     })
   }

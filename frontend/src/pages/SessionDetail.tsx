@@ -59,7 +59,7 @@ import { RepoOverlays } from "@/features/repos/RepoOverlays";
 import { createOpenCodeClient } from "@/api/opencode";
 import { usePermissions, useQuestions, useSSEHealth } from "@/contexts/EventContext";
 import { useSessionStatusForSession } from "@/stores/sessionStatusStore";
-import type { QuestionRequest } from "@/api/types";
+import type { PendingQuestion } from '@opencode-manager/shared/api/v1';
 import { QuestionPrompt } from "@/features/session/QuestionPrompt";
 import { MinimizedQuestionIndicator } from "@/features/session/MinimizedQuestionIndicator";
 import { PendingActionsGroup } from "@/features/notifications/PendingActionsGroup";
@@ -273,7 +273,7 @@ export function SessionDetail() {
   // they feed.
   const [commandsPanelOpen, setCommandsPanelOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
-  const [minimizedQuestion, setMinimizedQuestion] = useState<QuestionRequest | null>(null);
+  const [minimizedQuestion, setMinimizedQuestion] = useState<PendingQuestion | null>(null);
 
   const isMobile = useMobile();
   const { keyboardHeight } = useVisualViewport();
@@ -536,7 +536,7 @@ export function SessionDetail() {
   const handleShowSessionsDialog = useCallback(() => setSessionsDialogOpen(true), [setSessionsDialogOpen]);
   const handleShowHelpDialog = useCallback(() => openSettings(), [openSettings]);
 
-  const handleMinimizeQuestion = useCallback((question: QuestionRequest) => {
+  const handleMinimizeQuestion = useCallback((question: PendingQuestion) => {
     setMinimizedQuestion(question)
   }, [])
   
@@ -545,7 +545,7 @@ export function SessionDetail() {
   }, [])
 
   useEffect(() => {
-    if (minimizedQuestion && minimizedQuestion.sessionID !== sessionId) {
+    if (minimizedQuestion && minimizedQuestion.sessionId !== sessionId) {
       setMinimizedQuestion(null)
     }
   }, [sessionId, minimizedQuestion])
@@ -908,7 +908,7 @@ export function SessionDetail() {
                   <span className="text-sm font-medium">{t('session.header.waitingShortcut')}</span>
                 </div>
               )}
-              {minimizedQuestion && minimizedQuestion.sessionID === sessionId && (
+              {minimizedQuestion && minimizedQuestion.sessionId === sessionId && (
                 <MinimizedQuestionIndicator
                   question={minimizedQuestion}
                   onRestore={handleRestoreQuestion}

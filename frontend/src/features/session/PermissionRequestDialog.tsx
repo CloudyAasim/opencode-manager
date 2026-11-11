@@ -8,14 +8,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import type { PermissionRequest, PermissionResponse } from '@/api/types'
+import type { PendingPermission } from '@opencode-manager/shared/api/v1'
+import type { PermissionResponse } from '@/api/types'
 import { getPermissionLabel, getPermissionDetail } from '@opencode-manager/shared/notifications'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
 
 interface PermissionRequestDialogProps {
-  permission: PermissionRequest | null
+  permission: PendingPermission | null
   pendingCount: number
   isFromDifferentSession?: boolean
   sessionTitle?: string
@@ -46,7 +47,7 @@ export function PermissionRequestDialog({
     setIsLoading(true)
     setLoadingAction(response)
     try {
-      await onRespond(permission.id, permission.sessionID, response)
+      await onRespond(permission.id, permission.sessionId, response)
     } catch {
       showToast.error(t('session.permission.respondFailed'))
     } finally {
@@ -58,7 +59,7 @@ export function PermissionRequestDialog({
   const typeLabel = getPermissionLabel(permission.permission)
   const details = getPermissionDetail(permission)
   const hasMultiple = pendingCount > 1
-  const displaySessionName = sessionTitle || t('session.permission.sessionFallback', { id: permission.sessionID.slice(0, 8) })
+  const displaySessionName = sessionTitle || t('session.permission.sessionFallback', { id: permission.sessionId.slice(0, 8) })
 
   return (
     <Dialog open={parentOpen ?? true} onOpenChange={onOpenChange ?? (() => {})}>

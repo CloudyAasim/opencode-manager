@@ -2,14 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, ChevronRight, ChevronDown, ChevronUp, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import type { QuestionRequest, QuestionInfo } from '@/api/types'
+import type { PendingQuestion, PendingQuestionInfo } from '@opencode-manager/shared/api/v1'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
 import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 interface QuestionPromptProps {
-  question: QuestionRequest
+  question: PendingQuestion
   onReply: (requestID: string, answers: string[][]) => Promise<void>
   onReject: (requestID: string) => Promise<void>
   onMinimize?: () => void
@@ -313,7 +313,7 @@ export function QuestionPrompt({ question, onReply, onReject, onMinimize }: Ques
 }
 
 interface QuestionStepProps {
-  question: QuestionInfo
+  question: PendingQuestionInfo
   answers: string[]
   customInput: string
   confirmedCustom: string
@@ -460,7 +460,7 @@ function QuestionStep({
 }
 
 interface ConfirmStepProps {
-  questions: QuestionInfo[]
+  questions: PendingQuestionInfo[]
   answers: string[][]
   onEditQuestion: (index: number) => void
 }

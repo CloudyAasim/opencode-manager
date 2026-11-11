@@ -3,28 +3,31 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo, u
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { OpenCodeClient } from '@/api/opencode'
+import { createBffClient } from '@/api/bff'
+import { toPendingPermission, toPendingQuestion } from '@/api/pending'
 import { listRepos } from '@/api/repos'
-import type { PermissionRequest, PermissionResponse, QuestionRequest, SSEEvent, SSHHostKeyRequest, Repo } from '@/api/types'
+import type { PendingPermission, PendingQuestion } from '@opencode-manager/shared/api/v1'
+import type { PermissionResponse, SSEEvent, SSHHostKeyRequest, Repo } from '@/api/types'
 import { showToast } from '@/lib/toast'
 import { openCodeEventStream, type EventStreamHealthState } from '@/lib/opencode-event-stream'
-import { OPENCODE_API_ENDPOINT } from '@/config'
+import { API_BASE_URL, OPENCODE_API_ENDPOINT } from '@/config'
 import { addToSessionKeyedState, removeFromSessionKeyedState } from '@/lib/sessionKeyedState'
 import { invalidateRepoGitCachesDebounced, isSessionListQueryKey } from '@/lib/queryInvalidation'
 import { optimisticallyErrorToolPart } from '@/lib/optimisticToolError'
 import { useI18n } from '@/lib/i18n'
 
-type PermissionsBySession = Record<string, PermissionRequest[]>
-type QuestionsBySession = Record<string, QuestionRequest[]>
+type PermissionsBySession = Record<string, PendingPermission[]>
+type QuestionsBySession = Record<string, PendingQuestion[]>
 type SSEHealthState = Pick<EventStreamHealthState, 'isConnected' | 'isHealthy' | 'isStalled'>
 
-type SessionScopedItem = { id: string; sessionID: string }
+type SessionScopedItem = { id: string; sessionId: string }
 
 function groupBySession<T extends SessionScopedItem>(items: T[]): Record<string, T[]> {
   return items.reduce<Record<string, T[]>>((grouped, item) => {
-    const existing = grouped[item.sessionID] ?? []
+    const existing = grouped[item.sessionId] ?? []
     return {
       ...grouped,
-      [item.sessionID]: [...existing, item],
+      [item.sessionId]: [...existing, item],
     }
   }, {})
 }
@@ -45,24 +48,33 @@ function repoMatchesDirectory(repo: Repo, directory?: string | null) {
     .some((path) => normalizeDirectory(path) === normalizedDirectory)
 }
 
-function reconcileBySessionForDirectory<T extends SessionScopedItem>(
+/**
+ * The answer the server gave, put next to what the app already had.
+ *
+ * A session the answer mentions has the answer's requests and nothing else.
+ * A session the answer does not mention is gone - but only if it belonged to
+ * one of the directories that were asked about, because the answer says
+ * nothing about the directories that were not.
+ */
+function reconcileBySessionForDirectories<T extends SessionScopedItem>(
   prev: Record<string, T[]>,
-  directory: string,
+  directories: string[],
   items: T[],
   sessionDirectories: Map<string, string>,
 ): Record<string, T[]> {
   const grouped = groupBySession(items)
   const next = { ...prev }
 
-  for (const sessionID of Object.keys(prev)) {
-    if (grouped[sessionID]) continue
-    if (sessionDirectories.get(sessionID) === directory) {
-      delete next[sessionID]
+  for (const sessionId of Object.keys(prev)) {
+    if (grouped[sessionId]) continue
+    const directory = sessionDirectories.get(sessionId)
+    if (directory && directories.includes(directory)) {
+      delete next[sessionId]
     }
   }
 
-  for (const [sessionID, sessionItems] of Object.entries(grouped)) {
-    next[sessionID] = sortById(sessionItems)
+  for (const [sessionId, sessionItems] of Object.entries(grouped)) {
+    next[sessionId] = sortById(sessionItems)
   }
 
   return next
@@ -76,11 +88,11 @@ interface SSHHostKeyState {
 interface EventContextValue {
   sshHostKey: SSHHostKeyState
   permissions: {
-    current: PermissionRequest | null
+    current: PendingPermission | null
     pendingCount: number
     respond: (permissionID: string, sessionID: string, response: PermissionResponse) => Promise<void>
     dismiss: (permissionID: string, sessionID?: string) => void
-    getForCallID: (callID: string, sessionID: string) => PermissionRequest | null
+    getForCallID: (callID: string, sessionID: string) => PendingPermission | null
     hasForSession: (sessionID: string) => boolean
     showDialog: boolean
     setShowDialog: (show: boolean) => void
@@ -88,13 +100,13 @@ interface EventContextValue {
     syncForSession: (directory: string, sessionID: string) => Promise<void>
   }
   questions: {
-    current: QuestionRequest | null
+    current: PendingQuestion | null
     pendingCount: number
     reply: (requestID: string, answers: string[][]) => Promise<void>
     reject: (requestID: string) => Promise<void>
     dismiss: (requestID: string, sessionID?: string) => void
-    getForCallID: (callID: string, sessionID: string) => QuestionRequest | null
-    getForSession: (sessionID: string) => QuestionRequest | null
+    getForCallID: (callID: string, sessionID: string) => PendingQuestion | null
+    getForSession: (sessionID: string) => PendingQuestion | null
     hasForSession: (sessionID: string) => boolean
     navigateToCurrent: () => void
     syncForSession: (directory: string, sessionID: string) => Promise<void>
@@ -267,7 +279,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     return client
   }, [findSessionInCache])
 
-  const addPermission = useCallback((permission: PermissionRequest) => {
+  const addPermission = useCallback((permission: PendingPermission) => {
     addToSessionKeyedState(setPermissionsBySession, permission)
   }, [])
 
@@ -275,7 +287,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     removeFromSessionKeyedState(setPermissionsBySession, permissionID, sessionID)
   }, [])
 
-  const addQuestion = useCallback((question: QuestionRequest) => {
+  const addQuestion = useCallback((question: PendingQuestion) => {
     addToSessionKeyedState(setQuestionsBySession, question)
   }, [])
 
@@ -283,23 +295,50 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     removeFromSessionKeyedState(setQuestionsBySession, requestID, sessionID)
   }, [])
 
-  const reconcilePermissionsForDirectory = useCallback((directory: string, permissions: PermissionRequest[]) => {
+  /**
+   * The answer of the layer, put next to what the app already had.
+   *
+   * The requests know the directory they were asked about, so the app does
+   * not have to work it out - and it does not have to ask the agent for each
+   * directory by itself.
+   */
+  const reconcilePermissions = useCallback((
+    permissions: PendingPermission[],
+    directories: string[],
+  ) => {
     permissions.forEach(permission => {
-      rememberSessionDirectory(permission.sessionID, directory)
+      if (permission.directory) {
+        rememberSessionDirectory(permission.sessionId, permission.directory)
+      }
     })
 
     setPermissionsBySession(prev =>
-      reconcileBySessionForDirectory(prev, directory, permissions, sessionDirectoriesRef.current),
+      reconcileBySessionForDirectories(
+        prev,
+        directories,
+        permissions,
+        sessionDirectoriesRef.current,
+      ),
     )
   }, [rememberSessionDirectory])
 
-  const reconcileQuestionsForDirectory = useCallback((directory: string, questions: QuestionRequest[]) => {
+  const reconcileQuestions = useCallback((
+    questions: PendingQuestion[],
+    directories: string[],
+  ) => {
     questions.forEach(question => {
-      rememberSessionDirectory(question.sessionID, directory)
+      if (question.directory) {
+        rememberSessionDirectory(question.sessionId, question.directory)
+      }
     })
 
     setQuestionsBySession(prev =>
-      reconcileBySessionForDirectory(prev, directory, questions, sessionDirectoriesRef.current),
+      reconcileBySessionForDirectories(
+        prev,
+        directories,
+        questions,
+        sessionDirectoriesRef.current,
+      ),
     )
   }, [rememberSessionDirectory])
 
@@ -330,7 +369,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
     const permission = (permissionsBySession[sessionID] ?? []).find(p => p.id === permissionID)
     if (response === 'reject' && permission?.tool) {
-      optimisticallyErrorToolPart(queryClient, sessionID, permission.tool.messageID, permission.tool.callID, 'Permission denied')
+      optimisticallyErrorToolPart(queryClient, sessionID, permission.tool.messageId, permission.tool.callId, 'Permission denied')
     }
 
     removePermission(permissionID, sessionID)
@@ -345,9 +384,9 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   const replyToQuestion = useCallback(async (requestID: string, answers: string[][]) => {
     const question = Object.values(questionsBySession).flat().find(q => q.id === requestID)
     if (!question) throw new Error('Question not found')
-    const client = getClient(question.sessionID)
+    const client = getClient(question.sessionId)
     if (!client) throw new Error('No client found for session')
-    removeQuestion(requestID, question.sessionID)
+    removeQuestion(requestID, question.sessionId)
     try {
       await client.replyToQuestion(requestID, answers)
     } catch (error) {
@@ -359,14 +398,14 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   const rejectQuestion = useCallback(async (requestID: string) => {
     const question = Object.values(questionsBySession).flat().find(q => q.id === requestID)
     if (!question) throw new Error('Question not found')
-    const client = getClient(question.sessionID)
+    const client = getClient(question.sessionId)
     if (!client) throw new Error('No client found for session')
 
     if (question.tool) {
-      optimisticallyErrorToolPart(queryClient, question.sessionID, question.tool.messageID, question.tool.callID, 'Question rejected')
+      optimisticallyErrorToolPart(queryClient, question.sessionId, question.tool.messageId, question.tool.callId, 'Question rejected')
     }
 
-    removeQuestion(requestID, question.sessionID)
+    removeQuestion(requestID, question.sessionId)
     try {
       await client.rejectQuestion(requestID)
     } catch (error) {
@@ -375,24 +414,24 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     }
   }, [getClient, questionsBySession, queryClient, removeQuestion, addQuestion])
 
-  const getPermissionForCallID = useCallback((callID: string, sessionID: string): PermissionRequest | null => {
+  const getPermissionForCallID = useCallback((callID: string, sessionID: string): PendingPermission | null => {
     const perms = permissionsBySession[sessionID] ?? []
     return perms.find(p => {
       const metadata = p.metadata as { tool?: { id?: string } } | undefined
-      return p.tool?.callID === callID || metadata?.tool?.id === callID
+      return p.tool?.callId === callID || metadata?.tool?.id === callID
     }) ?? null
   }, [permissionsBySession])
 
-  const getQuestionForCallID = useCallback((callID: string, sessionID: string): QuestionRequest | null => {
+  const getQuestionForCallID = useCallback((callID: string, sessionID: string): PendingQuestion | null => {
     const questions = questionsBySession[sessionID] ?? []
-    return questions.find(q => q.tool?.callID === callID) ?? null
+    return questions.find(q => q.tool?.callId === callID) ?? null
   }, [questionsBySession])
 
   const hasPermissionsForSession = useCallback((sessionID: string): boolean => {
     return (permissionsBySession[sessionID]?.length ?? 0) > 0
   }, [permissionsBySession])
 
-  const getQuestionForSession = useCallback((sessionID: string): QuestionRequest | null => {
+  const getQuestionForSession = useCallback((sessionID: string): PendingQuestion | null => {
     return questionsBySession[sessionID]?.[0] ?? null
   }, [questionsBySession])
 
@@ -402,9 +441,9 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
   const navigateToCurrentQuestion = useCallback(() => {
     if (!currentQuestion) return
-    const repoId = getRepoIdForSession(currentQuestion.sessionID)
+    const repoId = getRepoIdForSession(currentQuestion.sessionId)
     if (repoId) {
-      const targetPath = `/repos/${repoId}/sessions/${currentQuestion.sessionID}`
+      const targetPath = `/repos/${repoId}/sessions/${currentQuestion.sessionId}`
       if (window.location.pathname !== targetPath) {
         navigate(targetPath)
       }
@@ -413,9 +452,9 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
   const navigateToCurrentPermission = useCallback(() => {
     if (!currentPermission) return
-    const repoId = getRepoIdForSession(currentPermission.sessionID)
+    const repoId = getRepoIdForSession(currentPermission.sessionId)
     if (repoId) {
-      const targetPath = `/repos/${repoId}/sessions/${currentPermission.sessionID}`
+      const targetPath = `/repos/${repoId}/sessions/${currentPermission.sessionId}`
       if (window.location.pathname !== targetPath) {
         navigate(targetPath)
       }
@@ -428,34 +467,34 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
     const uniqueDirectories = [...new Set(reposToUse.map(r => r.fullPath))]
 
-    await Promise.allSettled(
-      uniqueDirectories.map(async (directory) => {
-        const client = new OpenCodeClient(OPENCODE_API_ENDPOINT, directory)
-        const [pendingPermissions, pendingQuestions] = await Promise.all([
-          client.listPendingPermissions(),
-          client.listPendingQuestions(),
-        ])
-        reconcilePermissionsForDirectory(directory, pendingPermissions ?? [])
-        reconcileQuestionsForDirectory(directory, pendingQuestions ?? [])
-      })
-    )
-  }, [reconcilePermissionsForDirectory, reconcileQuestionsForDirectory])
+    // One request for every directory. The client used to ask the agent for
+    // the pending permissions of each directory and the pending questions of
+    // each directory - two requests per directory - and merge the answers
+    // itself. That is the server's job, and it moved to the layer the client
+    // talks to.
+    try {
+      const pending = await createBffClient(API_BASE_URL).listPending(uniqueDirectories)
+      reconcilePermissions(pending.permissions, uniqueDirectories)
+      reconcileQuestions(pending.questions, uniqueDirectories)
+    } catch {
+      // A directory that cannot be asked does not take the others with it.
+      // The stream will bring the news when it comes.
+    }
+  }, [reconcilePermissions, reconcileQuestions])
 
   fetchInitialPendingDataRef.current = fetchInitialPendingData
 
   const syncPermissionsForSession = useCallback(async (directory: string, sessionID: string) => {
-    const client = new OpenCodeClient(OPENCODE_API_ENDPOINT, directory)
-    const pendingPermissions = await client.listPendingPermissions()
+    const pending = await createBffClient(API_BASE_URL).listPending([directory])
     rememberSessionDirectory(sessionID, directory)
-    reconcilePermissionsForDirectory(directory, pendingPermissions ?? [])
-  }, [rememberSessionDirectory, reconcilePermissionsForDirectory])
+    reconcilePermissions(pending.permissions, [directory])
+  }, [rememberSessionDirectory, reconcilePermissions])
 
   const syncQuestionsForSession = useCallback(async (directory: string, sessionID: string) => {
-    const client = new OpenCodeClient(OPENCODE_API_ENDPOINT, directory)
-    const pendingQuestions = await client.listPendingQuestions()
+    const pending = await createBffClient(API_BASE_URL).listPending([directory])
     rememberSessionDirectory(sessionID, directory)
-    reconcileQuestionsForDirectory(directory, pendingQuestions ?? [])
-  }, [rememberSessionDirectory, reconcileQuestionsForDirectory])
+    reconcileQuestions(pending.questions, [directory])
+  }, [rememberSessionDirectory, reconcileQuestions])
 
   useEffect(() => {
     const handleSSEMessage = (data: unknown) => {
@@ -467,7 +506,9 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         case 'permission.asked':
           if ('permission' in event.properties && 'sessionID' in event.properties) {
             rememberSessionDirectory(event.properties.sessionID as string, event.directory)
-            addPermission(event.properties as PermissionRequest)
+            // The stream speaks the agent's dialect; the app keeps the
+            // versioned one, so the two meet here and only here.
+            addPermission(toPendingPermission(event.properties, event.directory))
           }
           break
         case 'permission.replied':
@@ -481,7 +522,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         case 'question.asked':
           if ('questions' in event.properties && 'sessionID' in event.properties && 'id' in event.properties) {
             rememberSessionDirectory(event.properties.sessionID as string, event.directory)
-            addQuestion(event.properties as QuestionRequest)
+            addQuestion(toPendingQuestion(event.properties, event.directory))
           }
           break
         case 'ssh.host-key-request':

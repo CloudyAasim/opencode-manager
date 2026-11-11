@@ -1,10 +1,10 @@
 import { X } from 'lucide-react'
-import type { QuestionRequest } from '@/api/types'
+import type { PendingQuestion } from '@opencode-manager/shared/api/v1'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 
 interface MinimizedQuestionIndicatorProps {
-  question: QuestionRequest
+  question: PendingQuestion
   onRestore: () => void
   onDismiss: () => void
 }

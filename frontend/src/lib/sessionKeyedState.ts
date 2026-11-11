@@ -1,4 +1,4 @@
-type SessionKeyedItem = { id: string; sessionID: string }
+type SessionKeyedItem = { id: string; sessionId: string }
 type SessionKeyedState<T> = Record<string, T[]>
 type StateSetter<T> = React.Dispatch<React.SetStateAction<SessionKeyedState<T>>>
 
@@ -7,35 +7,35 @@ export function addToSessionKeyedState<T extends SessionKeyedItem>(
   item: T
 ): void {
   setter(prev => {
-    const sessionID = item.sessionID
-    const existing = prev[sessionID] ?? []
+    const sessionId = item.sessionId
+    const existing = prev[sessionId] ?? []
     const existingIndex = existing.findIndex(i => i.id === item.id)
     
     if (existingIndex >= 0) {
       const updated = [...existing]
       updated[existingIndex] = item
-      return { ...prev, [sessionID]: updated }
+      return { ...prev, [sessionId]: updated }
     }
-    return { ...prev, [sessionID]: [...existing, item] }
+    return { ...prev, [sessionId]: [...existing, item] }
   })
 }
 
 export function removeFromSessionKeyedState<T extends SessionKeyedItem>(
   setter: StateSetter<T>,
   id: string,
-  sessionID?: string
+  sessionId?: string
 ): void {
   setter(prev => {
-    if (sessionID) {
-      const existing = prev[sessionID]
+    if (sessionId) {
+      const existing = prev[sessionId]
       if (!existing) return prev
       const filtered = existing.filter(i => i.id !== id)
       if (filtered.length === 0) {
-        const { [sessionID]: _removed, ...rest } = prev
+        const { [sessionId]: _removed, ...rest } = prev
       void _removed
         return rest
       }
-      return { ...prev, [sessionID]: filtered }
+      return { ...prev, [sessionId]: filtered }
     }
     
     const newState: SessionKeyedState<T> = {}

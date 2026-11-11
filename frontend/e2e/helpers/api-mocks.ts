@@ -155,6 +155,21 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
     return json(route, { sessions: sessions.map(bffSessionShape), cursors: {} })
   })
 
+  // The same layer answers for what the agent is waiting for: both kinds in
+  // one answer, for every directory at once.
+  await page.route('**/api/bff/pending', (route) =>
+    json(route, { permissions: [], questions: [] }),
+  )
+
+  // The client used to ask the agent for the pending permissions and the
+  // pending questions of every directory, and merge the answers itself. It
+  // must not do that any more: two round trips per directory, and the agent's
+  // dialect in the app, are both the server's job.
+  await page.route(/.*\/api\/opencode\/(api\/)?(permission|question)(\?.*)?$/, (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    throw new Error('The client asked the agent for its pending lists; it must ask the layer instead')
+  })
+
   // The client used to ask the agent for its list and merge the answers
   // itself. It must not do that any more: merging pages and keeping a cursor
   // per directory is the server's job, and a mock that quietly answered the
