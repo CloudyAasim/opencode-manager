@@ -228,11 +228,45 @@ describe('给前端的那一层', () => {
     ).toEqual([])
   })
 
+  it('前端不许再自己去问 agent 的待办列表', () => {
+    // The same job as the session list: one answer for every working
+    // directory, merged by the server. A client that asks the agent per
+    // directory pays for two round trips per directory - and it holds the
+    // agent's dialect, which is not the dialect the app keeps.
+    const AGENT_CLIENT = path.join(FRONTEND_DIR, 'api', 'opencode.ts')
+    const offenders: string[] = []
+
+    for (const match of read(AGENT_CLIENT).matchAll(/\basync\s+(listPending(?:Permissions|Questions))\s*\(/g)) {
+      offenders.push(`api/opencode.ts 定义了 ${match[1]}`)
+    }
+    for (const file of frontendSources()) {
+      const source = read(file)
+      for (const match of source.matchAll(/\basync\s+(listPending(?:Permissions|Questions))\s*\(/g)) {
+        offenders.push(`${path.relative(repoRoot, file)} 定义了 ${match[1]}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在自己去问 agent 的待办列表：${offenders.join(', ')}`,
+        '前端要问这一层，不要问 agent。',
+        '自己问的话，每个目录都要问两次，而答案还得在浏览器里合。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
   it('前端确实在问这一层', () => {
     const asking = frontendSources().filter((file) => read(file).includes('/api/bff/sessions'))
     expect(
       asking.length,
       '前端一处也没问这一层，那上面那条门禁就只是在说一件没有发生的事',
+    ).toBeGreaterThan(0)
+
+    const askingPending = frontendSources().filter((file) => read(file).includes('/api/bff/pending'))
+    expect(
+      askingPending.length,
+      '前端一处也没问这一层的待办，那上面那条门禁同样在说一件没有发生的事',
     ).toBeGreaterThan(0)
   })
 
