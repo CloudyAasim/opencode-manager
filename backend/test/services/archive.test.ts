@@ -182,6 +182,33 @@ describe('archive service', () => {
       expect(entries).toContain('sub/kept.txt')
       expect(entries).not.toContain('sub/ignored.txt')
     })
+
+    it('excludes gitignored files when the archived directory is more than one level below the repository root', async () => {
+      // The same thing, one level deeper - and the depth is what makes it a
+      // different case. The answer comes back with forward slashes, and the
+      // path it is compared against is built with the separator of the
+      // platform. One level down the two spellings agree by accident; two
+      // levels down they do not, and an answer that cannot be matched is an
+      // answer that matches nothing - the filter does nothing, and the
+      // archive carries the very file the repository asked to keep out.
+      const outerRoot = path.join(tmpRoot, 'outer-repo')
+      mkdirSync(path.join(outerRoot, 'repo', 'sub'), { recursive: true })
+      writeFileSync(path.join(outerRoot, '.gitignore'), 'ignored.txt\n')
+      writeFileSync(path.join(outerRoot, 'repo', 'sub', 'kept.txt'), 'kept')
+      writeFileSync(path.join(outerRoot, 'repo', 'sub', 'ignored.txt'), 'ignored')
+      runGit(outerRoot, ['init'])
+      runGit(outerRoot, ['config', 'user.email', 'test@example.com'])
+      runGit(outerRoot, ['config', 'user.name', 'Test'])
+      runGit(outerRoot, ['add', '.'])
+      runGit(outerRoot, ['-c', 'commit.gpgsign=false', 'commit', '-m', 'initial'])
+
+      const zipPath = await createDirectoryArchive(path.join(outerRoot, 'repo', 'sub'))
+      zipPaths.push(zipPath)
+
+      const entries = listZipEntries(zipPath)
+      expect(entries).toContain('sub/kept.txt')
+      expect(entries).not.toContain('sub/ignored.txt')
+    })
   })
 
   describe('createDirectoryArchive', () => {

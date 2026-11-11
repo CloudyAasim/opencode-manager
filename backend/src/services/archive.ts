@@ -107,7 +107,13 @@ async function getIgnoredPaths(gitRoot: string, targetPath: string, paths: strin
         logger.debug('[getIgnoredPaths] git check-ignore exited with code:', code)
         const ignoredFullPaths = stdout.split('\n').filter(p => p.trim())
         logger.debug('[getIgnoredPaths] Raw ignored count:', ignoredFullPaths.length, 'first 5:', ignoredFullPaths.slice(0, 5))
-        const targetRelativeToRoot = path.relative(gitRoot, targetPath)
+        // Forward slashes, like the answer itself. The paths handed to git were
+        // written that way (see above), and an answer that cannot be matched
+        // back is an answer that matches nothing - the filter would do nothing
+        // and the archive would carry the very files the repository asked to
+        // keep out. On Windows the separator of the platform is a backslash,
+        // which is not a separator git knows.
+        const targetRelativeToRoot = toArchivePath(path.relative(gitRoot, targetPath))
         
         for (const fullPath of ignoredFullPaths) {
           let relativePath = fullPath
