@@ -3,6 +3,8 @@ import type {
   AgentCapability,
   AgentKind,
   Message,
+  PendingPermission,
+  PendingQuestion,
   Session,
 } from '@opencode-manager/shared/api/v1'
 
@@ -13,7 +15,7 @@ import type {
  * which agent it was talking to.
  */
 
-export type { Agent, AgentCapability, AgentKind, Message, Session }
+export type { Agent, AgentCapability, AgentKind, Message, PendingPermission, PendingQuestion, Session }
 
 /**
  * Where the agent is working. Every coding agent has one, and the versioned
@@ -83,6 +85,16 @@ export interface AgentProvider {
   listMessages(sessionId: string, context: ProviderContext): Promise<Message[]>
   sendPrompt(sessionId: string, input: SendPromptInput, context: ProviderContext): Promise<void>
   abortSession(sessionId: string, context: ProviderContext): Promise<void>
+  /**
+   * The permissions the agent is waiting for.
+   *
+   * An agent that nobody is sitting in front of has none of these, and says
+   * so by refusing rather than by answering with an empty list - "nothing is
+   * waiting" and "there is nothing here to wait for" are different answers.
+   */
+  listPendingPermissions(context: ProviderContext): Promise<PendingPermission[]>
+  /** The questions the agent is waiting for. */
+  listPendingQuestions(context: ProviderContext): Promise<PendingQuestion[]>
 }
 
 export class AgentNotFoundError extends Error {

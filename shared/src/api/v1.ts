@@ -43,6 +43,14 @@ export const AgentCapabilitySchema = z.enum([
   'prompts',
   'abort',
   'events',
+  /**
+   * The agent can be waiting for a permission or for an answer.
+   *
+   * A program that runs in a terminal has no such thing: nobody is sitting
+   * there to answer it, so an agent without this capability says so instead
+   * of answering with an empty list that means "nothing is waiting".
+   */
+  'permissions',
 ])
 export type AgentCapability = z.infer<typeof AgentCapabilitySchema>
 
@@ -131,6 +139,84 @@ export const MessageSchema = z.object({
   tokens: TokenUsageSchema.nullable(),
 })
 export type Message = z.infer<typeof MessageSchema>
+
+/**
+ * The tool call a pending request hangs on.
+ *
+ * A request can arrive with no tool at all - a question the agent asked by
+ * itself - so it is nullable rather than optional: "nothing" and "we were not
+ * told" are the same thing here, and both are answerable.
+ */
+export const PendingRequestToolSchema = z.object({
+  messageId: z.string(),
+  callId: z.string(),
+})
+export type PendingRequestTool = z.infer<typeof PendingRequestToolSchema>
+
+/**
+ * A permission the agent is waiting for.
+ *
+ * It belongs to a conversation, so the conversation decides whose it is; the
+ * working directory is here so that a caller can tell where the conversation
+ * is when the ledger does not know.
+ */
+export const PendingPermissionSchema = z.object({
+  id: z.string().min(1),
+  sessionId: z.string().min(1),
+  directory: z.string().nullable(),
+  /** What is being asked permission for. */
+  permission: z.string(),
+  /** What the permission would allow, as the agent describes it. */
+  patterns: z.array(z.string()),
+  /** Whatever the agent attached to the request. Open, because it is the agent's. */
+  metadata: z.record(z.string(), z.unknown()),
+  /** The permissions that would always be allowed after this one. */
+  always: z.array(z.string()),
+  tool: PendingRequestToolSchema.nullable(),
+})
+export type PendingPermission = z.infer<typeof PendingPermissionSchema>
+
+export const PendingQuestionOptionSchema = z.object({
+  label: z.string(),
+  description: z.string().nullable(),
+})
+export type PendingQuestionOption = z.infer<typeof PendingQuestionOptionSchema>
+
+export const PendingQuestionInfoSchema = z.object({
+  question: z.string(),
+  /** A very short label for the question. */
+  header: z.string(),
+  options: z.array(PendingQuestionOptionSchema),
+  /** Whether more than one option may be chosen. */
+  multiple: z.boolean().default(false),
+})
+export type PendingQuestionInfo = z.infer<typeof PendingQuestionInfoSchema>
+
+/**
+ * A question the agent is waiting for.
+ *
+ * It belongs to a conversation, so the conversation decides whose it is.
+ */
+export const PendingQuestionSchema = z.object({
+  id: z.string().min(1),
+  sessionId: z.string().min(1),
+  directory: z.string().nullable(),
+  questions: z.array(PendingQuestionInfoSchema),
+  tool: PendingRequestToolSchema.nullable(),
+})
+export type PendingQuestion = z.infer<typeof PendingQuestionSchema>
+
+/**
+ * Everything the agent is waiting for.
+ *
+ * One answer for both kinds, because a caller that has to ask twice has to
+ * ask twice for every directory it watches.
+ */
+export const PendingListResponseSchema = z.object({
+  permissions: z.array(PendingPermissionSchema),
+  questions: z.array(PendingQuestionSchema),
+})
+export type PendingListResponse = z.infer<typeof PendingListResponseSchema>
 
 export const CreateSessionRequestSchema = z.object({
   title: z.string().min(1).optional(),

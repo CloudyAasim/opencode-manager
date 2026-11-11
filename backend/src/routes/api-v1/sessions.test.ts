@@ -92,7 +92,7 @@ describe('版本化 API', () => {
           id: 'alpha',
           label: 'Alpha',
           kind: 'cli',
-          capabilities: ['sessions', 'messages', 'prompts', 'abort'],
+          capabilities: ['sessions', 'messages', 'prompts', 'abort', 'permissions'],
           status: 'ready',
         },
       ],

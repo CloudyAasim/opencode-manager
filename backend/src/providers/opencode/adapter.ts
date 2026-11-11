@@ -1,4 +1,14 @@
-import type { Message, MessagePart, Session, SessionStatus, ToolCallState } from '@opencode-manager/shared/api/v1'
+import type {
+  Message,
+  MessagePart,
+  PendingPermission,
+  PendingQuestion,
+  PendingQuestionInfo,
+  PendingRequestTool,
+  Session,
+  SessionStatus,
+  ToolCallState,
+} from '@opencode-manager/shared/api/v1'
 import { UpstreamError, type OpenCodeClient } from '../../services/opencode/client'
 import {
   ProviderProtocolError,
@@ -172,6 +182,110 @@ function statusOf(raw: unknown): SessionStatus {
   return 'unknown'
 }
 
+/**
+ * The tool call a pending request hangs on.
+ *
+ * The agent says nothing when there is no tool, and says something we cannot
+ * read when it is not the shape we know. Both of those are "no tool", because
+ * a request with no tool is a question the agent asked by itself.
+ */
+function toPendingTool(value: unknown): PendingRequestTool | null {
+  const record = asRecord(value)
+  if (!record) return null
+  const messageId = asString(record.messageID)
+  const callId = asString(record.callID)
+  if (!messageId || !callId) return null
+  return { messageId, callId }
+}
+
+function stringArrayOf(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((entry): entry is string => typeof entry === 'string')
+}
+
+function metadataOf(value: unknown): Record<string, unknown> {
+  return asRecord(value) ?? {}
+}
+
+/**
+ * A permission the agent is waiting for, in the versioned API's words.
+ *
+ * The agent answers with a request that has no id or no session: that is not
+ * an empty list, it is an answer we cannot read, and saying so is more useful
+ * than passing a half-understood object on.
+ */
+export function toPendingPermission(
+  raw: unknown,
+  agentId: string,
+  fallbackDirectory?: string,
+): PendingPermission {
+  const record = asRecord(raw)
+  const id = asString(record?.id)
+  const sessionId = asString(record?.sessionID)
+  if (!id || !sessionId) {
+    throw new ProviderProtocolError(
+      agentId,
+      'The agent answered with a pending permission that has no id or no session',
+    )
+  }
+
+  return {
+    id,
+    sessionId,
+    directory: asString(record?.directory) ?? fallbackDirectory ?? null,
+    permission: asString(record?.permission) ?? '',
+    patterns: stringArrayOf(record?.patterns),
+    metadata: metadataOf(record?.metadata),
+    always: stringArrayOf(record?.always),
+    tool: toPendingTool(record?.tool),
+  }
+}
+
+function toPendingQuestionInfo(raw: unknown): PendingQuestionInfo {
+  const record = asRecord(raw)
+  const options = Array.isArray(record?.options) ? record.options : []
+  return {
+    question: asString(record?.question) ?? '',
+    header: asString(record?.header) ?? '',
+    options: options.map((option) => {
+      const entry = asRecord(option)
+      return {
+        label: asString(entry?.label) ?? '',
+        description: asString(entry?.description) ?? null,
+      }
+    }),
+    multiple: record?.multiple === true,
+  }
+}
+
+/**
+ * A question the agent is waiting for, in the versioned API's words.
+ */
+export function toPendingQuestion(
+  raw: unknown,
+  agentId: string,
+  fallbackDirectory?: string,
+): PendingQuestion {
+  const record = asRecord(raw)
+  const id = asString(record?.id)
+  const sessionId = asString(record?.sessionID)
+  if (!id || !sessionId) {
+    throw new ProviderProtocolError(
+      agentId,
+      'The agent answered with a pending question that has no id or no session',
+    )
+  }
+
+  const questions = Array.isArray(record?.questions) ? record.questions : []
+  return {
+    id,
+    sessionId,
+    directory: asString(record?.directory) ?? fallbackDirectory ?? null,
+    questions: questions.map(toPendingQuestionInfo),
+    tool: toPendingTool(record?.tool),
+  }
+}
+
 export interface OpenCodeProviderOptions {
   isReady?: () => boolean
 }
@@ -180,7 +294,13 @@ export class OpenCodeProvider implements AgentProvider {
   readonly id = AGENT_ID
   readonly label = 'OpenCode'
   readonly kind: AgentKind = 'server'
-  readonly capabilities: readonly AgentCapability[] = ['sessions', 'messages', 'prompts', 'abort']
+  readonly capabilities: readonly AgentCapability[] = [
+    'sessions',
+    'messages',
+    'prompts',
+    'abort',
+    'permissions',
+  ]
 
   constructor(
     private readonly client: OpenCodeClient,
@@ -270,6 +390,18 @@ export class OpenCodeProvider implements AgentProvider {
       context,
       sessionId,
     })
+  }
+
+  async listPendingPermissions(context: ProviderContext): Promise<PendingPermission[]> {
+    const raw = await this.readJson<unknown>('/permission', context)
+    const items = Array.isArray(raw) ? raw : []
+    return items.map((item) => toPendingPermission(item, this.id, context.directory))
+  }
+
+  async listPendingQuestions(context: ProviderContext): Promise<PendingQuestion[]> {
+    const raw = await this.readJson<unknown>('/question', context)
+    const items = Array.isArray(raw) ? raw : []
+    return items.map((item) => toPendingQuestion(item, this.id, context.directory))
   }
 
   private sessionPath(id: string): string {

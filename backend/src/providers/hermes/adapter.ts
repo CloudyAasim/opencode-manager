@@ -1,4 +1,10 @@
-import type { Message, MessagePart, Session } from '@opencode-manager/shared/api/v1'
+import type {
+  Message,
+  MessagePart,
+  PendingPermission,
+  PendingQuestion,
+  Session,
+} from '@opencode-manager/shared/api/v1'
 import {
   ProviderUnavailableError,
   type AgentCapability,
@@ -138,6 +144,27 @@ export class HermesProvider implements AgentProvider {
       throw new ProviderUnavailableError(this.id, `Hermes answered ${response.status} for the messages`)
     }
     return itemsOf((await response.json()) as unknown, 'messages').map((entry) => this.toMessage(entry))
+  }
+
+  /**
+   * Hermes asks nobody for anything.
+   *
+   * It says so rather than answering with an empty list: "nothing is waiting"
+   * and "there is nothing here that could be waiting for" are different
+   * answers.
+   */
+  async listPendingPermissions(): Promise<PendingPermission[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot ask for a permission: nobody is sitting in front of it`,
+    )
+  }
+
+  async listPendingQuestions(): Promise<PendingQuestion[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot ask a question: nobody is sitting in front of it`,
+    )
   }
 
   async sendPrompt(sessionId: string, input: SendPromptInput, _context: ProviderContext): Promise<void> {

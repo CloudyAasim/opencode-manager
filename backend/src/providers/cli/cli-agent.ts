@@ -1,4 +1,4 @@
-import type { Message, Session } from '@opencode-manager/shared/api/v1'
+import type { Message, PendingPermission, PendingQuestion, Session } from '@opencode-manager/shared/api/v1'
 import {
   ProviderUnavailableError,
   type AgentCapability,
@@ -112,6 +112,28 @@ export abstract class CliAgentProvider implements AgentProvider {
   async listMessages(sessionId: string, context: ProviderContext): Promise<Message[]> {
     const found = this.readSessions(context).find((session) => session.id === sessionId)
     return found?.messages ?? []
+  }
+
+  /**
+   * A program on this machine waits for nobody.
+   *
+   * It says so rather than answering with an empty list: "nothing is waiting"
+   * and "there is nothing here that could be waiting for" are different
+   * answers, and a caller that cannot tell them apart will draw an empty
+   * inbox on a screen that should have said the agent cannot ask.
+   */
+  async listPendingPermissions(): Promise<PendingPermission[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot ask for a permission: nobody is sitting in front of it`,
+    )
+  }
+
+  async listPendingQuestions(): Promise<PendingQuestion[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot ask a question: nobody is sitting in front of it`,
+    )
   }
 
   /**

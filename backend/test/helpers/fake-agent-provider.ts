@@ -1,4 +1,9 @@
-import type { Message, Session } from '@opencode-manager/shared/api/v1'
+import type {
+  Message,
+  PendingPermission,
+  PendingQuestion,
+  Session,
+} from '@opencode-manager/shared/api/v1'
 import type {
   AgentProvider,
   CreateSessionInput,
@@ -17,6 +22,8 @@ export interface FakeProviderOptions {
   sessions?: Session[]
   messages?: Record<string, Message[]>
   nextCursor?: string | null
+  pendingPermissions?: PendingPermission[]
+  pendingQuestions?: PendingQuestion[]
 }
 
 export interface FakeProviderCall {
@@ -34,7 +41,7 @@ export class FakeAgentProvider implements AgentProvider {
   readonly id: string
   readonly label: string
   readonly kind: 'server' | 'cli'
-  readonly capabilities = ['sessions', 'messages', 'prompts', 'abort'] as const
+  readonly capabilities = ['sessions', 'messages', 'prompts', 'abort', 'permissions'] as const
   readonly calls: FakeProviderCall[] = []
 
   sessions: Session[]
@@ -42,6 +49,8 @@ export class FakeAgentProvider implements AgentProvider {
   statusValue: ProviderStatus
   failWith: Error | null = null
   nextCursor: string | null
+  pendingPermissions: PendingPermission[]
+  pendingQuestions: PendingQuestion[]
 
   constructor(options: FakeProviderOptions = {}) {
     this.id = options.id ?? 'fake'
@@ -51,6 +60,8 @@ export class FakeAgentProvider implements AgentProvider {
     this.sessions = options.sessions ?? []
     this.messages = options.messages ?? {}
     this.nextCursor = options.nextCursor ?? null
+    this.pendingPermissions = options.pendingPermissions ?? []
+    this.pendingQuestions = options.pendingQuestions ?? []
   }
 
   private record(method: string, ...args: unknown[]): void {
@@ -116,6 +127,50 @@ export class FakeAgentProvider implements AgentProvider {
 
   async abortSession(sessionId: string, _context: ProviderContext): Promise<void> {
     this.record('abortSession', sessionId)
+  }
+
+  async listPendingPermissions(context: ProviderContext): Promise<PendingPermission[]> {
+    this.record('listPendingPermissions', context)
+    return this.pendingPermissions
+  }
+
+  async listPendingQuestions(context: ProviderContext): Promise<PendingQuestion[]> {
+    this.record('listPendingQuestions', context)
+    return this.pendingQuestions
+  }
+}
+
+export function makePendingPermission(
+  overrides: Partial<PendingPermission> = {},
+): PendingPermission {
+  return {
+    id: 'permission-1',
+    sessionId: 'session-1',
+    directory: '/work',
+    permission: 'bash',
+    patterns: ['*'],
+    metadata: {},
+    always: [],
+    tool: null,
+    ...overrides,
+  }
+}
+
+export function makePendingQuestion(overrides: Partial<PendingQuestion> = {}): PendingQuestion {
+  return {
+    id: 'question-1',
+    sessionId: 'session-1',
+    directory: '/work',
+    questions: [
+      {
+        question: 'Which one?',
+        header: 'Pick',
+        options: [{ label: 'This', description: null }],
+        multiple: false,
+      },
+    ],
+    tool: null,
+    ...overrides,
   }
 }
 
