@@ -38,6 +38,7 @@ seventy-five, and it still gets seventy-five.
 | Method | Path | What it does | Shape |
 | --- | --- | --- | --- |
 | `GET` | `/api/bff/sessions` | The sessions of one or more working directories | `BffSessionListResponse` |
+| `GET` | `/api/bff/pending` | What the agent is waiting for, across one or more working directories | `PendingListResponse` |
 
 ## The shapes
 
@@ -59,6 +60,23 @@ no place belongs to nobody - which is a different answer from "not yours".
 A directory that has no entry in `cursors` has no more pages. The agent said
 so, and saying it again would cost a round trip.
 
+### `PendingListResponse`
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `permissions` | `PendingPermission[]` | The permissions the agent is waiting for |
+| `questions` | `PendingQuestion[]` | The questions the agent is waiting for |
+
+A `PendingPermission` and a `PendingQuestion` are the versioned API's - there
+is one truth about what a pending request is. What this layer adds is the
+part that is its own: several directories at once.
+
+The client used to ask for this itself: two requests per working directory -
+the pending permissions of it and the pending questions of it - and it worked
+out which conversation each request belonged to. That is the server's job.
+
+A request belongs to a conversation, so the conversation decides whose it is.
+
 ## What it refuses
 
 - **No session, no list.** The same rule the rest of the server uses - one
@@ -68,3 +86,5 @@ so, and saying it again would cost a round trip.
 - **A conversation that is not yours.** An agent knows about conversations, not
   about people: it answers with everything in a directory, and the question of
   whose conversations those are is answered here.
+- **A pending request that is not yours.** A permission belongs to a
+  conversation, so the conversation decides whose request it is.

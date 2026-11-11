@@ -239,8 +239,8 @@ describe('给前端的那一层', () => {
   it('这一层必须把列表收窄到调用者', () => {
     // An agent knows about conversations, not about people. Without this the
     // list is the whole server's list, and it is handed to whoever asked.
-    const withList = bffFiles().filter((file) => /app\.(get|post)\(\s*'\/'\s*,/.test(read(file)))
-    expect(withList.length, '没找到出列表的地方，这条门禁正在空跑').toBeGreaterThan(0)
+    const withList = bffFiles().filter((file) => /listSessions\s*\(/.test(read(file)))
+    expect(withList.length, '没找到出会话列表的地方，这条门禁正在空跑').toBeGreaterThan(0)
 
     const offenders = withList
       .filter((file) => !/callerVisibleSessions|visibleSessions/.test(read(file)))
@@ -252,6 +252,26 @@ describe('给前端的那一层', () => {
       [
         `这些文件把会话列表原样交出去了：${offenders.join(', ')}`,
         '列表必须先按调用者收窄，不然它就是整个服务器的列表。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('这一层必须把待办收窄到调用者', () => {
+    // A pending request belongs to a conversation, so the conversation
+    // decides whose it is. An agent knows about conversations, not people.
+    const withPending = bffFiles().filter((file) => /listPending(?:Permissions|Questions)\s*\(/.test(read(file)))
+    expect(withPending.length, '没找到出处待办的地方，这条门禁正在空跑').toBeGreaterThan(0)
+
+    const offenders = withPending
+      .filter((file) => !/callerVisiblePendingRequests/.test(read(file)))
+      .map((file) => path.basename(file))
+      .sort()
+
+    expect(
+      offenders,
+      [
+        `这些文件把待办原样交出去了：${offenders.join(', ')}`,
+        '待办必须先按调用者收窄，不然它就是整个服务器的待办。',
       ].join('\n'),
     ).toEqual([])
   })

@@ -4,6 +4,7 @@ import type { AuthInstance, Session } from '../../auth'
 import { createAuthMiddleware } from '../../auth/middleware'
 import type { ProviderRegistry } from '../../providers/registry'
 import { createBffSessionRoutes } from './sessions'
+import { createBffPendingRoutes } from './pending'
 import { fail } from '../api-v1/respond'
 
 /**
@@ -45,6 +46,7 @@ export function createBffRoutes(registry: ProviderRegistry, database: Database, 
   )
 
   app.route('/sessions', createBffSessionRoutes(registry, database))
+  app.route('/pending', createBffPendingRoutes(registry, database))
 
   return app
 }

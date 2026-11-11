@@ -8,6 +8,8 @@ import { principalFrom, principalIsAdmin, resolveAccessRoots } from '../../auth/
 import { isWithinRoots } from '../../auth/access-scope'
 import { callerVisibleSessions } from '../../services/session-scope'
 import { fail, handle, ok } from '../api-v1/respond'
+import { agentIdOf } from '../api-v1/params'
+import { directoriesOf } from './params'
 
 /**
  * The session list the web client asks for.
@@ -50,7 +52,7 @@ export function createBffSessionRoutes(registry: ProviderRegistry, database: Dat
         }
       }
 
-      const provider = registry.resolve(agentOf(c))
+      const provider = registry.resolve(agentIdOf(c))
       const limit = limitOf(c)
       const search = searchOf(c)
       const cursors = cursorsOf(c)
@@ -78,30 +80,6 @@ export function createBffSessionRoutes(registry: ProviderRegistry, database: Dat
   )
 
   return app
-}
-
-function agentOf(c: Context): string | undefined {
-  const value = c.req.query('agent')
-  return value && value.trim() ? value : undefined
-}
-
-/**
- * The working directories to list, in the order they were named.
- *
- * A directory is named by repeating the parameter, because a path is allowed
- * to contain characters that a separator would make ambiguous.
- */
-function directoriesOf(c: Context): string[] {
-  const named = c.req.queries('directories') ?? []
-  const seen = new Set<string>()
-  const directories: string[] = []
-  for (const entry of named) {
-    const directory = entry.trim()
-    if (!directory || seen.has(directory)) continue
-    seen.add(directory)
-    directories.push(directory)
-  }
-  return directories
 }
 
 function limitOf(c: Context): number | undefined {
