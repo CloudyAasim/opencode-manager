@@ -24,6 +24,26 @@ vi.mock('../../src/utils/logger', () => ({
   },
 }))
 
+/**
+ * The repositories directory that names are resolved against.
+ *
+ * It is this test's own, and deliberately not the one the suite happens to run
+ * with: that one lives inside the package, which lives inside a git checkout
+ * whose .gitignore covers it - so git calls every file in it "ignored" and the
+ * archive leaves it out, rightly. This test is about a name resolving, not
+ * about git, and a test that depends on where the suite happens to write is a
+ * test that fails somewhere else for no reason of its own.
+ */
+const hermeticRepos = vi.hoisted(() => ({ path: '' }))
+
+vi.mock('@opencode-manager/shared/config/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@opencode-manager/shared/config/env')>()
+  return {
+    ...actual,
+    getReposPath: () => hermeticRepos.path,
+  }
+})
+
 function runGit(cwd: string, args: string[]): void {
   execFileSync('git', args, { cwd, stdio: 'ignore' })
 }
@@ -53,6 +73,9 @@ describe('archive service', () => {
 
   beforeAll(() => {
     tmpRoot = mkdtempSync(path.join(tmpdir(), 'archive-service-test-'))
+
+    hermeticRepos.path = path.join(tmpRoot, 'repos')
+    mkdirSync(hermeticRepos.path, { recursive: true })
 
     gitRepoPath = path.join(tmpRoot, 'git-repo')
     mkdirSync(path.join(gitRepoPath, 'src'), { recursive: true })
