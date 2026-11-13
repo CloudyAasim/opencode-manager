@@ -242,7 +242,7 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
     throw new Error('The client asked the agent to change a conversation; it must ask the layer instead')
   })
 
-  await page.route(/.*\/api\/opencode\/session\/[^/?]+\/abort(\?.*)?$/, (route) => {
+  await page.route(/.*\/api\/opencode\/session\/[^/?]+\/abort(\?.*)?$/, (_route) => {
     throw new Error('The client asked the agent to stop a conversation; it must ask the layer instead')
   })
 
