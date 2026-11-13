@@ -148,6 +148,46 @@ describe('事件流也用版本化的方言说话', () => {
     })
   })
 
+  it('会话有多忙：说的是版本化的状态', () => {
+    // The client is told about a status on the stream and asks for it over
+    // HTTP, and the two answers have to be the same words - so the status is
+    // said in the versioned dialect here too.
+    expect(
+      toVersionedEvent({
+        type: 'session.status',
+        properties: { sessionID: 'ses_1', status: { type: 'busy' } },
+      }),
+    ).toEqual({
+      type: 'session.status',
+      properties: { sessionId: 'ses_1', status: { type: 'busy' } },
+    })
+
+    expect(
+      toVersionedEvent({
+        type: 'session.status',
+        properties: {
+          sessionID: 'ses_1',
+          status: { type: 'retry', attempt: 2, message: 'the upstream said no', next: 5000 },
+        },
+      }),
+    ).toEqual({
+      type: 'session.status',
+      properties: {
+        sessionId: 'ses_1',
+        status: { type: 'retry', attempt: 2, message: 'the upstream said no', next: 5000 },
+      },
+    })
+  })
+
+  it('读不懂的状态被丢掉，不给客户端半句', () => {
+    expect(
+      toVersionedEvent({
+        type: 'session.status',
+        properties: { sessionID: 'ses_1', status: { type: 'retry', attempt: 2 } },
+      }),
+    ).toBeNull()
+  })
+
   it('不是对话的事，就照 agent 的原话传过去', () => {
     const todo = {
       type: 'todo.updated',
@@ -156,12 +196,12 @@ describe('事件流也用版本化的方言说话', () => {
 
     expect(toVersionedEvent(todo)).toEqual(todo)
 
-    const status = {
-      type: 'session.status',
-      properties: { sessionID: 'ses_1', status: { type: 'busy' } },
+    const asked = {
+      type: 'permission.asked',
+      properties: { sessionID: 'ses_1', id: 'per_1' },
     }
 
-    expect(toVersionedEvent(status)).toEqual(status)
+    expect(toVersionedEvent(asked)).toEqual(asked)
   })
 
   it('读不懂的对话事件被丢掉，不把半句对话交给客户端', () => {

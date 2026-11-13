@@ -1,9 +1,11 @@
 import type {
+  ConversationStatus,
   Message,
   MessagePart,
   MessageWithParts,
   PendingPermission,
   PendingQuestion,
+  PermissionResponse,
   Session,
   SessionRevert,
 } from '@opencode-manager/shared/api/v1'
@@ -27,6 +29,7 @@ export interface FakeProviderOptions {
   nextCursor?: string | null
   pendingPermissions?: PendingPermission[]
   pendingQuestions?: PendingQuestion[]
+  statuses?: Record<string, ConversationStatus>
 }
 
 export interface FakeProviderCall {
@@ -63,6 +66,7 @@ export class FakeAgentProvider implements AgentProvider {
   nextCursor: string | null
   pendingPermissions: PendingPermission[]
   pendingQuestions: PendingQuestion[]
+  statuses: Record<string, ConversationStatus>
 
   constructor(options: FakeProviderOptions = {}) {
     this.id = options.id ?? 'fake'
@@ -74,6 +78,7 @@ export class FakeAgentProvider implements AgentProvider {
     this.nextCursor = options.nextCursor ?? null
     this.pendingPermissions = options.pendingPermissions ?? []
     this.pendingQuestions = options.pendingQuestions ?? []
+    this.statuses = options.statuses ?? {}
   }
 
   private record(method: string, ...args: unknown[]): void {
@@ -175,6 +180,27 @@ export class FakeAgentProvider implements AgentProvider {
   async listPendingQuestions(context: ProviderContext): Promise<PendingQuestion[]> {
     this.recordAbout('listPendingQuestions', context, [])
     return this.pendingQuestions
+  }
+
+  async listSessionStatuses(context: ProviderContext): Promise<Record<string, ConversationStatus>> {
+    this.recordAbout('listSessionStatuses', context, [])
+    return this.statuses
+  }
+
+  async respondToPermission(
+    id: string,
+    response: PermissionResponse,
+    context: ProviderContext,
+  ): Promise<void> {
+    this.recordAbout('respondToPermission', context, [id, response])
+  }
+
+  async replyToQuestion(id: string, answers: string[][], context: ProviderContext): Promise<void> {
+    this.recordAbout('replyToQuestion', context, [id, answers])
+  }
+
+  async rejectQuestion(id: string, context: ProviderContext): Promise<void> {
+    this.recordAbout('rejectQuestion', context, [id])
   }
 }
 

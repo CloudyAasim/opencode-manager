@@ -1,9 +1,11 @@
 import type {
+  ConversationStatus,
   Message,
   MessagePart,
   MessageWithParts,
   PendingPermission,
   PendingQuestion,
+  PermissionResponse,
   Session,
   SessionRevert,
 } from '@opencode-manager/shared/api/v1'
@@ -164,6 +166,48 @@ export class HermesProvider implements AgentProvider {
   }
 
   async listPendingQuestions(): Promise<PendingQuestion[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot ask a question: nobody is sitting in front of it`,
+    )
+  }
+
+  /**
+   * Hermes does not say how busy a conversation is.
+   *
+   * There is nothing here to answer with, and an empty answer is the honest
+   * one: "nothing is busy" would be a claim it cannot make.
+   */
+  async listSessionStatuses(_context: ProviderContext): Promise<Record<string, ConversationStatus>> {
+    return {}
+  }
+
+  /**
+   * Nobody is sitting in front of Hermes, so nobody can answer its
+   * permissions.
+   *
+   * It says so rather than answering, because a permission that was never
+   * answered must not look like one that was allowed.
+   */
+  async respondToPermission(
+    _id: string,
+    _response: PermissionResponse,
+    _context: ProviderContext,
+  ): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot ask for a permission: nobody is sitting in front of it`,
+    )
+  }
+
+  async replyToQuestion(_id: string, _answers: string[][], _context: ProviderContext): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot ask a question: nobody is sitting in front of it`,
+    )
+  }
+
+  async rejectQuestion(_id: string, _context: ProviderContext): Promise<void> {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot ask a question: nobody is sitting in front of it`,

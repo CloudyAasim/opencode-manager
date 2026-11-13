@@ -2,9 +2,11 @@ import type {
   Agent,
   AgentCapability,
   AgentKind,
+  ConversationStatus,
   MessageWithParts,
   PendingPermission,
   PendingQuestion,
+  PermissionResponse,
   PromptModel,
   PromptPart,
   PromptTextPart,
@@ -132,6 +134,32 @@ export interface AgentProvider {
   listPendingPermissions(context: ProviderContext): Promise<PendingPermission[]>
   /** The questions the agent is waiting for. */
   listPendingQuestions(context: ProviderContext): Promise<PendingQuestion[]>
+  /**
+   * How busy every conversation is, right now.
+   *
+   * A conversation that nobody is sitting in front of still gets on with its
+   * work, and how it is getting on is asked of the agent the same way it is
+   * asked over the event stream - in the same words, so a client that hears
+   * about it and a client that asks for it are holding one thing.
+   */
+  listSessionStatuses(context: ProviderContext): Promise<Record<string, ConversationStatus>>
+  /**
+   * Answering a permission request.
+   *
+   * An agent that nobody can answer says so rather than pretending the
+   * permission was granted - a permission that was never answered must not
+   * look like one that was allowed.
+   */
+  respondToPermission(id: string, response: PermissionResponse, context: ProviderContext): Promise<void>
+  /**
+   * Answering a question.
+   *
+   * A question may have more than one part, and the answers come back in the
+   * order the parts were asked.
+   */
+  replyToQuestion(id: string, answers: string[][], context: ProviderContext): Promise<void>
+  /** Turning a question down. */
+  rejectQuestion(id: string, context: ProviderContext): Promise<void>
 }
 
 export class AgentNotFoundError extends Error {

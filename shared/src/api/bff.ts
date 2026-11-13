@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { SessionSchema } from './v1'
+import { ConversationStatusSchema, SessionSchema } from './v1'
 
 /**
  * The shape the web client talks to.
@@ -27,3 +27,17 @@ export const BffSessionListResponseSchema = z.object({
   cursors: z.record(z.string(), z.string()),
 })
 export type BffSessionListResponse = z.infer<typeof BffSessionListResponseSchema>
+
+/**
+ * How busy every conversation is, across the named directories.
+ *
+ * The statuses themselves are the versioned API's - there is one truth about
+ * how busy a conversation is, and the event stream says it in the same words.
+ * What this layer adds is that they come for every directory at once: the
+ * client used to ask the agent about each directory separately and merge the
+ * answers itself.
+ */
+export const BffConversationStatusResponseSchema = z.object({
+  statuses: z.record(z.string(), ConversationStatusSchema),
+})
+export type BffConversationStatusResponse = z.infer<typeof BffConversationStatusResponseSchema>

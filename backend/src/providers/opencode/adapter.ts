@@ -1,4 +1,5 @@
 import type {
+  ConversationStatus,
   Message,
   MessageError,
   MessagePart,
@@ -7,6 +8,7 @@ import type {
   PendingQuestion,
   PendingQuestionInfo,
   PendingRequestTool,
+  PermissionResponse,
   Session,
   SessionRevert,
   SessionShare,
@@ -416,11 +418,35 @@ export function toSessionPage(
   }
 }
 
-function statusOf(raw: unknown): SessionStatus {
-  const type = asString(asRecord(raw)?.type)
-  if (type === 'idle') return 'idle'
-  if (type === 'busy' || type === 'retry') return 'busy'
-  return 'unknown'
+/**
+ * How busy a conversation is, in the words the versioned API uses.
+ *
+ * A status that cannot be read is not a status: answering "unknown" where the
+ * agent said something else would be inventing an answer.
+ */
+export function toConversationStatus(raw: unknown): ConversationStatus | null {
+  const record = asRecord(raw)
+  const type = asString(record?.type)
+  if (type === 'idle') return { type: 'idle' }
+  if (type === 'busy') return { type: 'busy' }
+  if (type === 'retry') {
+    const attempt = asNumber(record?.attempt)
+    const message = asString(record?.message)
+    const next = asNumber(record?.next)
+    if (attempt === null || message === null || next === null) return null
+    return { type: 'retry', attempt, message, next }
+  }
+  return null
+}
+
+/**
+ * The coarse status a session record carries.
+ *
+ * A conversation that is trying again is busy, and the record has no room to
+ * say it is trying again - so it says busy, which is true.
+ */
+function statusOf(status: ConversationStatus): SessionStatus {
+  return status.type === 'idle' ? 'idle' : 'busy'
 }
 
 /**
@@ -560,7 +586,10 @@ export class OpenCodeProvider implements AgentProvider {
     const page = toSessionPage(raw, this.id, context.directory)
     const statuses = await this.readStatuses(context)
     return {
-      items: page.items.map((session) => ({ ...session, status: statuses.get(session.id) ?? 'unknown' })),
+      items: page.items.map((session) => {
+        const status = statuses.get(session.id)
+        return { ...session, status: status ? statusOf(status) : 'unknown' }
+      }),
       nextCursor: page.nextCursor,
     }
   }
@@ -733,6 +762,57 @@ export class OpenCodeProvider implements AgentProvider {
     return items.map((item) => toPendingQuestion(item, this.id, context.directory))
   }
 
+  /**
+   * How busy every conversation is, right now.
+   *
+   * Unlike the list of conversations, this is asked for on purpose, so a
+   * failure is a failure: an agent that cannot say how busy it is must not
+   * answer "nothing is busy", which is a different and wrong answer.
+   */
+  async listSessionStatuses(context: ProviderContext): Promise<Record<string, ConversationStatus>> {
+    const raw = await this.client.getJson<Record<string, unknown>>('/session/status', {
+      directory: context.directory,
+    })
+    const statuses: Record<string, ConversationStatus> = {}
+    for (const [id, value] of Object.entries(raw ?? {})) {
+      const status = toConversationStatus(value)
+      if (status) statuses[id] = status
+    }
+    return statuses
+  }
+
+  async respondToPermission(
+    id: string,
+    response: PermissionResponse,
+    context: ProviderContext,
+  ): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `/permission/${encodeURIComponent(id)}/reply`,
+      body: JSON.stringify({ reply: response }),
+      headers: { 'Content-Type': 'application/json' },
+      context,
+    })
+  }
+
+  async replyToQuestion(id: string, answers: string[][], context: ProviderContext): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `/question/${encodeURIComponent(id)}/reply`,
+      body: JSON.stringify({ answers }),
+      headers: { 'Content-Type': 'application/json' },
+      context,
+    })
+  }
+
+  async rejectQuestion(id: string, context: ProviderContext): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `/question/${encodeURIComponent(id)}/reject`,
+      context,
+    })
+  }
+
   private sessionPath(id: string): string {
     return `/session/${encodeURIComponent(id)}`
   }
@@ -804,14 +884,15 @@ export class OpenCodeProvider implements AgentProvider {
     return error instanceof Error ? error : new Error(String(error))
   }
 
-  private async readStatuses(context: ProviderContext): Promise<Map<string, SessionStatus>> {
-    const statuses = new Map<string, SessionStatus>()
+  private async readStatuses(context: ProviderContext): Promise<Map<string, ConversationStatus>> {
+    const statuses = new Map<string, ConversationStatus>()
     try {
       const raw = await this.client.getJson<Record<string, unknown>>('/session/status', {
         directory: context.directory,
       })
       for (const [id, value] of Object.entries(raw ?? {})) {
-        statuses.set(id, statusOf(value))
+        const status = toConversationStatus(value)
+        if (status) statuses.set(id, status)
       }
     } catch {
       // The status of a session is a convenience, not the session itself: a

@@ -1,5 +1,5 @@
 import { ConversationEventSchema } from '@opencode-manager/shared/api/v1'
-import { toMessage, toMessageError, toPart, toSession } from './adapter'
+import { toConversationStatus, toMessage, toMessageError, toPart, toSession } from './adapter'
 
 /**
  * What the agent says about a conversation, said in the versioned dialect.
@@ -15,10 +15,10 @@ import { toMessage, toMessageError, toPart, toSession } from './adapter'
  * itself, and they are said by the same translator that says it over HTTP.
  * There is one translation of an agent's message, not two that can disagree.
  *
- * The events that are not about the shape of a conversation - how busy it is,
- * what it is waiting for, which version of the program is running - are left
- * as the agent says them. They carry no shape of a conversation, so they
- * cannot put two shapes into one place.
+ * The events that are not about the conversation - what it is waiting for,
+ * which version of the program is running - are left as the agent says them.
+ * They carry no shape of a conversation, so they cannot put two shapes into
+ * one place.
  */
 
 const AGENT_ID = 'opencode'
@@ -71,9 +71,10 @@ export function toVersionedEvent(raw: unknown): unknown {
 /**
  * What the translator made of an event.
  *
- * `not-ours` is an event about something else - how busy the agent is, what
- * it is waiting for - and it is left alone. Everything else is an event of
- * the conversation's, and has to be said in the versioned dialect or dropped.
+ * `not-ours` is an event about something else - what the agent is waiting for,
+ * which version of the program is running - and it is left alone. Everything
+ * else is an event of the conversation's, and has to be said in the versioned
+ * dialect or dropped.
  */
 type Translation =
   | { kind: 'not-ours' }
@@ -109,6 +110,14 @@ function translate(type: string, properties: Record<string, unknown>): Translati
     const sessionId = asString(properties.sessionID)
     if (!sessionId) return NOTHING_TO_SAY
     return event({ type, properties: { sessionId } })
+  }
+
+  if (type === 'session.status') {
+    const sessionId = asString(properties.sessionID)
+    if (!sessionId) return NOTHING_TO_SAY
+    const status = toConversationStatus(properties.status)
+    if (!status) return NOTHING_TO_SAY
+    return event({ type, properties: { sessionId, status } })
   }
 
   if (type === 'session.error') {

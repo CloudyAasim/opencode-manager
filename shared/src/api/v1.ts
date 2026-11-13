@@ -70,6 +70,31 @@ export const SessionStatusSchema = z.enum(['idle', 'busy', 'unknown'])
 export type SessionStatus = z.infer<typeof SessionStatusSchema>
 
 /**
+ * How busy a conversation is right now.
+ *
+ * This is not the same word as the session's own `status` field, and the
+ * difference is worth keeping rather than flattening. The field says what was
+ * true when the conversation was last written down; this says what is
+ * happening at this moment. A conversation that is trying again says so here,
+ * and says when it will try again - which the field has no room for.
+ *
+ * The two are asked of the same place and travel together: the event stream
+ * says one and the answer says the other, and a client that holds both must
+ * not have to know which dialect it is holding.
+ */
+export const ConversationStatusSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('idle') }),
+  z.object({ type: z.literal('busy') }),
+  z.object({
+    type: z.literal('retry'),
+    attempt: z.number(),
+    message: z.string(),
+    next: z.number(),
+  }),
+])
+export type ConversationStatus = z.infer<typeof ConversationStatusSchema>
+
+/**
  * The message a conversation was rolled back to.
  *
  * A conversation can be undone to one of its messages: everything after that
@@ -489,6 +514,33 @@ export const PendingListResponseSchema = z.object({
 })
 export type PendingListResponse = z.infer<typeof PendingListResponseSchema>
 
+/**
+ * What to do about a permission request.
+ *
+ * Three answers, and they are the three a person can give: allow it this
+ * once, allow it from now on, or refuse it.
+ */
+export const PermissionResponseSchema = z.enum(['once', 'always', 'reject'])
+export type PermissionResponse = z.infer<typeof PermissionResponseSchema>
+
+/** The answer to a permission request. */
+export const PermissionReplySchema = z.object({
+  reply: PermissionResponseSchema,
+})
+export type PermissionReply = z.infer<typeof PermissionReplySchema>
+
+/**
+ * The answers to a question.
+ *
+ * A question may be asked in several parts, and each part has its own
+ * answers - a question with two parts gets two lists, in the order the parts
+ * were asked.
+ */
+export const QuestionReplySchema = z.object({
+  answers: z.array(z.array(z.string())),
+})
+export type QuestionReply = z.infer<typeof QuestionReplySchema>
+
 export const CreateSessionRequestSchema = z.object({
   title: z.string().min(1).optional(),
   directory: z.string().min(1).optional(),
@@ -621,10 +673,15 @@ export type DeletedResponse = z.infer<typeof DeletedResponseSchema>
  * a message is a message - so a client that read a conversation over HTTP and
  * then watched it change is holding one shape and not two.
  *
- * The events that are not here are not about the shape of a conversation: how
- * busy it is, what it is waiting for, which version of the program is running.
- * Those say what the agent says about them, and a client that wants them reads
- * them the way the agent says them.
+ * How busy a conversation is is here too, and for the same reason: the client
+ * is told about it over the stream and asks for it over HTTP, and the two
+ * answers have to be the same words or the client is holding two dialects of
+ * one thing.
+ *
+ * The events that are not here are not about the conversation: what it is
+ * waiting for, which version of the program is running. Those say what the
+ * agent says about them, and a client that wants them reads them the way the
+ * agent says them.
  */
 export const ConversationEventSchema = z.discriminatedUnion('type', [
   z.object({
@@ -650,6 +707,13 @@ export const ConversationEventSchema = z.discriminatedUnion('type', [
     type: z.literal('session.idle'),
     properties: z.object({
       sessionId: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('session.status'),
+    properties: z.object({
+      sessionId: z.string(),
+      status: ConversationStatusSchema,
     }),
   }),
   z.object({

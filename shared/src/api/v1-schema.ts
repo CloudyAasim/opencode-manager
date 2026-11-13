@@ -5,11 +5,16 @@ import {
   AgentSchema,
   ApiDescriptorSchema,
   ApiErrorSchema,
+  ConversationEventSchema,
+  ConversationStatusSchema,
   CreateSessionRequestSchema,
   DeletedResponseSchema,
   MessageListResponseSchema,
   MessagePartSchema,
   MessageSchema,
+  PendingListResponseSchema,
+  PendingPermissionSchema,
+  PendingQuestionSchema,
   RenameSessionRequestSchema,
   SendPromptRequestSchema,
   SessionListResponseSchema,
@@ -24,6 +29,11 @@ import {
  * TypeScript can still generate its models from the same source of truth the
  * backend validates against. The backend checks the committed file against
  * this function, so the schema cannot drift away from the shapes.
+ *
+ * Everything the versioned API answers with is here, not only the answers
+ * that come over HTTP: the event stream is part of the same surface, and a
+ * client that watches a conversation change needs the shape of what it is
+ * told.
  */
 export function buildV1JsonSchema(): Record<string, unknown> {
   return {
@@ -40,10 +50,15 @@ export function buildV1JsonSchema(): Record<string, unknown> {
       MessagePart: z.toJSONSchema(MessagePartSchema),
       ToolCall: z.toJSONSchema(ToolCallSchema),
       TokenUsage: z.toJSONSchema(TokenUsageSchema),
+      ConversationStatus: z.toJSONSchema(ConversationStatusSchema),
+      ConversationEvent: z.toJSONSchema(ConversationEventSchema),
+      PendingPermission: z.toJSONSchema(PendingPermissionSchema),
+      PendingQuestion: z.toJSONSchema(PendingQuestionSchema),
       AgentListResponse: z.toJSONSchema(AgentListResponseSchema),
       SessionListResponse: z.toJSONSchema(SessionListResponseSchema),
       SessionResponse: z.toJSONSchema(SessionResponseSchema),
       MessageListResponse: z.toJSONSchema(MessageListResponseSchema),
+      PendingListResponse: z.toJSONSchema(PendingListResponseSchema),
       AcceptedResponse: z.toJSONSchema(AcceptedResponseSchema),
       DeletedResponse: z.toJSONSchema(DeletedResponseSchema),
       CreateSessionRequest: z.toJSONSchema(CreateSessionRequestSchema),
