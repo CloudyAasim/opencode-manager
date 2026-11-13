@@ -10,6 +10,15 @@ type SSEClientCallback = (event: string, data: string) => void
 type SSEClientFrameWriter = (frame: Uint8Array) => void
 type SSEEventListener = (directory: string, event: SSEEvent) => void
 
+/**
+ * What an event means, said in somebody else's words.
+ *
+ * The translator is given the event the agent sent and answers with the event
+ * as it should travel, or with null when the event cannot be read and is
+ * better dropped than carried half-translated.
+ */
+export type SSEEventTranslator = (event: unknown) => unknown | null
+
 interface SSEClient {
   id: string
   callback: SSEClientCallback
@@ -63,6 +72,7 @@ class SSEAggregator {
   private pendingActionsFetcher: PendingActionsFetcher | null = null
   private passwordResolver: OpenCodePasswordResolver | null = null
   private scheduledSessionsResolver: (() => ScheduledSessionRef[]) | null = null
+  private eventTranslator: SSEEventTranslator | null = null
 
   private constructor() {}
 
@@ -76,6 +86,19 @@ class SSEAggregator {
 
   setScheduledSessionsResolver(resolver: () => ScheduledSessionRef[]): void {
     this.scheduledSessionsResolver = resolver
+  }
+
+  /**
+   * Who says what an event means.
+   *
+   * This layer carries events and knows how to fan them out; it does not know
+   * which agent they came from, and so it does not know what they say. The
+   * translator is given to it by whoever does know - so the conversation's
+   * events can be said in the versioned dialect, and everything else can be
+   * left in the agent's own words.
+   */
+  setEventTranslator(translator: SSEEventTranslator | null): void {
+    this.eventTranslator = translator
   }
 
   reconnect(): void {
@@ -433,10 +456,22 @@ class SSEAggregator {
       try { listener(directory, parsed) } catch { /* ignore listener errors */ }
     })
 
+    // The conversation's events are said in the versioned dialect, so that a
+    // client that read a conversation over HTTP and then watched it change is
+    // holding one shape and not two. The translator is handed to this layer by
+    // whoever knows which agent is behind it: this layer knows how to carry an
+    // event, not what an event means.
+    const translated = this.eventTranslator ? this.eventTranslator(parsed) : parsed
+    if (translated === null) return
+
+    // An event nobody translated is the agent's own words, and they travel as
+    // they came - byte for byte, so that nothing is lost in the telling.
+    const payload = translated === parsed ? data : JSON.stringify({ directory, payload: translated })
+
     const subscriberIds = this.directoryClients.get(directory)
     if (subscriberIds && subscriberIds.size > 0) {
       let frame: Uint8Array | undefined
-      const getFrame = (): Uint8Array => (frame ??= encodeSSEFrame('message', data))
+      const getFrame = (): Uint8Array => (frame ??= encodeSSEFrame('message', payload))
       for (const clientId of subscriberIds) {
         const client = this.clients.get(clientId)
         if (!client) continue

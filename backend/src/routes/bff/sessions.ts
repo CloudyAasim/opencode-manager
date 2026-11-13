@@ -6,8 +6,11 @@ import {
   AcceptedResponseSchema,
   CreateSessionRequestSchema,
   DeletedResponseSchema,
+  MessageListResponseSchema,
   RenameSessionRequestSchema,
+  SendPromptRequestSchema,
   SessionResponseSchema,
+  SessionRevertSchema,
 } from '@opencode-manager/shared/api/v1'
 import type { Session } from '../../auth'
 import type { Session as Conversation } from '@opencode-manager/shared/api/v1'
@@ -200,6 +203,95 @@ export function createBffSessionRoutes(registry: ProviderRegistry, database: Dat
     }),
   )
 
+  /**
+   * What was said in one conversation.
+   *
+   * The client used to ask the agent for this itself, and it had to know
+   * which agent and which working directory the conversation lived in before
+   * it could ask. Here it names the conversation, and this layer works out
+   * where it lives - and refuses the answer when the conversation is not the
+   * caller's.
+   */
+  app.get('/:id/messages', (c) =>
+    handle(c, async () => {
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      const messages = await provider.listMessages(c.req.param('id'), contextOf(located.directory))
+      return ok(c, MessageListResponseSchema, { messages })
+    }),
+  )
+
+  /**
+   * Saying something to one conversation.
+   *
+   * The words, the files that go with them, and the model and the agent that
+   * should answer all travel together, so that the conversation is answered
+   * the way the caller asked for and not the way the server felt like.
+   */
+  app.post('/:id/prompts', (c) =>
+    handle(c, async () => {
+      const body = SendPromptRequestSchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.sendPrompt(
+        c.req.param('id'),
+        {
+          parts: body.data.parts,
+          model: body.data.model,
+          agent: body.data.agent,
+          variant: body.data.variant,
+        },
+        contextOf(located.directory),
+      )
+      return ok(c, AcceptedResponseSchema, { accepted: true })
+    }),
+  )
+
+  /**
+   * Taking a message back.
+   *
+   * The conversation is rolled back to the message that is named, and
+   * everything after it stops counting. The layer works out where the
+   * conversation lives, and refuses the answer when the conversation is not
+   * the caller's.
+   */
+  app.post('/:id/revert', (c) =>
+    handle(c, async () => {
+      const body = SessionRevertSchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      const session = await provider.revertSession(
+        c.req.param('id'),
+        { messageId: body.data.messageId, partId: body.data.partId },
+        contextOf(located.directory),
+      )
+      return ok(c, SessionResponseSchema, { session })
+    }),
+  )
+
   return app
 }
 
@@ -238,7 +330,6 @@ async function locate(
   if (!visible) {
     return fail(c, 404, 'not_found', 'No session is known under that id')
   }
-
   return { session: location.session, directory: location.directory, provider }
 }
 

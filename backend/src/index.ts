@@ -66,6 +66,7 @@ import { createApiV1Routes } from './routes/api-v1'
 import { createBffRoutes } from './routes/bff'
 import { ProviderRegistry } from './providers/registry'
 import { OpenCodeProvider } from './providers/opencode/adapter'
+import { toVersionedEvent } from './providers/opencode/events'
 import { ClaudeCodeProvider } from './providers/cli/claude-code'
 import { PiProvider } from './providers/cli/pi'
 import { HermesProvider } from './providers/hermes/adapter'
@@ -394,6 +395,10 @@ if (ENV.VAPID.PUBLIC_KEY && ENV.VAPID.PRIVATE_KEY) {
 
 sseAggregator.setPendingActionsFetcher(openCodeClient)
 sseAggregator.setPasswordResolver(() => new SettingsService(db).getOpenCodeServerPassword())
+// The conversation's events are said in the versioned dialect, by the same
+// translator that says a conversation over HTTP. The stream does not know
+// what an event means; this is who knows.
+sseAggregator.setEventTranslator(toVersionedEvent)
 sseAggregator.start()
 
 sseAggregator.setScheduledSessionsResolver(

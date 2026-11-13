@@ -311,8 +311,14 @@ describe('给前端的那一层', () => {
     // One conversation is as much a conversation as a list of them is: an
     // agent knows about conversations, not about people. Without this, one
     // conversation is handed to whoever asked for it.
+    //
+    // The methods that read or change a conversation are all of them now, and
+    // not only the four that create and rename and remove and stop: reading
+    // the messages of a conversation and sending words to it are the same
+    // kind of thing, and a file that does one of those without narrowing it
+    // to the caller hands a conversation to whoever asked.
     const withSession = bffFiles().filter((file) =>
-      /\b(getSession|renameSession|deleteSession|abortSession)\s*\(/.test(read(file)),
+      /\b(getSession|renameSession|deleteSession|abortSession|listMessages|sendPrompt|revertSession)\s*\(/.test(read(file)),
     )
     expect(withSession.length, '没找到出会话的地方，这条门禁正在空跑').toBeGreaterThan(0)
 

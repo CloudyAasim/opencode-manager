@@ -43,6 +43,9 @@ seventy-five, and it still gets seventy-five.
 | `PATCH` | `/api/bff/sessions/:id` | A conversation's new title | `SessionResponse` |
 | `DELETE` | `/api/bff/sessions/:id` | A conversation, gone | `DeletedResponse` |
 | `POST` | `/api/bff/sessions/:id/abort` | Stop what the conversation is doing | `AcceptedResponse` |
+| `GET` | `/api/bff/sessions/:id/messages` | What was said in one conversation | `MessageListResponse` |
+| `POST` | `/api/bff/sessions/:id/prompts` | Saying something to one conversation | `AcceptedResponse` |
+| `POST` | `/api/bff/sessions/:id/revert` | Taking a message back | `SessionResponse` |
 | `GET` | `/api/bff/pending` | What the agent is waiting for, across one or more working directories | `PendingListResponse` |
 
 ## The shapes
@@ -117,6 +120,52 @@ A conversation that is created here is written down in the ledger with the
 person who asked for it, in the same moment the conversation comes into
 existence - which is what lets every later request tell one person's
 conversation from another's.
+
+### The conversation itself
+
+Reading the conversation, saying something to it and taking a message back are
+this layer's job too, for the same reason the list is: the client would
+otherwise have to know which agent is behind the conversation and which working
+directory it lives in before it could ask anything about it.
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `GET /api/bff/sessions/:id/messages` | - | `MessageListResponse` |
+| `POST /api/bff/sessions/:id/prompts` | `SendPromptRequest` | `AcceptedResponse` |
+| `POST /api/bff/sessions/:id/revert` | `SessionRevert` | `SessionResponse` |
+
+The messages are the versioned API's messages - there is one truth about what a
+message is - and the prompt is the versioned API's prompt: the words, the files
+that go with them, and the model and the agent that should answer all travel
+together, so the conversation is answered the way the caller asked for it and
+not the way the server felt like.
+
+A prompt that says nothing is not a prompt: the request has to carry words or a
+file to hand over, so a caller who meant to say something cannot end up with an
+empty turn in the conversation and no idea why.
+
+Taking a message back rolls the conversation back to the message that is named.
+The agent does the taking; the answer is the conversation as it is afterwards,
+read back rather than guessed at.
+
+### The event stream says the same thing in the same words
+
+The client learns about a conversation that is happening from the event stream,
+and the stream is translated into the same versioned dialect the answers are
+in - so one cache slot holds one shape, and the client never has to hold the
+agent's words and the layer's words at the same time.
+
+What is translated is the shape of the conversation: a session appearing,
+changing or going away, a message being written, a part of it arriving or
+changing, a part being taken away, a message being removed, the session going
+idle, being compacted, or failing. Everything else that travels on the stream -
+the agent's status, its to-do list, the permissions and the questions it is
+waiting on - is passed through as it is, because none of it carries the shape
+of the conversation.
+
+A part of a conversation that arrives in a kind this layer does not know is not
+dropped and not turned into text: it is called `other` and keeps whatever words
+it had.
 
 ### What it refuses
 
