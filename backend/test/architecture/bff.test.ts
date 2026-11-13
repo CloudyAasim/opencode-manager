@@ -270,6 +270,67 @@ describe('给前端的那一层', () => {
     ).toBeGreaterThan(0)
   })
 
+  it('前端不许再自己去问 agent 的会话级面', () => {
+    // Creating, renaming, deleting and stopping a conversation are the
+    // layer's job: it knows where the conversation lives and who asked for
+    // it. A client that asks the agent itself has to know both, and it keeps
+    // a map of conversations to directories that is wrong the moment a
+    // conversation moves.
+    //
+    // The names are what makes this checkable: the layer's client has
+    // methods of its own, so only the agent's client is looked at.
+    const AGENT_CLIENT = path.join(FRONTEND_DIR, 'api', 'opencode.ts')
+    const AGENT_ONLY = ['updateSession', 'deleteWorkspace']
+    const offenders: string[] = []
+
+    for (const match of read(AGENT_CLIENT).matchAll(
+      /\basync\s+(createSession|updateSession|deleteSession|deleteWorkspace|abortSession)\s*\(/g,
+    )) {
+      offenders.push(`api/opencode.ts 定义了 ${match[1]}`)
+    }
+    for (const file of frontendSources()) {
+      const source = read(file)
+      for (const match of source.matchAll(
+        new RegExp(`\\basync\\s+(${AGENT_ONLY.join('|')})\\s*\\(`, 'g'),
+      )) {
+        offenders.push(`${path.relative(repoRoot, file)} 定义了 ${match[1]}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在自己去问 agent 的会话级面：${offenders.join(', ')}`,
+        '前端要问这一层，不要问 agent。',
+        '自己问的话，客户端就得自己记着会话在哪个目录，还得自己记着这个会话是谁的。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('这一层必须把会话收窄到调用者', () => {
+    // One conversation is as much a conversation as a list of them is: an
+    // agent knows about conversations, not about people. Without this, one
+    // conversation is handed to whoever asked for it.
+    const withSession = bffFiles().filter((file) =>
+      /\b(getSession|renameSession|deleteSession|abortSession)\s*\(/.test(read(file)),
+    )
+    expect(withSession.length, '没找到出会话的地方，这条门禁正在空跑').toBeGreaterThan(0)
+
+    const offenders = withSession
+      .filter((file) => !/sessionVisibleTo|sessionBelongsToCaller/.test(read(file)))
+      .map((file) => path.basename(file))
+      .sort()
+
+    expect(
+      offenders,
+      [
+        `这些文件把会话原样交出去了：${offenders.join(', ')}`,
+        '会话必须先按调用者收窄，不然它就是别人的会话。',
+        '（收窄一个会话的是 sessionVisibleTo，不是收窄列表的那个。）',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
   it('这一层必须把列表收窄到调用者', () => {
     // An agent knows about conversations, not about people. Without this the
     // list is the whole server's list, and it is handed to whoever asked.
