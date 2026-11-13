@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { UpstreamError, type OpenCodeClient } from '../../services/opencode/client'
 import { ProviderProtocolError, ProviderUpstreamError, SessionNotFoundError } from '../contract'
-import { OpenCodeProvider, toMessage, toPart, toSession } from './adapter'
+import { OpenCodeProvider, toMessage, toMessageWithParts, toPart, toSession } from './adapter'
 
 function clientWith(overrides: Record<string, unknown>): OpenCodeClient {
   return {
@@ -42,6 +42,7 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
       archived: true,
       status: 'unknown',
       revert: null,
+      share: null,
     })
   })
 
@@ -63,6 +64,21 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
     expect(session.revert).toBeNull()
   })
 
+  it('会话：共享链接照原样翻译过来', () => {
+    const session = toSession(
+      { id: 'ses_1', share: { url: 'https://example.com/s/abc' } },
+      'opencode',
+    )
+
+    expect(session.share).toEqual({ url: 'https://example.com/s/abc' })
+  })
+
+  it('会话：没有共享链接就说没有，不是不存在这个字段', () => {
+    const session = toSession({ id: 'ses_1' }, 'opencode')
+
+    expect(session.share).toBeNull()
+  })
+
   it('会话：上游没说的东西不许被编出来', () => {
     const session = toSession({ id: 'ses_1' }, 'opencode')
 
@@ -79,30 +95,41 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
   })
 
   it('消息：info 和 parts 合起来才是一条消息', () => {
-    const message = toMessage(
-      {
-        info: {
-          id: 'msg_1',
-          sessionID: 'ses_1',
-          role: 'assistant',
-          time: { created: 100, completed: 200 },
-          cost: 0.5,
-          tokens: { input: 10, output: 20, reasoning: 5, cache: { read: 1, write: 2 } },
-        },
-        parts: [{ id: 'prt_1', type: 'text', text: 'hi' }],
+    const raw = {
+      info: {
+        id: 'msg_1',
+        sessionID: 'ses_1',
+        role: 'assistant',
+        time: { created: 100, completed: 200 },
+        cost: 0.5,
+        tokens: { input: 10, output: 20, reasoning: 5, cache: { read: 1, write: 2 } },
+        modelID: 'claude',
+        providerID: 'anthropic',
+        agent: 'build',
+        variant: 'v1',
       },
-      'opencode',
-    )
+      parts: [{ id: 'prt_1', type: 'text', text: 'hi' }],
+    }
 
-    expect(message).toEqual({
+    expect(toMessage(raw, 'opencode')).toEqual({
       id: 'msg_1',
       sessionId: 'ses_1',
       role: 'assistant',
       createdAt: 100,
       completedAt: 200,
-      parts: [{ id: 'prt_1', type: 'text', text: 'hi', tool: null }],
       cost: 0.5,
       tokens: { input: 10, output: 20, reasoning: 5, cacheRead: 1, cacheWrite: 2 },
+      modelId: 'claude',
+      providerId: 'anthropic',
+      agent: 'build',
+      variant: 'v1',
+      parentId: null,
+      error: null,
+    })
+
+    expect(toMessageWithParts(raw, 'opencode')).toEqual({
+      info: toMessage(raw, 'opencode'),
+      parts: [{ id: 'prt_1', type: 'text', text: 'hi', synthetic: null, time: null }],
     })
   })
 
@@ -120,46 +147,95 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
       id: 'p1',
       type: 'text',
       text: 'hello',
-      tool: null,
+      synthetic: null,
+      time: null,
     })
 
     expect(toPart({ id: 'p2', type: 'reasoning', text: 'thinking' })).toEqual({
       id: 'p2',
       type: 'reasoning',
       text: 'thinking',
-      tool: null,
+      time: null,
     })
 
     expect(toPart({ id: 'p3', type: 'tool', tool: 'bash', state: { status: 'completed', title: 'ls' } })).toEqual({
       id: 'p3',
       type: 'tool',
-      text: null,
-      tool: { name: 'bash', state: 'completed', title: 'ls', output: null },
+      callId: '',
+      name: 'bash',
+      state: {
+        status: 'completed',
+        title: 'ls',
+        output: null,
+        error: null,
+        input: null,
+        metadata: null,
+        raw: null,
+        time: null,
+      },
     })
 
     expect(toPart({ id: 'p4', type: 'file', filename: 'a.txt' })).toEqual({
       id: 'p4',
       type: 'file',
-      text: 'a.txt',
-      tool: null,
+      filename: 'a.txt',
+      mime: null,
+      url: '',
     })
   })
 
   it('片段：看不懂的片段不许被丢掉，也不许被当成文字', () => {
-    expect(toPart({ id: 'p5', type: 'step-start' })).toEqual({
-      id: 'p5',
-      type: 'other',
-      text: null,
-      tool: null,
-    })
+    const part = toPart({ id: 'p5', type: 'mystery', text: 'what' })
+
+    // The words are kept - dropping a piece of the answer loses part of it -
+    // but the kind is not 'text', so nothing on the screen draws it as the
+    // message's text.
+    expect(part).toEqual({ id: 'p5', type: 'other', text: 'what' })
+    expect(part.type).not.toBe('text')
   })
 
   it('片段：工具还没开始就是 pending', () => {
     expect(toPart({ id: 'p6', type: 'tool', tool: 'bash', state: { status: 'pending' } })).toEqual({
       id: 'p6',
       type: 'tool',
-      text: null,
-      tool: { name: 'bash', state: 'pending', title: null, output: null },
+      callId: '',
+      name: 'bash',
+      state: {
+        status: 'pending',
+        title: null,
+        output: null,
+        error: null,
+        input: null,
+        metadata: null,
+        raw: null,
+        time: null,
+      },
+    })
+  })
+
+  it('片段：子会话的 id 在工具自己身上还是在状态里，都读得到', () => {
+    // The agent puts the conversation a task handed off to in one place or the
+    // other, and the versioned shape has one place for it - so both are read
+    // into it, and the client does not have to know which one the agent used.
+    const onThePart = toPart({
+      id: 'p7',
+      type: 'tool',
+      tool: 'task',
+      metadata: { sessionId: 'child-session' },
+      state: { status: 'completed', output: 'done' },
+    })
+    expect(onThePart.type === 'tool' ? onThePart.state.metadata : null).toEqual({
+      sessionId: 'child-session',
+    })
+
+    const inTheState = toPart({
+      id: 'p8',
+      type: 'tool',
+      tool: 'task',
+      state: { status: 'completed', output: 'done', metadata: { sessionId: 'child-session' } },
+    })
+    expect(inTheState.type === 'tool' ? inTheState.state.metadata : null).toEqual({
+      sessionId: 'child-session',
     })
   })
 })
@@ -343,13 +419,50 @@ describe('OpenCode 适配器', () => {
     const forward = vi.fn(async () => new Response('', { status: 200 }))
     const provider = new OpenCodeProvider(clientWith({ forward }))
 
-    await provider.sendPrompt('ses_1', { text: 'do it' }, {})
+    await provider.sendPrompt(
+      'ses_1',
+      { parts: [{ type: 'text', text: 'do it' }], model: null, agent: null, variant: null },
+      {},
+    )
 
     expect(forward).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'POST',
         path: '/session/ses_1/prompt_async',
         body: JSON.stringify({ parts: [{ type: 'text', text: 'do it' }] }),
+      }),
+    )
+  })
+
+  it('发提示词时，模型、agent 和变体都照原样送到', async () => {
+    const forward = vi.fn(async () => new Response('', { status: 200 }))
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    await provider.sendPrompt(
+      'ses_1',
+      {
+        parts: [
+          { type: 'text', text: 'do it' },
+          { type: 'file', filename: 'note.txt', mime: 'text/plain', url: 'file:///tmp/note.txt' },
+        ],
+        model: { providerId: 'anthropic', modelId: 'claude' },
+        agent: 'build',
+        variant: 'v1',
+      },
+      {},
+    )
+
+    expect(forward).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: JSON.stringify({
+          parts: [
+            { type: 'text', text: 'do it' },
+            { type: 'file', mime: 'text/plain', filename: 'note.txt', url: 'file:///tmp/note.txt' },
+          ],
+          model: { providerID: 'anthropic', modelID: 'claude' },
+          agent: 'build',
+          variant: 'v1',
+        }),
       }),
     )
   })

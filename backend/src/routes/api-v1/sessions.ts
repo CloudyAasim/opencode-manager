@@ -121,7 +121,16 @@ export function createSessionRoutes(registry: ProviderRegistry, database: Databa
       }
 
       const provider = registry.resolve(agentIdOf(c))
-      await provider.sendPrompt(c.req.param('id'), { text: body.data.text }, contextOf(c))
+      await provider.sendPrompt(
+        c.req.param('id'),
+        {
+          parts: body.data.parts,
+          model: body.data.model,
+          agent: body.data.agent,
+          variant: body.data.variant,
+        },
+        contextOf(c),
+      )
       return ok(c, AcceptedResponseSchema, { accepted: true })
     }),
   )

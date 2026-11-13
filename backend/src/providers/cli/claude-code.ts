@@ -1,7 +1,12 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import type { Message, MessagePart } from '@opencode-manager/shared/api/v1'
+import type {
+  Message,
+  MessagePart,
+  MessageWithParts,
+  ToolMessagePart,
+} from '@opencode-manager/shared/api/v1'
 import { CliAgentProvider, type CliSession } from './cli-agent'
 import { jsonlLines, runCli } from './cli-process'
 import type { ProviderStatus } from '../contract'
@@ -159,9 +164,9 @@ export function readClaudeSession(file: string, fallbackId: string): CliSession 
  * here, because a call without its result says only that something was
  * attempted.
  */
-export function toClaudeMessages(records: ClaudeLine[]): Message[] {
-  const messages: Message[] = []
-  const toolParts = new Map<string, MessagePart>()
+export function toClaudeMessages(records: ClaudeLine[]): MessageWithParts[] {
+  const messages: MessageWithParts[] = []
+  const toolParts = new Map<string, ToolMessagePart>()
 
   for (const record of records) {
     if (record.type !== 'user' && record.type !== 'assistant') continue
@@ -176,14 +181,8 @@ export function toClaudeMessages(records: ClaudeLine[]): Message[] {
       // agent, so none of it belongs in the conversation.
       if (record.isMeta || isLocalCommand(content)) continue
       messages.push({
-        id,
-        sessionId: record.sessionId ?? '',
-        role: record.type === 'user' ? 'user' : 'assistant',
-        createdAt: timestamp,
-        completedAt: null,
-        parts: [{ id, type: 'text', text: content, tool: null }],
-        cost: null,
-        tokens: null,
+        info: toInfo(id, record.sessionId ?? '', record.type === 'user' ? 'user' : 'assistant', timestamp),
+        parts: [{ id, type: 'text', text: content, synthetic: null, time: null }],
       })
       continue
     }
@@ -194,9 +193,9 @@ export function toClaudeMessages(records: ClaudeLine[]): Message[] {
       for (const block of content as ClaudeBlock[]) {
         if (block?.type !== 'tool_result') continue
         const part = toolParts.get(block.tool_use_id ?? '')
-        if (!part?.tool) continue
-        part.tool.state = block.is_error ? 'error' : 'completed'
-        part.tool.output = textOf(block.content)
+        if (!part) continue
+        part.state.status = block.is_error ? 'error' : 'completed'
+        part.state.output = textOf(block.content)
       }
       continue
     }
@@ -204,15 +203,25 @@ export function toClaudeMessages(records: ClaudeLine[]): Message[] {
     const parts: MessagePart[] = []
     for (const [index, block] of (content as ClaudeBlock[]).entries()) {
       if (block?.type === 'text') {
-        parts.push({ id: `${id}-${index}`, type: 'text', text: block.text ?? '', tool: null })
+        parts.push({ id: `${id}-${index}`, type: 'text', text: block.text ?? '', synthetic: null, time: null })
       } else if (block?.type === 'thinking') {
-        parts.push({ id: `${id}-${index}`, type: 'reasoning', text: block.thinking ?? '', tool: null })
+        parts.push({ id: `${id}-${index}`, type: 'reasoning', text: block.thinking ?? '', time: null })
       } else if (block?.type === 'tool_use') {
-        const part: MessagePart = {
+        const part: ToolMessagePart = {
           id: block.id ?? `${id}-${index}`,
           type: 'tool',
-          text: null,
-          tool: { name: block.name ?? '', state: 'running', title: null, output: null },
+          callId: block.id ?? '',
+          name: block.name ?? '',
+          state: {
+            status: 'running',
+            title: null,
+            output: null,
+            error: null,
+            input: null,
+            metadata: null,
+            raw: null,
+            time: null,
+          },
         }
         parts.push(part)
         toolParts.set(block.id ?? '', part)
@@ -220,22 +229,46 @@ export function toClaudeMessages(records: ClaudeLine[]): Message[] {
     }
 
     messages.push({
-      id,
-      sessionId: record.sessionId ?? '',
-      role: 'assistant',
-      createdAt: timestamp,
-      completedAt: null,
+      info: toInfo(id, record.sessionId ?? '', 'assistant', timestamp),
       parts,
-      cost: null,
-      tokens: null,
     })
   }
 
   return messages
 }
 
-function titleOf(messages: Message[]): string {
-  const firstUser = messages.find((message) => message.role === 'user')
+/**
+ * What the transcript says about a message, without the pieces of it.
+ *
+ * A transcript says who said what and when. It says nothing about what the
+ * answer cost or which model gave it, and saying so with null is truer than
+ * making a number up.
+ */
+function toInfo(
+  id: string,
+  sessionId: string,
+  role: Message['role'],
+  createdAt: number,
+): Message {
+  return {
+    id,
+    sessionId,
+    role,
+    createdAt,
+    completedAt: null,
+    cost: null,
+    tokens: null,
+    modelId: null,
+    providerId: null,
+    agent: null,
+    variant: null,
+    parentId: null,
+    error: null,
+  }
+}
+
+function titleOf(messages: MessageWithParts[]): string {
+  const firstUser = messages.find((message) => message.info.role === 'user')
   const text = firstUser?.parts.find((part) => part.type === 'text')?.text ?? ''
   const line = text.split(/\r?\n/).find((entry) => entry.trim().length > 0)
   return line ? line.trim() : ''

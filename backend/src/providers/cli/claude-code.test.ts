@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { MessagePart } from '@opencode-manager/shared/api/v1'
 import { ClaudeCodeProvider, readClaudeSession } from './claude-code'
 
 function writeSession(lines: unknown[]): { file: string; id: string } {
@@ -59,7 +60,7 @@ describe('Claude Code 的会话', () => {
     expect(session?.directory).toBe('/work/demo')
     expect(session?.title).toBe('read the file please')
     expect(session?.messages).toHaveLength(2)
-    expect(session?.messages[0]?.role).toBe('user')
+    expect(session?.messages[0]?.info.role).toBe('user')
     expect(session?.messages[1]?.parts).toHaveLength(2)
   })
 
@@ -89,11 +90,21 @@ describe('Claude Code 的会话', () => {
     const tool = session?.messages[0]?.parts[0]
 
     expect(tool?.type).toBe('tool')
-    expect(tool?.tool).toEqual({
+    expect(tool).toEqual({
+      id: 'toolu_1',
+      type: 'tool',
+      callId: 'toolu_1',
       name: 'Read',
-      state: 'completed',
-      title: null,
-      output: 'the file says hello',
+      state: {
+        status: 'completed',
+        title: null,
+        output: 'the file says hello',
+        error: null,
+        input: null,
+        metadata: null,
+        raw: null,
+        time: null,
+      },
     })
   })
 
@@ -115,8 +126,25 @@ describe('Claude Code 的会话', () => {
     ])
 
     const session = readClaudeSession(file, 'ses_abc123')
+    const tool = session?.messages[0]?.parts[0]
 
-    expect(session?.messages[0]?.parts[0]?.tool?.state).toBe('error')
+    expect(tool?.type).toBe('tool')
+    expect(tool).toEqual({
+      id: 'toolu_1',
+      type: 'tool',
+      callId: 'toolu_1',
+      name: 'Bash',
+      state: {
+        status: 'error',
+        title: null,
+        output: 'no such file',
+        error: null,
+        input: null,
+        metadata: null,
+        raw: null,
+        time: null,
+      },
+    })
   })
 
   it('看不懂的行被跳过，而不是被猜', () => {
@@ -206,12 +234,12 @@ describe('真的一段 Claude Code 对话', () => {
     // Two: what the person said, and what came back. The result of the tool
     // call belongs to the call, not to the conversation.
     expect(session?.messages).toHaveLength(2)
-    expect(session?.messages[0]?.role).toBe('user')
-    expect(session?.messages[0]?.parts[0]?.text).toBe('what does this repo do?')
+    expect(session?.messages[0]?.info.role).toBe('user')
+    expect(textOf(session?.messages[0]?.parts[0])).toBe('what does this repo do?')
   })
 
   it('本地命令不算对话', () => {
-    const texts = session?.messages.flatMap((message) => message.parts.map((part) => part.text)) ?? []
+    const texts = session?.messages.flatMap((message) => message.parts.map(textOf)) ?? []
 
     expect(texts).not.toContain('<command-name>/exit</command-name>')
     expect(texts).not.toContain('<local-command-stdout>Goodbye!</local-command-stdout>')
@@ -225,13 +253,23 @@ describe('真的一段 Claude Code 对话', () => {
   it('工具的调用和它的结果还是一件事', () => {
     const assistant = session?.messages[1]
 
-    expect(assistant?.role).toBe('assistant')
-    expect(assistant?.parts[0]?.text).toBe('It is a small library that reads the settings.')
-    expect(assistant?.parts[1]?.tool).toEqual({
+    expect(assistant?.info.role).toBe('assistant')
+    expect(textOf(assistant?.parts[0])).toBe('It is a small library that reads the settings.')
+    expect(assistant?.parts[1]).toEqual({
+      id: 'toolu_01',
+      type: 'tool',
+      callId: 'toolu_01',
       name: 'Read',
-      state: 'completed',
-      title: null,
-      output: '# Demo\nA small library.',
+      state: {
+        status: 'completed',
+        title: null,
+        output: '# Demo\nA small library.',
+        error: null,
+        input: null,
+        metadata: null,
+        raw: null,
+        time: null,
+      },
     })
   })
 
@@ -239,3 +277,14 @@ describe('真的一段 Claude Code 对话', () => {
     expect(session?.title).toBe('what does this repo do?')
   })
 })
+
+/**
+ * The words of a piece of a message.
+ *
+ * A piece of a message is one of several kinds and only the text one has
+ * words in it, so asking for the words means asking whether this is that
+ * kind first.
+ */
+function textOf(part: MessagePart | undefined): string | undefined {
+  return part?.type === 'text' ? part.text : undefined
+}

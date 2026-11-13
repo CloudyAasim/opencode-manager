@@ -2,10 +2,14 @@ import type {
   Agent,
   AgentCapability,
   AgentKind,
-  Message,
+  MessageWithParts,
   PendingPermission,
   PendingQuestion,
+  PromptModel,
+  PromptPart,
+  PromptTextPart,
   Session,
+  SessionRevert,
 } from '@opencode-manager/shared/api/v1'
 
 /**
@@ -15,7 +19,7 @@ import type {
  * which agent it was talking to.
  */
 
-export type { Agent, AgentCapability, AgentKind, Message, PendingPermission, PendingQuestion, Session }
+export type { Agent, AgentCapability, AgentKind, MessageWithParts, PendingPermission, PendingQuestion, Session }
 
 /**
  * Where the agent is working. Every coding agent has one, and the versioned
@@ -42,8 +46,33 @@ export interface CreateSessionInput {
   directory?: string
 }
 
+/**
+ * What is being said to a conversation.
+ *
+ * A message can be more than words: a file can be handed over with it, and
+ * the model and the agent that should answer can be named. An agent that
+ * cannot do one of those says so rather than quietly dropping it.
+ */
 export interface SendPromptInput {
-  text: string
+  parts: PromptPart[]
+  model: PromptModel | null
+  agent: string | null
+  variant: string | null
+}
+
+/**
+ * The words in a prompt.
+ *
+ * An agent that only speaks words gets the words. A prompt that is only files
+ * has no words in it, and the agent that cannot be given a file says so
+ * rather than pretending it read one.
+ */
+export function promptText(input: SendPromptInput): string {
+  return input.parts
+    .filter((part): part is PromptTextPart => part.type === 'text')
+    .map((part) => part.text)
+    .join('\n')
+    .trim()
 }
 
 /**
@@ -82,8 +111,16 @@ export interface AgentProvider {
   createSession(input: CreateSessionInput): Promise<Session>
   renameSession(id: string, title: string, context: ProviderContext): Promise<Session>
   deleteSession(id: string, context: ProviderContext): Promise<void>
-  listMessages(sessionId: string, context: ProviderContext): Promise<Message[]>
+  listMessages(sessionId: string, context: ProviderContext): Promise<MessageWithParts[]>
   sendPrompt(sessionId: string, input: SendPromptInput, context: ProviderContext): Promise<void>
+  /**
+   * Taking a message back.
+   *
+   * The conversation is rolled back to the message that is named, and
+   * everything after it stops counting. An agent that keeps no such thing
+   * says so rather than pretending it did.
+   */
+  revertSession(id: string, revert: SessionRevert, context: ProviderContext): Promise<Session>
   abortSession(sessionId: string, context: ProviderContext): Promise<void>
   /**
    * The permissions the agent is waiting for.

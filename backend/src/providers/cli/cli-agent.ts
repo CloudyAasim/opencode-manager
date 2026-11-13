@@ -1,6 +1,13 @@
-import type { Message, PendingPermission, PendingQuestion, Session } from '@opencode-manager/shared/api/v1'
+import type {
+  MessageWithParts,
+  PendingPermission,
+  PendingQuestion,
+  Session,
+  SessionRevert,
+} from '@opencode-manager/shared/api/v1'
 import {
   ProviderUnavailableError,
+  promptText,
   type AgentCapability,
   type AgentKind,
   type AgentProvider,
@@ -33,7 +40,7 @@ export interface CliSession {
   directory: string | null
   createdAt: number
   updatedAt: number
-  messages: Message[]
+  messages: MessageWithParts[]
   /** Where the session lives, when it lives in a file. */
   file?: string
 }
@@ -109,7 +116,7 @@ export abstract class CliAgentProvider implements AgentProvider {
     return found ? toSession(found, this.id, context.directory) : null
   }
 
-  async listMessages(sessionId: string, context: ProviderContext): Promise<Message[]> {
+  async listMessages(sessionId: string, context: ProviderContext): Promise<MessageWithParts[]> {
     const found = this.readSessions(context).find((session) => session.id === sessionId)
     return found?.messages ?? []
   }
@@ -149,8 +156,22 @@ export abstract class CliAgentProvider implements AgentProvider {
     return toSession(session, this.id)
   }
 
+  /**
+   * A program on this machine is given words, and nothing else.
+   *
+   * A prompt that carries a file but no words cannot become a command line:
+   * running the program with nothing to say would look like it had read the
+   * file, and it never did.
+   */
   async sendPrompt(sessionId: string, input: SendPromptInput, context: ProviderContext): Promise<void> {
-    await this.run(input.text, sessionId, context)
+    const text = promptText(input)
+    if (!text) {
+      throw new ProviderUnavailableError(
+        this.id,
+        `${this.label} can only be given words, and this prompt has none in it`,
+      )
+    }
+    await this.run(text, sessionId, context)
   }
 
   /**
@@ -169,6 +190,16 @@ export abstract class CliAgentProvider implements AgentProvider {
     }
     const { unlink } = await import('node:fs/promises')
     await unlink(file)
+  }
+
+  /**
+   * A program on this machine keeps what it wrote down.
+   *
+   * It does not take it back, so it says so rather than answering with a
+   * conversation that looks rolled back and is not.
+   */
+  async revertSession(_id: string, _revert: SessionRevert, _context: ProviderContext): Promise<Session> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot roll a conversation back`)
   }
 
   async abortSession(_id: string, _context: ProviderContext): Promise<void> {
@@ -249,6 +280,7 @@ function toSession(session: CliSession, agentId: string, fallbackDirectory?: str
     // A program on this machine keeps what it wrote down and does not take it
     // back, so there is no point to roll a conversation back to.
     revert: null,
+    share: null,
   }
 }
 

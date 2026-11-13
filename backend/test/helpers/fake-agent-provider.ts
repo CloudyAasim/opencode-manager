@@ -1,8 +1,11 @@
 import type {
   Message,
+  MessagePart,
+  MessageWithParts,
   PendingPermission,
   PendingQuestion,
   Session,
+  SessionRevert,
 } from '@opencode-manager/shared/api/v1'
 import type {
   AgentProvider,
@@ -20,7 +23,7 @@ export interface FakeProviderOptions {
   kind?: 'server' | 'cli'
   status?: ProviderStatus
   sessions?: Session[]
-  messages?: Record<string, Message[]>
+  messages?: Record<string, MessageWithParts[]>
   nextCursor?: string | null
   pendingPermissions?: PendingPermission[]
   pendingQuestions?: PendingQuestion[]
@@ -54,7 +57,7 @@ export class FakeAgentProvider implements AgentProvider {
   readonly calls: FakeProviderCall[] = []
 
   sessions: Session[]
-  messages: Record<string, Message[]>
+  messages: Record<string, MessageWithParts[]>
   statusValue: ProviderStatus
   failWith: Error | null = null
   nextCursor: string | null
@@ -122,6 +125,7 @@ export class FakeAgentProvider implements AgentProvider {
       archived: false,
       status: 'idle',
       revert: null,
+      share: null,
     }
     this.sessions = [...this.sessions, session]
     return session
@@ -141,13 +145,22 @@ export class FakeAgentProvider implements AgentProvider {
     this.sessions = this.sessions.filter((session) => session.id !== id)
   }
 
-  async listMessages(sessionId: string, _context: ProviderContext): Promise<Message[]> {
-    this.record('listMessages', sessionId)
+  async listMessages(sessionId: string, context: ProviderContext): Promise<MessageWithParts[]> {
+    this.recordAbout('listMessages', context, [sessionId])
     return this.messages[sessionId] ?? []
   }
 
-  async sendPrompt(sessionId: string, input: SendPromptInput, _context: ProviderContext): Promise<void> {
-    this.record('sendPrompt', sessionId, input)
+  async sendPrompt(sessionId: string, input: SendPromptInput, context: ProviderContext): Promise<void> {
+    this.recordAbout('sendPrompt', context, [sessionId, input])
+  }
+
+  async revertSession(id: string, revert: SessionRevert, context: ProviderContext): Promise<Session> {
+    this.recordAbout('revertSession', context, [id, revert])
+    const found = this.sessions.find((session) => session.id === id)
+    if (!found) throw new Error(`no session ${id}`)
+    const reverted = { ...found, revert }
+    this.sessions = this.sessions.map((session) => (session.id === id ? reverted : session))
+    return reverted
   }
 
   async abortSession(sessionId: string, context: ProviderContext): Promise<void> {
@@ -212,6 +225,7 @@ export function makeSession(overrides: Partial<Session> = {}): Session {
     archived: false,
     status: 'idle',
     revert: null,
+    share: null,
   }
   // A field that is not given stays as it was, rather than becoming
   // undefined: the shape says the field is there, and null is what it says
@@ -219,16 +233,28 @@ export function makeSession(overrides: Partial<Session> = {}): Session {
   return { ...session, ...overrides, revert: overrides.revert ?? session.revert }
 }
 
-export function makeMessage(overrides: Partial<Message> = {}): Message {
-  return {
+export function makeMessage(
+  overrides: Partial<Message> = {},
+  parts?: MessagePart[],
+): MessageWithParts {
+  const info: Message = {
     id: 'message-1',
     sessionId: 'session-1',
     role: 'user',
     createdAt: 1000,
     completedAt: null,
-    parts: [{ id: 'part-1', type: 'text', text: 'hello', tool: null }],
     cost: null,
     tokens: null,
+    modelId: null,
+    providerId: null,
+    agent: null,
+    variant: null,
+    parentId: null,
+    error: null,
     ...overrides,
+  }
+  return {
+    info,
+    parts: parts ?? [{ id: 'part-1', type: 'text', text: 'hello', synthetic: null, time: null }],
   }
 }

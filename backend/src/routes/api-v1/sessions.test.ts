@@ -290,8 +290,8 @@ describe('版本化 API', () => {
     const res = await app.request('/api/v1/sessions/session-1/messages')
 
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { messages: Array<{ id: string }> }
-    expect(body.messages[0]?.id).toBe('message-1')
+    const body = (await res.json()) as { messages: Array<{ info: { id: string } }> }
+    expect(body.messages[0]?.info.id).toBe('message-1')
   })
 
   it('发一句话', async () => {
@@ -301,12 +301,27 @@ describe('版本化 API', () => {
     const res = await app.request('/api/v1/sessions/session-1/prompts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'do it' }),
+      body: JSON.stringify({
+        parts: [{ type: 'text', text: 'do it' }],
+        model: null,
+        agent: null,
+        variant: null,
+      }),
     })
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ accepted: true })
-    expect(provider.calls.some((call) => call.method === 'sendPrompt')).toBe(true)
+
+    const sent = provider.calls.find((call) => call.method === 'sendPrompt')
+    expect(sent).toBeDefined()
+    // The words have to arrive. A prompt that is accepted and dropped is a
+    // conversation that never answers and nobody can say why.
+    expect(sent?.args[1]).toEqual({
+      parts: [{ type: 'text', text: 'do it' }],
+      model: null,
+      agent: null,
+      variant: null,
+    })
   })
 
   it('空话不算一句话', async () => {
@@ -316,10 +331,35 @@ describe('版本化 API', () => {
     const res = await app.request('/api/v1/sessions/session-1/prompts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '' }),
+      body: JSON.stringify({
+        parts: [{ type: 'text', text: '' }],
+        model: null,
+        agent: null,
+        variant: null,
+      }),
     })
 
     expect(res.status).toBe(400)
+    expect(provider.calls.some((call) => call.method === 'sendPrompt')).toBe(false)
+  })
+
+  it('只递一个文件，也是说了话', async () => {
+    const provider = new FakeAgentProvider()
+    const { app } = createApp([provider])
+
+    const res = await app.request('/api/v1/sessions/session-1/prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        parts: [{ type: 'file', filename: 'note.txt', mime: 'text/plain', url: 'file:///tmp/note.txt' }],
+        model: null,
+        agent: null,
+        variant: null,
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(provider.calls.some((call) => call.method === 'sendPrompt')).toBe(true)
   })
 
   it('叫停一个会话', async () => {

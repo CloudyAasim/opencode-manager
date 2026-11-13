@@ -52,7 +52,7 @@ describe('Pi 的会话', () => {
     expect(session?.directory).toBe('/work/demo')
     expect(session?.title).toBe('hello there')
     expect(session?.messages).toHaveLength(2)
-    expect(session?.messages[1]?.tokens).toEqual({
+    expect(session?.messages[1]?.info.tokens).toEqual({
       input: 10,
       output: 5,
       reasoning: 0,
@@ -91,11 +91,21 @@ describe('Pi 的会话', () => {
     const tool = session?.messages[0]?.parts[0]
 
     expect(tool?.type).toBe('tool')
-    expect(tool?.tool).toEqual({
+    expect(tool).toEqual({
+      id: 'call_1',
+      type: 'tool',
+      callId: 'call_1',
       name: 'bash',
-      state: 'completed',
-      title: null,
-      output: 'total 48',
+      state: {
+        status: 'completed',
+        title: null,
+        output: 'total 48',
+        error: null,
+        input: null,
+        metadata: null,
+        raw: null,
+        time: null,
+      },
     })
   })
 

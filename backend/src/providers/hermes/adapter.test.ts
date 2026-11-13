@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { MessagePart } from '@opencode-manager/shared/api/v1'
 import { HermesProvider } from './adapter'
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -64,6 +65,7 @@ describe('Hermes', () => {
       archived: false,
       status: 'idle',
       revert: null,
+      share: null,
     })
     expect(page.nextCursor).toBeNull()
   })
@@ -96,15 +98,19 @@ describe('Hermes', () => {
     const messages = await provider.listMessages('sess_1', {})
 
     expect(messages).toHaveLength(2)
-    expect(messages[0]?.role).toBe('user')
-    expect(messages[1]?.parts[0]?.text).toBe('hi')
+    expect(messages[0]?.info.role).toBe('user')
+    expect(textOf(messages[1]?.parts[0])).toBe('hi')
   })
 
   it('发一句话，是用 OpenAI 那套形状发的', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ id: 'chatcmpl-1' }))
     const provider = new HermesProvider({ apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch })
 
-    await provider.sendPrompt('sess_1', { text: 'do it' }, {})
+    await provider.sendPrompt(
+      'sess_1',
+      { parts: [{ type: 'text', text: 'do it' }], model: null, agent: null, variant: null },
+      {},
+    )
 
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('http://127.0.0.1:8642/v1/chat/completions')
@@ -114,6 +120,34 @@ describe('Hermes', () => {
       messages: [{ role: 'user', content: 'do it' }],
     })
     expect((init.headers as Record<string, string>)['X-Hermes-Session-Id']).toBe('sess_1')
+  })
+
+  it('对话收不回去', async () => {
+    const provider = new HermesProvider({ apiKey: 'k' })
+
+    await expect(
+      provider.revertSession('sess_1', { messageId: 'message-1', partId: null }, {}),
+    ).rejects.toThrow('cannot roll a conversation back')
+  })
+
+  it('prompt 里只有文件，就是没有话可说', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ id: 'chatcmpl-1' }))
+    const provider = new HermesProvider({ apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch })
+
+    await expect(
+      provider.sendPrompt(
+        'sess_1',
+        {
+          parts: [{ type: 'file', filename: 'a.txt', mime: 'text/plain', url: 'file:///a.txt' }],
+          model: null,
+          agent: null,
+          variant: null,
+        },
+        {},
+      ),
+    ).rejects.toThrow('only be given words')
+    // 假装读过文件，比明说自己做不到更糟。
+    expect(fetchImpl).not.toHaveBeenCalled()
   })
 
   it('服务器答不上来，就是答不上来', async () => {
@@ -182,10 +216,25 @@ describe('Hermes', () => {
     const messages = await provider.listMessages('api_1', {})
 
     expect(messages).toHaveLength(2)
-    expect(messages[0]?.id).toBe('1')
-    expect(messages[0]?.role).toBe('system')
-    expect(messages[1]?.parts[0]?.text).toBe('here you go')
-    expect(messages[1]?.parts[1]?.tool?.name).toBe('bash')
+    expect(messages[0]?.info.id).toBe('1')
+    expect(messages[0]?.info.role).toBe('system')
+    expect(textOf(messages[1]?.parts[0])).toBe('here you go')
+    expect(messages[1]?.parts[1]).toEqual({
+      id: 'call_1',
+      type: 'tool',
+      callId: 'call_1',
+      name: 'bash',
+      state: {
+        status: 'completed',
+        title: null,
+        output: null,
+        error: null,
+        input: null,
+        metadata: null,
+        raw: null,
+        time: null,
+      },
+    })
   })
 
   it('服务端说的话要带出来', async () => {
@@ -199,3 +248,14 @@ describe('Hermes', () => {
     )
   })
 })
+
+/**
+ * The words of a piece of a message.
+ *
+ * A piece of a message is one of several kinds and only the text one has
+ * words in it, so asking for the words means asking whether this is that
+ * kind first.
+ */
+function textOf(part: MessagePart | undefined): string | undefined {
+  return part?.type === 'text' ? part.text : undefined
+}

@@ -83,6 +83,17 @@ export const SessionRevertSchema = z.object({
 })
 export type SessionRevert = z.infer<typeof SessionRevertSchema>
 
+/**
+ * Where the conversation can be read by somebody else.
+ *
+ * A conversation that has been shared has a link; one that has not does not.
+ * Both are answerable, so both are said.
+ */
+export const SessionShareSchema = z.object({
+  url: z.string(),
+})
+export type SessionShare = z.infer<typeof SessionShareSchema>
+
 export const SessionSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),
@@ -105,37 +116,92 @@ export const SessionSchema = z.object({
    * Where the conversation was rolled back to, when it was rolled back.
    */
   revert: SessionRevertSchema.nullable(),
+  /**
+   * The link somebody else can read the conversation through, when it has one.
+   */
+  share: SessionShareSchema.nullable(),
 })
 export type Session = z.infer<typeof SessionSchema>
 
 export const MessageRoleSchema = z.enum(['user', 'assistant', 'system'])
 export type MessageRole = z.infer<typeof MessageRoleSchema>
 
-export const MessagePartTypeSchema = z.enum(['text', 'reasoning', 'tool', 'file', 'other'])
+/**
+ * The kinds of thing a message is made of.
+ *
+ * A conversation is not only words. It is the thinking behind the words, the
+ * tools that were called, the files that were read, the changes that were
+ * proposed, the work that was handed to somebody else. A client that draws a
+ * conversation has to be able to tell those apart, so they are named here.
+ *
+ * They are the parts of a conversation and not the parts of one program: every
+ * coding agent has text, reasoning, tools and files, and the words for them
+ * are the same wherever the agent comes from.
+ */
+export const MessagePartTypeSchema = z.enum([
+  'text',
+  'reasoning',
+  'tool',
+  'file',
+  'patch',
+  'agent',
+  'subtask',
+  'step-start',
+  'step-finish',
+  'snapshot',
+  'retry',
+  'compaction',
+  'other',
+])
 export type MessagePartType = z.infer<typeof MessagePartTypeSchema>
 
 export const ToolCallStateSchema = z.enum(['pending', 'running', 'completed', 'error'])
 export type ToolCallState = z.infer<typeof ToolCallStateSchema>
 
+/**
+ * When something started, and when it stopped.
+ *
+ * Both are there even when the second one never came: work that is still
+ * going on has a beginning and no end yet.
+ */
+export const TimeRangeSchema = z.object({
+  start: z.number(),
+  end: z.number().nullable(),
+})
+export type TimeRange = z.infer<typeof TimeRangeSchema>
+
+/**
+ * A tool call, and how far it got.
+ *
+ * The call is named and numbered, and the state says where it got to: a call
+ * that is still running has no output yet, a call that failed says why, and a
+ * call that was never answered is still pending.
+ *
+ * What the tool was called with, and what it left behind, is the agent's own
+ * - a tool is called with whatever its caller decided to call it with - so
+ * those two are open.
+ */
 export const ToolCallSchema = z.object({
+  callId: z.string(),
   name: z.string(),
-  state: ToolCallStateSchema,
-  title: z.string().nullable(),
-  /**
-   * What the tool said when it was done. A call without its result is half
-   * of the story, and the half that says whether the work actually worked.
-   */
-  output: z.string().nullable(),
+  state: z.object({
+    status: ToolCallStateSchema,
+    title: z.string().nullable(),
+    /**
+     * What the tool said when it was done. A call without its result is half
+     * of the story, and the half that says whether the work actually worked.
+     */
+    output: z.string().nullable(),
+    /** What went wrong, when the call went wrong. */
+    error: z.string().nullable(),
+    input: z.record(z.string(), z.unknown()).nullable(),
+    metadata: z.record(z.string(), z.unknown()).nullable(),
+    /** The call as it was written down, before it was made sense of. */
+    raw: z.string().nullable(),
+    time: TimeRangeSchema.nullable(),
+  }),
 })
 export type ToolCall = z.infer<typeof ToolCallSchema>
-
-export const MessagePartSchema = z.object({
-  id: z.string(),
-  type: MessagePartTypeSchema,
-  text: z.string().nullable(),
-  tool: ToolCallSchema.nullable(),
-})
-export type MessagePart = z.infer<typeof MessagePartSchema>
 
 export const TokenUsageSchema = z.object({
   input: z.number(),
@@ -146,17 +212,204 @@ export const TokenUsageSchema = z.object({
 })
 export type TokenUsage = z.infer<typeof TokenUsageSchema>
 
+/**
+ * Why a message failed.
+ *
+ * These are the kinds of failure a conversation can have, not the classes one
+ * program happens to throw: the credentials were refused, the answer was too
+ * long, the run was stopped, the upstream said no, or nobody knows.
+ */
+export const MessageErrorKindSchema = z.enum([
+  'authentication',
+  'output-length',
+  'aborted',
+  'api',
+  'unknown',
+])
+export type MessageErrorKind = z.infer<typeof MessageErrorKindSchema>
+
+export const MessageErrorSchema = z.object({
+  kind: MessageErrorKindSchema,
+  message: z.string(),
+  /** Which provider refused, when the failure is about credentials. */
+  providerId: z.string().nullable(),
+  /** The status the upstream answered with, when it answered with one. */
+  statusCode: z.number().nullable(),
+  /** Whether trying again could work. */
+  isRetryable: z.boolean().nullable(),
+})
+export type MessageError = z.infer<typeof MessageErrorSchema>
+
+export const TextMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('text'),
+  text: z.string(),
+  /** Whether the words were said by the agent or put there by something else. */
+  synthetic: z.boolean().nullable(),
+  time: TimeRangeSchema.nullable(),
+})
+export type TextMessagePart = z.infer<typeof TextMessagePartSchema>
+
+export const ReasoningMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('reasoning'),
+  text: z.string(),
+  time: TimeRangeSchema.nullable(),
+})
+export type ReasoningMessagePart = z.infer<typeof ReasoningMessagePartSchema>
+
+export const ToolMessagePartSchema = ToolCallSchema.extend({
+  id: z.string(),
+  type: z.literal('tool'),
+})
+export type ToolMessagePart = z.infer<typeof ToolMessagePartSchema>
+
+export const FileMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('file'),
+  filename: z.string().nullable(),
+  mime: z.string().nullable(),
+  url: z.string(),
+})
+export type FileMessagePart = z.infer<typeof FileMessagePartSchema>
+
+export const PatchMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('patch'),
+  hash: z.string(),
+  files: z.array(z.string()),
+})
+export type PatchMessagePart = z.infer<typeof PatchMessagePartSchema>
+
+export const AgentMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('agent'),
+  name: z.string(),
+})
+export type AgentMessagePart = z.infer<typeof AgentMessagePartSchema>
+
+export const SubtaskMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('subtask'),
+  agent: z.string(),
+  description: z.string(),
+  prompt: z.string(),
+  command: z.string().nullable(),
+})
+export type SubtaskMessagePart = z.infer<typeof SubtaskMessagePartSchema>
+
+export const StepStartMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('step-start'),
+  snapshot: z.string().nullable(),
+})
+export type StepStartMessagePart = z.infer<typeof StepStartMessagePartSchema>
+
+export const StepFinishMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('step-finish'),
+  reason: z.string(),
+  snapshot: z.string().nullable(),
+  cost: z.number(),
+  tokens: TokenUsageSchema,
+})
+export type StepFinishMessagePart = z.infer<typeof StepFinishMessagePartSchema>
+
+export const SnapshotMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('snapshot'),
+  snapshot: z.string(),
+})
+export type SnapshotMessagePart = z.infer<typeof SnapshotMessagePartSchema>
+
+export const RetryMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('retry'),
+  attempt: z.number(),
+  error: MessageErrorSchema,
+  time: TimeRangeSchema.nullable(),
+})
+export type RetryMessagePart = z.infer<typeof RetryMessagePartSchema>
+
+export const CompactionMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('compaction'),
+  auto: z.boolean(),
+})
+export type CompactionMessagePart = z.infer<typeof CompactionMessagePartSchema>
+
+export const OtherMessagePartSchema = z.object({
+  id: z.string(),
+  type: z.literal('other'),
+  text: z.string().nullable(),
+})
+export type OtherMessagePart = z.infer<typeof OtherMessagePartSchema>
+
+/**
+ * One piece of a message.
+ *
+ * The kind says which of the other fields mean anything: a tool part has a
+ * name and a state, a patch part has a hash and a list of files, a piece of
+ * reasoning has words and nothing else. A client that switches on the kind
+ * knows exactly what it is holding.
+ */
+export const MessagePartSchema = z.discriminatedUnion('type', [
+  TextMessagePartSchema,
+  ReasoningMessagePartSchema,
+  ToolMessagePartSchema,
+  FileMessagePartSchema,
+  PatchMessagePartSchema,
+  AgentMessagePartSchema,
+  SubtaskMessagePartSchema,
+  StepStartMessagePartSchema,
+  StepFinishMessagePartSchema,
+  SnapshotMessagePartSchema,
+  RetryMessagePartSchema,
+  CompactionMessagePartSchema,
+  OtherMessagePartSchema,
+])
+export type MessagePart = z.infer<typeof MessagePartSchema>
+
+/**
+ * One message.
+ *
+ * The parts are not in here: a message on its own says who said it, when, what
+ * it cost and whether it went wrong. The pieces it is made of are asked for
+ * separately, because they arrive one at a time while the conversation is
+ * happening.
+ */
 export const MessageSchema = z.object({
   id: z.string(),
   sessionId: z.string(),
   role: MessageRoleSchema,
   createdAt: z.number(),
   completedAt: z.number().nullable(),
-  parts: z.array(MessagePartSchema),
   cost: z.number().nullable(),
   tokens: TokenUsageSchema.nullable(),
+  /** Which model answered, when an answer came from one. */
+  modelId: z.string().nullable(),
+  /** Which provider served the model, when it did. */
+  providerId: z.string().nullable(),
+  /** Which agent answered, when the answer came from an agent. */
+  agent: z.string().nullable(),
+  /** Which variant of the model answered, when there are several. */
+  variant: z.string().nullable(),
+  parentId: z.string().nullable(),
+  error: MessageErrorSchema.nullable(),
 })
 export type Message = z.infer<typeof MessageSchema>
+
+/**
+ * A message and the pieces it is made of.
+ *
+ * This is what a conversation looks like when it is read in one go: the
+ * message and everything that belongs to it.
+ */
+export const MessageWithPartsSchema = z.object({
+  info: MessageSchema,
+  parts: z.array(MessagePartSchema),
+})
+export type MessageWithParts = z.infer<typeof MessageWithPartsSchema>
 
 /**
  * The tool call a pending request hangs on.
@@ -247,9 +500,69 @@ export const RenameSessionRequestSchema = z.object({
 })
 export type RenameSessionRequest = z.infer<typeof RenameSessionRequestSchema>
 
-export const SendPromptRequestSchema = z.object({
-  text: z.string().min(1),
+export const PromptTextPartSchema = z.object({
+  type: z.literal('text'),
+  text: z.string(),
 })
+export type PromptTextPart = z.infer<typeof PromptTextPartSchema>
+
+export const PromptFilePartSchema = z.object({
+  type: z.literal('file'),
+  filename: z.string().nullable(),
+  mime: z.string().nullable(),
+  url: z.string(),
+})
+export type PromptFilePart = z.infer<typeof PromptFilePartSchema>
+
+/**
+ * What is being said to a conversation.
+ *
+ * A message can be more than words: a file can be handed over with it. The
+ * words and the files are told apart by the kind, so a client knows which is
+ * which without guessing.
+ */
+export const PromptPartSchema = z.discriminatedUnion('type', [
+  PromptTextPartSchema,
+  PromptFilePartSchema,
+])
+export type PromptPart = z.infer<typeof PromptPartSchema>
+
+/**
+ * The model that is asked to answer.
+ *
+ * A prompt that does not care says nothing about the model, and the agent
+ * picks the one it would have picked anyway.
+ */
+export const PromptModelSchema = z.object({
+  providerId: z.string(),
+  modelId: z.string(),
+})
+export type PromptModel = z.infer<typeof PromptModelSchema>
+
+/**
+ * What is being said to a conversation.
+ *
+ * A prompt that says nothing is not a prompt: the request has to carry words
+ * or a file to hand over, so a caller who meant to say something cannot end
+ * up with an empty turn in the conversation and no idea why.
+ */
+export const SendPromptRequestSchema = z
+  .object({
+    parts: z.array(PromptPartSchema).min(1),
+    model: PromptModelSchema.nullable(),
+    /** Which agent answers, when the caller wants a particular one. */
+    agent: z.string().nullable(),
+    /** Which variant of that agent answers, when there are several. */
+    variant: z.string().nullable(),
+  })
+  .refine(
+    (request) =>
+      request.parts.some((part) => part.type === 'file' || part.text.trim().length > 0),
+    {
+      message:
+        'A prompt has to say something: a part with words in it, or a file to hand over.',
+    },
+  )
 export type SendPromptRequest = z.infer<typeof SendPromptRequestSchema>
 
 export const ApiDescriptorSchema = z.object({
@@ -284,7 +597,7 @@ export const SessionResponseSchema = z.object({
 export type SessionResponse = z.infer<typeof SessionResponseSchema>
 
 export const MessageListResponseSchema = z.object({
-  messages: z.array(MessageSchema),
+  messages: z.array(MessageWithPartsSchema),
 })
 export type MessageListResponse = z.infer<typeof MessageListResponseSchema>
 
@@ -298,3 +611,98 @@ export const DeletedResponseSchema = z.object({
   id: z.string(),
 })
 export type DeletedResponse = z.infer<typeof DeletedResponseSchema>
+
+/**
+ * What happens to a conversation, said in the versioned dialect.
+ *
+ * These are the events that carry the conversation itself: a conversation that
+ * was made, that changed, that ended, and the messages inside it. Everything
+ * here is said in the same words as the shapes above - a session is a session,
+ * a message is a message - so a client that read a conversation over HTTP and
+ * then watched it change is holding one shape and not two.
+ *
+ * The events that are not here are not about the shape of a conversation: how
+ * busy it is, what it is waiting for, which version of the program is running.
+ * Those say what the agent says about them, and a client that wants them reads
+ * them the way the agent says them.
+ */
+export const ConversationEventSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('session.created'),
+    properties: z.object({
+      sessionId: z.string(),
+      session: SessionSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('session.updated'),
+    properties: z.object({
+      session: SessionSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('session.deleted'),
+    properties: z.object({
+      sessionId: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('session.idle'),
+    properties: z.object({
+      sessionId: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('session.compacted'),
+    properties: z.object({
+      sessionId: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('session.error'),
+    properties: z.object({
+      sessionId: z.string().nullable(),
+      error: MessageErrorSchema.nullable(),
+    }),
+  }),
+  z.object({
+    type: z.literal('message.updated'),
+    properties: z.object({
+      message: MessageSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('message.part.updated'),
+    properties: z.object({
+      sessionId: z.string(),
+      messageId: z.string(),
+      part: MessagePartSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('message.part.delta'),
+    properties: z.object({
+      sessionId: z.string(),
+      messageId: z.string(),
+      partId: z.string(),
+      field: z.string(),
+      delta: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('message.part.removed'),
+    properties: z.object({
+      sessionId: z.string(),
+      messageId: z.string(),
+      partId: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('message.removed'),
+    properties: z.object({
+      sessionId: z.string(),
+      messageId: z.string(),
+    }),
+  }),
+])
+export type ConversationEvent = z.infer<typeof ConversationEventSchema>

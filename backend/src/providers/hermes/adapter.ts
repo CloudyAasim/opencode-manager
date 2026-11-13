@@ -1,12 +1,15 @@
 import type {
   Message,
   MessagePart,
+  MessageWithParts,
   PendingPermission,
   PendingQuestion,
   Session,
+  SessionRevert,
 } from '@opencode-manager/shared/api/v1'
 import {
   ProviderUnavailableError,
+  promptText,
   type AgentCapability,
   type AgentKind,
   type AgentProvider,
@@ -136,7 +139,7 @@ export class HermesProvider implements AgentProvider {
     }
   }
 
-  async listMessages(sessionId: string, _context: ProviderContext): Promise<Message[]> {
+  async listMessages(sessionId: string, _context: ProviderContext): Promise<MessageWithParts[]> {
     const response = await this.call(
       `/api/sessions/${encodeURIComponent(sessionId)}/messages`,
     )
@@ -167,18 +170,42 @@ export class HermesProvider implements AgentProvider {
     )
   }
 
+  /**
+   * Hermes is given words.
+   *
+   * A prompt that carries a file but no words has nothing to put in the chat
+   * request, and sending an empty message would look like the file had been
+   * read when it never was.
+   */
   async sendPrompt(sessionId: string, input: SendPromptInput, _context: ProviderContext): Promise<void> {
+    const text = promptText(input)
+    if (!text) {
+      throw new ProviderUnavailableError(
+        this.id,
+        `${this.label} can only be given words, and this prompt has none in it`,
+      )
+    }
     const response = await this.call('/v1/chat/completions', {
       method: 'POST',
       headers: { 'X-Hermes-Session-Id': sessionId },
       body: JSON.stringify({
         model: 'hermes-agent',
-        messages: [{ role: 'user', content: input.text }],
+        messages: [{ role: 'user', content: text }],
       }),
     })
     if (!response.ok) {
       throw new ProviderUnavailableError(this.id, `Hermes answered ${response.status} for the prompt`)
     }
+  }
+
+  /**
+   * Hermes keeps what it wrote down.
+   *
+   * It does not take it back, so it says so rather than answering with a
+   * conversation that looks rolled back and is not.
+   */
+  async revertSession(_id: string, _revert: SessionRevert, _context: ProviderContext): Promise<Session> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot roll a conversation back`)
   }
 
   async abortSession(_id: string, _context: ProviderContext): Promise<void> {
@@ -255,17 +282,18 @@ export class HermesProvider implements AgentProvider {
       // Hermes keeps what it wrote down and does not take it back, so there is
       // no point to roll a conversation back to.
       revert: null,
+      share: null,
     }
   }
 
-  private toMessage(raw: unknown): Message {
+  private toMessage(raw: unknown): MessageWithParts {
     const record = recordOf(raw)
     const id = stringOf(record.id) ?? (typeof record.id === 'number' ? String(record.id) : '')
     const parts: MessagePart[] = []
     const content = record.content
 
     if (typeof content === 'string') {
-      parts.push({ id, type: 'text', text: content, tool: null })
+      parts.push({ id, type: 'text', text: content, synthetic: null, time: null })
     } else if (Array.isArray(content)) {
       for (const [index, block] of content.entries()) {
         const entry = recordOf(block)
@@ -275,7 +303,8 @@ export class HermesProvider implements AgentProvider {
             id: `${id}-${index}`,
             type: 'text',
             text: stringOf(entry.text) ?? '',
-            tool: null,
+            synthetic: null,
+            time: null,
           })
         }
       }
@@ -285,28 +314,44 @@ export class HermesProvider implements AgentProvider {
     // the OpenAI API uses.
     for (const call of toolCallsOf(record.tool_calls)) {
       const function_ = recordOf(call.function)
+      const callId = stringOf(call.id) ?? ''
       parts.push({
-        id: stringOf(call.id) ?? '',
+        id: callId,
         type: 'tool',
-        text: null,
-        tool: {
-          name: stringOf(call.name) ?? stringOf(function_.name) ?? '',
-          state: 'completed',
+        callId,
+        name: stringOf(call.name) ?? stringOf(function_.name) ?? '',
+        state: {
+          status: 'completed',
           title: null,
           output: null,
+          error: null,
+          input: null,
+          metadata: null,
+          raw: null,
+          time: null,
         },
       })
     }
 
     return {
-      id,
-      sessionId: stringOf(record.session_id) ?? '',
-      role: roleOf(record.role),
-      createdAt: numberOf(record.timestamp) ?? 0,
-      completedAt: null,
+      info: {
+        id,
+        sessionId: stringOf(record.session_id) ?? '',
+        role: roleOf(record.role),
+        createdAt: numberOf(record.timestamp) ?? 0,
+        completedAt: null,
+        cost: numberOf(record.actual_cost_usd) ?? numberOf(record.estimated_cost_usd) ?? null,
+        // The server counts the tokens of a run, but it does not put them in
+        // the message, and a number made up here would be a lie.
+        tokens: null,
+        modelId: null,
+        providerId: null,
+        agent: null,
+        variant: null,
+        parentId: null,
+        error: null,
+      },
       parts,
-      cost: numberOf(record.actual_cost_usd) ?? numberOf(record.estimated_cost_usd) ?? null,
-      tokens: null,
     }
   }
 }

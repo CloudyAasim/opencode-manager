@@ -20,7 +20,11 @@ class FakeAgentProvider extends CliAgentProvider {
   /** The sessions the program left behind, for the tests that need some. */
   sessions: CliSession[] = []
 
+  /** The words the program was given, one entry per run. */
+  asked: string[] = []
+
   protected command(text: string): string[] {
+    this.asked.push(text)
     return ['--say', text]
   }
 
@@ -118,5 +122,48 @@ describe('把一个程序变成 agent', () => {
     const page = await provider.listSessions({ directory: '/work' })
 
     expect(page.items[0]?.directory).toBe('/elsewhere')
+  })
+
+  it('程序不会把对话收回去', async () => {
+    const provider = new FakeAgentProvider({})
+
+    await expect(
+      provider.revertSession('ses_1', { messageId: 'message-1', partId: null }, {}),
+    ).rejects.toThrow('cannot roll a conversation back')
+  })
+
+  it('prompt 里的话，到了程序那里', async () => {
+    const dir = installFakeAgent()
+    const provider = new FakeAgentProvider({ environment: { PATH: dir } })
+
+    await provider.sendPrompt(
+      'ses_from_cli',
+      { parts: [{ type: 'text', text: 'fix the parser' }], model: null, agent: null, variant: null },
+      {},
+    )
+
+    expect(provider.asked).toEqual(['fix the parser'])
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('prompt 里只有文件，就是没有话可说', async () => {
+    const dir = installFakeAgent()
+    const provider = new FakeAgentProvider({ environment: { PATH: dir } })
+
+    await expect(
+      provider.sendPrompt(
+        'ses_from_cli',
+        {
+          parts: [{ type: 'file', filename: 'a.txt', mime: 'text/plain', url: 'file:///a.txt' }],
+          model: null,
+          agent: null,
+          variant: null,
+        },
+        {},
+      ),
+    ).rejects.toThrow('only be given words')
+    // 假装读过文件，比明说自己做不到更糟。
+    expect(provider.asked).toEqual([])
+    fs.rmSync(dir, { recursive: true, force: true })
   })
 })
