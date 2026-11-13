@@ -1,9 +1,6 @@
 import type { paths } from './opencode-types'
-import { fetchWrapper, fetchWrapperVoid } from './fetchWrapper'
+import { fetchWrapper } from './fetchWrapper'
 
-type SessionResponse = paths['/session/{sessionID}']['get']['responses']['200']['content']['application/json']
-type MessageListResponse = paths['/session/{sessionID}/message']['get']['responses']['200']['content']['application/json']
-type SendPromptAsyncRequest = NonNullable<paths['/session/{sessionID}/prompt_async']['post']['requestBody']>['content']['application/json']
 type ConfigResponse = paths['/config']['get']['responses']['200']['content']['application/json']
 type CommandListResponse = paths['/command']['get']['responses']['200']['content']['application/json']
 type CommandRequest = NonNullable<paths['/session/{sessionID}/command']['post']['requestBody']>['content']['application/json']
@@ -15,6 +12,19 @@ type LspStatus = LspStatusResponse[number]
 
 export type { SendCommandResponse, LspStatus }
 
+/**
+ * The agent's own door.
+ *
+ * What is left on it is what has not moved to the layer the client talks to:
+ * the settings of the agent, the commands it knows, the agents it can be, the
+ * shell it runs in, and the things it is asked to remember about a
+ * conversation.
+ *
+ * The conversation itself is not here any more - it is read from the layer,
+ * in the versioned dialect, and the event stream says the same thing in the
+ * same words. How the agent is getting on with a conversation is not the
+ * shape of a conversation, so that is still here too.
+ */
 export class OpenCodeClient {
   private baseURL: string
   private directory?: string
@@ -33,46 +43,13 @@ export class OpenCodeClient {
     return { ...params, directory: this.directory }
   }
 
-  /**
-   * One conversation.
-   *
-   * The last thing on this client that asks the agent about a conversation:
-   * the detail of a conversation and the event stream about it are filed in
-   * the same cache slot, and the event stream still speaks the agent's own
-   * dialect. It moves when the event stream does.
-   */
-  async getSession(sessionID: string) {
-    return fetchWrapper<SessionResponse>(`${this.baseURL}/session/${sessionID}`, {
-      params: this.getParams(),
-    })
-  }
-
   async forkSession(sessionID: string, messageID?: string) {
-    return fetchWrapper<SessionResponse>(`${this.baseURL}/session/${sessionID}/fork`, {
+    return fetchWrapper<paths['/session/{sessionID}']['get']['responses']['200']['content']['application/json']>(`${this.baseURL}/session/${sessionID}/fork`, {
       method: 'POST',
       params: this.getParams(),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messageID }),
     })
-  }
-
-  async listMessages(sessionID: string) {
-    return fetchWrapper<MessageListResponse>(`${this.baseURL}/session/${sessionID}/message`, {
-      params: this.getParams(),
-    })
-  }
-
-  async sendPromptAsync(sessionID: string, data: SendPromptAsyncRequest): Promise<void> {
-    return fetchWrapperVoid(
-      `${this.baseURL}/session/${sessionID}/prompt_async`,
-      {
-        method: 'POST',
-        params: this.getParams(),
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-        timeout: 0,
-      }
-    )
   }
 
   async summarizeSession(sessionID: string, providerID: string, modelID: string) {
@@ -137,6 +114,20 @@ export class OpenCodeClient {
     })
   }
 
+  /**
+   * How the agent is getting on with its conversations.
+   *
+   * This is not the shape of a conversation - it is the agent's account of
+   * its own work, and the event stream still carries it in the agent's own
+   * words. So it is still asked of the agent, and it moves when the status
+   * moves.
+   */
+  async getSessionStatuses() {
+    return fetchWrapper<Record<string, { type: 'idle' } | { type: 'busy' } | { type: 'retry'; attempt: number; message: string; next: number }>>(`${this.baseURL}/session/status`, {
+      params: this.getParams(),
+    })
+  }
+
   async respondToPermission(permissionID: string, response: 'once' | 'always' | 'reject') {
     return fetchWrapper(`${this.baseURL}/permission/${permissionID}/reply`, {
       method: 'POST',
@@ -164,28 +155,6 @@ export class OpenCodeClient {
 
   async listAgents() {
     return fetchWrapper<AgentListResponse>(`${this.baseURL}/agent`, {
-      params: this.getParams(),
-    })
-  }
-
-  async revertMessage(sessionID: string, data: { messageID: string, partID?: string }) {
-    return fetchWrapper(`${this.baseURL}/session/${sessionID}/revert`, {
-      method: 'POST',
-      params: this.getParams(),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-  }
-
-  async unrevertSession(sessionID: string) {
-    return fetchWrapper(`${this.baseURL}/session/${sessionID}/unrevert`, {
-      method: 'POST',
-      params: this.getParams(),
-    })
-  }
-
-  async getSessionStatuses() {
-    return fetchWrapper<Record<string, { type: 'idle' } | { type: 'busy' } | { type: 'retry'; attempt: number; message: string; next: number }>>(`${this.baseURL}/session/status`, {
       params: this.getParams(),
     })
   }

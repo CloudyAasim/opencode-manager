@@ -36,8 +36,8 @@ async function fetchProviders(opcodeUrl: string): Promise<ProvidersResponse> {
   return fetchWrapper<ProvidersResponse>(`${opcodeUrl}/config/providers`)
 }
 
-export const useContextUsage = (opcodeUrl: string | null | undefined, sessionID: string | undefined, directory?: string): ContextUsage => {
-  const { data: messages, isLoading: messagesLoading } = useMessages(opcodeUrl, sessionID, directory)
+export const useContextUsage = (serverUrl: string | null | undefined, opcodeUrl: string | null | undefined, sessionID: string | undefined, directory?: string): ContextUsage => {
+  const { data: messages, isLoading: messagesLoading } = useMessages(serverUrl, sessionID, directory)
 
   const { data: providersData } = useQuery({
     queryKey: ['providers', opcodeUrl],
@@ -55,8 +55,9 @@ export const useContextUsage = (opcodeUrl: string | null | undefined, sessionID:
 
     const sumTokens = (msg: typeof latestAssistantMessage) => {
       if (msg?.info.role !== 'assistant') return 0
-      const msgInfo = msg.info as { tokens?: { input: number; output: number; reasoning: number; cache?: { read: number } } }
-      return (msgInfo.tokens?.input ?? 0) + (msgInfo.tokens?.output ?? 0) + (msgInfo.tokens?.reasoning ?? 0) + (msgInfo.tokens?.cache?.read ?? 0)
+      const tokens = msg.info.tokens
+      if (!tokens) return 0
+      return tokens.input + tokens.output + tokens.reasoning + tokens.cacheRead
     }
 
     if (sumTokens(latestAssistantMessage) === 0 && assistantMessages.length > 1) {
@@ -67,9 +68,9 @@ export const useContextUsage = (opcodeUrl: string | null | undefined, sessionID:
       if (!latestAssistantMessage || latestAssistantMessage.info.role !== 'assistant') {
         return null
       }
-      const msg = latestAssistantMessage.info as { providerID?: string; modelID?: string }
-      if (msg.providerID && msg.modelID) {
-        return `${msg.providerID}/${msg.modelID}`
+      const msg = latestAssistantMessage.info
+      if (msg.providerId && msg.modelId) {
+        return `${msg.providerId}/${msg.modelId}`
       }
       return null
     })()
@@ -77,7 +78,9 @@ export const useContextUsage = (opcodeUrl: string | null | undefined, sessionID:
     let contextLimit: number | null = null
     if (currentModel && providersData) {
       const [providerId, modelId] = currentModel.split('/')
-      const provider = providersData.providers.find(p => p.id === providerId)
+      // The list of providers may be missing from the answer, and a page that
+      // cannot say how much of the context is used is still a page.
+      const provider = (providersData.providers ?? []).find(p => p.id === providerId)
       if (provider?.models) {
         const model = provider.models[modelId]
         if (model?.limit) {

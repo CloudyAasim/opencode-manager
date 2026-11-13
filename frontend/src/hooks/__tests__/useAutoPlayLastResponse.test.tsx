@@ -32,36 +32,31 @@ import { getLatestPlayableAssistantMessage, useAutoPlayLastResponse } from '../u
 const createMessage = (id: string, completed?: number): MessageWithParts => ({
   info: {
     id,
-    sessionID: 'test-session',
+    sessionId: 'test-session',
     role: 'assistant',
-    time: {
-      created: Date.now(),
-      ...(completed ? { completed } : {}),
-    },
-    parentID: 'parent-1',
-    modelID: 'gpt-4',
-    providerID: 'openai',
-    mode: 'build',
+    createdAt: Date.now(),
+    completedAt: completed ?? null,
+    parentId: 'parent-1',
+    modelId: 'gpt-4',
+    providerId: 'openai',
     agent: 'default',
-    path: {
-      cwd: '/test',
-      root: '/test',
-    },
+    variant: null,
     cost: 0.01,
     tokens: {
       input: 100,
       output: 50,
       reasoning: 0,
-      cache: { read: 0, write: 0 },
+      cacheRead: 0,
+      cacheWrite: 0,
     },
+    error: null,
   },
   parts: [
     {
       id: 'part-1',
-      sessionID: 'test-session',
-      messageID: id,
       type: 'text',
       text: 'Test message text',
+      synthetic: null,
       time: {
         start: Date.now(),
         end: Date.now() + 100,
@@ -75,15 +70,17 @@ const createAssistantMessageWithoutText = (id: string): MessageWithParts => ({
   parts: [
     {
       id: 'part-1',
-      sessionID: 'test-session',
-      messageID: id,
       type: 'tool',
-      callID: 'call-1',
-      tool: 'question',
+      callId: 'call-1',
+      name: 'question',
       state: {
         status: 'error',
-        input: {},
+        title: null,
+        output: null,
         error: 'Question rejected',
+        input: {},
+        metadata: null,
+        raw: null,
         time: {
           start: Date.now(),
           end: Date.now() + 100,

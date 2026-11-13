@@ -1,9 +1,6 @@
 import { useMemo, useRef, useEffect } from 'react'
 import { useMessages, useConfig, useAgents } from './useOpenCode'
 import { useSessionAgentStore } from '@/stores/sessionAgentStore'
-import type { components } from '@/api/opencode-types'
-
-type UserMessage = components['schemas']['UserMessage']
 
 interface AgentInfo {
   name: string
@@ -58,11 +55,12 @@ interface SessionAgentResult {
 }
 
 export function useSessionAgent(
+  serverUrl: string | null | undefined,
   opcodeUrl: string | null | undefined,
   sessionID: string | undefined,
   directory?: string
 ) {
-  const { data: messages } = useMessages(opcodeUrl, sessionID, directory)
+  const { data: messages } = useMessages(serverUrl, sessionID, directory)
   const { data: config } = useConfig(opcodeUrl, directory)
   const { data: agents, isSuccess: agentsLoaded } = useAgents(opcodeUrl, directory)
   const storedAgent = useSessionAgentStore((s) => s.agents[sessionID ?? ''] ?? null)
@@ -112,11 +110,13 @@ export function useSessionAgent(
     for (let i = messages.length - 1; i >= 0; i--) {
       const msgWithParts = messages[i]
       if (msgWithParts.info.role === 'user') {
-        const userInfo = msgWithParts.info as UserMessage
+        const userInfo = msgWithParts.info
         if (userInfo.agent) {
           latestAgent = userInfo.agent
-          latestModel = userInfo.model
-          latestVariant = userInfo.variant
+          latestModel = userInfo.modelId && userInfo.providerId
+            ? { providerID: userInfo.providerId, modelID: userInfo.modelId }
+            : undefined
+          latestVariant = userInfo.variant ?? undefined
           break
         }
       }

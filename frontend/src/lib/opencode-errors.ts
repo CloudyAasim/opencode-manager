@@ -1,13 +1,13 @@
 import { FetchError } from '@opencode-manager/shared/types/errors'
-import type { components } from '@/api/opencode-types'
+import type { MessageError } from '@opencode-manager/shared/api/v1'
 
-export type OpenCodeError =
-  | components['schemas']['ProviderAuthError']
-  | components['schemas']['UnknownError']
-  | components['schemas']['MessageOutputLengthError']
-  | components['schemas']['MessageAbortedError']
-  | components['schemas']['APIError']
-
+/**
+ * A failure, in the words the app shows.
+ *
+ * The conversation's errors are the versioned API's - one truth about what
+ * went wrong - and this turns one of those into the two things the screen
+ * needs: a heading and a sentence.
+ */
 export interface ParsedError {
   title: string
   message: string
@@ -16,48 +16,41 @@ export interface ParsedError {
   providerID?: string
 }
 
-export function parseOpenCodeError(error: OpenCodeError | undefined | null): ParsedError | null {
+export function parseMessageError(error: MessageError | undefined | null): ParsedError | null {
   if (!error) return null
 
-  switch (error.name) {
-    case 'ProviderAuthError':
+  switch (error.kind) {
+    case 'authentication':
       return {
         title: 'Authentication Failed',
-        message: error.data.message || `Authentication failed for provider: ${error.data.providerID}`,
+        message: error.message || `Authentication failed for provider: ${error.providerId ?? 'the provider'}`,
         isRetryable: false,
-        providerID: error.data.providerID,
+        providerID: error.providerId ?? undefined,
       }
 
-    case 'UnknownError':
-      return {
-        title: 'Error',
-        message: error.data.message || 'An unknown error occurred',
-        isRetryable: true,
-      }
-
-    case 'MessageOutputLengthError':
+    case 'output-length':
       return {
         title: 'Response Too Long',
-        message: 'The model response exceeded the maximum allowed length',
+        message: error.message || 'The model response exceeded the maximum allowed length',
         isRetryable: false,
       }
 
-    case 'MessageAbortedError':
-      return null 
+    case 'aborted':
+      return null
 
-    case 'APIError':
+    case 'api':
       return {
-        title: `API Error${error.data.statusCode ? ` (${error.data.statusCode})` : ''}`,
-        message: error.data.message || 'An API error occurred',
-        isRetryable: error.data.isRetryable,
-        statusCode: error.data.statusCode,
+        title: `API Error${error.statusCode ? ` (${error.statusCode})` : ''}`,
+        message: error.message || 'An API error occurred',
+        isRetryable: error.isRetryable ?? false,
+        statusCode: error.statusCode ?? undefined,
       }
 
     default:
       return {
         title: 'Error',
-        message: 'An unexpected error occurred',
-        isRetryable: true,
+        message: error.message || 'An unknown error occurred',
+        isRetryable: error.isRetryable ?? true,
       }
   }
 }

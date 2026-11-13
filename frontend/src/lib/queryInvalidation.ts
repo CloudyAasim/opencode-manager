@@ -19,12 +19,20 @@ export async function stopQueries(
   await queryClient.cancelQueries(filters).catch(() => {})
 }
 
+/**
+ * The messages of one conversation, as they are cached.
+ *
+ * The messages come from the layer the client talks to, and they are in the
+ * versioned dialect - so the key says so. They used to be filed under the
+ * agent's own name, which is where they went to be asked for before they
+ * moved to the layer.
+ */
 export function messagesQueryKey(
-  opcodeUrl: string | null | undefined,
+  serverUrl: string | null | undefined,
   sessionID: string | null | undefined,
   directory: string | null | undefined,
 ) {
-  return ['opencode', 'messages', opcodeUrl, sessionID, directory]
+  return ['bff', 'messages', serverUrl, sessionID, directory]
 }
 
 /**
@@ -56,13 +64,17 @@ const PROBE = '__probe__'
 /**
  * The other two query keys of the same family, which were spelled out at
  * their call sites - three files' worth of a shape that had no owner.
+ *
+ * The conversation and its messages come from the layer the client talks to,
+ * so they are filed under its name. The pending requests have not moved yet:
+ * they are still the agent's, and they are still filed under its name.
  */
 export function sessionQueryKey(
-  opcodeUrl: string | null | undefined,
+  serverUrl: string | null | undefined,
   sessionID: string | null | undefined,
   directory: string | null | undefined,
 ) {
-  return ['opencode', 'session', opcodeUrl, sessionID, directory]
+  return ['bff', 'session', serverUrl, sessionID, directory]
 }
 
 export function pendingActionsQueryKey(
@@ -258,7 +270,7 @@ export function invalidateSessionCaches(queryClient: QueryClient) {
   queryClient.invalidateQueries({
     predicate: (query) =>
       (isSessionListQueryKey(query.queryKey) ||
-        (query.queryKey[0] === 'opencode' &&
+        (query.queryKey[0] === 'bff' &&
           (query.queryKey[1] === 'session' || query.queryKey[1] === 'messages'))),
   })
 }

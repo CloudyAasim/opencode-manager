@@ -24,10 +24,25 @@ export interface Repo {
 }
 
 import type { components } from './opencode-types'
+import type {
+  ConversationEvent,
+  Message as VersionedMessage,
+  MessagePart as VersionedPart,
+  MessageWithParts as VersionedMessageWithParts,
+  Session as VersionedSession,
+} from '@opencode-manager/shared/api/v1'
 
-export type Message = components['schemas']['Message']
-export type Part = components['schemas']['Part']
-export type Session = components['schemas']['Session']
+/**
+ * The conversation's own shapes.
+ *
+ * A conversation is read over HTTP and watched over the event stream, and it
+ * is the same conversation in both. So the shapes are the versioned API's -
+ * one truth about what a message is - and the client holds one dialect, not
+ * two: the one it reads and the one it is told about.
+ */
+export type Message = VersionedMessage
+export type Part = VersionedPart
+export type Session = VersionedSession
 export type PermissionRequest = components['schemas']['PermissionRequest']
 export type PermissionResponse = 'once' | 'always' | 'reject'
 
@@ -36,83 +51,9 @@ export type QuestionInfo = components['schemas']['QuestionInfo']
 export type QuestionRequest = components['schemas']['QuestionRequest']
 export type QuestionAnswer = components['schemas']['QuestionAnswer']
 
-export type MessageWithParts = {
-  info: Message
-  parts: Part[]
-}
+export type MessageWithParts = VersionedMessageWithParts
 
 export type MessageListResponse = MessageWithParts[]
-
-export interface SSEMessagePartUpdatedEvent {
-  type: 'message.part.updated' | 'messagev2.part.updated'
-  properties: {
-    part: Part
-  }
-}
-
-export interface SSEMessagePartDeltaEvent {
-  type: 'message.part.delta'
-  properties: {
-    sessionID: string
-    messageID: string
-    partID: string
-    field: string
-    delta: string
-  }
-}
-
-export interface SSEMessageUpdatedEvent {
-  type: 'message.updated' | 'messagev2.updated'
-  properties: {
-    info: Message
-  }
-}
-
-export interface SSEMessageRemovedEvent {
-  type: 'message.removed' | 'messagev2.removed'
-  properties: {
-    sessionID: string
-    messageID: string
-  }
-}
-
-export interface SSEMessagePartRemovedEvent {
-  type: 'message.part.removed' | 'messagev2.part.removed'
-  properties: {
-    sessionID: string
-    messageID: string
-    partID: string
-  }
-}
-
-export interface SSESessionUpdatedEvent {
-  type: 'session.updated'
-  properties: {
-    info: Session
-  }
-}
-
-export interface SSESessionCreatedEvent {
-  type: 'session.created'
-  properties: {
-    sessionID: string
-    info: Session
-  }
-}
-
-export interface SSESessionDeletedEvent {
-  type: 'session.deleted'
-  properties: {
-    sessionID: string
-  }
-}
-
-export interface SSESessionCompactedEvent {
-  type: 'session.compacted'
-  properties: {
-    sessionID: string
-  }
-}
 
 export interface SSETodoUpdatedEvent {
   type: 'todo.updated'
@@ -174,13 +115,12 @@ export interface SSEInstallationUpdateAvailableEvent {
   }
 }
 
-export interface SSESessionIdleEvent {
-  type: 'session.idle'
-  properties: {
-    sessionID: string
-  }
-}
-
+/**
+ * How busy a conversation is.
+ *
+ * This is not the shape of a conversation - it is how the agent is getting on
+ * with it - so it is said in the agent's own words, and the app keeps them.
+ */
 export interface SSESessionStatusEvent {
   type: 'session.status'
   properties: {
@@ -197,18 +137,6 @@ export interface SSESessionStatusEvent {
       message: string
       next: number
     }
-  }
-}
-
-export interface SSESessionErrorEvent {
-  type: 'session.error'
-  properties: {
-    sessionID?: string
-    error?: components['schemas']['ProviderAuthError'] 
-      | components['schemas']['UnknownError'] 
-      | components['schemas']['MessageOutputLengthError'] 
-      | components['schemas']['MessageAbortedError'] 
-      | components['schemas']['APIError']
   }
 }
 
@@ -230,19 +158,16 @@ export interface SSESSHHostKeyRequestEvent {
   properties: SSHHostKeyRequest
 }
 
+/**
+ * Everything the stream can say.
+ *
+ * The conversation's own events are the versioned API's - the same words the
+ * conversation itself is read in. The rest are the agent's, because they are
+ * not about the shape of a conversation: what it is waiting for, what it is
+ * doing right now, which version of the program is running.
+ */
 export type SSEEvent =
-  | SSEMessagePartUpdatedEvent
-  | SSEMessagePartDeltaEvent
-  | SSEMessageUpdatedEvent
-  | SSEMessageRemovedEvent
-  | SSEMessagePartRemovedEvent
-  | SSESessionCreatedEvent
-  | SSESessionUpdatedEvent
-  | SSESessionDeletedEvent
-  | SSESessionCompactedEvent
-  | SSESessionIdleEvent
-  | SSESessionStatusEvent
-  | SSESessionErrorEvent
+  | ConversationEvent
   | SSETodoUpdatedEvent
   | SSEPermissionAskedEvent
   | SSEPermissionRepliedEvent
@@ -251,6 +176,7 @@ export type SSEEvent =
   | SSEQuestionRejectedEvent
   | SSEInstallationUpdatedEvent
   | SSEInstallationUpdateAvailableEvent
+  | SSESessionStatusEvent
   | SSELspUpdatedEvent
   | SSEVcsBranchUpdatedEvent
   | SSESSHHostKeyRequestEvent

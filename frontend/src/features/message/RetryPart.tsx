@@ -1,18 +1,26 @@
 import { memo, useEffect, useState } from 'react'
-import type { components } from '@/api/opencode-types'
 import { RefreshCw, AlertTriangle } from 'lucide-react'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
+import { parseMessageError } from '@/lib/opencode-errors'
 import { useI18n } from '@/lib/i18n'
+import type { Part } from '@/api/types'
 
-type RetryPartType = components['schemas']['RetryPart']
+type RetryPartType = Extract<Part, { type: 'retry' }>
 
 interface RetryPartProps {
   part: RetryPartType
+  /**
+   * The conversation the retry belongs to.
+   *
+   * A piece does not say this about itself any more, so the thread hands it
+   * down: the countdown is the conversation's, not the piece's.
+   */
+  sessionId?: string
 }
 
-export const RetryPart = memo(function RetryPart({ part }: RetryPartProps) {
+export const RetryPart = memo(function RetryPart({ part, sessionId }: RetryPartProps) {
   const { t } = useI18n()
-  const sessionStatus = useSessionStatusForSession(part.sessionID)
+  const sessionStatus = useSessionStatusForSession(sessionId)
   const nextTimestamp = sessionStatus.type === 'retry' ? sessionStatus.next : 0
   const initialCountdown = sessionStatus.type === 'retry' && nextTimestamp > 0
     ? Math.max(0, Math.ceil((nextTimestamp - Date.now()) / 1000))
@@ -36,7 +44,10 @@ export const RetryPart = memo(function RetryPart({ part }: RetryPartProps) {
     return () => clearInterval(timer)
   }, [sessionStatus.type, nextTimestamp])
   
-  const errorMessage = part.error?.data?.message || t('message.retry.errorFallback')
+  // The failure says what went wrong in its own words; the shared wording
+  // only fills in for a failure that came without any.
+  const parsed = parseMessageError(part.error)
+  const errorMessage = parsed?.message || part.error?.message || t('message.retry.errorFallback')
   
   return (
     <div className="flex items-center gap-3 p-3 my-2 rounded-lg bg-warning border border-warning">

@@ -3,7 +3,7 @@ import type { Part, MessageWithParts } from '@/api/types'
 import { messagesQueryKey } from '@/lib/queryInvalidation'
 
 interface PartsBatcher {
-  queuePartUpdate: (sessionID: string, part: Part, directory?: string) => void
+  queuePartUpdate: (sessionID: string, messageID: string, part: Part, directory?: string) => void
   queuePartDelta: (sessionID: string, messageID: string, partID: string, field: string, delta: string, directory?: string) => void
   queuePartRemoval: (sessionID: string, messageID: string, partID: string, directory?: string) => void
   flush: (target?: { sessionID?: string; directory?: string }) => void
@@ -11,7 +11,7 @@ interface PartsBatcher {
 }
 
 type PartOperation =
-  | { type: 'upsert'; part: Part; deferred?: boolean }
+  | { type: 'upsert'; messageID: string; part: Part; deferred?: boolean }
   | { type: 'delta'; messageID: string; partID: string; field: string; delta: string; deferred?: boolean }
   | { type: 'remove'; messageID: string; partID: string }
 
@@ -41,8 +41,14 @@ function stampDeferred(group: OperationGroup, now: number): void {
   if (group.firstDeferredAt === undefined) group.firstDeferredAt = now
 }
 
-export function createTextPart(sessionID: string, messageID: string, partID: string, text: string): Part {
-  return { id: partID, sessionID, messageID, type: 'text', text } as Part
+/**
+ * A piece of text that has not arrived yet.
+ *
+ * It is the versioned API's shape: a piece does not say which message it
+ * belongs to - the message it is put into says that.
+ */
+export function createTextPart(partID: string, text: string): Part {
+  return { id: partID, type: 'text', text, synthetic: null, time: null }
 }
 
 function appendPart(
@@ -61,7 +67,7 @@ function appendPart(
 
 export function createPartsBatcher(
   queryClient: QueryClient,
-  opcodeUrl: string,
+  serverUrl: string,
 ): PartsBatcher {
   const pendingOperations = new Map<string, OperationGroup>()
   let pendingFrameId: number | null = null
@@ -92,7 +98,7 @@ export function createPartsBatcher(
       }
 
       const { sessionID, directory } = group
-      const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory)
+      const queryKey = messagesQueryKey(serverUrl, sessionID, directory)
       const currentData = queryClient.getQueryData<MessageWithParts[]>(queryKey)
 
       if (!currentData) {
@@ -138,7 +144,7 @@ export function createPartsBatcher(
 
       for (const operation of group.operations) {
         if (operation.type === 'upsert') {
-          const msgIdx = messageIdxById.get(operation.part.messageID)
+          const msgIdx = messageIdxById.get(operation.messageID)
           if (msgIdx === undefined) {
             const deferred = deferOperation(operation)
             if (deferred) unapplied.push(deferred)
@@ -212,7 +218,7 @@ export function createPartsBatcher(
               updatedData,
               msgIdx,
               msg,
-              createTextPart(sessionID, operation.messageID, operation.partID, operation.delta),
+              createTextPart(operation.partID, operation.delta),
               pIdx,
               supersededPartIDs,
             )
@@ -285,8 +291,8 @@ export function createPartsBatcher(
     scheduleFlush()
   }
 
-  const queuePartUpdate = (sessionID: string, part: Part, directory?: string) => {
-    queueOperation(sessionID, { type: 'upsert', part }, directory)
+  const queuePartUpdate = (sessionID: string, messageID: string, part: Part, directory?: string) => {
+    queueOperation(sessionID, { type: 'upsert', messageID, part }, directory)
   }
 
   const queuePartDelta = (sessionID: string, messageID: string, partID: string, field: string, delta: string, directory?: string) => {

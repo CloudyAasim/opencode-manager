@@ -265,7 +265,7 @@ describe('SessionDetail assistant loading at repoId=0', () => {
     renderAssistantSession('sess-wt-1')
 
     await waitFor(() => {
-      expect(mocks.useSSE.mock.calls.at(-1)?.[1]).toBe('/abs/worktrees/job-1-run-1')
+      expect(mocks.useSSE.mock.calls.at(-1)?.[2]).toBe('/abs/worktrees/job-1-run-1')
     })
 
     expect(mocks.useMessages.mock.calls.at(-1)?.[2]).toBe('/abs/worktrees/job-1-run-1')
@@ -280,7 +280,7 @@ describe('SessionDetail assistant loading at repoId=0', () => {
     renderAssistantSession('sess-asst-1')
 
     await waitFor(() => {
-      expect(mocks.useSSE.mock.calls.at(-1)?.[1]).toBe('/abs/assistant')
+      expect(mocks.useSSE.mock.calls.at(-1)?.[2]).toBe('/abs/assistant')
     })
 
     expect(mocks.useMessages.mock.calls.at(-1)?.[2]).toBe('/abs/assistant')

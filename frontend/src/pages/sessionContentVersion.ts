@@ -18,7 +18,7 @@ export function getMessagesContentVersion(messages?: MessageWithParts[]): number
         return partSum + hashString(part.text);
       }
       if (part.type === "tool") {
-        const state = part.state as Record<string, unknown>;
+        const state = part.state;
         let v = 0;
         if (typeof state.status === "string") v += hashString(state.status);
         if (typeof state.output === "string") v += hashString(state.output);

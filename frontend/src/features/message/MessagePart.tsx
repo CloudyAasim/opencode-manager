@@ -1,5 +1,4 @@
 import { memo } from 'react'
-import type { components } from '@/api/opencode-types'
 import { Volume2, VolumeX, Loader2 } from 'lucide-react'
 import { TextPart } from './TextPart'
 import { PatchPart } from './PatchPart'
@@ -11,16 +10,23 @@ import { useSettings } from '@/hooks/useSettings'
 import { CopyButton } from '@/components/ui/copy-button'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
-
-type RetryPartType = components['schemas']['RetryPart']
-
-type Part = components['schemas']['Part']
+import type { Part } from '@/api/types'
 
 interface MessagePartProps {
   part: Part
   role?: string
   allParts?: Part[]
   partIndex?: number
+  /**
+   * The message this piece belongs to, and the conversation it belongs to.
+   *
+   * A piece does not say these things about itself any more: the pieces of a
+   * message are the message's, and the message is what says which
+   * conversation it is in. So the two answers a piece cannot give are handed
+   * down from the thread that holds it.
+   */
+  messageId?: string
+  sessionId?: string
   onFileClick?: (filePath: string, lineNumber?: number) => void
   onChildSessionClick?: (sessionId: string) => void
   messageTextContent?: string
@@ -38,7 +44,7 @@ function getCopyableContent(part: Part, allParts?: Part[]): string {
       } else if (part.state.status === 'running' && part.state.input) {
         return JSON.stringify(part.state.input, null, 2)
       }
-      return `Tool: ${part.tool} (${part.state.status})`
+      return `Tool: ${part.name} (${part.state.status})`
     case 'reasoning':
       return part.text || ''
     case 'snapshot':
@@ -107,7 +113,7 @@ function TTSButton({ messageId, content, className = "" }: TTSButtonProps) {
   )
 }
 
-export const MessagePart = memo(function MessagePart({ part, role, allParts, partIndex, onFileClick, onChildSessionClick, messageTextContent }: MessagePartProps) {
+export const MessagePart = memo(function MessagePart({ part, role, allParts, partIndex, messageId, sessionId, onFileClick, onChildSessionClick, messageTextContent }: MessagePartProps) {
   const { preferences } = useSettings()
   const simpleChatMode = preferences?.simpleChatMode ?? false
   const showReasoning = preferences?.showReasoning ?? false
@@ -129,8 +135,8 @@ export const MessagePart = memo(function MessagePart({ part, role, allParts, par
       if (simpleChatMode) return null
       return <PatchPart part={part} onFileClick={onFileClick} />
     case 'tool':
-      if (simpleChatMode && part.tool !== 'task') return null
-      return <ToolCallPart part={part} onFileClick={onFileClick} onChildSessionClick={onChildSessionClick} />
+      if (simpleChatMode && part.name !== 'task') return null
+      return <ToolCallPart part={part} sessionId={sessionId} onFileClick={onFileClick} onChildSessionClick={onChildSessionClick} />
     case 'reasoning':
       if (simpleChatMode || !showReasoning) return null
       return (
@@ -161,13 +167,13 @@ export const MessagePart = memo(function MessagePart({ part, role, allParts, par
       if (simpleChatMode) return null
       {
         const isFree = part.cost === 0
-        const totalTokens = part.tokens.input + part.tokens.output + (part.tokens.cache?.read || 0)
+        const totalTokens = part.tokens.input + part.tokens.output + part.tokens.cacheRead
         const costText = isMobile && isFree ? null : <span>{t('message.parts.costTokens', { cost: part.cost.toFixed(4), tokens: totalTokens })}</span>
         return (
           <div className="text-xs text-muted-foreground my-1 flex items-center gap-2">
             {costText}
             <CopyButton content={copyableContent} title={t('message.actions.copyStepComplete')} />
-            {messageTextContent && part.messageID && <TTSButton messageId={part.messageID} content={messageTextContent} />}
+            {messageTextContent && messageId && <TTSButton messageId={messageId} content={messageTextContent} />}
           </div>
         )
       }
@@ -179,7 +185,7 @@ export const MessagePart = memo(function MessagePart({ part, role, allParts, par
         </span>
       )
     case 'retry':
-      return <RetryPart part={part as RetryPartType} />
+      return <RetryPart part={part} sessionId={sessionId} />
     case 'subtask': {
       const label = part.description || part.prompt || t('message.parts.subAgentTask')
       return (

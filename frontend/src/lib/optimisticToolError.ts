@@ -39,18 +39,16 @@ export function optimisticallyErrorToolPart(
       if (msgWithParts.info.id !== messageID) return msgWithParts
 
       const targetPart = msgWithParts.parts.find((p): p is Extract<Part, { type: 'tool' }> & {
-        callID: string
+        callId: string
         state: Extract<Part, { type: 'tool' }>['state'] & {
           status: 'running'
-          input: Record<string, unknown>
-          time: { start: number }
+          time: { start: number; end: number | null }
         }
       } =>
         p.type === 'tool' &&
-        'callID' in p &&
-        p.callID === callID &&
-        'state' in p &&
-        p.state?.status === 'running'
+        p.callId === callID &&
+        p.state.status === 'running' &&
+        p.state.time !== null
       )
       if (!targetPart) {
         return msgWithParts
@@ -66,8 +64,11 @@ export function optimisticallyErrorToolPart(
           ...p,
           state: {
             status: 'error' as const,
-            input: targetState.input,
+            title: targetState.title,
+            output: targetState.output,
             error: errorMessage,
+            input: targetState.input,
+            metadata: targetState.metadata,
             time: {
               start: targetState.time.start,
               end: Date.now(),

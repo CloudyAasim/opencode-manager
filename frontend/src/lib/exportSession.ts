@@ -38,32 +38,32 @@ function formatPartContent(part: Part): string {
 
 function formatToolPart(part: Part): string {
   if (part.type !== 'tool') return ''
-  
-  const toolName = part.tool || 'Unknown Tool'
+
+  const toolName = part.name || 'Unknown Tool'
   const state = part.state
   const status = state?.status || 'unknown'
-  
+
   let content = `### Tool: ${toolName}\n`
   content += `*Status: ${status}*\n\n`
-  
-  if (state && 'input' in state && state.input) {
+
+  if (state?.input) {
     content += '**Input:**\n```json\n'
     content += JSON.stringify(state.input, null, 2)
     content += '\n```\n\n'
   }
-  
-  if (state && 'output' in state && state.output) {
+
+  if (state?.output) {
     content += '**Output:**\n```\n'
     content += state.output
     content += '\n```\n'
   }
-  
-  if (state && 'error' in state && state.error) {
+
+  if (state?.error) {
     content += '**Error:**\n```\n'
     content += state.error
     content += '\n```\n'
   }
-  
+
   return content
 }
 
@@ -88,7 +88,7 @@ function generateSessionMarkdown(
   lines.push(`# ${session.title || 'Untitled Session'}`)
   lines.push('')
   lines.push(`**Session ID:** ${session.id}`)
-  lines.push(`**Created:** ${formatDate(session.time.created)}`)
+  lines.push(`**Created:** ${formatDate(session.createdAt)}`)
   if (session.share?.url) {
     lines.push(`**Shared:** [View](${session.share.url})`)
   }

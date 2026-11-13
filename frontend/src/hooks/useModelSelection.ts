@@ -129,9 +129,9 @@ export function useModelSelection(
     return raw.filter((m) => modelExists(m, providers))
   }, [modelState?.favorite, providers])
 
-  const defaultModelString = providersData?.providers
+  const defaultModelString = (providersData?.providers ?? [])
     .map((provider) => {
-      const modelID = providersData.default[provider.id] || Object.keys(provider.models || {})[0]
+      const modelID = providersData?.default?.[provider.id] || Object.keys(provider.models || {})[0]
       return modelID ? `${provider.id}/${modelID}` : null
     })
     .find((value): value is string => Boolean(value))

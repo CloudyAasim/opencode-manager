@@ -9,24 +9,19 @@ import type {
   ContentPart,
   MessageWithParts,
 } from "../api/types";
-import type { paths, components } from "../api/opencode-types";
+import type { paths } from "../api/opencode-types";
+import type { SendPromptRequest } from "@opencode-manager/shared/api/v1";
 import { parseNetworkError, isGatewayTimeout } from "../lib/opencode-errors";
 import { showToast } from "../lib/toast";
 import { useI18n } from "../lib/i18n";
 import { useSendErrorStore } from "../stores/sendErrorStore";
 import { useSessionStatus } from "../stores/sessionStatusStore";
-import { invalidateSessionListCaches, messagesQueryKey, sessionListQueryKey, sessionQuerySession, stopQueries } from "../lib/queryInvalidation";
+import { invalidateSessionListCaches, messagesQueryKey, sessionListQueryKey, sessionQueryKey, sessionQuerySession, stopQueries } from "../lib/queryInvalidation";
 import { reconcileConfirmedPrompt } from "../lib/sendErrorReconcile";
 import { buildSessionKey } from "../lib/sessionKey";
 import { toggleSessionPin } from "../api/sessionPins";
 import { SESSION_PINS_QUERY_KEY } from "./useSessionPins";
 import type { SessionPin } from "@opencode-manager/shared/schemas";
-
-type AssistantMessage = components["schemas"]["AssistantMessage"];
-
-type SendPromptRequest = NonNullable<
-  paths["/session/{sessionID}/prompt_async"]["post"]["requestBody"]
->["content"]["application/json"];
 
 type SendCommandResponse = paths["/session/{sessionID}/command"]["post"]["responses"]["200"]["content"]["application/json"];
 
@@ -117,44 +112,49 @@ export const useSessionsAcrossDirectories = (
 /**
  * One conversation.
  *
- * This one still asks the agent, and it is the last thing on this surface
- * that does: the detail of a conversation and the event stream about it are
- * filed in the same cache slot, and the event stream still speaks the
- * agent's own dialect. A conversation read in the versioned dialect and then
- * overwritten by one in the agent's would leave the app holding two shapes
- * for the same thing - so the detail moves when the event stream does, and
- * not before.
+ * The layer is asked, not the agent: the layer knows where the conversation
+ * lives, and it knows whether the caller may have it. The detail of a
+ * conversation and the event stream about it are filed in the same cache slot,
+ * and both are in the versioned dialect now - so the app holds one shape for
+ * a conversation and not two.
  */
-export const useSession = (opcodeUrl: string | null | undefined, sessionID: string | undefined, directory?: string) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
-
+export const useSession = (serverUrl: string | null | undefined, sessionID: string | undefined, directory?: string) => {
   return useQuery({
-    queryKey: ["opencode", "session", opcodeUrl, sessionID, directory],
-    queryFn: () => {
-      if (!client || !sessionID) throw new Error('Missing client or sessionID')
-      return client.getSession(sessionID)
+    queryKey: sessionQueryKey(serverUrl, sessionID, directory),
+    queryFn: async () => {
+      if (serverUrl === undefined || serverUrl === null) throw new Error('The layer the client talks to is not available')
+      if (!sessionID) throw new Error('Missing sessionID')
+      const response = await createBffClient(serverUrl).getSession(sessionID, directory ? [directory] : [])
+      return response.session
     },
-    enabled: !!client && !!sessionID,
+    enabled: serverUrl !== undefined && serverUrl !== null && !!sessionID,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 15000,
-    retry: (failureCount) => failureCount < 4,
+    // A conversation that is not the caller's is an answer, not a hiccup:
+    // asking again would only be told the same thing.
+    retry: (failureCount, error) => !(error instanceof FetchError && error.statusCode === 404) && failureCount < 4,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 };
 
-export const useMessages = (opcodeUrl: string | null | undefined, sessionID: string | undefined, directory?: string, opts?: { fallbackPoll?: boolean }) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
-
+/**
+ * What was said in one conversation.
+ *
+ * The layer is asked, not the agent: the client no longer has to know which
+ * agent is behind the conversation or which working directory it lives in.
+ */
+export const useMessages = (serverUrl: string | null | undefined, sessionID: string | undefined, directory?: string, opts?: { fallbackPoll?: boolean }) => {
   return useQuery({
-    queryKey: messagesQueryKey(opcodeUrl, sessionID, directory),
+    queryKey: messagesQueryKey(serverUrl, sessionID, directory),
     queryFn: async () => {
-      if (!client || !sessionID) throw new Error('Missing client or sessionID')
-      const response = await client.listMessages(sessionID)
-      reconcileConfirmedPrompt(sessionID, response as MessageWithParts[])
-      return response as MessageWithParts[]
+      if (serverUrl === undefined || serverUrl === null) throw new Error('The layer the client talks to is not available')
+      if (!sessionID) throw new Error('Missing sessionID')
+      const response = await createBffClient(serverUrl).listMessages(sessionID, directory ? [directory] : [])
+      reconcileConfirmedPrompt(sessionID, response.messages)
+      return response.messages
     },
-    enabled: !!client && !!sessionID,
+    enabled: serverUrl !== undefined && serverUrl !== null && !!sessionID,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
     staleTime: 30000,
@@ -328,41 +328,44 @@ export const useUpdateSession = (serverUrl: string | null | undefined) => {
   });
 };
 
+/**
+ * The pieces of a message that has not happened yet.
+ *
+ * They are the versioned API's pieces, so that a message the app made up and
+ * a message the agent sent are the same kind of thing - and so that the
+ * moment the agent's own message arrives, it can take the place of the made-up
+ * one without anything having to be translated on the way.
+ */
 const createOptimisticUserMessageParts = (
-  sessionID: string,
   parts: ContentPart[],
   optimisticID: string,
-) => {
+): Part[] => {
   return parts.map((part, index): Part => {
     if (part.type === "text") {
       return {
         id: `${optimisticID}_part_${index}`,
-        type: "text" as const,
+        type: "text",
         text: part.content,
-        messageID: optimisticID,
-        sessionID,
-      } as Part;
-    } else if (part.type === "image") {
+        synthetic: null,
+        time: null,
+      };
+    }
+    if (part.type === "image") {
       return {
         id: `${optimisticID}_part_${index}`,
-        type: "file" as const,
+        type: "file",
         filename: part.filename,
         url: part.dataUrl,
         mime: part.mime || "image/*",
-        messageID: optimisticID,
-        sessionID,
-      } as Part;
-    } else {
-      return {
-        id: `${optimisticID}_part_${index}`,
-        type: "file" as const,
-        filename: part.name,
-        url: part.path.startsWith("file:") ? part.path : `file://${part.path}`,
-        mime: "text/plain",
-        messageID: optimisticID,
-        sessionID,
-      } as Part;
+      };
     }
+    return {
+      id: `${optimisticID}_part_${index}`,
+      type: "file",
+      filename: part.name,
+      url: part.path.startsWith("file:") ? part.path : `file://${part.path}`,
+      mime: "text/plain",
+    };
   });
 };
 
@@ -373,26 +376,22 @@ const createOptimisticUserMessageInfo = (
   agent?: string,
   variant?: string,
 ): Message => {
-  const message = {
+  const parsedModel = model ? parseModelString(model) : undefined;
+  return {
     id: optimisticID,
     role: "user",
-    sessionID,
-    time: { created: Date.now() },
-  } as Message;
-
-  if (model) {
-    const parsedModel = parseModelString(model);
-    if (parsedModel) {
-      return {
-        ...message,
-        model: parsedModel,
-        agent,
-        variant,
-      } as Message;
-    }
-  }
-
-  return { ...message, agent, variant } as Message;
+    sessionId: sessionID,
+    createdAt: Date.now(),
+    completedAt: null,
+    cost: null,
+    tokens: null,
+    modelId: parsedModel?.modelID ?? null,
+    providerId: parsedModel?.providerID ?? null,
+    agent: agent ?? null,
+    variant: variant ?? null,
+    parentId: null,
+    error: null,
+  };
 };
 
 const getPromptText = (prompt: string | undefined, parts: ContentPart[] | undefined): string => {
@@ -405,8 +404,19 @@ const getPromptText = (prompt: string | undefined, parts: ContentPart[] | undefi
     .trim();
 };
 
-export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: string) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
+/**
+ * Saying something to one conversation.
+ *
+ * The layer is asked, not the agent: the layer knows where the conversation
+ * lives, so the client does not have to say. The words, the files that go
+ * with them, and the model and the agent that should answer all travel
+ * together - so the conversation is answered the way it was asked.
+ *
+ * The agent's address is still known here for one reason only: the list of
+ * models that may be picked is still the agent's, and the check that the
+ * picked model is still on that list reads the agent's own cache.
+ */
+export const useSendPrompt = (serverUrl: string | null | undefined, opcodeUrl: string | null | undefined, directory?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -425,14 +435,14 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
       agent?: string;
       variant?: string;
     }) => {
-      if (!client) throw new Error("No client available");
+      if (serverUrl === undefined || serverUrl === null) throw new Error("The layer the client talks to is not available");
 
-      const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
+      const queryKey = messagesQueryKey(serverUrl, sessionID, directory);
       await stopQueries(queryClient, { queryKey });
 
       useSessionStatus.getState().setOptimisticActive(sessionID);
 
-      const requestData: SendPromptRequest = {
+      const request: SendPromptRequest = {
         parts: parts?.map((part) =>
           part.type === "text"
             ? { type: "text", text: (part as ContentPart & { type: "text" }).content }
@@ -452,6 +462,9 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
                     : `file://${part.path}`,
                 },
         ) || [{ type: "text", text: prompt || "" }],
+        model: null,
+        agent: agent ?? null,
+        variant: variant ?? null,
       };
 
       if (model) {
@@ -473,27 +486,23 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
             }
           }
 
-          requestData.model = {
-            providerID: parsedModel.providerID,
-            modelID: parsedModel.modelID,
+          request.model = {
+            providerId: parsedModel.providerID,
+            modelId: parsedModel.modelID,
           };
         }
       }
 
-      if (agent) {
-        requestData.agent = agent;
-      }
-
-      if (variant) {
-        requestData.variant = variant;
-      }
-
       useSendErrorStore.getState().setQueuedPrompt(sessionID, getPromptText(prompt, parts));
-      await client.sendPromptAsync(sessionID, requestData);
+      await createBffClient(serverUrl).sendPrompt(
+        sessionID,
+        request,
+        directory ? [directory] : [],
+      );
     },
     onError: (error, variables) => {
       const { sessionID, prompt, parts } = variables;
-      const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
+      const queryKey = messagesQueryKey(serverUrl, sessionID, directory);
 
       useSendErrorStore.getState().clearQueuedPrompt(sessionID);
 
@@ -541,13 +550,12 @@ const MAX_ABORT_RETRIES = 10;
 /**
  * Stop what a conversation is doing.
  *
- * The layer is asked, not the agent. The messages are still the agent's own
- * - the event stream has not learned the versioned dialect yet - so the
- * message cache is still filed under the agent's address.
+ * The layer is asked, not the agent. The messages are the versioned API's
+ * now - the event stream learned that dialect in the same round - so the
+ * message cache is filed under the layer's address.
  */
 export const useAbortSession = (
   serverUrl: string | null | undefined,
-  opcodeUrl: string | null | undefined,
   directory?: string,
   sessionID?: string,
 ) => {
@@ -556,19 +564,18 @@ export const useAbortSession = (
   const retryCountRef = useRef(0);
 
   const forceCompleteMessages = useCallback((targetSessionID: string) => {
-    const queryKey = messagesQueryKey(opcodeUrl, targetSessionID, directory);
+    const queryKey = messagesQueryKey(serverUrl, targetSessionID, directory);
     const now = Date.now();
-    
+
     queryClient.setQueryData<MessageWithParts[]>(queryKey, (old) => {
       if (!old) return old;
-      
+
       return old.map(msgWithParts => {
         const msg = msgWithParts.info;
         let updatedParts = msgWithParts.parts;
-        
+
         if (msg.role === "assistant") {
-          const assistantInfo = msg as AssistantMessage;
-          if (!assistantInfo.time.completed) {
+          if (!msg.completedAt) {
             updatedParts = updatedParts.map(part => {
               if (part.type !== "tool") return part;
               if (part.state.status !== "running" && part.state.status !== "pending") return part;
@@ -578,27 +585,27 @@ export const useAbortSession = (
                   ...part.state,
                   status: "completed" as const,
                   output: part.state.status === "running" ? "[Session aborted]" : "[Tool was pending when session aborted]",
-                  title: part.state.status === "running" ? (part.state as { title?: string }).title || "" : "",
-                  metadata: (part.state as { metadata?: Record<string, unknown> }).metadata || {},
+                  title: part.state.status === "running" ? part.state.title || "" : "",
+                  metadata: part.state.metadata || {},
                   time: {
-                    start: (part.state as { time?: { start: number } }).time?.start || now,
+                    start: part.state.time?.start || now,
                     end: now
                   }
                 }
               };
             });
-            
+
             return {
               ...msgWithParts,
               info: {
-                ...assistantInfo,
-                time: {
-                  ...assistantInfo.time,
-                  completed: now
-                },
+                ...msg,
+                completedAt: now,
                 error: {
-                  name: "MessageAbortedError" as const,
-                  data: { message: "Session aborted" }
+                  kind: "aborted" as const,
+                  message: "Session aborted",
+                  providerId: null,
+                  statusCode: null,
+                  isRetryable: false,
                 }
               },
               parts: updatedParts
@@ -608,7 +615,7 @@ export const useAbortSession = (
         return msgWithParts;
       });
     });
-  }, [queryClient, opcodeUrl, directory]);
+  }, [queryClient, serverUrl, directory]);
 
   const stopRetrying = useCallback(() => {
     if (retryIntervalRef.current) {
@@ -619,23 +626,22 @@ export const useAbortSession = (
   }, []);
 
   const isSessionComplete = useCallback((targetSessionID: string) => {
-    const queryKey = messagesQueryKey(opcodeUrl, targetSessionID, directory);
+    const queryKey = messagesQueryKey(serverUrl, targetSessionID, directory);
     const messages = queryClient.getQueryData<MessageWithParts[]>(queryKey);
-    
+
     const hasIncompleteMessages = messages?.some(msgWithParts => {
       if (msgWithParts.info.role !== "assistant") return false;
-      const assistantInfo = msgWithParts.info as AssistantMessage;
-      return !assistantInfo.time.completed;
+      return !msgWithParts.info.completedAt;
     });
 
     return !hasIncompleteMessages;
-  }, [queryClient, opcodeUrl, directory]);
+  }, [queryClient, serverUrl, directory]);
 
   useEffect(() => {
     if (!sessionID) return;
 
     const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
+      const queryKey = messagesQueryKey(serverUrl, sessionID, directory);
       if (event.query.queryKey.join(",") === queryKey.join(",")) {
         if (isSessionComplete(sessionID) && retryIntervalRef.current) {
           stopRetrying();
@@ -644,7 +650,7 @@ export const useAbortSession = (
     });
 
     return () => unsubscribe();
-  }, [sessionID, queryClient, opcodeUrl, directory, isSessionComplete, stopRetrying]);
+  }, [sessionID, queryClient, serverUrl, directory, isSessionComplete, stopRetrying]);
 
   useEffect(() => {
     return () => stopRetrying();
@@ -694,7 +700,14 @@ export const useAbortSession = (
   return mutation;
 };
 
-export const useSendShell = (opcodeUrl: string | null | undefined, directory?: string) => {
+/**
+ * Running a command in the conversation's own shell.
+ *
+ * The shell is still the agent's - there is no layer for it yet - but the
+ * message it writes into is the versioned API's, so the cache is filed under
+ * the layer's address.
+ */
+export const useSendShell = (serverUrl: string | null | undefined, opcodeUrl: string | null | undefined, directory?: string) => {
   const client = useOpenCodeClient(opcodeUrl, directory);
   const queryClient = useQueryClient();
 
@@ -713,13 +726,12 @@ export const useSendShell = (opcodeUrl: string | null | undefined, directory?: s
       const optimisticUserID = `optimistic_user_${Date.now()}_${Math.random()}`;
 
       const userMessageParts = createOptimisticUserMessageParts(
-        sessionID,
         [{ type: "text" as const, content: command }],
         optimisticUserID,
       );
       const userMessageInfo = createOptimisticUserMessageInfo(sessionID, optimisticUserID);
 
-      const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
+      const queryKey = messagesQueryKey(serverUrl, sessionID, directory);
       await stopQueries(queryClient, { queryKey });
 
       const optimisticMessageWithParts: MessageWithParts = {
@@ -741,7 +753,7 @@ export const useSendShell = (opcodeUrl: string | null | undefined, directory?: s
     onError: (_, variables) => {
       const { sessionID } = variables;
       queryClient.setQueryData<MessageWithParts[]>(
-        messagesQueryKey(opcodeUrl, sessionID, directory),
+        messagesQueryKey(serverUrl, sessionID, directory),
         (old) => {
           if (!old) return old;
           return old.filter((msgWithParts) => !msgWithParts.info.id.startsWith("optimistic_"));
@@ -753,7 +765,7 @@ export const useSendShell = (opcodeUrl: string | null | undefined, directory?: s
       const { optimisticUserID } = data;
 
       queryClient.setQueryData<MessageWithParts[]>(
-        messagesQueryKey(opcodeUrl, sessionID, directory),
+        messagesQueryKey(serverUrl, sessionID, directory),
         (old) => {
           if (!old) return old;
           return old.filter((msgWithParts) => msgWithParts.info.id !== optimisticUserID);
@@ -761,7 +773,7 @@ export const useSendShell = (opcodeUrl: string | null | undefined, directory?: s
       );
 
       queryClient.invalidateQueries({
-        queryKey: ["opencode", "session", opcodeUrl, sessionID, directory],
+        queryKey: sessionQueryKey(serverUrl, sessionID, directory),
       });
     },
   });
@@ -796,6 +808,7 @@ export const useAgents = (opcodeUrl: string | null | undefined, directory?: stri
 };
 
 export const useLoadSkill = (
+  serverUrl: string | null | undefined,
   opcodeUrl: string | null | undefined,
   sessionID: string | undefined,
   directory?: string,
@@ -813,10 +826,9 @@ export const useLoadSkill = (
       if (!sessionID) throw new Error("No active session");
 
       const optimisticUserID = `optimistic_user_${Date.now()}_${Math.random()}`;
-      const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
+      const queryKey = messagesQueryKey(serverUrl, sessionID, directory);
 
       const userMessageParts = createOptimisticUserMessageParts(
-        sessionID,
         [{ type: "text" as const, content: `Loading skill: ${skillName}` }],
         optimisticUserID,
       );
@@ -837,7 +849,7 @@ export const useLoadSkill = (
     },
     onError: (error) => {
       if (sessionID) {
-        const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
+        const queryKey = messagesQueryKey(serverUrl, sessionID, directory);
         queryClient.setQueryData<MessageWithParts[]>(
           queryKey,
           (old) => old?.filter((m) => !m.info.id.startsWith("optimistic_")),
@@ -845,25 +857,15 @@ export const useLoadSkill = (
       }
       showToast.error(error instanceof Error ? error.message : "Failed to load skill");
     },
-    onSuccess: (data) => {
-      const { response } = data;
-      const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
-
-      queryClient.setQueryData<MessageWithParts[]>(
-        queryKey,
-        (old) => {
-          if (!old) return old;
-
-          const existingIdx = old.findIndex(m => m.info.id === response.info.id);
-          if (existingIdx >= 0) {
-            const updated = [...old];
-            updated[existingIdx] = { info: response.info, parts: response.parts };
-            return updated;
-          }
-
-          return [...old, { info: response.info, parts: response.parts }];
-        },
-      );
+    onSuccess: () => {
+      // The command's own answer is still the agent's, in the agent's words.
+      // Putting it into the message cache would leave the cache holding two
+      // shapes for the same conversation, so it is not put there: the cache is
+      // refilled from the layer instead, and then it holds one shape.
+      if (!sessionID) return;
+      queryClient.invalidateQueries({
+        queryKey: messagesQueryKey(serverUrl, sessionID, directory),
+      });
     },
   });
 };

@@ -54,82 +54,79 @@ const setupSettings = (preferences: MockSettingsReturn['preferences']) => {
   })
 }
 
-const createTextPart = (text: string, messageId: string) => ({
+const createTextPart = (text: string) => ({
   type: 'text' as const,
   text,
-  sessionID: 'test-session',
-  messageID: messageId,
   id: 'part-1',
+  synthetic: null,
+  time: null,
 })
 
-const createTaskToolPart = (description: string, sessionId: string | undefined, messageId: string) => ({
+const createTaskToolPart = (description: string, sessionId: string | undefined) => ({
   type: 'tool' as const,
-  tool: 'task',
-  sessionID: 'test-session',
-  messageID: messageId,
   id: 'part-2',
-  callID: 'call-1',
-  metadata: sessionId ? { sessionId } : undefined,
+  callId: 'call-1',
+  name: 'task',
   state: {
     status: 'completed' as const,
     input: { description },
     output: 'done',
+    error: null,
     title: 'Task',
-    metadata: {},
+    metadata: sessionId ? { sessionId } : null,
     time: { start: Date.now(), end: Date.now() + 100 },
   },
 })
 
-const createSubtaskPart = (description: string, messageId: string) => ({
+const createSubtaskPart = (description: string) => ({
   type: 'subtask' as const,
+  id: 'part-3',
   prompt: 'Please review this',
   description,
   agent: 'reviewer',
-  sessionID: 'test-session',
-  messageID: messageId,
-  id: 'part-3',
+  command: null,
 })
 
-const createStepFinishPart = (messageId: string) => ({
+const createStepFinishPart = () => ({
   type: 'step-finish' as const,
-  sessionID: 'test-session',
-  messageID: messageId,
   id: 'part-4',
   reason: 'stop',
+  snapshot: null,
   cost: 0,
   tokens: {
     input: 0,
     output: 0,
     reasoning: 0,
-    cache: { read: 0, write: 0 },
+    cacheRead: 0,
+    cacheWrite: 0,
   },
 })
 
-const createReasoningPart = (text: string, messageId: string) => ({
+const createReasoningPart = (text: string) => ({
   type: 'reasoning' as const,
-  text,
-  sessionID: 'test-session',
-  messageID: messageId,
   id: 'part-5',
+  text,
+  time: null,
 })
 
 const createAssistantMessage = (
   id: string,
   parts: unknown[],
-  modelID?: string
+  modelId?: string
 ) => ({
   info: {
     id,
     role: 'assistant' as const,
-    sessionID: 'test-session',
-    parentID: 'parent-1',
-    providerID: 'test-provider',
-    mode: 'build',
-    time: {
-      created: Date.now(),
-      completed: Date.now() + 100,
-    },
-    modelID: modelID || 'test-model',
+    sessionId: 'test-session',
+    parentId: 'parent-1',
+    providerId: 'test-provider',
+    createdAt: Date.now(),
+    completedAt: Date.now() + 100,
+    modelId: modelId || 'test-model',
+    cost: null,
+    tokens: null,
+    agent: null,
+    error: null,
   },
   parts,
 })
@@ -138,14 +135,18 @@ const createUserMessage = (id: string, text: string) => ({
   info: {
     id,
     role: 'user' as const,
-    sessionID: 'test-session',
+    sessionId: 'test-session',
     agent: 'test-agent',
-    model: 'test-model',
-    time: {
-      created: Date.now(),
-    },
+    modelId: 'test-model',
+    providerId: null,
+    parentId: null,
+    createdAt: Date.now(),
+    completedAt: Date.now(),
+    cost: null,
+    tokens: null,
+    error: null,
   },
-  parts: [createTextPart(text, id)],
+  parts: [createTextPart(text)],
 })
 
 describe('MessageThread', () => {
@@ -174,7 +175,7 @@ describe('MessageThread', () => {
 
     const messages = [
       createUserMessage('1', 'Hello'),
-      createAssistantMessage('2', [createSubtaskPart('Review changes', '2')]),
+      createAssistantMessage('2', [createSubtaskPart('Review changes')]),
     ]
 
     const onChildSessionClick = vi.fn()
@@ -201,7 +202,7 @@ describe('MessageThread', () => {
 
     const messages = [
       createUserMessage('1', 'Hello'),
-      createAssistantMessage('2', [createTaskToolPart('Do something', 'child-session', '2')]),
+      createAssistantMessage('2', [createTaskToolPart('Do something', 'child-session')]),
     ]
 
     const onChildSessionClick = vi.fn()
@@ -234,9 +235,9 @@ describe('MessageThread', () => {
     const messages = [
       createUserMessage('1', 'Hello'),
       createAssistantMessage('2', [
-        createTextPart('   ', '2'),
-        createTaskToolPart('Explore codebase structure', 'child-session', '2'),
-        createStepFinishPart('2'),
+        createTextPart('   '),
+        createTaskToolPart('Explore codebase structure', 'child-session'),
+        createStepFinishPart(),
       ]),
     ]
 
@@ -262,10 +263,10 @@ describe('MessageThread', () => {
     const messages = [
       createUserMessage('1', 'Hello'),
       createAssistantMessage('2', [
-        createReasoningPart('I should use the explore agent', '2'),
-        createTextPart('\n\n', '2'),
-        createTaskToolPart('Explore codebase structure', 'child-session', '2'),
-        createStepFinishPart('2'),
+        createReasoningPart('I should use the explore agent'),
+        createTextPart('\n\n'),
+        createTaskToolPart('Explore codebase structure', 'child-session'),
+        createStepFinishPart(),
       ]),
     ]
 
@@ -292,10 +293,10 @@ describe('MessageThread', () => {
     const messages = [
       createUserMessage('1', 'Hello'),
       createAssistantMessage('2', [
-        createReasoningPart('I should use the explore agent', '2'),
-        createTextPart('\n\n', '2'),
-        createTaskToolPart('Explore codebase structure', 'child-session', '2'),
-        createStepFinishPart('2'),
+        createReasoningPart('I should use the explore agent'),
+        createTextPart('\n\n'),
+        createTaskToolPart('Explore codebase structure', 'child-session'),
+        createStepFinishPart(),
       ]),
     ]
 
@@ -322,10 +323,10 @@ describe('MessageThread', () => {
     const messages = [
       createUserMessage('1', 'Hello'),
       createAssistantMessage('2', [
-        createReasoningPart('I should use the explore agent', '2'),
-        createTextPart('\n\n', '2'),
-        createTaskToolPart('Explore codebase structure', 'child-session', '2'),
-        createStepFinishPart('2'),
+        createReasoningPart('I should use the explore agent'),
+        createTextPart('\n\n'),
+        createTaskToolPart('Explore codebase structure', 'child-session'),
+        createStepFinishPart(),
       ]),
     ]
 
@@ -351,7 +352,7 @@ describe('MessageThread', () => {
 
     const messages = [
       createUserMessage('1', 'Hello'),
-      createAssistantMessage('2', [createTextPart('This is a response', '2')]),
+      createAssistantMessage('2', [createTextPart('This is a response')]),
     ]
 
     render(
@@ -375,8 +376,8 @@ describe('MessageThread', () => {
     const messages = [
       createUserMessage('1', 'Hello'),
       createAssistantMessage('2', [
-        createTextPart('Here is the analysis', '2'),
-        createSubtaskPart('Review changes', '2'),
+        createTextPart('Here is the analysis'),
+        createSubtaskPart('Review changes'),
       ]),
     ]
 
@@ -423,7 +424,7 @@ describe('MessageThread', () => {
 
     const messages = [
       createUserMessage('1', 'Hello'),
-      createAssistantMessage('2', [createTextPart('This is a response', '2')]),
+      createAssistantMessage('2', [createTextPart('This is a response')]),
     ]
 
     const { unmount } = render(
@@ -459,7 +460,7 @@ describe('MessageThread', () => {
 
     const messages = [
       createUserMessage('1', 'Hello'),
-      createAssistantMessage('2', [createTextPart('This is a response', '2')]),
+      createAssistantMessage('2', [createTextPart('This is a response')]),
     ]
 
     render(

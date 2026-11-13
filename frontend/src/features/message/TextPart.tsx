@@ -7,12 +7,12 @@ import { Maximize2, X, AlertCircle } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
 import { Button } from '@/components/ui/button'
 import { PanelLoading } from '@/components/ui/panel-loading'
-import type { components } from '@/api/opencode-types'
 import { useTheme } from '@/hooks/useTheme'
 import { useI18n } from '@/lib/i18n'
+import type { Part } from '@/api/types'
 import 'highlight.js/styles/github-dark.css'
 
-type TextPart = components['schemas']['TextPart']
+type TextPart = Extract<Part, { type: 'text' }>
 
 interface TextPartProps {
   part: TextPart

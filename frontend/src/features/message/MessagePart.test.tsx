@@ -105,19 +105,18 @@ describe('MessagePart', () => {
     })
   }
 
-  const createStepFinishPart = (messageID: string): MessagePartType => ({
+  const createStepFinishPart = (): MessagePartType => ({
     type: 'step-finish',
-    messageID,
-    sessionID: 'test-session',
+    id: 'part-step-finish',
+    reason: 'stop',
+    snapshot: null,
     cost: 0.01,
     tokens: {
       input: 100,
       output: 50,
-      cache: { read: 0, write: 0 },
-    },
-    time: {
-      start: Date.now(),
-      end: Date.now() + 100,
+      reasoning: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
     },
   })
 
@@ -126,61 +125,65 @@ describe('MessagePart', () => {
 
   it('renders TTS button for step-finish part with message text', () => {
     setup()
-    const part = createStepFinishPart(TEST_MESSAGE_ID)
-    
+    const part = createStepFinishPart()
+
     render(
       <MessagePart
         part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     expect(screen.getByRole('button')).toBeInTheDocument()
     expect(screen.getByTitle('Read aloud')).toBeInTheDocument()
   })
 
   it('does not render TTS button when message text is empty', () => {
     setup()
-    const part = createStepFinishPart(TEST_MESSAGE_ID)
-    
+    const part = createStepFinishPart()
+
     render(
       <MessagePart
         part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent=""
       />
     )
-    
+
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('does not render TTS button when TTS is disabled', () => {
     setup({ ttsEnabled: false })
-    const part = createStepFinishPart(TEST_MESSAGE_ID)
-    
+    const part = createStepFinishPart()
+
     render(
       <MessagePart
         part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('calls speakMessage with message id on tap when idle', () => {
     setup()
-    const part = createStepFinishPart(TEST_MESSAGE_ID)
-    
+    const part = createStepFinishPart()
+
     render(
       <MessagePart
         part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     const button = screen.getByRole('button')
     fireEvent.click(button)
-    
+
     expect(mockSpeakMessage).toHaveBeenCalledTimes(1)
     expect(mockSpeakMessage).toHaveBeenCalledWith(TEST_MESSAGE_ID, TEST_CONTENT)
   })
@@ -195,34 +198,36 @@ describe('MessagePart', () => {
       isEnabled: true,
     }
     mocks.useTTS.mockReturnValue(mockTTSForTest)
-    
-    const part = createStepFinishPart(TEST_MESSAGE_ID)
-    
+
+    const part = createStepFinishPart()
+
     render(
       <MessagePart
         part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     const button = screen.getByRole('button')
     fireEvent.click(button)
-    
+
     expect(mockStop).toHaveBeenCalledTimes(1)
     expect(mockSpeakMessage).not.toHaveBeenCalled()
   })
 
   it('shows active state when this message is playing', () => {
     setup({ activeMessageId: TEST_MESSAGE_ID, isPlaying: true })
-    const part = createStepFinishPart(TEST_MESSAGE_ID)
-    
+    const part = createStepFinishPart()
+
     render(
       <MessagePart
         part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     const button = screen.getByRole('button')
     expect(button).toHaveClass('bg-destructive')
     expect(button).toHaveClass('text-destructive')
@@ -230,67 +235,74 @@ describe('MessagePart', () => {
 
   it('shows active state when this message is loading', () => {
     setup({ activeMessageId: TEST_MESSAGE_ID, isLoading: true })
-    const part = createStepFinishPart(TEST_MESSAGE_ID)
-    
+    const part = createStepFinishPart()
+
     render(
       <MessagePart
         part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     const button = screen.getByRole('button')
     expect(button).toHaveClass('bg-destructive')
   })
 
   it('does not show active state when different message is playing', () => {
     setup({ activeMessageId: 'other-message', isPlaying: true })
-    const part = createStepFinishPart(TEST_MESSAGE_ID)
-    
+    const part = createStepFinishPart()
+
     render(
       <MessagePart
         part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     const button = screen.getByRole('button')
     expect(button).not.toHaveClass('bg-destructive')
   })
 
   it('tracks playback by message id not text', () => {
     setup({ activeMessageId: TEST_MESSAGE_ID, isPlaying: true })
-    const part1 = createStepFinishPart(TEST_MESSAGE_ID)
-    const part2 = createStepFinishPart('message-2')
-    
+    const part = createStepFinishPart()
+
     const { rerender } = render(
       <MessagePart
-        part={part1}
+        part={part}
+        messageId={TEST_MESSAGE_ID}
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     expect(screen.getByRole('button')).toHaveClass('bg-destructive')
-    
+
     rerender(
       <MessagePart
-        part={part2}
+        part={part}
+        messageId="message-2"
         messageTextContent={TEST_CONTENT}
       />
     )
-    
+
     expect(screen.getByRole('button')).not.toHaveClass('bg-destructive')
   })
 
   describe('tool output clamping', () => {
     const createBashPartWithOutput = (output: string): MessagePartType => ({
       type: 'tool',
-      tool: 'bash',
-      sessionID: 'test-session',
+      id: 'part-bash',
+      callId: 'call-1',
+      name: 'bash',
       state: {
         status: 'completed',
-        input: { command: 'echo big' },
+        title: null,
         output,
+        error: null,
+        input: { command: 'echo big' },
+        metadata: null,
         time: { start: Date.now(), end: Date.now() + 100 },
       },
     })
@@ -361,69 +373,76 @@ describe('MessagePart', () => {
   describe('simpleChatMode', () => {
     const createToolPart = (): MessagePartType => ({
       type: 'tool',
-      tool: 'edit',
-      sessionID: 'test-session',
+      id: 'part-tool',
+      callId: 'call-1',
+      name: 'edit',
       state: {
         status: 'completed',
+        title: null,
+        output: null,
+        error: null,
         input: { filePath: '/test/file.txt' },
+        metadata: null,
         time: { start: Date.now(), end: Date.now() + 100 },
       },
     })
 
     const createPatchPart = (): MessagePartType => ({
       type: 'patch',
+      id: 'part-patch',
       hash: 'abc123',
       files: ['/test/file.txt'],
-      sessionID: 'test-session',
     })
 
     const createReasoningPart = (): MessagePartType => ({
       type: 'reasoning',
+      id: 'part-reasoning',
       text: 'This is the reasoning text',
-      sessionID: 'test-session',
+      time: null,
     })
 
     const createSnapshotPart = (): MessagePartType => ({
       type: 'snapshot',
+      id: 'part-snapshot',
       snapshot: 'snapshot-data',
-      sessionID: 'test-session',
     })
 
     const createAgentPart = (): MessagePartType => ({
       type: 'agent',
+      id: 'part-agent',
       name: 'test-agent',
-      sessionID: 'test-session',
     })
 
     const createStepFinishPart = (): MessagePartType => ({
       type: 'step-finish',
-      messageID: 'test-message',
-      sessionID: 'test-session',
+      id: 'part-step-finish',
+      reason: 'stop',
+      snapshot: null,
       cost: 0.01,
       tokens: {
         input: 100,
         output: 50,
-        cache: { read: 0, write: 0 },
-      },
-      time: {
-        start: Date.now(),
-        end: Date.now() + 100,
+        reasoning: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
       },
     })
 
     const createTextPart = (): MessagePartType => ({
       type: 'text',
+      id: 'part-text',
       text: 'Hello, this is a text message',
-      sessionID: 'test-session',
+      synthetic: null,
+      time: null,
     })
 
     const createSubtaskPart = (): MessagePartType => ({
       type: 'subtask',
+      id: 'part-subtask',
       prompt: 'Please review this change',
       description: 'Review changes',
       agent: 'auditor',
       command: 'review',
-      sessionID: 'test-session',
     })
 
     it('renders null for non-task tool part when simpleChatMode is true', () => {
@@ -454,18 +473,21 @@ describe('MessagePart', () => {
         mode: 'build',
       })
 
-      const part = {
-        ...createToolPart(),
-        tool: 'task',
-        callID: 'call-1',
-        metadata: { sessionId: 'child-session' },
+      const part: MessagePartType = {
+        type: 'tool',
+        id: 'part-task',
+        callId: 'call-1',
+        name: 'task',
         state: {
           status: 'completed',
-          input: { description: 'Review changes' },
+          title: 'Task',
           output: 'done',
+          error: null,
+          input: { description: 'Review changes' },
+          metadata: { sessionId: 'child-session' },
           time: { start: Date.now(), end: Date.now() + 100 },
         },
-      } as MessagePartType
+      }
       const onChildSessionClick = vi.fn()
 
       render(<MessagePart part={part} onChildSessionClick={onChildSessionClick} />)
@@ -713,8 +735,9 @@ describe('MessagePart', () => {
   describe('showReasoning', () => {
     const createReasoningPart = (): MessagePartType => ({
       type: 'reasoning',
+      id: 'part-reasoning',
       text: 'This is the reasoning text',
-      sessionID: 'test-session',
+      time: null,
     })
 
     it('renders null for reasoning part when showReasoning is false', () => {
@@ -756,9 +779,10 @@ describe('MessagePart', () => {
   describe('synthetic text parts', () => {
     const createTextPart = (overrides: Partial<MessagePartType>): MessagePartType => ({
       type: 'text',
+      id: 'part-text',
       text: 'hello',
-      sessionID: 'test-session',
-      messageID: 'm1',
+      synthetic: null,
+      time: null,
       ...overrides,
     } as MessagePartType)
 

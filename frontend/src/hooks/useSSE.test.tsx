@@ -5,8 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSSE } from './useSSE'
 import { useSessionStatus } from '../stores/sessionStatusStore'
 import { useSendErrorStore } from '../stores/sendErrorStore'
-import type { MessageWithParts } from '@/api/types'
+import { messagesQueryKey, sessionQueryKey } from '../lib/queryInvalidation'
+import type { MessageWithParts, Session } from '@/api/types'
 import { createTextPart } from '@/lib/partsBatcher'
+
+const SERVER = 'http://localhost:5551'
+const AGENT = 'http://localhost:5551'
 
 const mocks = vi.hoisted(() => ({
   getSessionStatuses: vi.fn(),
@@ -63,6 +67,51 @@ class MockEventSource {
   }
 }
 
+/**
+ * A message, in the versioned dialect.
+ *
+ * The event stream says the same thing in the same words the conversation is
+ * read in, so the shapes here are the versioned ones.
+ */
+function assistantMessage(sessionID: string, messageID: string): MessageWithParts {
+  return {
+    info: {
+      id: messageID,
+      sessionId: sessionID,
+      role: 'assistant',
+      createdAt: Date.now(),
+      completedAt: null,
+      cost: 0,
+      tokens: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+      modelId: 'test-model',
+      providerId: 'test-provider',
+      agent: 'test-agent',
+      variant: null,
+      parentId: null,
+      error: null,
+    },
+    parts: [],
+  }
+}
+
+/** A session, in the versioned dialect. */
+function versionedSession(id: string, title: string): Session {
+  return {
+    id,
+    agentId: 'test',
+    title,
+    directory: '/repo',
+    workspaceId: null,
+    parentId: null,
+    createdAt: 1000,
+    updatedAt: 2000,
+    archived: false,
+    status: 'idle',
+    revert: null,
+    share: null,
+  }
+}
+
 describe('useSSE', () => {
   const originalEventSource = globalThis.EventSource
   const originalFetch = globalThis.fetch
@@ -96,7 +145,7 @@ describe('useSSE', () => {
     )
 
     const { result, unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper }
     )
 
@@ -127,10 +176,10 @@ describe('useSSE', () => {
 
     await waitFor(() => {
       expect(invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ['opencode', 'session', 'http://localhost:5551', 'session-1', '/repo'],
+        queryKey: sessionQueryKey(SERVER, 'session-1', '/repo'),
       })
       expect(invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ['opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo'],
+        queryKey: messagesQueryKey(SERVER, 'session-1', '/repo'),
       })
     })
 
@@ -150,7 +199,7 @@ describe('useSSE', () => {
     useSessionStatus.getState().setStatus('session-1', { type: 'busy' })
 
     const { unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper }
     )
 
@@ -198,7 +247,7 @@ describe('useSSE', () => {
       .mockImplementationOnce(() => new Promise((resolve) => { resolveRepoB = resolve }))
 
     const { rerender, unmount } = renderHook(
-      ({ directory }) => useSSE('http://localhost:5551', directory, 'session-1'),
+      ({ directory }) => useSSE(SERVER, AGENT, directory, 'session-1'),
       { wrapper, initialProps: { directory: '/repo-a' } }
     )
 
@@ -248,7 +297,7 @@ describe('useSSE', () => {
     )
 
     const { result, unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper }
     )
 
@@ -264,23 +313,18 @@ describe('useSSE', () => {
     invalidateQueriesSpy.mockClear()
     setQueryDataSpy.mockClear()
 
-    const sessionData = {
-      id: 'session-2',
-      projectID: 'proj-1',
-      title: 'Updated Session',
-      time: { created: 1000, updated: 2000 },
-    }
+    const sessionData = versionedSession('session-2', 'Updated Session')
 
     act(() => {
       MockEventSource.instances[0].emit('message', {
         type: 'session.updated',
-        properties: { info: sessionData },
+        properties: { session: sessionData },
       })
     })
 
     await waitFor(() => {
       expect(setQueryDataSpy).toHaveBeenCalledWith(
-        ['opencode', 'session', 'http://localhost:5551', 'session-2', '/repo'],
+        sessionQueryKey(SERVER, 'session-2', '/repo'),
         sessionData,
       )
     })
@@ -304,14 +348,11 @@ describe('useSSE', () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
 
-    queryClient.setQueryData(
-      ['opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo'],
-      [],
-    )
+    queryClient.setQueryData(messagesQueryKey(SERVER, 'session-1', '/repo'), [])
     useSessionStatus.getState().setOptimisticActive('session-1')
 
     const { result, unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper },
     )
 
@@ -352,7 +393,7 @@ describe('useSSE', () => {
     useSendErrorStore.getState().setQueuedPrompt('session-1', 'queued message')
 
     const { result, unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper },
     )
 
@@ -368,11 +409,10 @@ describe('useSSE', () => {
       MockEventSource.instances[0].emit('message', {
         type: 'message.updated',
         properties: {
-          info: {
+          message: {
+            ...assistantMessage('session-1', 'assistant-current').info,
             id: 'assistant-current',
             role: 'assistant',
-            sessionID: 'session-1',
-            time: { created: 1 },
           },
         },
       })
@@ -382,10 +422,13 @@ describe('useSSE', () => {
       MockEventSource.instances[0].emit('message', {
         type: 'session.error',
         properties: {
-          sessionID: 'session-1',
+          sessionId: 'session-1',
           error: {
-            name: 'UnknownError',
-            data: { message: 'Queued send failed' },
+            kind: 'unknown',
+            message: 'Queued send failed',
+            providerId: null,
+            statusCode: null,
+            isRetryable: null,
           },
         },
       })
@@ -417,7 +460,7 @@ describe('useSSE', () => {
     })
 
     const { result, unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper },
     )
 
@@ -431,7 +474,7 @@ describe('useSSE', () => {
       MockEventSource.instances[0].emit('message', {
         type: 'message.updated',
         properties: {
-          info: { id: 'assistant-1', role: 'assistant', sessionID: 'session-1', time: { created: 1 } },
+          message: assistantMessage('session-1', 'assistant-1').info,
         },
       })
     })
@@ -455,7 +498,7 @@ describe('useSSE', () => {
     })
 
     const { result, unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper },
     )
 
@@ -468,7 +511,7 @@ describe('useSSE', () => {
     act(() => {
       MockEventSource.instances[0].emit('message', {
         type: 'session.idle',
-        properties: { sessionID: 'session-1' },
+        properties: { sessionId: 'session-1' },
       })
     })
 
@@ -486,7 +529,7 @@ describe('useSSE', () => {
     useSendErrorStore.getState().setQueuedPrompt('session-1', 'queued message')
 
     const { result, unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper },
     )
 
@@ -500,8 +543,14 @@ describe('useSSE', () => {
       MockEventSource.instances[0].emit('message', {
         type: 'session.error',
         properties: {
-          sessionID: 'session-1',
-          error: { name: 'UnknownError', data: { message: 'Queued send failed' } },
+          sessionId: 'session-1',
+          error: {
+            kind: 'unknown',
+            message: 'Queued send failed',
+            providerId: null,
+            statusCode: null,
+            isRetryable: null,
+          },
         },
       })
     })
@@ -509,7 +558,7 @@ describe('useSSE', () => {
     act(() => {
       MockEventSource.instances[0].emit('message', {
         type: 'session.idle',
-        properties: { sessionID: 'session-1' },
+        properties: { sessionId: 'session-1' },
       })
     })
 
@@ -531,7 +580,7 @@ describe('useSSE', () => {
     useSendErrorStore.getState().setQueuedPrompt('session-1', 'queued message')
 
     const { result, unmount } = renderHook(
-      () => useSSE('http://localhost:5551', '/repo', 'session-1'),
+      () => useSSE(SERVER, AGENT, '/repo', 'session-1'),
       { wrapper },
     )
 
@@ -547,11 +596,10 @@ describe('useSSE', () => {
       MockEventSource.instances[0].emit('message', {
         type: 'message.updated',
         properties: {
-          info: {
+          message: {
+            ...assistantMessage('session-1', 'queued-user').info,
             id: 'queued-user',
             role: 'user',
-            sessionID: 'session-1',
-            time: { created: 1 },
           },
         },
       })
@@ -561,10 +609,13 @@ describe('useSSE', () => {
       MockEventSource.instances[0].emit('message', {
         type: 'session.error',
         properties: {
-          sessionID: 'session-1',
+          sessionId: 'session-1',
           error: {
-            name: 'UnknownError',
-            data: { message: 'Unrelated failure' },
+            kind: 'unknown',
+            message: 'Unrelated failure',
+            providerId: null,
+            statusCode: null,
+            isRetryable: null,
           },
         },
       })
@@ -589,17 +640,17 @@ describe('useSSE', () => {
 
       // Seed both directory caches before rendering the hook
       queryClient.setQueryData(
-        ['opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo-a'],
+        messagesQueryKey(SERVER, 'session-1', '/repo-a'),
         [{
           ...assistantMessage('session-1', 'message-1'),
-          parts: [createTextPart('session-1', 'message-1', 'part-1', 'A')],
+          parts: [createTextPart('part-1', 'A')],
         }],
       )
       queryClient.setQueryData(
-        ['opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo-b'],
+        messagesQueryKey(SERVER, 'session-1', '/repo-b'),
         [{
           ...assistantMessage('session-1', 'message-1'),
-          parts: [createTextPart('session-1', 'message-1', 'part-1', 'B')],
+          parts: [createTextPart('part-1', 'B')],
         }],
       )
 
@@ -610,7 +661,7 @@ describe('useSSE', () => {
       // Use stable reference to avoid re-render loop with inline array
       const directories = ['/repo-a', '/repo-b']
       const { result, unmount } = renderHook(
-        () => useSSE('http://localhost:5551', directories, 'session-1'),
+        () => useSSE(SERVER, AGENT, directories, 'session-1'),
         { wrapper },
       )
 
@@ -631,23 +682,23 @@ describe('useSSE', () => {
           type: 'message.part.delta',
           directory: '/repo-b',
           properties: {
-            sessionID: 'session-1',
-            messageID: 'message-1',
-            partID: 'part-1',
+            sessionId: 'session-1',
+            messageId: 'message-1',
+            partId: 'part-1',
             field: 'text',
             delta: ' + streamed',
           },
         })
       })
 
-      const repoBData = queryClient.getQueryData<MessageWithParts[]>([
-        'opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo-b',
-      ])
+      const repoBData = queryClient.getQueryData<MessageWithParts[]>(
+        messagesQueryKey(SERVER, 'session-1', '/repo-b'),
+      )
       expect(repoBData![0].parts[0]).toHaveProperty('text', 'B + streamed')
 
-      const repoAData = queryClient.getQueryData<MessageWithParts[]>([
-        'opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo-a',
-      ])
+      const repoAData = queryClient.getQueryData<MessageWithParts[]>(
+        messagesQueryKey(SERVER, 'session-1', '/repo-a'),
+      )
       expect(repoAData![0].parts[0]).toHaveProperty('text', 'A')
 
       unmount()
@@ -673,16 +724,16 @@ describe('useSSE', () => {
 
       // Seed cache with an empty part
       queryClient.setQueryData(
-        ['opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo'],
+        messagesQueryKey(SERVER, 'session-1', '/repo'),
         [{
           ...assistantMessage('session-1', 'message-1'),
-          parts: [createTextPart('session-1', 'message-1', 'part-1', '')],
+          parts: [createTextPart('part-1', '')],
         }],
       )
 
-      // Initial render with directory=undefined — batcher should be created eagerly
+      // Initial render with directory=undefined - batcher should be created eagerly
       const { rerender, unmount } = renderHook(
-        ({ directory }) => useSSE('http://localhost:5551', directory, 'session-1'),
+        ({ directory }) => useSSE(SERVER, AGENT, directory, 'session-1'),
         { wrapper, initialProps: { directory: undefined as string | undefined } },
       )
 
@@ -699,16 +750,16 @@ describe('useSSE', () => {
         eventSource.emit('connected', { clientId: 'client-1' })
       })
 
-      // Emit a part delta — the batcher was created on the initial mount,
+      // Emit a part delta - the batcher was created on the initial mount,
       // so it should process the event even though directory was undefined at mount time
       act(() => {
         eventSource.emit('message', {
           type: 'message.part.delta',
           directory: '/repo',
           properties: {
-            sessionID: 'session-1',
-            messageID: 'message-1',
-            partID: 'part-1',
+            sessionId: 'session-1',
+            messageId: 'message-1',
+            partId: 'part-1',
             field: 'text',
             delta: 'streamed content',
           },
@@ -716,9 +767,9 @@ describe('useSSE', () => {
       })
 
       await waitFor(() => {
-        const data = queryClient.getQueryData<MessageWithParts[]>([
-          'opencode', 'messages', 'http://localhost:5551', 'session-1', '/repo',
-        ])
+        const data = queryClient.getQueryData<MessageWithParts[]>(
+          messagesQueryKey(SERVER, 'session-1', '/repo'),
+        )
         expect(data![0].parts[0]).toHaveProperty('text', 'streamed content')
       })
 
@@ -728,23 +779,3 @@ describe('useSSE', () => {
     }
   })
 })
-
-function assistantMessage(sessionID: string, messageID: string): MessageWithParts {
-  return {
-    info: {
-      id: messageID,
-      sessionID,
-      role: 'assistant',
-      time: { created: Date.now() },
-      parentID: '',
-      modelID: 'test-model',
-      providerID: 'test-provider',
-      mode: 'test',
-      agent: 'test-agent',
-      path: { cwd: '/test', root: '/test' },
-      cost: 0,
-      tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-    },
-    parts: [],
-  }
-}

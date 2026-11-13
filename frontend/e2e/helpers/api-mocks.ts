@@ -83,6 +83,7 @@ function bffSessionShape(session: SessionSummary) {
     archived: false,
     status: 'idle',
     revert: null,
+    share: null,
   }
 }
 
@@ -147,6 +148,13 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
     return json(route, [])
   })
 
+  // The list of providers the agent knows, in the shape the app reads it in.
+  // The catch-all above answers every agent path with an empty list, and this
+  // one is not a list - it is an object with a list in it.
+  await page.route(/.*\/api\/opencode\/(api\/)?config\/providers(\?.*)?$/, (route) =>
+    json(route, { providers: [], connected: [], default: {} }),
+  )
+
   // The layer the client talks to for its list. It is asked once for every
   // directory, and it answers with the list and one cursor per directory.
   //
@@ -208,6 +216,31 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
   await page.route('**/api/bff/pending', (route) =>
     json(route, { permissions: [], questions: [] }),
   )
+
+  // The conversation itself is read from the layer too, and in the versioned
+  // dialect: a message and the pieces it is made of. The client names the
+  // conversation; the layer works out where it lives.
+  await page.route(/.*\/api\/bff\/sessions\/[^/?]+\/messages(\?.*)?$/, async (route) => {
+    if (state.latency.messagesMs) await sleep(state.latency.messagesMs)
+    return json(route, { messages: [] })
+  })
+
+  // Saying something to a conversation, and taking a message back, are the
+  // layer's job as well.
+  await page.route(/.*\/api\/bff\/sessions\/[^/?]+\/prompts(\?.*)?$/, (route) =>
+    json(route, { accepted: true }),
+  )
+  await page.route(/.*\/api\/bff\/sessions\/[^/?]+\/revert(\?.*)?$/, (route) => {
+    const id = /\/api\/bff\/sessions\/([^/?]+)/.exec(new URL(route.request().url()).pathname)?.[1] ?? ''
+    return json(route, { session: bffSessionShape({ id, directory: DEFAULT_REPO.fullPath }) })
+  })
+
+  // The client's own door for the conversation is closed: the conversation is
+  // the layer's, in the layer's words. A mock that quietly answered the old
+  // call would hide a client that went back to asking the agent.
+  await page.route(/.*\/api\/opencode\/(api\/)?session\/[^/?]+\/(message|messages|prompt|prompt_async|revert)(\?.*)?$/, () => {
+    throw new Error('The client asked the agent about the conversation; it must ask the layer instead')
+  })
 
   // The client used to ask the agent for the pending permissions and the
   // pending questions of every directory, and merge the answers itself. It

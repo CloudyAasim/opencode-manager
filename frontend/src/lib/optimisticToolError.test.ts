@@ -14,31 +14,37 @@ function runningToolMessage(messageID: string, callID: string): MessageWithParts
   return {
     info: {
       id: messageID,
-      sessionID: 'session-1',
+      sessionId: 'session-1',
       role: 'assistant',
-      time: { created: 1 },
-      parentID: '',
-      modelID: 'm',
-      providerID: 'p',
-      mode: 'build',
+      createdAt: 1,
+      completedAt: null,
+      parentId: '',
+      modelId: 'm',
+      providerId: 'p',
       agent: 'a',
-      path: { cwd: '/repo', root: '/repo' },
       cost: 0,
-      tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+      tokens: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+      error: null,
     },
     parts: [
-      { id: `${messageID}-text`, messageID, sessionID: 'session-1', type: 'text', text: 'working' },
+      { id: `${messageID}-text`, type: 'text', text: 'working', synthetic: null, time: null },
       {
         id: `${messageID}-tool`,
-        messageID,
-        sessionID: 'session-1',
         type: 'tool',
-        callID,
-        tool: 'bash',
-        state: { status: 'running', input: { command: 'ls' }, time: { start: 100 } },
+        callId: callID,
+        name: 'bash',
+        state: {
+          status: 'running',
+          title: null,
+          output: null,
+          error: null,
+          input: { command: 'ls' },
+          metadata: null,
+          time: { start: 100, end: null },
+        },
       },
     ],
-  } as unknown as MessageWithParts
+  }
 }
 
 function seed(queryClient: QueryClient, messages: MessageWithParts[]): void {
@@ -68,7 +74,15 @@ describe('optimisticallyErrorToolPart', () => {
   it('leaves a tool that already finished alone', () => {
     const queryClient = new QueryClient()
     const message = runningToolMessage('msg-1', 'call-1')
-    ;(message.parts[1] as unknown as { state: { status: string } }).state = { status: 'completed', output: 'ok', time: { start: 100, end: 200 } }
+    ;(message.parts[1] as unknown as { state: { status: string } }).state = {
+      status: 'completed',
+      title: null,
+      output: 'ok',
+      error: null,
+      input: { command: 'ls' },
+      metadata: null,
+      time: { start: 100, end: 200 },
+    }
     seed(queryClient, [message])
 
     optimisticallyErrorToolPart(queryClient, 'session-1', 'msg-1', 'call-1', 'Permission denied')

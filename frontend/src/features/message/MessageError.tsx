@@ -1,18 +1,25 @@
 import { memo } from 'react'
 import { AlertCircle, KeyRound, XCircle, Clock } from 'lucide-react'
-import { parseOpenCodeError, type OpenCodeError } from '@/lib/opencode-errors'
+import { parseMessageError } from '@/lib/opencode-errors'
+import type { MessageError as MessageErrorType } from '@opencode-manager/shared/api/v1'
 
 interface MessageErrorProps {
-  error: OpenCodeError
+  error: MessageErrorType
 }
 
-const getErrorIcon = (errorName: string) => {
-  switch (errorName) {
-    case 'ProviderAuthError':
+/**
+ * Which face a failure gets.
+ *
+ * The kinds are the reasons a conversation can fail, not the classes one
+ * program happens to throw, so the face is chosen from the kind.
+ */
+const getErrorIcon = (kind: MessageErrorType['kind']) => {
+  switch (kind) {
+    case 'authentication':
       return KeyRound
-    case 'MessageAbortedError':
+    case 'aborted':
       return XCircle
-    case 'MessageOutputLengthError':
+    case 'output-length':
       return Clock
     default:
       return AlertCircle
@@ -20,10 +27,10 @@ const getErrorIcon = (errorName: string) => {
 }
 
 export const MessageError = memo(function MessageError({ error }: MessageErrorProps) {
-  const parsed = parseOpenCodeError(error)
+  const parsed = parseMessageError(error)
   if (!parsed) return null
 
-  const Icon = getErrorIcon(error.name)
+  const Icon = getErrorIcon(error.kind)
 
   return (
     <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/30 text-destructive">

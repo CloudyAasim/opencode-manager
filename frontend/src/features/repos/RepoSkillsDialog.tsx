@@ -13,6 +13,7 @@ import { useDeleteSkill } from '@/hooks/useDeleteSkill'
 import { invalidateSkillCaches } from '@/lib/queryInvalidation'
 import type { SkillFileInfo } from '@opencode-manager/shared'
 import { useI18n } from '@/lib/i18n'
+import { API_BASE_URL } from '@/config'
 
 type RepoSkillsDialogBaseProps = {
   open: boolean
@@ -48,7 +49,7 @@ export function RepoSkillsDialog({
   })
 
   const canLoad = !!sessionId && !!opcodeUrl
-  const loadSkill = useLoadSkill(opcodeUrl, sessionId, directory)
+  const loadSkill = useLoadSkill(API_BASE_URL, opcodeUrl, sessionId, directory)
 
   const handleLoad = (skill: SkillFileInfo) => {
     loadSkill.mutate({ skillName: skill.name })

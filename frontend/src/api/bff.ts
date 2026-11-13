@@ -1,4 +1,11 @@
-import type { PendingPermission, PendingQuestion, Session } from '@opencode-manager/shared/api/v1'
+import type {
+  MessageWithParts,
+  PendingPermission,
+  PendingQuestion,
+  SendPromptRequest,
+  Session,
+  SessionRevert,
+} from '@opencode-manager/shared/api/v1'
 import { fetchWrapper } from './fetchWrapper'
 
 /**
@@ -65,6 +72,18 @@ export interface BffDeletedResponse {
 /** Something the agent has taken on. */
 export interface BffAcceptedResponse {
   accepted: true
+}
+
+/**
+ * What was said in one conversation.
+ *
+ * The messages are the versioned API's messages - there is one truth about
+ * what a message is - and what this layer adds is that the client does not
+ * have to know which agent is behind the conversation or which working
+ * directory it lives in.
+ */
+export interface BffMessageListResponse {
+  messages: MessageWithParts[]
 }
 
 export class BffClient {
@@ -163,6 +182,60 @@ export class BffClient {
   async abortSession(sessionId: string, directories: string[] = []): Promise<BffAcceptedResponse> {
     return fetchWrapper<BffAcceptedResponse>(this.sessionUrl(sessionId, directories, 'abort'), {
       method: 'POST',
+    })
+  }
+
+  /**
+   * What was said in one conversation.
+   *
+   * The client names the conversation and, at most, the working directories it
+   * works in. The layer works out where the conversation lives, so the client
+   * does not have to keep a map of conversations to directories - and a
+   * conversation that is not the caller's is refused the same way a
+   * conversation that does not exist is.
+   */
+  async listMessages(
+    sessionId: string,
+    directories: string[] = [],
+  ): Promise<BffMessageListResponse> {
+    return fetchWrapper<BffMessageListResponse>(this.sessionUrl(sessionId, directories, 'messages'))
+  }
+
+  /**
+   * Saying something to one conversation.
+   *
+   * The words, the files that go with them, and the model and the agent that
+   * should answer all travel together - so the conversation is answered the
+   * way it was asked, and not the way the server felt like.
+   */
+  async sendPrompt(
+    sessionId: string,
+    input: SendPromptRequest,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(this.sessionUrl(sessionId, directories, 'prompts'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+  }
+
+  /**
+   * Taking a message back.
+   *
+   * The conversation is rolled back to the message that is named, and
+   * everything after it stops counting. The layer knows where the
+   * conversation lives, so the client does not have to say.
+   */
+  async revertSession(
+    sessionId: string,
+    revert: SessionRevert,
+    directories: string[] = [],
+  ): Promise<BffSessionResponse> {
+    return fetchWrapper<BffSessionResponse>(this.sessionUrl(sessionId, directories, 'revert'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(revert),
     })
   }
 

@@ -4,83 +4,64 @@ import { installApiMocks, makeSession } from '../helpers/api-mocks'
 const REPO = { id: 1, fullPath: '/workspace/repos/demo', localPath: 'demo', cloneStatus: 'ready' as const }
 const OTHER = { id: 2, fullPath: '/workspace/repos/other', localPath: 'other', cloneStatus: 'ready' as const }
 
-function makeMessages(count: number) {
+/**
+ * The conversation, in the versioned dialect.
+ *
+ * A message and the pieces it is made of. The pieces do not say which message
+ * they belong to - the message they are put into says that.
+ */
+function makeMessages(count: number, sessionID: string) {
   return Array.from({ length: count }, (_, index) => ({
-    id: `msg-${String(index).padStart(4, '0')}`,
-    role: 'assistant',
-    sessionID: 'ses_virtual',
-    time: { created: 1_700_000_000_000 + index, completed: 1_700_000_001_000 + index },
-    modelID: 'test-model',
+    info: {
+      id: `msg-${String(index).padStart(4, '0')}`,
+      role: 'assistant',
+      sessionId: sessionID,
+      createdAt: 1_700_000_000_000 + index,
+      completedAt: 1_700_000_001_000 + index,
+      cost: 0,
+      tokens: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+      modelId: 'test-model',
+      providerId: 'test-provider',
+      agent: null,
+      variant: null,
+      parentId: null,
+      error: null,
+    },
     parts: [
       {
         id: `prt-${index}`,
-        sessionID: 'ses_virtual',
-        messageID: `msg-${String(index).padStart(4, '0')}`,
         type: 'text',
         text: `message body number ${index}`,
+        synthetic: null,
+        time: null,
       },
     ],
   }))
 }
 
-function messageListResponse(ids: string[]) {
-  return {
-    data: ids.map((id) => ({
-      id,
-      projectID: 'p',
-      cost: 0,
-      tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-      time: { created: 1_700_000_000_000, updated: 1_700_000_000_000 },
-      title: 'session',
-      location: { directory: REPO.fullPath },
-    })),
-  }
-}
-
-function sessionResponse() {
-  return {
-    id: 'ses_virtual',
-    projectID: 'p',
-    cost: 0,
-    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-    time: { created: 1_700_000_000_000, completed: 1_700_000_001_000 },
-    modelID: 'test-model',
-    title: 'virtual session',
-    location: { directory: REPO.fullPath },
-  }
+/** The conversation, as the layer the client talks to hands it over. */
+function mockConversation(page: import('@playwright/test').Page, sessionID: string, count: number) {
+  const messages = makeMessages(count, sessionID)
+  return page.route(/.*\/api\/bff\/sessions\/[^/?]+\/messages(\?.*)?$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ messages }),
+    }),
+  )
 }
 
 test.describe('message thread virtualization', () => {
   test('keeps the DOM small for a long conversation and still scrolls to the end', async ({ page }) => {
-    const messages = makeMessages(200)
+    const messages = makeMessages(200, 'ses_virtual')
 
     await installApiMocks(page, {
       repos: [REPO, OTHER],
       sessionsByDirectory: { [REPO.fullPath]: [makeSession('ses_virtual', REPO.fullPath)] },
     })
 
-    await page.route(/.*\/api\/opencode\/.*message.*$/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(messages.map((message) => ({ info: message, parts: message.parts }))),
-      }),
-    )
-    await page.route(/.*\/api\/opencode\/session\/ses_virtual(\?.*)?$/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(sessionResponse()),
-      }),
-    )
+    await mockConversation(page, 'ses_virtual', 200)
 
-    await page.route(/.*\/api\/opencode\/api\/session(\?.*)?$/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(messageListResponse(['ses_virtual'])),
-      }),
-    )
     await page.goto('/repos/1/sessions/ses_virtual')
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(2500)
@@ -104,49 +85,12 @@ test.describe('message thread virtualization', () => {
   })
 
   test('renders every message for a short conversation', async ({ page }) => {
-    const messages = makeMessages(5)
-
     await installApiMocks(page, {
       repos: [REPO, OTHER],
       sessionsByDirectory: { [REPO.fullPath]: [makeSession('ses_short', REPO.fullPath)] },
     })
 
-    await page.route(/.*\/api\/opencode\/api\/session(\?.*)?$/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(messageListResponse(['ses_short'])),
-      }),
-    )
-    await page.route(/.*\/api\/opencode\/.*message.*$/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(messages.map((message) => ({ info: message, parts: message.parts }))),
-      }),
-    )
-    await page.route(/.*\/api\/opencode\/session\/ses_short(\?.*)?$/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ...sessionResponse(), id: 'ses_short' }),
-      }),
-    )
-
-    await page.route(/.*\/api\/opencode\/session\/ses_short(\?.*)?$/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ...sessionResponse(), id: 'ses_short' }),
-      }),
-    )
-    await page.route(/.*\/api\/opencode\/.*message.*$/, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(messages.map((message) => ({ info: message, parts: message.parts }))),
-      }),
-    )
+    await mockConversation(page, 'ses_short', 5)
 
     await page.goto('/repos/1/sessions/ses_short')
     await page.waitForLoadState('domcontentloaded')

@@ -223,13 +223,13 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       fileInputRef.current?.click()
     }
   }), [imageAttachments, clearSTT, isRecording, abortRecording, resetVoiceGestureState])
-  const sessionAgent = useSessionAgent(opcodeUrl, sessionID, directory)
+  const sessionAgent = useSessionAgent(API_BASE_URL, opcodeUrl, sessionID, directory)
   const currentMode = localMode ?? sessionAgent.agent
   const setStoredAgent = useSessionAgentStore((s) => s.setAgent)
-  const sendPrompt = useSendPrompt(opcodeUrl, directory)
-  const sendShell = useSendShell(opcodeUrl, directory)
+  const sendPrompt = useSendPrompt(API_BASE_URL, opcodeUrl, directory)
+  const sendShell = useSendShell(API_BASE_URL, opcodeUrl, directory)
   const isPromptSubmitPending = sendPrompt.isPending || sendShell.isPending
-  const abortSession = useAbortSession(API_BASE_URL, opcodeUrl, directory, sessionID)
+  const abortSession = useAbortSession(API_BASE_URL, directory, sessionID)
   const { filterCommands } = useCommands(opcodeUrl)
   const { executeCommand } = useCommandHandler({
     serverUrl: API_BASE_URL,

@@ -10,9 +10,7 @@ import type { Message, Part, MessageWithParts } from '@/api/types'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
 import { useSessionTodos } from '@/stores/sessionTodosStore'
 import { useSettings } from '@/hooks/useSettings'
-import type { components } from '@/api/opencode-types'
 import type { Todo } from '@/features/message/SessionTodoDisplay'
-import type { OpenCodeError } from '@/lib/opencode-errors'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 
@@ -38,7 +36,10 @@ interface MessageThreadProps {
 
 const isMessageStreaming = (msg: Message): boolean => {
   if (msg.role !== 'assistant') return false
-  return !('completed' in msg.time && msg.time.completed)
+  // A message that has not been completed yet is still being answered. "Not
+  // told" and "told zero" are the same thing here, and only the first is a
+  // message still in flight.
+  return msg.completedAt === null
 }
 
 function isSessionStatusActive(sessionStatus: { type?: string }): boolean {
@@ -71,7 +72,7 @@ const hasRenderableContent = (role: Message['role'], parts: Part[], simpleChatMo
       case 'agent':
         return !simpleChatMode
       case 'tool':
-        return !simpleChatMode || part.tool === 'task'
+        return !simpleChatMode || part.name === 'task'
       case 'retry':
         return true
       case 'step-finish':
@@ -86,8 +87,8 @@ const hasRenderableContent = (role: Message['role'], parts: Part[], simpleChatMo
   })
 }
 
-function isTaskToolPart(part: Part): part is components['schemas']['ToolPart'] {
-  return part.type === 'tool' && part.tool === 'task'
+function isTaskToolPart(part: Part): part is Extract<Part, { type: 'tool' }> {
+  return part.type === 'tool' && part.name === 'task'
 }
 
 function isSubAgentActivityPart(part: Part): boolean {
@@ -198,7 +199,8 @@ const MessageRow = memo(function MessageRow({
   const isEditingThisMessage = editingUserMessageId === msg.id
 
   const hasContent = hasRenderableContent(msg.role, parts, simpleChatMode, showReasoning)
-  const hasError = msg.role === 'assistant' && 'error' in msg && msg.error
+  const error = msg.role === 'assistant' ? msg.error : null
+  const hasError = !!error
   const standaloneSubAgentMessage = isStandaloneSubAgentMessage(msg.role, parts)
 
   if (!hasContent && !hasError) {
@@ -219,6 +221,8 @@ const MessageRow = memo(function MessageRow({
                 role={msg.role}
                 allParts={parts}
                 partIndex={partIndex}
+                messageId={msg.id}
+                sessionId={sessionID}
                 onFileClick={onFileClick}
                 onChildSessionClick={onChildSessionClick}
                 messageTextContent={messageTextContent}
@@ -249,13 +253,11 @@ const MessageRow = memo(function MessageRow({
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground">
-              {msg.role === 'user' ? t('message.roles.you') : (msg.role === 'assistant' && 'modelID' in msg ? msg.modelID : t('message.roles.assistant'))}
+              {msg.role === 'user' ? t('message.roles.you') : (msg.role === 'assistant' && msg.modelId ? msg.modelId : t('message.roles.assistant'))}
             </span>
-            {msg.time && (
-              <span className="text-xs text-muted-foreground">
-                {new Date(msg.time.created).toLocaleTimeString()}
-              </span>
-            )}
+            <span className="text-xs text-muted-foreground">
+              {new Date(msg.createdAt).toLocaleTimeString()}
+            </span>
             {canEditUserMessage && nextAssistantMsg && (
               <Button
                 variant="ghost"
@@ -276,7 +278,6 @@ const MessageRow = memo(function MessageRow({
           
           {msg.role === 'user' && canUndoUserMessage && (
             <UserMessageActionButtons
-              opcodeUrl={opcodeUrl}
               sessionId={sessionID}
               directory={directory}
               userMessageId={msg.id}
@@ -317,6 +318,8 @@ const MessageRow = memo(function MessageRow({
                   role={msg.role}
                   allParts={parts}
                   partIndex={partIndex}
+                  messageId={msg.id}
+                  sessionId={sessionID}
                   onFileClick={onFileClick}
                   onChildSessionClick={onChildSessionClick}
                   messageTextContent={msg.role === 'assistant' ? messageTextContent : undefined}
@@ -324,8 +327,8 @@ const MessageRow = memo(function MessageRow({
               </div>
             ))
           ) : null}
-          {hasError && (
-            <MessageError error={msg.error as OpenCodeError} />
+          {hasError && error && (
+            <MessageError error={error} />
           )}
         </div>
       </div>
@@ -385,13 +388,11 @@ export const MessageThread = memo(function MessageThread({
     const allParts = messages.flatMap(m => m.parts)
 
     const latestTodoPart = allParts
-      .filter((part): part is components['schemas']['ToolPart'] => part.type === 'tool' && (part.tool === 'todowrite' || part.tool === 'todoread'))
-      .filter(part => part.state.status === 'completed' && 'time' in part.state)
+      .filter((part): part is Extract<Part, { type: 'tool' }> => part.type === 'tool' && (part.name === 'todowrite' || part.name === 'todoread'))
+      .filter(part => part.state.status === 'completed' && part.state.time)
       .sort((a, b) => {
-        const aState = a.state as { time?: { end?: number } }
-        const bState = b.state as { time?: { end?: number } }
-        const aEndTime = aState.time?.end ?? 0
-        const bEndTime = bState.time?.end ?? 0
+        const aEndTime = a.state.time?.end ?? 0
+        const bEndTime = b.state.time?.end ?? 0
         return bEndTime - aEndTime
       })[0]
 
@@ -399,9 +400,10 @@ export const MessageThread = memo(function MessageThread({
       const state = latestTodoPart.state
       let todos: Todo[] = []
 
-      if ('metadata' in state && state.metadata?.todos && Array.isArray(state.metadata.todos)) {
-        todos = state.metadata.todos as Todo[]
-      } else if ('output' in state && state.output) {
+      const metadataTodos = state.metadata?.todos
+      if (Array.isArray(metadataTodos)) {
+        todos = metadataTodos as Todo[]
+      } else if (state.output) {
         try {
           const parsed = JSON.parse(state.output)
           todos = Array.isArray(parsed)

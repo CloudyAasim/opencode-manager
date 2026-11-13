@@ -401,7 +401,7 @@ export function SessionDetail() {
   ) ?? repoDirectory;
 
   const { data: session, isLoading: sessionLoading, error: sessionQueryError } = useSession(
-    opcodeUrl,
+    API_BASE_URL,
     sessionId,
     sessionDirectory,
   );
@@ -416,7 +416,7 @@ export function SessionDetail() {
     ));
   }, [sessionId, session?.directory]);
 
-  const { isConnected, isReconnecting } = useSSE(opcodeUrl, sessionDirectory, sessionId);
+  const { isConnected, isReconnecting } = useSSE(API_BASE_URL, opcodeUrl, sessionDirectory, sessionId);
   const sseHealth = useSSEHealth();
 
   // The message list is the one thing the user is actually waiting on, and it
@@ -428,14 +428,14 @@ export function SessionDetail() {
   // Health that has not reported yet cannot confirm delivery either, so it
   // lands on the same side: poll.
   const streamDelivering = isConnected && !isReconnecting && sseHealth?.isHealthy === true && !sseHealth.isStalled;
-  const { data: rawMessages, isLoading: messagesLoading } = useMessages(opcodeUrl, sessionId, sessionDirectory, { fallbackPoll: !streamDelivering });
+  const { data: rawMessages, isLoading: messagesLoading } = useMessages(API_BASE_URL, sessionId, sessionDirectory, { fallbackPoll: !streamDelivering });
 
   const messages = useMemo(() => {
     if (!rawMessages) return undefined
-    const revertMessageID = session?.revert?.messageID
+    const revertMessageID = session?.revert?.messageId
     if (!revertMessageID) return rawMessages
     return rawMessages.filter(msgWithParts => compareMessageIds(msgWithParts.info.id, revertMessageID) < 0)
-  }, [rawMessages, session?.revert?.messageID]);
+  }, [rawMessages, session?.revert?.messageId]);
 
   const getMessagesWithParts = useCallback((): MessageWithParts[] | undefined => {
     return messages
@@ -450,7 +450,7 @@ export function SessionDetail() {
     contentVersion: messagesContentVersion,
     onScrollStateChange: setShowScrollButton
   });
-  const abortSession = useAbortSession(API_BASE_URL, opcodeUrl, sessionDirectory, sessionId);
+  const abortSession = useAbortSession(API_BASE_URL, sessionDirectory, sessionId);
   const updateSession = useUpdateSession(API_BASE_URL);
   const createSession = useCreateSession(API_BASE_URL, sessionDirectory);
   // Reached only when the project has no session yet. Nothing is created until
@@ -509,12 +509,14 @@ export function SessionDetail() {
   const latestPlayableAssistant = useMemo(() => getLatestPlayableAssistantMessage(messages), [messages]);
   
   const isSessionActive = useMemo(() => {
-    if (session?.time?.compacting) return true
+    // The status of the conversation is the agent's to say - including when it
+    // is busy making the conversation smaller - and it is the status that
+    // says so, not the conversation's own timestamps.
     if (sessionStatus.type !== 'idle') return true
-    if (lastAssistantMessage && !('completed' in lastAssistantMessage.info.time)) return true
+    if (lastAssistantMessage && !lastAssistantMessage.info.completedAt) return true
     return false
-  }, [lastAssistantMessage, session?.time?.compacting, sessionStatus.type])
-  const hasIncompleteMessages = lastAssistantMessage ? !('completed' in lastAssistantMessage.info.time && lastAssistantMessage.info.time.completed) : false;
+  }, [lastAssistantMessage, sessionStatus.type])
+  const hasIncompleteMessages = lastAssistantMessage ? !lastAssistantMessage.info.completedAt : false;
   const isStreamingResponse = hasIncompleteMessages && isSessionActive;
   const workspaceBasePath = repo?.localPath;
 
@@ -702,10 +704,10 @@ export function SessionDetail() {
   }, [navigate, repoId, sessionRouteSuffix]);
 
   const handleParentSessionClick = useCallback(() => {
-    if (session?.parentID) {
-      navigate(`/repos/${repoId}/sessions/${session.parentID}${sessionRouteSuffix}`)
+    if (session?.parentId) {
+      navigate(`/repos/${repoId}/sessions/${session.parentId}${sessionRouteSuffix}`)
     }
-  }, [navigate, repoId, session?.parentID, sessionRouteSuffix]);
+  }, [navigate, repoId, session?.parentId, sessionRouteSuffix]);
 
   const handleToggleDetails = useCallback(() => {
     const newValue = !preferences?.expandToolCalls
@@ -794,7 +796,7 @@ export function SessionDetail() {
       >
         <Header className="bg-background">
           <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
-            {session?.parentID && (
+            {session?.parentId && (
               <Button
                 variant="ghost"
                 size="xs"

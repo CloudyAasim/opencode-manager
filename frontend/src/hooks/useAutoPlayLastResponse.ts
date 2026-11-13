@@ -28,7 +28,7 @@ export function getLatestPlayableAssistantMessage(messages: MessageWithParts[] |
 }
 
 function isMessageCompleted(message: MessageWithParts['info']): boolean {
-  return message.role === 'assistant' && message.time.completed !== undefined
+  return message.role === 'assistant' && message.completedAt !== null
 }
 
 export function useAutoPlayLastResponse({

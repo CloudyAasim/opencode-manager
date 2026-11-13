@@ -1,16 +1,22 @@
 import { useRouteError, isRouteErrorResponse } from 'react-router-dom'
 import { AlertTriangle, RefreshCw, LogIn, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { parseNetworkError, parseOpenCodeError } from '@/lib/opencode-errors'
-import type { OpenCodeError } from '@/lib/opencode-errors'
+import { parseNetworkError } from '@/lib/opencode-errors'
+import { FetchError } from '@/api/fetchWrapper'
 import { useI18n } from '@/lib/i18n'
 
 type Translate = ReturnType<typeof useI18n>['t']
 
-function isOpenCodeError(error: unknown): error is OpenCodeError {
-  return typeof error === 'object' && error !== null && 'name' in error && 'data' in error
-}
-
+/**
+ * What the boundary knows about a failure.
+ *
+ * The agent used to have an error of its own - a named thing with a `data`
+ * field - and the boundary could read it. That shape is gone: the layer the
+ * client talks to says every failure in one envelope, and the client folds
+ * that envelope into a `FetchError` before anything else sees it. So the
+ * branches here are the ones that can still arrive: a route that answered
+ * with a status, a request that failed, and an error nobody planned for.
+ */
 function getErrorDetails(error: unknown, t: Translate) {
   if (isRouteErrorResponse(error)) {
     if (error.status === 401 || error.status === 403) {
@@ -37,9 +43,16 @@ function getErrorDetails(error: unknown, t: Translate) {
     }
   }
 
-  if (isOpenCodeError(error)) {
-    const parsed = parseOpenCodeError(error)
-    if (parsed) return parsed
+  // The layer said no and it was about who is asking. That is not a hiccup:
+  // asking again with the same credentials will be told the same thing, so
+  // the screen offers the way in rather than a retry.
+  if (error instanceof FetchError && (error.statusCode === 401 || error.statusCode === 403)) {
+    return {
+      title: t('ui.routeErrorBoundary.authenticationRequiredTitle'),
+      message: t('ui.routeErrorBoundary.authenticationRequiredMessage'),
+      isRetryable: false,
+      statusCode: error.statusCode,
+    }
   }
 
   if (error instanceof Error) {

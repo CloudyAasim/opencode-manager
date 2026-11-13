@@ -275,12 +275,14 @@ describe('useMessages send error reconciliation', () => {
       kind: 'network',
     })
 
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([
-      {
-        info: { id: 'user-1', role: 'user', sessionID: 'session-1', time: { created: 1 } },
-        parts: [{ id: 'part-1', type: 'text', text: 'sent while backgrounded', messageID: 'user-1', sessionID: 'session-1' }],
-      },
-    ]), { headers: { 'Content-Type': 'application/json' } }))
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      messages: [
+        {
+          info: { id: 'user-1', role: 'user', sessionId: 'session-1', createdAt: 1 },
+          parts: [{ id: 'part-1', type: 'text', text: 'sent while backgrounded', synthetic: null, time: null }],
+        },
+      ],
+    }), { headers: { 'Content-Type': 'application/json' } }))
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const wrapper = ({ children }: { children: ReactNode }) => (
@@ -303,12 +305,14 @@ describe('useMessages send error reconciliation', () => {
       kind: 'network',
     })
 
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([
-      {
-        info: { id: 'user-1', role: 'user', sessionID: 'session-1', time: { created: 1 } },
-        parts: [{ id: 'part-1', type: 'text', text: 'different prompt', messageID: 'user-1', sessionID: 'session-1' }],
-      },
-    ]), { headers: { 'Content-Type': 'application/json' } }))
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      messages: [
+        {
+          info: { id: 'user-1', role: 'user', sessionId: 'session-1', createdAt: 1 },
+          parts: [{ id: 'part-1', type: 'text', text: 'different prompt', synthetic: null, time: null }],
+        },
+      ],
+    }), { headers: { 'Content-Type': 'application/json' } }))
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const wrapper = ({ children }: { children: ReactNode }) => (

@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
-import type { components } from '@/api/opencode-types'
 import { useSettings } from '@/hooks/useSettings'
 import { DiffStats } from './DiffStats'
 import { ContentDiffViewer } from './ContentDiffViewer'
 import { CodePreview } from './CodePreview'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import type { Part } from '@/api/types'
 
-type ToolPart = components['schemas']['ToolPart']
+type ToolPart = Extract<Part, { type: 'tool' }>
 
 export interface FileDiffData {
   file: string
@@ -32,6 +32,14 @@ function isFileDiff(data: unknown): data is FileDiffData {
     typeof (data as FileDiffData).additions === 'number' &&
     typeof (data as FileDiffData).deletions === 'number'
   )
+}
+
+/**
+ * What the tool was called with is the tool caller's own business, so it
+ * arrives open: anything can be in it. Only the strings are read.
+ */
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
 }
 
 export function getRelativePath(filePath: string): string {
@@ -77,8 +85,9 @@ export function FileToolRender({ part, filediff, filePath, content, toolName, on
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   const getDuration = () => {
-    if (part.state.status === 'completed' && part.state.time) {
-      return ((part.state.time.end - part.state.time.start) / 1000).toFixed(2) + 's'
+    const time = part.state.time
+    if (part.state.status === 'completed' && time && time.end !== null) {
+      return ((time.end - time.start) / 1000).toFixed(2) + 's'
     }
     return ''
   }
@@ -135,24 +144,24 @@ export function FileToolRender({ part, filediff, filePath, content, toolName, on
 export function getToolSpecificRender(part: ToolPart, onFileClick?: (filePath: string) => void): React.ReactElement | null {
   if (part.state.status !== 'completed') return null
 
-  if (part.tool === 'edit') {
+  if (part.name === 'edit') {
     const filediff = part.state.metadata?.filediff
-    const filePath = part.state.input?.filePath as string | undefined
+    const filePath = asString(part.state.input?.filePath)
     if (filediff && isFileDiff(filediff)) {
       return <FileToolRender part={part} filediff={filediff} filePath={filePath} toolName="Edit" onFileClick={onFileClick} />
     }
   }
 
-  if (part.tool === 'write') {
-    const filePath = part.state.input?.filePath as string | undefined
-    const content = part.state.input?.content as string | undefined
+  if (part.name === 'write') {
+    const filePath = asString(part.state.input?.filePath)
+    const content = asString(part.state.input?.content)
     if (filePath) {
       return <FileToolRender part={part} filePath={filePath} content={content} toolName="Write" onFileClick={onFileClick} />
     }
   }
 
-  if (part.tool === 'read') {
-    const filePath = part.state.input?.filePath as string | undefined
+  if (part.name === 'read') {
+    const filePath = asString(part.state.input?.filePath)
     if (filePath) {
       return <FileToolRender part={part} filePath={filePath} toolName="Read" onFileClick={onFileClick} />
     }

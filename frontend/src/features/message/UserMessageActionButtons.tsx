@@ -4,9 +4,9 @@ import { useUndoMessage } from '@/hooks/useUndoMessage'
 import { useMobile } from '@/hooks/useMobile'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
+import { API_BASE_URL } from '@/config'
 
 interface UserMessageActionButtonsProps {
-  opcodeUrl: string
   sessionId: string
   directory?: string
   userMessageId: string
@@ -15,7 +15,6 @@ interface UserMessageActionButtonsProps {
 }
 
 export const UserMessageActionButtons = memo(function UserMessageActionButtons({
-  opcodeUrl,
   sessionId,
   directory,
   userMessageId,
@@ -24,9 +23,9 @@ export const UserMessageActionButtons = memo(function UserMessageActionButtons({
 }: UserMessageActionButtonsProps) {
   const isMobile = useMobile()
   const { t } = useI18n()
-  const undoMessage = useUndoMessage({ 
-    opcodeUrl, 
-    sessionId, 
+  const undoMessage = useUndoMessage({
+    serverUrl: API_BASE_URL,
+    sessionId,
     directory,
     onSuccess: onUndo
   })

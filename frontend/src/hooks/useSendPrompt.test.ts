@@ -6,16 +6,16 @@ import { useSendPrompt } from './useOpenCode'
 import { FetchError } from '../api/fetchWrapper'
 import { messagesQueryKey } from '../lib/queryInvalidation'
 
-const mockSendPromptAsync = vi.fn()
+const mockSendPrompt = vi.fn()
 const mockSetOptimisticActive = vi.fn()
 const mockClearStatus = vi.fn()
 
-vi.mock('../api/opencode', async () => {
-  const actual = await vi.importActual('../api/opencode')
+vi.mock('../api/bff', async () => {
+  const actual = await vi.importActual('../api/bff')
   return {
     ...actual,
-    OpenCodeClient: vi.fn().mockImplementation(() => ({
-      sendPromptAsync: mockSendPromptAsync,
+    createBffClient: vi.fn(() => ({
+      sendPrompt: mockSendPrompt,
     })),
   }
 })
@@ -76,12 +76,14 @@ describe('useSendPrompt', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     queryClient = createTestQueryClient()
-    mockSendPromptAsync.mockResolvedValue(undefined)
+    mockSendPrompt.mockResolvedValue(undefined)
   })
 
   const renderHookWithProviders = () =>
     renderHook(
-      () => useSendPrompt('http://localhost:5551', '/test'),
+      // The layer the client talks to, the agent's address (still known for
+      // the list of models that may be picked), and the working directory.
+      () => useSendPrompt('http://localhost:5551', 'http://localhost:5551', '/test'),
       {
         wrapper: ({ children }) =>
           createElement(QueryClientProvider, { client: queryClient }, children),
@@ -99,9 +101,10 @@ describe('useSendPrompt', () => {
       })
     ).resolves.toBeUndefined()
 
-    expect(mockSendPromptAsync).toHaveBeenCalledWith(
+    expect(mockSendPrompt).toHaveBeenCalledWith(
       'test-session',
       expect.objectContaining({ parts: expect.any(Array) }),
+      ['/test'],
     )
   })
 
@@ -141,7 +144,7 @@ describe('useSendPrompt', () => {
     expect((error as FetchError).code).toBe('MODEL_UNAVAILABLE')
     expect((error as FetchError).statusCode).toBe(409)
     expect(error!.message).toBe('Selected model is no longer available. Pick a different model.')
-    expect(mockSendPromptAsync).not.toHaveBeenCalled()
+    expect(mockSendPrompt).not.toHaveBeenCalled()
   })
 
   it('proceeds when model exists in providers', async () => {
@@ -173,12 +176,13 @@ describe('useSendPrompt', () => {
       })
     ).resolves.toBeUndefined()
 
-    expect(mockSendPromptAsync).toHaveBeenCalledWith(
+    expect(mockSendPrompt).toHaveBeenCalledWith(
       'test-session',
       expect.objectContaining({
         parts: expect.any(Array),
-        model: { providerID: 'anthropic', modelID: 'claude-sonnet-4' },
+        model: { providerId: 'anthropic', modelId: 'claude-sonnet-4' },
       }),
+      ['/test'],
     )
   })
 
@@ -216,7 +220,7 @@ describe('useSendPrompt', () => {
 
   it('stores queued prompt before the async request resolves', async () => {
     let resolveAsync: () => void = () => {}
-    mockSendPromptAsync.mockImplementationOnce(() => new Promise<void>((resolve) => {
+    mockSendPrompt.mockImplementationOnce(() => new Promise<void>((resolve) => {
       resolveAsync = resolve
     }))
 
@@ -240,7 +244,7 @@ describe('useSendPrompt', () => {
     queryClient.setQueryData(queryKey, [
       { info: { id: 'optimistic_user_1' }, parts: [] },
     ])
-    mockSendPromptAsync.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    mockSendPrompt.mockRejectedValueOnce(new TypeError('Failed to fetch'))
 
     const { result } = renderHookWithProviders()
 
@@ -266,7 +270,7 @@ describe('useSendPrompt', () => {
     queryClient.setQueryData(queryKey, [
       { info: { id: 'optimistic_user_1' }, parts: [] },
     ])
-    mockSendPromptAsync.mockRejectedValueOnce(new FetchError('Gateway timeout', 524))
+    mockSendPrompt.mockRejectedValueOnce(new FetchError('Gateway timeout', 524))
 
     const { result } = renderHookWithProviders()
 

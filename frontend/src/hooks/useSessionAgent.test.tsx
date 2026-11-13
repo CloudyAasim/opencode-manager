@@ -130,7 +130,7 @@ describe('useSessionAgent', () => {
     } as ReturnType<typeof useAgents>)
 
     const { result } = renderHook(() =>
-      useSessionAgent('http://localhost:5551', 'session-1', '/assistant')
+      useSessionAgent('http://localhost:5551', 'http://localhost:5551', 'session-1', '/assistant')
     )
 
     await waitFor(() => {
@@ -144,7 +144,8 @@ describe('useSessionAgent', () => {
         info: {
           role: 'user',
           agent: 'assistant',
-          model: { providerID: 'provider', modelID: 'model' },
+          providerId: 'provider',
+          modelId: 'model',
           variant: 'variant-1',
         },
       },
@@ -165,7 +166,7 @@ describe('useSessionAgent', () => {
     } as ReturnType<typeof useAgents>)
 
     const { result } = renderHook(() =>
-      useSessionAgent('http://localhost:5551', 'session-1', '/assistant')
+      useSessionAgent('http://localhost:5551', 'http://localhost:5551', 'session-1', '/assistant')
     )
 
     await waitFor(() => {
@@ -182,7 +183,8 @@ describe('useSessionAgent', () => {
           info: {
             role: 'user',
             agent: 'assistant',
-            model: { providerID: 'provider', modelID: 'session-model' },
+            providerId: 'provider',
+          modelId: 'session-model',
             variant: 'session-variant',
           },
         },
@@ -202,7 +204,7 @@ describe('useSessionAgent', () => {
     } as ReturnType<typeof useAgents>)
 
     const { result } = renderHook(() =>
-      useSessionAgent('http://localhost:5551', 'session-1', '/assistant')
+      useSessionAgent('http://localhost:5551', 'http://localhost:5551', 'session-1', '/assistant')
     )
 
     await waitFor(() => {
@@ -231,7 +233,7 @@ describe('useSessionAgent', () => {
     } as ReturnType<typeof useAgents>)
 
     const { result } = renderHook(() =>
-      useSessionAgent('http://localhost:5551', 'session-1', '/assistant')
+      useSessionAgent('http://localhost:5551', 'http://localhost:5551', 'session-1', '/assistant')
     )
 
     await waitFor(() => {
@@ -253,7 +255,7 @@ describe('useSessionAgent', () => {
     } as ReturnType<typeof useAgents>)
 
     renderHook(() =>
-      useSessionAgent('http://localhost:5551', 'session-1', '/assistant')
+      useSessionAgent('http://localhost:5551', 'http://localhost:5551', 'session-1', '/assistant')
     )
 
     await waitFor(() => {
@@ -280,7 +282,7 @@ describe('useSessionAgent', () => {
     } as ReturnType<typeof useAgents>)
 
     const { result } = renderHook(() =>
-      useSessionAgent('http://localhost:5551', 'session-1', '/assistant')
+      useSessionAgent('http://localhost:5551', 'http://localhost:5551', 'session-1', '/assistant')
     )
 
     await waitFor(() => {
@@ -312,7 +314,7 @@ describe('useSessionAgent', () => {
     } as ReturnType<typeof useAgents>)
 
     const { result } = renderHook(() =>
-      useSessionAgent('http://localhost:5551', 'session-1', '/assistant')
+      useSessionAgent('http://localhost:5551', 'http://localhost:5551', 'session-1', '/assistant')
     )
 
     await waitFor(() => {

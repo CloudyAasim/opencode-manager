@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createOpenCodeClient } from '@/api/opencode'
+import { createBffClient } from '@/api/bff'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
 import { messagesQueryKey, sessionQueryKey, stopQueries } from '@/lib/queryInvalidation'
 import type { MessageWithParts } from '@/api/types'
 
 interface UseUndoMessageOptions {
-  opcodeUrl: string | null
+  serverUrl: string | null
   sessionId: string
   directory?: string
   onSuccess?: (restoredPrompt: string) => void
@@ -16,8 +16,14 @@ interface UndoMessageContext {
   previousMessages?: MessageWithParts[]
 }
 
+/**
+ * Take the last answer back, and say the question again.
+ *
+ * The layer is asked, not the agent: it knows where the conversation lives,
+ * and it is the one that decides whether the caller may have it.
+ */
 export function useUndoMessage({ 
-  opcodeUrl, 
+  serverUrl, 
   sessionId, 
   directory,
   onSuccess 
@@ -27,14 +33,22 @@ export function useUndoMessage({
 
   return useMutation<string, Error, { messageID: string; messageContent: string }, UndoMessageContext>({
     mutationFn: async ({ messageID, messageContent }: { messageID: string, messageContent: string }) => {
-      if (!opcodeUrl) throw new Error('OpenCode URL not available')
-      
-      const client = createOpenCodeClient(opcodeUrl, directory)
-      await client.revertMessage(sessionId, { messageID })
+      // An empty address is not a missing one: it means "the server that served
+      // this page", which is what a deployment behind its own address looks
+      // like from here.
+      if (serverUrl === undefined || serverUrl === null) {
+        throw new Error('The layer the client talks to is not available')
+      }
+
+      await createBffClient(serverUrl).revertSession(
+        sessionId,
+        { messageId: messageID, partId: null },
+        directory ? [directory] : [],
+      )
       return messageContent
     },
     onMutate: async ({ messageID }) => {
-      const queryKey = messagesQueryKey(opcodeUrl, sessionId, directory)
+      const queryKey = messagesQueryKey(serverUrl, sessionId, directory)
       
       await stopQueries(queryClient, { queryKey })
       
@@ -53,7 +67,7 @@ export function useUndoMessage({
     onError: (_error, _variables, _context: UndoMessageContext | undefined) => {
       if (_context?.previousMessages) {
         queryClient.setQueryData(
-          messagesQueryKey(opcodeUrl, sessionId, directory),
+          messagesQueryKey(serverUrl, sessionId, directory),
           _context.previousMessages
         )
       }
@@ -62,10 +76,10 @@ export function useUndoMessage({
     },
     onSuccess: (restoredPrompt) => {
       queryClient.invalidateQueries({
-        queryKey: messagesQueryKey(opcodeUrl, sessionId, directory)
+        queryKey: messagesQueryKey(serverUrl, sessionId, directory)
       })
       queryClient.invalidateQueries({
-        queryKey: sessionQueryKey(opcodeUrl, sessionId, directory)
+        queryKey: sessionQueryKey(serverUrl, sessionId, directory)
       })
       onSuccess?.(restoredPrompt)
     }

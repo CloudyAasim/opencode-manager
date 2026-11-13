@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useLoadSkill } from '../useOpenCode'
+import { messagesQueryKey } from '../../lib/queryInvalidation'
 import type { MessageWithParts } from '../../api/types'
 
 import { showToast } from '../../lib/toast'
@@ -24,6 +25,19 @@ vi.mock('../../lib/toast', () => ({
   },
 }))
 
+const SERVER = 'http://localhost:5551'
+const AGENT = 'http://localhost:5551'
+const SESSION = 'test-session-id'
+const DIRECTORY = '/test/dir'
+
+/**
+ * The slot the conversation is cached in.
+ *
+ * Read off the helper that files it, so the test cannot keep writing into a
+ * slot the app stopped reading.
+ */
+const messagesKey = messagesQueryKey(SERVER, SESSION, DIRECTORY)
+
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -42,13 +56,13 @@ describe('useLoadSkill', () => {
 
   it('calls sendCommand with correct parameters when mutate is called', async () => {
     const mockResponse = {
-      info: { id: 'asm_1', sessionID: 'test-session-id', role: 'assistant' },
+      info: { id: 'asm_1', sessionID: SESSION, role: 'assistant' },
       parts: []
     }
     mocks.sendCommand.mockResolvedValue(mockResponse)
 
     const { result } = renderHook(
-      () => useLoadSkill('http://localhost:5551', 'test-session-id', '/test/dir'),
+      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -59,7 +73,7 @@ describe('useLoadSkill', () => {
     })
 
     expect(mocks.sendCommand).toHaveBeenCalledTimes(1)
-    expect(mocks.sendCommand).toHaveBeenCalledWith('test-session-id', {
+    expect(mocks.sendCommand).toHaveBeenCalledWith(SESSION, {
       command: 'my-skill',
       arguments: '',
     })
@@ -67,7 +81,7 @@ describe('useLoadSkill', () => {
 
   it('throws error when sessionID is undefined', async () => {
     const { result } = renderHook(
-      () => useLoadSkill('http://localhost:5551', undefined, '/test/dir'),
+      () => useLoadSkill(SERVER, AGENT, undefined, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -83,7 +97,7 @@ describe('useLoadSkill', () => {
 
   it('throws error when client is not available', async () => {
     const { result } = renderHook(
-      () => useLoadSkill(null, 'test-session-id', '/test/dir'),
+      () => useLoadSkill(SERVER, null, SESSION, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -102,7 +116,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockRejectedValue(testError)
 
     const { result } = renderHook(
-      () => useLoadSkill('http://localhost:5551', 'test-session-id', '/test/dir'),
+      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -120,7 +134,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockRejectedValue('string error')
 
     const { result } = renderHook(
-      () => useLoadSkill('http://localhost:5551', 'test-session-id', '/test/dir'),
+      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -141,13 +155,12 @@ describe('useLoadSkill', () => {
         mutations: { retry: false },
       },
     })
-    const messagesKey = ['opencode', 'messages', 'http://localhost:5551', 'test-session-id', '/test/dir']
     queryClient.setQueryData(messagesKey, [])
 
     mocks.sendCommand.mockReturnValue(new Promise(() => {}))
 
     const { result } = renderHook(
-      () => useLoadSkill('http://localhost:5551', 'test-session-id', '/test/dir'),
+      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
       { wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider> },
     )
 
@@ -172,7 +185,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockRejectedValue(testError)
 
     const { result } = renderHook(
-      () => useLoadSkill('http://localhost:5551', 'test-session-id', '/test/dir'),
+      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
       { wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider> },
     )
 
@@ -191,14 +204,13 @@ describe('useLoadSkill', () => {
         mutations: { retry: false },
       },
     })
-    const messagesKey = ['opencode', 'messages', 'http://localhost:5551', 'test-session-id', '/test/dir']
     queryClient.setQueryData(messagesKey, [])
 
     const testError = new Error('Command failed')
     mocks.sendCommand.mockRejectedValue(testError)
 
     const { result } = renderHook(
-      () => useLoadSkill('http://localhost:5551', 'test-session-id', '/test/dir'),
+      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
       { wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider> },
     )
 
@@ -212,9 +224,13 @@ describe('useLoadSkill', () => {
     expect(messages).toHaveLength(0)
   })
 
-  it('replaces optimistic message with assistant response on success', async () => {
+  it('refills the conversation instead of writing the agent\'s answer into it', async () => {
+    // The command's answer is still the agent's, in the agent's words. Putting
+    // it into the message cache would leave that one cache holding two
+    // shapes for the same conversation - so the cache is refilled from the
+    // layer instead, and then it holds one shape.
     const assistant = {
-      info: { id: 'asm_skill_1', sessionID: 'test-session-id', role: 'assistant' },
+      info: { id: 'asm_skill_1', sessionID: SESSION, role: 'assistant' },
       parts: [{ type: 'text', text: 'done' }]
     }
     mocks.sendCommand.mockResolvedValue(assistant)
@@ -224,10 +240,11 @@ describe('useLoadSkill', () => {
         mutations: { retry: false },
       },
     })
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
     const wrapper = ({ children }: { children: React.ReactNode }) =>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     const { result } = renderHook(
-      () => useLoadSkill('http://localhost:5551', 'test-session-id', '/test/dir'),
+      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
       { wrapper }
     )
 
@@ -237,7 +254,9 @@ describe('useLoadSkill', () => {
       expect(result.current.isSuccess).toBe(true)
     })
 
-    const messages = queryClient.getQueryData<MessageWithParts[]>(['opencode', 'messages', 'http://localhost:5551', 'test-session-id', '/test/dir'])
-    expect(messages?.some(m => m.info.id === 'asm_skill_1')).toBe(true)
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: messagesKey })
+
+    const messages = queryClient.getQueryData<MessageWithParts[]>(messagesKey)
+    expect(messages?.some(m => m.info.id === 'asm_skill_1')).toBe(false)
   })
 })

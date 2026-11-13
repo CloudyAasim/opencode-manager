@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useMemo, memo } from 'react'
-import type { components } from '@/api/opencode-types'
 import { useSettings } from '@/hooks/useSettings'
 import { useUserBash } from '@/stores/userBashStore'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
@@ -11,8 +10,9 @@ import { getToolSpecificRender } from './FileToolRender'
 import { useI18n } from '@/lib/i18n'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import type { Part } from '@/api/types'
 
-type ToolPart = components['schemas']['ToolPart']
+type ToolPart = Extract<Part, { type: 'tool' }>
 
 const DISPLAY_LIMIT = 30_000
 const DISPLAY_HEAD_LENGTH = 20_000
@@ -46,17 +46,45 @@ function BoundedPre({ content, className }: { content: string; className: string
 
 interface ToolCallPartProps {
   part: ToolPart
+  /**
+   * The conversation the call was made in.
+   *
+   * A call does not say this about itself any more - the pieces of a message
+   * are the message's, and the message is what says which conversation it is
+   * in - so the thread hands it down. The waiting room is keyed by it.
+   */
+  sessionId?: string
   onFileClick?: (filePath: string, lineNumber?: number) => void
   onChildSessionClick?: (sessionId: string) => void
   simpleChatMode?: boolean
 }
 
+/**
+ * The conversation the sub-agent went off into, if the agent said so.
+ *
+ * It is said in the call's own metadata, because that is the call's business
+ * and not the conversation's: who the call was made for is the agent's own
+ * bookkeeping.
+ */
 function getTaskSessionId(part: ToolPart): string | undefined {
-  let sessionId = part.metadata?.sessionId as string | undefined
-  if (!sessionId && part.state.status !== 'pending' && 'metadata' in part.state) {
-    sessionId = part.state.metadata?.sessionId as string | undefined
-  }
-  return sessionId
+  if (part.state.status === 'pending') return undefined
+  const sessionId = part.state.metadata?.sessionId
+  return typeof sessionId === 'string' ? sessionId : undefined
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
+/**
+ * How long the call took, when it took long enough to say.
+ *
+ * A call that has not finished has a beginning and no end yet, and there is
+ * no duration to report for one.
+ */
+function durationOf(time: { start: number; end: number | null } | null): number | null {
+  if (!time || time.end === null) return null
+  return (time.end - time.start) / 1000
 }
 
 function ClickableJson({ json, onFileClick }: { json: unknown; onFileClick?: (filePath: string) => void }) {
@@ -100,38 +128,37 @@ function ClickableJson({ json, onFileClick }: { json: unknown; onFileClick?: (fi
   return <pre className="bg-accent p-2 rounded text-xs overflow-x-auto whitespace-pre-wrap break-words">{parts}</pre>
 }
 
-export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onChildSessionClick }: ToolCallPartProps) {
+export const ToolCallPart = memo(function ToolCallPart({ part, sessionId, onFileClick, onChildSessionClick }: ToolCallPartProps) {
   const { preferences } = useSettings()
   const { t } = useI18n()
   const { userBashCommands } = useUserBash()
-  const taskSessionId = part.tool === 'task' ? getTaskSessionId(part) : undefined
+  const taskSessionId = part.name === 'task' ? getTaskSessionId(part) : undefined
   const taskSessionStatus = useSessionStatusForSession(taskSessionId)
   const { getForCallID: getPermissionForCallID } = usePermissions()
   const { getForCallID: getQuestionForCallID } = useQuestions()
   const outputRef = useRef<HTMLDivElement>(null)
-  const rawCommand = part.tool === 'bash' && typeof part.state.input?.command === 'string'
-    ? part.state.input.command
-    : undefined
+  const command = part.state.input?.command
+  const rawCommand = part.name === 'bash' && typeof command === 'string' ? command : undefined
   const displayCommand = rawCommand
   const isUserBashCommand = part.state.status === 'completed' &&
     typeof displayCommand === 'string' &&
     userBashCommands.has(displayCommand)
-  const isTodoTool = part.tool === 'todowrite' || part.tool === 'todoread'
+  const isTodoTool = part.name === 'todowrite' || part.name === 'todoread'
   const defaultExpanded = isUserBashCommand || isTodoTool || (preferences?.expandToolCalls ?? false)
   const [userToggled, setUserToggled] = useState<boolean | null>(null)
   const expanded = userToggled ?? defaultExpanded
   const setExpanded = (next: boolean) => setUserToggled(next)
 
-  const pendingPermission = getPermissionForCallID(part.callID, part.sessionID)
+  const pendingPermission = getPermissionForCallID(part.callId, sessionId ?? '')
   const isWaitingPermission = part.state.status === 'running' && !!pendingPermission
-  const pendingQuestion = getQuestionForCallID(part.callID, part.sessionID)
+  const pendingQuestion = getQuestionForCallID(part.callId, sessionId ?? '')
   const isWaitingQuestion = part.state.status === 'running' && !!pendingQuestion
 
   useEffect(() => {
-    if (part.tool === 'bash' && expanded && outputRef.current) {
+    if (part.name === 'bash' && expanded && outputRef.current) {
       outputRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
-  }, [expanded, part.tool])
+  }, [expanded, part.name])
 
   const getStatusColor = () => {
     switch (part.state.status) {
@@ -166,24 +193,24 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
   const getPreviewText = () => {
     if (part.state.status === 'pending') return null
 
-    const input = part.state.input as Record<string, unknown>
+    const input = part.state.input
     if (!input) return null
 
-    switch (part.tool) {
+    switch (part.name) {
       case 'read':
       case 'write':
       case 'edit':
-        return (input.filePath as string) || null
+        return asString(input.filePath) || null
       case 'bash':
         return displayCommand || null
       case 'glob':
-        return (input.pattern as string) || null
+        return asString(input.pattern) || null
       case 'grep':
-        return (input.pattern as string) || null
+        return asString(input.pattern) || null
       case 'list':
-        return (input.path as string) || '.'
+        return asString(input.path) || '.'
       case 'task':
-        return (input.description as string) || null
+        return asString(input.description) || null
       case 'todowrite':
       case 'todoread':
         return null
@@ -193,9 +220,10 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
   }
 
   const previewText = getPreviewText()
-  const isFileTool = ['read', 'write', 'edit'].includes(part.tool)
+  const duration = durationOf(part.state.time)
+  const isFileTool = ['read', 'write', 'edit'].includes(part.name)
 
-  if (part.tool === 'task') {
+  if (part.name === 'task') {
     const sessionId = taskSessionId
     const description = previewText || t('message.parts.subAgentTask')
     const status = part.state.status
@@ -276,9 +304,9 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
           <span className="text-success">✓</span>
           <span className="font-medium">$</span>
           <span className="text-foreground">{command}</span>
-          {part.state.status === 'completed' && part.state.time && (
+          {part.state.status === 'completed' && duration !== null && (
             <span className="text-muted-foreground text-xs ml-auto">
-              {((part.state.time.end - part.state.time.start) / 1000).toFixed(2)}s
+              {duration.toFixed(2)}s
             </span>
           )}
         </div>
@@ -318,7 +346,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
       >
         <button type="button">
         <span className={getStatusColor()}>{getStatusIcon()}</span>
-        <span className="font-medium">{part.tool}</span>
+        <span className="font-medium">{part.name}</span>
 
         {previewText && isFileTool ? (
           <span
@@ -337,13 +365,13 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
           <span className="text-muted-foreground text-xs truncate">{previewText}</span>
         ) : null}
 
-        {part.tool === 'task' && (() => {
-          const sessionId = getTaskSessionId(part)
-          return sessionId ? (
+        {part.name === 'task' && (() => {
+          const childSessionId = getTaskSessionId(part)
+          return childSessionId ? (
             <span
               onClick={(e) => {
                 e.stopPropagation()
-                onChildSessionClick?.(sessionId)
+                onChildSessionClick?.(childSessionId)
               }}
               className="text-primary text-xs hover:text-primary dark:hover:text-primary cursor-pointer underline decoration-dotted flex items-center gap-1"
               title={t('message.actions.viewSubagentSession')}
@@ -372,7 +400,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
 
           {part.state.status === 'running' && (
             <>
-              {part.tool === 'bash' ? (
+              {part.name === 'bash' ? (
                 <div className="text-sm">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="text-muted-foreground">{t('message.tools.command')}</div>
@@ -404,7 +432,7 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
 
           {part.state.status === 'completed' && (
             <>
-              {part.tool === 'bash' ? (
+              {part.name === 'bash' ? (
                 <div className="text-sm">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="text-muted-foreground">{t('message.tools.command')}</div>
@@ -435,9 +463,9 @@ export const ToolCallPart = memo(function ToolCallPart({ part, onFileClick, onCh
                   )}
                 </div>
               </div>
-              {part.state.time && (
+              {duration !== null && (
                 <div className="text-xs text-muted-foreground">
-                  {t('message.tools.duration', { seconds: ((part.state.time.end - part.state.time.start) / 1000).toFixed(2) })}
+                  {t('message.tools.duration', { seconds: duration.toFixed(2) })}
                 </div>
               )}
             </>

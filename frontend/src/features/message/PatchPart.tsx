@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import type { components } from '@/api/opencode-types'
 import { getRelativePath } from './FileToolRender'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { Card } from '@/components/ui/card'
+import type { Part } from '@/api/types'
 
-type PatchPartType = components['schemas']['PatchPart']
+type PatchPartType = Extract<Part, { type: 'patch' }>
 
 interface PatchPartProps {
   part: PatchPartType
