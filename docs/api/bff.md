@@ -46,7 +46,11 @@ seventy-five, and it still gets seventy-five.
 | `GET` | `/api/bff/sessions/:id/messages` | What was said in one conversation | `MessageListResponse` |
 | `POST` | `/api/bff/sessions/:id/prompts` | Saying something to one conversation | `AcceptedResponse` |
 | `POST` | `/api/bff/sessions/:id/revert` | Taking a message back | `SessionResponse` |
+| `POST` | `/api/bff/sessions/:id/permissions/:permissionId/reply` | Answering a permission request | `AcceptedResponse` |
+| `POST` | `/api/bff/sessions/:id/questions/:questionId/reply` | Answering a question | `AcceptedResponse` |
+| `POST` | `/api/bff/sessions/:id/questions/:questionId/reject` | Turning a question down | `AcceptedResponse` |
 | `GET` | `/api/bff/pending` | What the agent is waiting for, across one or more working directories | `PendingListResponse` |
+| `GET` | `/api/bff/status` | How busy every conversation is, across one or more working directories | `BffConversationStatusResponse` |
 
 ## The shapes
 
@@ -148,6 +152,36 @@ Taking a message back rolls the conversation back to the message that is named.
 The agent does the taking; the answer is the conversation as it is afterwards,
 read back rather than guessed at.
 
+### What the conversation is waiting for
+
+A permission and a question both hang on a conversation, so the conversation
+decides whose they are - and the client names the conversation, the same way it
+names one everywhere else.
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `POST /api/bff/sessions/:id/permissions/:permissionId/reply` | `PermissionReply` | `AcceptedResponse` |
+| `POST /api/bff/sessions/:id/questions/:questionId/reply` | `QuestionReply` | `AcceptedResponse` |
+| `POST /api/bff/sessions/:id/questions/:questionId/reject` | - | `AcceptedResponse` |
+
+A permission is answered once, always, or not at all. A question may have more
+than one part, and the answers come back in the order the parts were asked.
+
+### How busy everything is
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `GET /api/bff/status` | - | `BffConversationStatusResponse` |
+
+One request for every directory, the way the session list is one request for
+every directory. The statuses are the versioned API's - there is one truth
+about how busy a conversation is - and the event stream says them in the same
+words, because a client that hears about a status and asks for it must not
+have to know which dialect it is holding.
+
+A status belongs to a conversation, so it is narrowed to the caller the same
+way the conversation list is.
+
 ### The event stream says the same thing in the same words
 
 The client learns about a conversation that is happening from the event stream,
@@ -158,8 +192,8 @@ agent's words and the layer's words at the same time.
 What is translated is the shape of the conversation: a session appearing,
 changing or going away, a message being written, a part of it arriving or
 changing, a part being taken away, a message being removed, the session going
-idle, being compacted, or failing. Everything else that travels on the stream -
-the agent's status, its to-do list, the permissions and the questions it is
+idle, being compacted, how busy it is, or failing. Everything else that travels
+on the stream - the agent's to-do list, the permissions and the questions it is
 waiting on - is passed through as it is, because none of it carries the shape
 of the conversation.
 

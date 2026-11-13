@@ -7,6 +7,8 @@ import {
   CreateSessionRequestSchema,
   DeletedResponseSchema,
   MessageListResponseSchema,
+  PermissionReplySchema,
+  QuestionReplySchema,
   RenameSessionRequestSchema,
   SendPromptRequestSchema,
   SessionResponseSchema,
@@ -289,6 +291,86 @@ export function createBffSessionRoutes(registry: ProviderRegistry, database: Dat
         contextOf(located.directory),
       )
       return ok(c, SessionResponseSchema, { session })
+    }),
+  )
+
+  /**
+   * Answering a permission request.
+   *
+   * The permission hangs on a conversation, so the conversation decides whose
+   * it is - and the layer works out where the conversation lives, the same way
+   * it does for everything else about a conversation. A conversation that is
+   * not the caller's is refused the same way one that does not exist is.
+   */
+  app.post('/:id/permissions/:permissionId/reply', (c) =>
+    handle(c, async () => {
+      const body = PermissionReplySchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.respondToPermission(
+        c.req.param('permissionId'),
+        body.data.reply,
+        contextOf(located.directory),
+      )
+      return ok(c, AcceptedResponseSchema, { accepted: true })
+    }),
+  )
+
+  /**
+   * Answering a question.
+   *
+   * A question may have more than one part, and the answers come back in the
+   * order the parts were asked.
+   */
+  app.post('/:id/questions/:questionId/reply', (c) =>
+    handle(c, async () => {
+      const body = QuestionReplySchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.replyToQuestion(
+        c.req.param('questionId'),
+        body.data.answers,
+        contextOf(located.directory),
+      )
+      return ok(c, AcceptedResponseSchema, { accepted: true })
+    }),
+  )
+
+  /**
+   * Turning a question down.
+   *
+   * The same conversation, the same rules: the question hangs on it, so the
+   * conversation decides whose it is.
+   */
+  app.post('/:id/questions/:questionId/reject', (c) =>
+    handle(c, async () => {
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.rejectQuestion(c.req.param('questionId'), contextOf(located.directory))
+      return ok(c, AcceptedResponseSchema, { accepted: true })
     }),
   )
 

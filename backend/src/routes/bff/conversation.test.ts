@@ -325,4 +325,151 @@ describe('这一层出的对话', () => {
     expect(res.status).toBe(404)
     expect(provider.calls.some((call) => call.method === 'revertSession')).toBe(false)
   })
+
+  it('权限的应答要问到会话在哪儿，应答本身也要说清楚', async () => {
+    const own = ownDirectory()
+    recordAgentSession(database, {
+      sessionId: 'ses-1',
+      userId: 'user-2',
+      username: 'other',
+      role: 'user',
+      directory: own,
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1', directory: own })] })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-1/permissions/per-1/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply: 'once' }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { accepted: boolean }
+    expect(body).toEqual({ accepted: true })
+
+    const replied = provider.calls.find((call) => call.method === 'respondToPermission')
+    expect(directoryOf(replied)).toBe(own)
+    expect(replied?.args[0]).toBe('per-1')
+    expect(replied?.args[1]).toBe('once')
+  })
+
+  it('权限的应答不合契约，就不该发出去', async () => {
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1' })] })
+    const { app } = createApp([provider], asAdmin)
+
+    const res = await app.request('/api/bff/sessions/ses-1/permissions/per-1/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply: 'maybe' }),
+    })
+
+    expect(res.status).toBe(400)
+    const body = await json(res)
+    expect(body.error?.code).toBe('bad_request')
+    expect(provider.calls.some((call) => call.method === 'respondToPermission')).toBe(false)
+  })
+
+  it('别人的会话，权限的应答发不出去', async () => {
+    recordAgentSession(database, {
+      sessionId: 'ses-theirs',
+      userId: 'user-1',
+      username: 'user',
+      role: 'admin',
+      directory: ownDirectory(),
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({
+      sessions: [makeSession({ id: 'ses-theirs', directory: ownDirectory() })],
+    })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-theirs/permissions/per-1/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply: 'always' }),
+    })
+
+    expect(res.status).toBe(404)
+    expect(provider.calls.some((call) => call.method === 'respondToPermission')).toBe(false)
+  })
+
+  it('问题的应答要问到会话在哪儿，答案按问的顺序送到', async () => {
+    const own = ownDirectory()
+    recordAgentSession(database, {
+      sessionId: 'ses-1',
+      userId: 'user-2',
+      username: 'other',
+      role: 'user',
+      directory: own,
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1', directory: own })] })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-1/questions/q-1/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: [['first'], ['second', 'also second']] }),
+    })
+
+    expect(res.status).toBe(200)
+
+    const replied = provider.calls.find((call) => call.method === 'replyToQuestion')
+    expect(directoryOf(replied)).toBe(own)
+    expect(replied?.args[0]).toBe('q-1')
+    expect(replied?.args[1]).toEqual([['first'], ['second', 'also second']])
+  })
+
+  it('问题被拒掉，也要问到会话在哪儿', async () => {
+    const own = ownDirectory()
+    recordAgentSession(database, {
+      sessionId: 'ses-1',
+      userId: 'user-2',
+      username: 'other',
+      role: 'user',
+      directory: own,
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1', directory: own })] })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-1/questions/q-1/reject', { method: 'POST' })
+
+    expect(res.status).toBe(200)
+
+    const rejected = provider.calls.find((call) => call.method === 'rejectQuestion')
+    expect(directoryOf(rejected)).toBe(own)
+    expect(rejected?.args[0]).toBe('q-1')
+  })
+
+  it('别人的会话，问题的应答发不出去', async () => {
+    recordAgentSession(database, {
+      sessionId: 'ses-theirs',
+      userId: 'user-1',
+      username: 'user',
+      role: 'admin',
+      directory: ownDirectory(),
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({
+      sessions: [makeSession({ id: 'ses-theirs', directory: ownDirectory() })],
+    })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-theirs/questions/q-1/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: [['first']] }),
+    })
+
+    expect(res.status).toBe(404)
+    expect(provider.calls.some((call) => call.method === 'replyToQuestion')).toBe(false)
+  })
 })

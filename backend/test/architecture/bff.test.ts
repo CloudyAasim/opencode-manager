@@ -326,6 +326,10 @@ describe('给前端的那一层', () => {
       'sendPromptAsync',
       'revertMessage',
       'unrevertSession',
+      'getSessionStatuses',
+      'respondToPermission',
+      'replyToQuestion',
+      'rejectQuestion',
     ]
     const offenders: string[] = []
 
@@ -360,7 +364,15 @@ describe('给前端的那一层', () => {
     // client really does have the conversation, or the gate is guarding an
     // empty room.
     const layer = read(LAYER_CLIENT)
-    for (const method of ['listMessages', 'sendPrompt', 'revertSession']) {
+    for (const method of [
+      'listMessages',
+      'sendPrompt',
+      'revertSession',
+      'listStatuses',
+      'respondToPermission',
+      'replyToQuestion',
+      'rejectQuestion',
+    ]) {
       expect(layer, `这一层的客户端没有 ${method}`).toMatch(new RegExp(`\\basync\\s+${method}\\s*\\(`))
     }
   })
@@ -371,18 +383,30 @@ describe('给前端的那一层', () => {
     // agent about the conversation, whatever the method that does it is
     // called.
     //
+    // The same is true of the paths that are not the conversation itself but
+    // hang on it: how busy it is, and what it is waiting for. The layer says
+    // those in the versioned dialect too, and a client that asked the agent
+    // for them would be holding the agent's words beside the versioned ones.
+    //
     // The agent's own type file is the one exception: it describes what the
     // agent's API looks like so the client can be written against it, and
     // describing a door is not walking through it.
     const AGENT_TYPES = path.join(FRONTEND_DIR, 'api', 'opencode-types.ts')
     const AGENT_CONVERSATION_PATH = /\/session\/[^`'"\s]*?\/(?:message|messages|prompt|prompt_async|revert)\b/g
+    const AGENT_STATUS_PATH = /\/session\/status\b/g
+    // The agent's waiting paths are singular and this layer's are plural -
+    // "/permission/{id}/reply" is the agent's, "/permissions/{id}/reply" is
+    // this layer's - and the difference is what keeps the two apart.
+    const AGENT_WAITING_PATH = /\/(?:permission|question)\/[^`'"\s]*?\/(?:reply|reject)\b/g
     const offenders: string[] = []
 
     for (const file of frontendSources()) {
       if (file === AGENT_TYPES) continue
       const source = read(file)
-      for (const match of source.matchAll(AGENT_CONVERSATION_PATH)) {
-        offenders.push(`${path.relative(repoRoot, file)} 够到了 ${match[0]}`)
+      for (const pattern of [AGENT_CONVERSATION_PATH, AGENT_STATUS_PATH, AGENT_WAITING_PATH]) {
+        for (const match of source.matchAll(pattern)) {
+          offenders.push(`${path.relative(repoRoot, file)} 够到了 ${match[0]}`)
+        }
       }
     }
 
@@ -400,7 +424,7 @@ describe('给前端的那一层', () => {
     // agent knows about conversations, not about people. Without this, one
     // conversation is handed to whoever asked for it.
     const withSession = bffFiles().filter((file) =>
-      /\b(getSession|renameSession|deleteSession|abortSession|listMessages|sendPrompt|revertSession)\s*\(/.test(read(file)),
+      /\b(getSession|renameSession|deleteSession|abortSession|listMessages|sendPrompt|revertSession|respondToPermission|replyToQuestion|rejectQuestion)\s*\(/.test(read(file)),
     )
     expect(withSession.length, '没找到出会话的地方，这条门禁正在空跑').toBeGreaterThan(0)
 
