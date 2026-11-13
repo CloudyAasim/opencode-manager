@@ -22,8 +22,9 @@ export type { SendCommandResponse, LspStatus }
  *
  * The conversation itself is not here any more - it is read from the layer,
  * in the versioned dialect, and the event stream says the same thing in the
- * same words. How the agent is getting on with a conversation is not the
- * shape of a conversation, so that is still here too.
+ * same words. How busy a conversation is went with it, for the same reason:
+ * the client is told about that over the stream and asks for it over HTTP,
+ * and two dialects of one thing is what this door no longer has.
  */
 export class OpenCodeClient {
   private baseURL: string
@@ -111,45 +112,6 @@ export class OpenCodeClient {
       params: this.getParams(),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    })
-  }
-
-  /**
-   * How the agent is getting on with its conversations.
-   *
-   * This is not the shape of a conversation - it is the agent's account of
-   * its own work, and the event stream still carries it in the agent's own
-   * words. So it is still asked of the agent, and it moves when the status
-   * moves.
-   */
-  async getSessionStatuses() {
-    return fetchWrapper<Record<string, { type: 'idle' } | { type: 'busy' } | { type: 'retry'; attempt: number; message: string; next: number }>>(`${this.baseURL}/session/status`, {
-      params: this.getParams(),
-    })
-  }
-
-  async respondToPermission(permissionID: string, response: 'once' | 'always' | 'reject') {
-    return fetchWrapper(`${this.baseURL}/permission/${permissionID}/reply`, {
-      method: 'POST',
-      params: this.getParams(),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reply: response }),
-    })
-  }
-
-  async replyToQuestion(requestID: string, answers: string[][]) {
-    return fetchWrapper(`${this.baseURL}/question/${requestID}/reply`, {
-      method: 'POST',
-      params: this.getParams(),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers }),
-    })
-  }
-
-  async rejectQuestion(requestID: string) {
-    return fetchWrapper(`${this.baseURL}/question/${requestID}/reject`, {
-      method: 'POST',
-      params: this.getParams(),
     })
   }
 

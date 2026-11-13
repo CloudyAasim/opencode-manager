@@ -1,10 +1,18 @@
 import { create } from 'zustand'
+import type { ConversationStatus } from '@opencode-manager/shared/api/v1'
 
-export type SessionStatusType = 
-  | { type: 'idle' }
-  | { type: 'busy' }
-  | { type: 'compact' }
-  | { type: 'retry'; attempt: number; message: string; next: number }
+/**
+ * How busy a conversation is, as the app keeps it.
+ *
+ * The versioned API's statuses are the ones that come from outside - the
+ * event stream and the answer to "how busy is everything" - and they are said
+ * in the same words in both, because a client that hears about a status and
+ * asks for it must not have to know which dialect it is holding.
+ *
+ * "Compact" is the app's own: it is what a conversation is doing while it is
+ * being compacted, and nothing outside says so.
+ */
+export type SessionStatusType = ConversationStatus | { type: 'compact' }
 
 interface SessionStatusStore {
   statuses: Map<string, SessionStatusType>

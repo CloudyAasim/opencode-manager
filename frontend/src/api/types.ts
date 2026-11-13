@@ -29,6 +29,7 @@ import type {
   Message as VersionedMessage,
   MessagePart as VersionedPart,
   MessageWithParts as VersionedMessageWithParts,
+  PermissionResponse as VersionedPermissionResponse,
   Session as VersionedSession,
 } from '@opencode-manager/shared/api/v1'
 
@@ -44,7 +45,7 @@ export type Message = VersionedMessage
 export type Part = VersionedPart
 export type Session = VersionedSession
 export type PermissionRequest = components['schemas']['PermissionRequest']
-export type PermissionResponse = 'once' | 'always' | 'reject'
+export type PermissionResponse = VersionedPermissionResponse
 
 export type QuestionOption = components['schemas']['QuestionOption']
 export type QuestionInfo = components['schemas']['QuestionInfo']
@@ -115,31 +116,6 @@ export interface SSEInstallationUpdateAvailableEvent {
   }
 }
 
-/**
- * How busy a conversation is.
- *
- * This is not the shape of a conversation - it is how the agent is getting on
- * with it - so it is said in the agent's own words, and the app keeps them.
- */
-export interface SSESessionStatusEvent {
-  type: 'session.status'
-  properties: {
-    sessionID: string
-    status: {
-      type: 'idle'
-    } | {
-      type: 'busy'
-    } | {
-      type: 'compact'
-    } | {
-      type: 'retry'
-      attempt: number
-      message: string
-      next: number
-    }
-  }
-}
-
 export interface SSELspUpdatedEvent {
   type: 'lsp.updated'
   properties: Record<string, never>
@@ -162,9 +138,10 @@ export interface SSESSHHostKeyRequestEvent {
  * Everything the stream can say.
  *
  * The conversation's own events are the versioned API's - the same words the
- * conversation itself is read in. The rest are the agent's, because they are
- * not about the shape of a conversation: what it is waiting for, what it is
- * doing right now, which version of the program is running.
+ * conversation itself is read in, and that includes how busy it is, because
+ * the client is told about that over the stream and asks for it over HTTP.
+ * The rest are the agent's, because they are not about the conversation:
+ * what it is waiting for, which version of the program is running.
  */
 export type SSEEvent =
   | ConversationEvent
@@ -176,7 +153,6 @@ export type SSEEvent =
   | SSEQuestionRejectedEvent
   | SSEInstallationUpdatedEvent
   | SSEInstallationUpdateAvailableEvent
-  | SSESessionStatusEvent
   | SSELspUpdatedEvent
   | SSEVcsBranchUpdatedEvent
   | SSESSHHostKeyRequestEvent

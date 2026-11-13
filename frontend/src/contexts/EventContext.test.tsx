@@ -24,15 +24,11 @@ vi.mock('@/api/repos', () => ({
 
 // The client asks the layer for what the agent is waiting for, so that is
 // what this test controls: one answer for every directory, in the versioned
-// dialect the app keeps.
+// dialect the app keeps. Answering a permission and answering a question
+// go to the same layer, for the same reason.
 vi.mock('@/api/bff', () => ({
   createBffClient: vi.fn(() => ({
     listPending: mocks.listPending,
-  })),
-}))
-
-vi.mock('@/api/opencode', () => ({
-  OpenCodeClient: vi.fn(() => ({
     replyToQuestion: mocks.replyToQuestion,
     rejectQuestion: mocks.rejectQuestion,
     respondToPermission: mocks.respondToPermission,
@@ -274,7 +270,15 @@ describe('EventProvider questions', () => {
 
     await waitFor(() => {
       expect(mocks.respondToPermission).toHaveBeenCalledTimes(1)
-      expect(mocks.respondToPermission).toHaveBeenCalledWith('permission-1', 'reject')
+      // The conversation is named, and the working directory the app happens
+      // to know is offered as a fallback - the layer works out where the
+      // conversation lives on its own.
+      expect(mocks.respondToPermission).toHaveBeenCalledWith(
+        'session-1',
+        'permission-1',
+        'reject',
+        ['/repo'],
+      )
       expect(screen.getByTestId('permission-count')).toHaveTextContent('1')
       expect(screen.getByTestId('permission-current')).toHaveTextContent('permission-2')
     })
@@ -561,7 +565,7 @@ describe('EventProvider questions', () => {
     }).not.toThrow()
   })
 
-  it('getClient resolves directory from infinite-query session list cache', async () => {
+  it('the session directory resolves from the infinite-query session list cache', async () => {
     mocks.listRepos.mockResolvedValue([{ id: 123, fullPath: '/repo' }])
 
     const queryClient = new QueryClient({
@@ -592,15 +596,15 @@ describe('EventProvider questions', () => {
     )
 
     function ClientHarness() {
-      const { getClient } = useEventContext()
-      const client = getClient('ses-infinite')
-      return <div data-testid="client-result">{client ? 'found' : 'not-found'}</div>
+      const { getSessionDirectory } = useEventContext()
+      const directory = getSessionDirectory('ses-infinite')
+      return <div data-testid="client-result">{directory ?? 'not-found'}</div>
     }
 
     render(<ClientHarness />, { wrapper })
 
     await waitFor(() => {
-      expect(screen.getByTestId('client-result')).toHaveTextContent('found')
+      expect(screen.getByTestId('client-result')).toHaveTextContent('/repo')
     })
   })
 

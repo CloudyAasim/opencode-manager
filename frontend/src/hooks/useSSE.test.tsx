@@ -13,12 +13,14 @@ const SERVER = 'http://localhost:5551'
 const AGENT = 'http://localhost:5551'
 
 const mocks = vi.hoisted(() => ({
-  getSessionStatuses: vi.fn(),
+  listStatuses: vi.fn(),
 }))
 
-vi.mock('@/api/opencode', () => ({
-  OpenCodeClient: vi.fn(() => ({
-    getSessionStatuses: mocks.getSessionStatuses,
+// How busy everything is comes from the layer now, in the versioned dialect -
+// the same words the event stream says them in.
+vi.mock('@/api/bff', () => ({
+  createBffClient: vi.fn(() => ({
+    listStatuses: mocks.listStatuses,
   })),
 }))
 
@@ -119,7 +121,7 @@ describe('useSSE', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     MockEventSource.instances = []
-    mocks.getSessionStatuses.mockResolvedValue({})
+    mocks.listStatuses.mockResolvedValue({ statuses: {} })
     useSessionStatus.getState().replaceStatuses({})
     useSendErrorStore.setState({ errors: {}, queuedPrompts: {} })
     globalThis.EventSource = MockEventSource as unknown as typeof EventSource
@@ -240,9 +242,9 @@ describe('useSSE', () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
 
-    let resolveRepoA: (value: Record<string, { type: 'busy' }>) => void = () => {}
-    let resolveRepoB: (value: Record<string, { type: 'busy' }>) => void = () => {}
-    mocks.getSessionStatuses
+    let resolveRepoA: (value: { statuses: Record<string, { type: 'busy' }> }) => void = () => {}
+    let resolveRepoB: (value: { statuses: Record<string, { type: 'busy' }> }) => void = () => {}
+    mocks.listStatuses
       .mockImplementationOnce(() => new Promise((resolve) => { resolveRepoA = resolve }))
       .mockImplementationOnce(() => new Promise((resolve) => { resolveRepoB = resolve }))
 
@@ -266,7 +268,7 @@ describe('useSSE', () => {
     })
 
     await act(async () => {
-      resolveRepoB({ 'session-b': { type: 'busy' } })
+      resolveRepoB({ statuses: { 'session-b': { type: 'busy' } } })
     })
 
     await waitFor(() => {
@@ -274,7 +276,7 @@ describe('useSSE', () => {
     })
 
     await act(async () => {
-      resolveRepoA({ 'session-a': { type: 'busy' } })
+      resolveRepoA({ statuses: { 'session-a': { type: 'busy' } } })
     })
 
     expect(useSessionStatus.getState().getStatus('session-b')).toEqual({ type: 'busy' })
@@ -369,7 +371,7 @@ describe('useSSE', () => {
       MockEventSource.instances[0].emit('message', {
         type: 'session.status',
         properties: {
-          sessionID: 'session-1',
+          sessionId: 'session-1',
           status: { type: 'idle' },
         },
       })

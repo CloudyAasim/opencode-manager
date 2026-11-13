@@ -1,7 +1,9 @@
 import type {
+  ConversationStatus,
   MessageWithParts,
   PendingPermission,
   PendingQuestion,
+  PermissionResponse,
   SendPromptRequest,
   Session,
   SessionRevert,
@@ -22,6 +24,13 @@ export const BFF_SESSIONS_ENDPOINT = '/api/bff/sessions'
  * The same layer, the same rule: the client asks it, and it asks the agent.
  */
 export const BFF_PENDING_ENDPOINT = '/api/bff/pending'
+
+/**
+ * Where the statuses live.
+ *
+ * The same layer, the same rule: the client asks it, and it asks the agent.
+ */
+export const BFF_STATUS_ENDPOINT = '/api/bff/status'
 
 /**
  * The layer the client talks to for its session list.
@@ -84,6 +93,17 @@ export interface BffAcceptedResponse {
  */
 export interface BffMessageListResponse {
   messages: MessageWithParts[]
+}
+
+/**
+ * How busy every conversation is.
+ *
+ * The statuses are the versioned API's - there is one truth about how busy a
+ * conversation is, and the event stream says it in the same words. What this
+ * layer adds is that they come for every directory at once.
+ */
+export interface BffConversationStatusResponse {
+  statuses: Record<string, ConversationStatus>
 }
 
 export class BffClient {
@@ -237,6 +257,81 @@ export class BffClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(revert),
     })
+  }
+
+  /**
+   * How busy every conversation is, across the named directories.
+   *
+   * One request for every directory, the way the session list is one request
+   * for every directory. The statuses are said in the versioned dialect, the
+   * same words the event stream says them in.
+   */
+  async listStatuses(directories: string[]): Promise<BffConversationStatusResponse> {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    return fetchWrapper<BffConversationStatusResponse>(
+      `${this.baseURL}${BFF_STATUS_ENDPOINT}?${params.toString()}`,
+    )
+  }
+
+  /**
+   * Answering a permission request.
+   *
+   * The permission hangs on a conversation, so the conversation is named: the
+   * layer works out where it lives and whether it is the caller's.
+   */
+  async respondToPermission(
+    sessionId: string,
+    permissionId: string,
+    reply: PermissionResponse,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.sessionUrl(sessionId, directories, `permissions/${encodeURIComponent(permissionId)}/reply`),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply }),
+      },
+    )
+  }
+
+  /**
+   * Answering a question.
+   *
+   * A question may have more than one part, and the answers come back in the
+   * order the parts were asked.
+   */
+  async replyToQuestion(
+    sessionId: string,
+    questionId: string,
+    answers: string[][],
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.sessionUrl(sessionId, directories, `questions/${encodeURIComponent(questionId)}/reply`),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers }),
+      },
+    )
+  }
+
+  /**
+   * Turning a question down.
+   */
+  async rejectQuestion(
+    sessionId: string,
+    questionId: string,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.sessionUrl(sessionId, directories, `questions/${encodeURIComponent(questionId)}/reject`),
+      { method: 'POST' },
+    )
   }
 
   /**

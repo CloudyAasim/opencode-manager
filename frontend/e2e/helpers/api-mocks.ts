@@ -235,6 +235,19 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
     return json(route, { session: bffSessionShape({ id, directory: DEFAULT_REPO.fullPath }) })
   })
 
+  // Answering what the agent is waiting for hangs on a conversation, so the
+  // conversation is named and the layer works out where it lives.
+  await page.route(/.*\/api\/bff\/sessions\/[^/?]+\/permissions\/[^/?]+\/reply(\?.*)?$/, (route) =>
+    json(route, { accepted: true }),
+  )
+  await page.route(/.*\/api\/bff\/sessions\/[^/?]+\/questions\/[^/?]+\/(reply|reject)(\?.*)?$/, (route) =>
+    json(route, { accepted: true }),
+  )
+
+  // How busy everything is comes from the layer too, in the versioned dialect
+  // - the same words the event stream says them in.
+  await page.route('**/api/bff/status', (route) => json(route, { statuses: {} }))
+
   // The client's own door for the conversation is closed: the conversation is
   // the layer's, in the layer's words. A mock that quietly answered the old
   // call would hide a client that went back to asking the agent.
@@ -249,6 +262,19 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
   await page.route(/.*\/api\/opencode\/(api\/)?(permission|question)(\?.*)?$/, (route) => {
     if (route.request().method() !== 'GET') return route.fallback()
     throw new Error('The client asked the agent for its pending lists; it must ask the layer instead')
+  })
+
+  // And answering them is the layer's job as well - the agent's own door for
+  // it is closed, so a client that went back to using it would be caught.
+  await page.route(/.*\/api\/opencode\/(api\/)?(permission|question)\/[^/?]+\/(reply|reject)(\?.*)?$/, () => {
+    throw new Error('The client asked the agent about what it is waiting for; it must ask the layer instead')
+  })
+
+  // How busy the agent is came from the agent in the agent's own words, while
+  // the conversation came from the layer in the layer's words - and the client
+  // held both. It is the layer's now, in one dialect.
+  await page.route(/.*\/api\/opencode\/(api\/)?session\/status(\?.*)?$/, () => {
+    throw new Error('The client asked the agent how busy it is; it must ask the layer instead')
   })
 
   // The client used to ask the agent for its list and merge the answers

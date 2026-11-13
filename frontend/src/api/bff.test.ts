@@ -184,3 +184,68 @@ describe('BffClient 问一个会话', () => {
     })
   })
 })
+
+describe('BffClient 问状态与等待', () => {
+  const fetchMock = vi.fn()
+
+  beforeEach(() => {
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const answer = (body: unknown) =>
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } }),
+    )
+
+  const urlOf = (call = 0) => new URL(String(fetchMock.mock.calls[call]![0]))
+
+  it('状态一次问一个目录', async () => {
+    answer({ statuses: {} })
+
+    await createBffClient('').listStatuses(['/w/a', '/w/b'])
+
+    expect(urlOf().pathname).toBe('/api/bff/status')
+    expect(urlOf().searchParams.getAll('directories')).toEqual(['/w/a', '/w/b'])
+  })
+
+  it('权限的应答问的是这一层，而且说的是哪一个会话', async () => {
+    answer({ accepted: true })
+
+    await createBffClient('').respondToPermission('ses_1', 'per_1', 'once')
+
+    expect(urlOf().pathname).toBe('/api/bff/sessions/ses_1/permissions/per_1/reply')
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ reply: 'once' }) }),
+    )
+  })
+
+  it('问题的应答，答案按问的顺序送到', async () => {
+    answer({ accepted: true })
+
+    await createBffClient('').replyToQuestion('ses_1', 'q_1', [['first'], ['second']])
+
+    expect(urlOf().pathname).toBe('/api/bff/sessions/ses_1/questions/q_1/reply')
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ answers: [['first'], ['second']] }) }),
+    )
+  })
+
+  it('拒掉问题问的是这一层', async () => {
+    answer({ accepted: true })
+
+    await createBffClient('').rejectQuestion('ses_1', 'q_1')
+
+    expect(urlOf().pathname).toBe('/api/bff/sessions/ses_1/questions/q_1/reject')
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+})

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useOpenCodeClient } from './useOpenCode'
 import { invalidateSessionListCaches, invalidateSessionListCachesDebounced, messagesQueryKey, pendingActionsQueryKey, sessionQueryKey } from '@/lib/queryInvalidation'
 import type { SSEEvent, MessageWithParts } from '@/api/types'
 import { showToast } from '@/lib/toast'
@@ -13,6 +12,7 @@ import type { EventStreamSubscription } from '@/lib/opencode-event-stream'
 import { parseMessageError } from '@/lib/opencode-errors'
 import { createPartsBatcher } from '@/lib/partsBatcher'
 import { i18n, useI18n } from '@/lib/i18n'
+import { createBffClient } from '@/api/bff'
 import { useCancellableTimer } from './use-cancellable-timer'
 
 const STATUS_POLL_INTERVAL_MS = 15000
@@ -29,10 +29,11 @@ const getEventDirectory = (event: SSEEvent): string | undefined => {
  * layer the client talks to - it is read over HTTP from there and written
  * here in the same words - so the cache is filed under the layer's address.
  *
- * The status of a conversation is not the shape of a conversation: it is how
- * the agent is getting on with it. That is still the agent's to say, so the
- * status is still asked of the agent, and the agent's address is still known
- * here for that one thing.
+ * How busy a conversation is travels the same way. It used to be the agent's
+ * own answer in the agent's own words, which meant the client held the
+ * status in one dialect when the stream said it and in another when it asked
+ * for it. It is the layer's now, in one dialect, and the stream says the
+ * same words.
  */
 export const useSSE = (
   serverUrl: string | null | undefined,
@@ -49,7 +50,6 @@ export const useSSE = (
   const directoryKey = directoriesList.join('|')
   const primaryDirectory = directoriesList[0]
   const directorySet = useMemo(() => new Set(directoriesList), [directoriesList])
-  const client = useOpenCodeClient(opcodeUrl, primaryDirectory)
   const queryClient = useQueryClient()
   const mountedRef = useRef(true)
   const sessionIdRef = useRef(currentSessionId)
@@ -156,9 +156,9 @@ export const useSSE = (
         break
 
       case 'session.status': {
-        if (!('sessionID' in event.properties && 'status' in event.properties)) break
-        const { sessionID, status } = event.properties
-        setSessionStatus(sessionID, status)
+        if (!('sessionId' in event.properties && 'status' in event.properties)) break
+        const { sessionId, status } = event.properties
+        setSessionStatus(sessionId, status)
         break
       }
 
@@ -382,30 +382,30 @@ export const useSSE = (
   }, [t, queryClient, serverUrl, opcodeUrl, directorySet, resolveCacheDirectory, setSessionStatus, setSessionTodos, currentSessionId, handleRestartServer])
 
   const fetchInitialData = useCallback(async () => {
-    if (!client || !primaryDirectory || !mountedRef.current) return
+    if (!serverUrl || directoriesList.length === 0 || !mountedRef.current) return
     const syncVersion = ++statusSyncVersionRef.current
 
     try {
-      const statuses = await client.getSessionStatuses()
-      if (mountedRef.current && statusSyncVersionRef.current === syncVersion && statuses) {
-        replaceSessionStatuses(statuses)
+      const answer = await createBffClient(serverUrl).listStatuses(directoriesList)
+      if (mountedRef.current && statusSyncVersionRef.current === syncVersion) {
+        replaceSessionStatuses(answer.statuses)
       }
     } catch (err) {
       if (err instanceof Error && !err.message.includes('aborted')) {
         throw err
       }
     }
-  }, [client, primaryDirectory, replaceSessionStatuses])
+  }, [serverUrl, directoriesList, replaceSessionStatuses])
 
   useEffect(() => {
-    if (!client || !primaryDirectory || isConnected) return
+    if (!serverUrl || directoriesList.length === 0 || isConnected) return
 
     const interval = setInterval(() => {
       void fetchInitialData().catch(() => undefined)
     }, STATUS_POLL_INTERVAL_MS)
 
     return () => clearInterval(interval)
-  }, [client, primaryDirectory, fetchInitialData, isConnected])
+  }, [serverUrl, directoriesList, fetchInitialData, isConnected])
 
   const syncCurrentSession = useCallback(() => {
     const sessionId = sessionIdRef.current

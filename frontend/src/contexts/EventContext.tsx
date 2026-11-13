@@ -2,7 +2,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { OpenCodeClient } from '@/api/opencode'
 import { createBffClient } from '@/api/bff'
 import { toPendingPermission, toPendingQuestion } from '@/api/pending'
 import { listRepos } from '@/api/repos'
@@ -10,7 +9,7 @@ import type { PendingPermission, PendingQuestion } from '@opencode-manager/share
 import type { PermissionResponse, SSEEvent, SSHHostKeyRequest, Repo } from '@/api/types'
 import { showToast } from '@/lib/toast'
 import { openCodeEventStream, type EventStreamHealthState } from '@/lib/opencode-event-stream'
-import { API_BASE_URL, OPENCODE_API_ENDPOINT } from '@/config'
+import { API_BASE_URL } from '@/config'
 import { addToSessionKeyedState, removeFromSessionKeyedState } from '@/lib/sessionKeyedState'
 import { invalidateRepoGitCachesDebounced, isSessionListQueryKey } from '@/lib/queryInvalidation'
 import { optimisticallyErrorToolPart } from '@/lib/optimisticToolError'
@@ -113,7 +112,13 @@ interface EventContextValue {
   }
   sseHealth: SSEHealthState
   getRepoIdForSession: (sessionID: string) => number | null
-  getClient: (sessionID: string) => OpenCodeClient | null
+  /**
+   * Where a conversation is, when the app happens to know.
+   *
+   * It is a fallback for the layer, not the answer: the layer works out where
+   * a conversation lives on its own.
+   */
+  getSessionDirectory: (sessionID: string) => string | null
 }
 
 const EventContext = createContext<EventContextValue | null>(null)
@@ -170,20 +175,11 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   const [questionsBySession, setQuestionsBySession] = useState<QuestionsBySession>({})
   const [showPermissionDialog, setShowPermissionDialog] = useState(true)
 
-  const clientsRef = useRef<Map<string, OpenCodeClient>>(new Map())
   const sessionDirectoriesRef = useRef<Map<string, string>>(new Map())
   const prevPermissionCountRef = useRef(0)
   const initialFetchDoneRef = useRef(false)
   const subscriptionRef = useRef<ReturnType<typeof openCodeEventStream.subscribeGlobalMonitor> | null>(null)
   const reposRef = useRef<typeof repos>(null)
-  const MAX_CACHED_CLIENTS = 50
-
-  useEffect(() => {
-    const clients = clientsRef.current
-    return () => {
-      clients.clear()
-    }
-  }, [])
 
   const { data: repos } = useQuery({
     queryKey: ['repos'],
@@ -200,6 +196,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     if (!directory) return
     sessionDirectoriesRef.current.set(sessionID, directory)
   }, [])
+
 
   const findSessionDirectory = useCallback((sessionID: string): string | null => {
     const remembered = sessionDirectoriesRef.current.get(sessionID)
@@ -248,10 +245,17 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     return null
   }, [queryClient])
 
-  const findSessionInCache = useCallback((sessionID: string): { url: string; directory: string } | null => {
+  /**
+   * The working directory a conversation is in, as a fallback.
+   *
+   * The layer works out where a conversation lives - the ledger knows, or the
+   * agent knows. What the app offers here is only what it happens to have
+   * noticed, and the layer's answer does not depend on it: it is a fallback,
+   * not the answer.
+   */
+  const directoriesOf = useCallback((sessionID: string): string[] => {
     const directory = findSessionDirectory(sessionID)
-    if (!directory) return null
-    return { url: OPENCODE_API_ENDPOINT, directory }
+    return directory ? [directory] : []
   }, [findSessionDirectory])
 
   const getRepoIdForSession = useCallback((sessionID: string): number | null => {
@@ -261,23 +265,6 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     const repo = repos.find(r => repoMatchesDirectory(r, directory))
     return repo?.id ?? null
   }, [repos, findSessionDirectory])
-
-  const getClient = useCallback((sessionID: string): OpenCodeClient | null => {
-    const result = findSessionInCache(sessionID)
-    if (!result) return null
-
-    const clientKey = `${result.url}|${result.directory}`
-    let client = clientsRef.current.get(clientKey)
-    if (!client) {
-      if (clientsRef.current.size >= MAX_CACHED_CLIENTS) {
-        const firstKey = clientsRef.current.keys().next().value
-        if (firstKey) clientsRef.current.delete(firstKey)
-      }
-      client = new OpenCodeClient(result.url, result.directory)
-      clientsRef.current.set(clientKey, client)
-    }
-    return client
-  }, [findSessionInCache])
 
   const addPermission = useCallback((permission: PendingPermission) => {
     addToSessionKeyedState(setPermissionsBySession, permission)
@@ -364,9 +351,6 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   // state; if the send fails it goes back, and the periodic reconcile would
   // bring it back anyway.
   const respondToPermission = useCallback(async (permissionID: string, sessionID: string, response: PermissionResponse) => {
-    const client = getClient(sessionID)
-    if (!client) throw new Error('No client found for session')
-
     const permission = (permissionsBySession[sessionID] ?? []).find(p => p.id === permissionID)
     if (response === 'reject' && permission?.tool) {
       optimisticallyErrorToolPart(queryClient, sessionID, permission.tool.messageId, permission.tool.callId, 'Permission denied')
@@ -374,32 +358,38 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
     removePermission(permissionID, sessionID)
     try {
-      await client.respondToPermission(permissionID, response)
+      await createBffClient(API_BASE_URL).respondToPermission(
+        sessionID,
+        permissionID,
+        response,
+        directoriesOf(sessionID),
+      )
     } catch (error) {
       if (permission) addPermission(permission)
       throw error
     }
-  }, [getClient, permissionsBySession, queryClient, removePermission, addPermission])
+  }, [permissionsBySession, queryClient, removePermission, addPermission, directoriesOf])
 
   const replyToQuestion = useCallback(async (requestID: string, answers: string[][]) => {
     const question = Object.values(questionsBySession).flat().find(q => q.id === requestID)
     if (!question) throw new Error('Question not found')
-    const client = getClient(question.sessionId)
-    if (!client) throw new Error('No client found for session')
     removeQuestion(requestID, question.sessionId)
     try {
-      await client.replyToQuestion(requestID, answers)
+      await createBffClient(API_BASE_URL).replyToQuestion(
+        question.sessionId,
+        requestID,
+        answers,
+        directoriesOf(question.sessionId),
+      )
     } catch (error) {
       addQuestion(question)
       throw error
     }
-  }, [getClient, questionsBySession, removeQuestion, addQuestion])
+  }, [questionsBySession, removeQuestion, addQuestion, directoriesOf])
 
   const rejectQuestion = useCallback(async (requestID: string) => {
     const question = Object.values(questionsBySession).flat().find(q => q.id === requestID)
     if (!question) throw new Error('Question not found')
-    const client = getClient(question.sessionId)
-    if (!client) throw new Error('No client found for session')
 
     if (question.tool) {
       optimisticallyErrorToolPart(queryClient, question.sessionId, question.tool.messageId, question.tool.callId, 'Question rejected')
@@ -407,12 +397,16 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
     removeQuestion(requestID, question.sessionId)
     try {
-      await client.rejectQuestion(requestID)
+      await createBffClient(API_BASE_URL).rejectQuestion(
+        question.sessionId,
+        requestID,
+        directoriesOf(question.sessionId),
+      )
     } catch (error) {
       addQuestion(question)
       throw error
     }
-  }, [getClient, questionsBySession, queryClient, removeQuestion, addQuestion])
+  }, [questionsBySession, queryClient, removeQuestion, addQuestion, directoriesOf])
 
   const getPermissionForCallID = useCallback((callID: string, sessionID: string): PendingPermission | null => {
     const perms = permissionsBySession[sessionID] ?? []
@@ -637,7 +631,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     },
     sseHealth,
     getRepoIdForSession,
-    getClient,
+    getSessionDirectory: findSessionDirectory,
   }), [
     sshHostKeyRequest,
     respondToSSHHostKey,
@@ -662,7 +656,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     syncQuestionsForSession,
     sseHealth,
     getRepoIdForSession,
-    getClient,
+    findSessionDirectory,
   ])
 
   return <EventContext.Provider value={value}>{children}</EventContext.Provider>
