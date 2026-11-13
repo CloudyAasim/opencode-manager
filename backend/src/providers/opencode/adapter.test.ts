@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { UpstreamError, type OpenCodeClient } from '../../services/opencode/client'
-import { ProviderProtocolError, SessionNotFoundError } from '../contract'
+import { ProviderProtocolError, ProviderUpstreamError, SessionNotFoundError } from '../contract'
 import { OpenCodeProvider, toMessage, toPart, toSession } from './adapter'
 
 function clientWith(overrides: Record<string, unknown>): OpenCodeClient {
@@ -41,7 +41,26 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
       updatedAt: 20,
       archived: true,
       status: 'unknown',
+      revert: null,
     })
+  })
+
+  it('会话：回滚到了哪一条，上游说的就是哪一条', () => {
+    const session = toSession(
+      {
+        id: 'ses_1',
+        revert: { messageID: 'msg_1', partID: 'prt_1' },
+      },
+      'opencode',
+    )
+
+    expect(session.revert).toEqual({ messageId: 'msg_1', partId: 'prt_1' })
+  })
+
+  it('会话：回滚到了不是一条消息的地方，就当没有回滚过', () => {
+    const session = toSession({ id: 'ses_1', revert: { partID: 'prt_1' } }, 'opencode')
+
+    expect(session.revert).toBeNull()
   })
 
   it('会话：上游没说的东西不许被编出来', () => {
@@ -227,6 +246,53 @@ describe('OpenCode 适配器', () => {
     const page = await provider.listSessions({})
 
     expect(page.items[0]?.directory).toBe('C:\\work\\demo')
+  })
+
+  it('会话的工作区没了的时候，删掉的是工作区', async () => {
+    // The browser used to do this itself: it guessed from an error message
+    // and it knew the working area's id because the conversation was on
+    // screen. Here the id is read from the agent, and the words that mean
+    // "the area is gone" are the agent's own.
+    const forward = vi.fn(async (request: { method: string; path: string }) => {
+      if (request.path.startsWith('/experimental/workspace/')) {
+        return new Response('{}', { status: 200 })
+      }
+      return new Response('Workspace not found: wrk_1', { status: 500 })
+    })
+    const getJson = vi.fn(async () => ({ id: 'ses_1', workspaceID: 'wrk_1' }))
+    const provider = new OpenCodeProvider(clientWith({ forward, getJson }))
+
+    await provider.deleteSession('ses_1', { directory: '/work' })
+
+    expect(forward).toHaveBeenCalledTimes(2)
+    expect((forward.mock.calls[1]![0] as { path: string }).path).toBe('/experimental/workspace/wrk_1')
+  })
+
+  it('工作区也删不掉的时候，要说的是删不掉', async () => {
+    const forward = vi.fn(async (request: { method: string; path: string }) => {
+      if (request.path.startsWith('/experimental/workspace/')) {
+        return new Response('nope', { status: 500 })
+      }
+      return new Response('Workspace not found: wrk_1', { status: 500 })
+    })
+    const getJson = vi.fn(async () => ({ id: 'ses_1', workspaceID: 'wrk_1' }))
+    const provider = new OpenCodeProvider(clientWith({ forward, getJson }))
+
+    await expect(provider.deleteSession('ses_1', {})).rejects.toThrow(ProviderUpstreamError)
+  })
+
+  it('删不掉的时候，不要顺手动别人的工作区', async () => {
+    // The failure is not about a working area, so nothing else is touched:
+    // removing a working area that was not the problem would throw away work
+    // nobody asked to throw away.
+    const forward = vi.fn(async () => new Response('nope', { status: 403 }))
+    const getJson = vi.fn(async () => ({ id: 'ses_1', workspaceID: 'wrk_1' }))
+    const provider = new OpenCodeProvider(clientWith({ forward, getJson }))
+
+    await expect(provider.deleteSession('ses_1', {})).rejects.toThrow(ProviderUpstreamError)
+
+    expect(forward).toHaveBeenCalledTimes(1)
+    expect(getJson).not.toHaveBeenCalled()
   })
 
   it('上游没说会话是在哪儿写的，就用问的那个目录', async () => {

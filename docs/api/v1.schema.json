@@ -185,6 +185,36 @@
             "busy",
             "unknown"
           ]
+        },
+        "revert": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "messageId": {
+                  "type": "string"
+                },
+                "partId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "messageId",
+                "partId"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -197,7 +227,8 @@
         "createdAt",
         "updatedAt",
         "archived",
-        "status"
+        "status",
+        "revert"
       ],
       "additionalProperties": false
     },
@@ -669,6 +700,36 @@
                   "busy",
                   "unknown"
                 ]
+              },
+              "revert": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "messageId": {
+                        "type": "string"
+                      },
+                      "partId": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "messageId",
+                      "partId"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -681,7 +742,8 @@
               "createdAt",
               "updatedAt",
               "archived",
-              "status"
+              "status",
+              "revert"
             ],
             "additionalProperties": false
           }
@@ -767,6 +829,36 @@
                 "busy",
                 "unknown"
               ]
+            },
+            "revert": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "messageId": {
+                      "type": "string"
+                    },
+                    "partId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "messageId",
+                    "partId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -779,7 +871,8 @@
             "createdAt",
             "updatedAt",
             "archived",
-            "status"
+            "status",
+            "revert"
           ],
           "additionalProperties": false
         }

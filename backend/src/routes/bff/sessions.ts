@@ -2,17 +2,28 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import type { Database } from 'bun:sqlite'
 import { BffSessionListResponseSchema } from '@opencode-manager/shared/api/bff'
+import {
+  AcceptedResponseSchema,
+  CreateSessionRequestSchema,
+  DeletedResponseSchema,
+  RenameSessionRequestSchema,
+  SessionResponseSchema,
+} from '@opencode-manager/shared/api/v1'
 import type { Session } from '../../auth'
+import type { Session as Conversation } from '@opencode-manager/shared/api/v1'
 import type { ProviderRegistry } from '../../providers/registry'
+import type { ProviderContext } from '../../providers/contract'
 import { principalFrom, principalIsAdmin, resolveAccessRoots } from '../../auth/ownership'
 import { isWithinRoots } from '../../auth/access-scope'
-import { callerVisibleSessions } from '../../services/session-scope'
+import { callerVisibleSessions, sessionVisibleTo } from '../../services/session-scope'
+import { recordAgentSession } from '../../services/agent-session'
+import { locateSession } from '../../services/session-directory'
 import { fail, handle, ok } from '../api-v1/respond'
 import { agentIdOf } from '../api-v1/params'
-import { directoriesOf } from './params'
+import { checkedDirectoriesOf, directoriesOf } from './params'
 
 /**
- * The session list the web client asks for.
+ * The conversations the web client asks for.
  *
  * The client used to do this work itself: it had a list of working
  * directories, it asked the agent for one page from each of them, it merged
@@ -28,6 +39,14 @@ import { directoriesOf } from './params'
  * The limit is per directory, exactly as it was when the client did this: a
  * client that asked for twenty-five sessions and had three directories got
  * seventy-five, and it still gets seventy-five.
+ *
+ * One conversation is the same story told about a single thing. The client
+ * named the conversation *and* the working directory it lived in, because the
+ * versioned API asks about one agent in one directory at a time. Here the
+ * client names the conversation and this layer works out where it lives - the
+ * ledger knows, or the agent knows, or the caller's own directories know. A
+ * client that kept its own map of conversations to directories was a client
+ * with one more thing to get wrong.
  */
 export function createBffSessionRoutes(registry: ProviderRegistry, database: Database) {
   const app = new Hono<{ Variables: { session: Session['session']; user: Session['user'] } }>()
@@ -45,12 +64,8 @@ export function createBffSessionRoutes(registry: ProviderRegistry, database: Dat
       // A directory is the caller's to name only if it is one of theirs. The
       // sessions themselves are filtered further down, but a directory that
       // is not theirs has no business being named at all.
-      if (!principalIsAdmin(principal)) {
-        const strayed = directories.filter((directory) => !isWithinRoots(directory, roots))
-        if (strayed.length > 0) {
-          return fail(c, 403, 'forbidden', 'A working directory that is not yours was named')
-        }
-      }
+      const checked = checkedDirectoriesOf(c, principal, roots)
+      if (checked instanceof Response) return checked
 
       const provider = registry.resolve(agentIdOf(c))
       const limit = limitOf(c)
@@ -79,7 +94,157 @@ export function createBffSessionRoutes(registry: ProviderRegistry, database: Dat
     }),
   )
 
+  app.post('/', (c) =>
+    handle(c, async () => {
+      const body = CreateSessionRequestSchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const principal = principalFrom(c.get('user'))
+      if (!principal) {
+        return fail(c, 401, 'unauthorized', 'No session')
+      }
+      const roots = resolveAccessRoots(database, principal)
+
+      // A conversation is worked on in a directory, and the directory is the
+      // caller's to name only if it is one of theirs.
+      const directory = body.data.directory
+      if (!directory) {
+        return fail(c, 400, 'bad_request', 'Name the working directory the conversation is created in')
+      }
+      if (!principalIsAdmin(principal) && !isWithinRoots(directory, roots)) {
+        return fail(c, 403, 'forbidden', 'A working directory that is not yours was named')
+      }
+
+      const provider = registry.resolve(agentIdOf(c))
+      const session = await provider.createSession({ title: body.data.title, directory })
+
+      // This is the one moment where both halves of the answer exist at the
+      // same time: who asked, and which id came back. The ledger is what lets
+      // every later request tell one person's conversation from another's, so
+      // it is written here - the same moment the request that created it
+      // through the browser's other door writes it.
+      recordAgentSession(database, {
+        sessionId: session.id,
+        userId: principal.id,
+        username: principal.username ?? null,
+        role: principal.role,
+        directory,
+        source: 'bff',
+      })
+
+      return ok(c, SessionResponseSchema, { session })
+    }),
+  )
+
+  app.get('/:id', (c) =>
+    handle(c, async () => {
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+      return ok(c, SessionResponseSchema, { session: located.session })
+    }),
+  )
+
+  app.patch('/:id', (c) =>
+    handle(c, async () => {
+      const body = RenameSessionRequestSchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      const session = await provider.renameSession(
+        c.req.param('id'),
+        body.data.title,
+        contextOf(located.directory),
+      )
+      return ok(c, SessionResponseSchema, { session })
+    }),
+  )
+
+  app.delete('/:id', (c) =>
+    handle(c, async () => {
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.deleteSession(c.req.param('id'), contextOf(located.directory))
+      return ok(c, DeletedResponseSchema, { deleted: true, id: c.req.param('id') })
+    }),
+  )
+
+  app.post('/:id/abort', (c) =>
+    handle(c, async () => {
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.abortSession(c.req.param('id'), contextOf(located.directory))
+      return ok(c, AcceptedResponseSchema, { accepted: true })
+    }),
+  )
+
   return app
+}
+
+/**
+ * The conversation a request is about, and whether the caller may touch it.
+ *
+ * The place of the conversation is worked out rather than asked for, and the
+ * answer is refused when the conversation is not the caller's. It is refused
+ * the same way a conversation that does not exist is refused: a caller who
+ * may not have it should not be able to learn that it is there.
+ */
+async function locate(
+  c: Context,
+  registry: ProviderRegistry,
+  database: Database,
+): Promise<
+  | { session: Conversation | null; directory: string | null; provider: ReturnType<ProviderRegistry['resolve']> }
+  | Response
+> {
+  const principal = principalFrom(c.get('user'))
+  const roots = resolveAccessRoots(database, principal)
+
+  const directories = checkedDirectoriesOf(c, principal, roots)
+  if (directories instanceof Response) return directories
+
+  const provider = registry.resolve(agentIdOf(c))
+  const sessionId = c.req.param('id')
+  const location = await locateSession(database, provider, sessionId, directories)
+
+  const visible = sessionVisibleTo(
+    { id: sessionId, directory: location.directory },
+    location.record,
+    principal,
+    roots,
+  )
+  if (!visible) {
+    return fail(c, 404, 'not_found', 'No session is known under that id')
+  }
+
+  return { session: location.session, directory: location.directory, provider }
+}
+
+/** Where the agent is working, when the place of the conversation is known. */
+function contextOf(directory: string | null): ProviderContext {
+  return directory ? { directory } : {}
 }
 
 function limitOf(c: Context): number | undefined {
@@ -117,4 +282,12 @@ function cursorsOf(c: Context): Record<string, string> {
     if (typeof cursor === 'string' && cursor) cursors[directory] = cursor
   }
   return cursors
+}
+
+async function readJson(c: Context): Promise<unknown> {
+  try {
+    return await c.req.json()
+  } catch {
+    return null
+  }
 }

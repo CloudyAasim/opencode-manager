@@ -246,6 +246,9 @@ function toSession(session: CliSession, agentId: string, fallbackDirectory?: str
     updatedAt: session.updatedAt,
     archived: false,
     status: 'idle',
+    // A program on this machine keeps what it wrote down and does not take it
+    // back, so there is no point to roll a conversation back to.
+    revert: null,
   }
 }
 

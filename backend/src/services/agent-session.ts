@@ -23,7 +23,15 @@ import type { Database } from 'bun:sqlite'
  * session.
  */
 
-export type AgentSessionSource = 'proxy' | 'schedule'
+/**
+ * How a conversation came to exist.
+ *
+ * `proxy` is a person opening one in the browser, `bff` is the same person
+ * opening one through the layer the browser talks to, and `schedule` is cron
+ * firing. The distinction is bookkeeping: it says who to ask when a
+ * conversation turns up with no owner of its own.
+ */
+export type AgentSessionSource = 'proxy' | 'bff' | 'schedule'
 
 /**
  * `unknown` is a recorded fact, not a third kind of user. It means the row

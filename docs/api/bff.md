@@ -38,6 +38,11 @@ seventy-five, and it still gets seventy-five.
 | Method | Path | What it does | Shape |
 | --- | --- | --- | --- |
 | `GET` | `/api/bff/sessions` | The sessions of one or more working directories | `BffSessionListResponse` |
+| `POST` | `/api/bff/sessions` | A new conversation, in a named working directory | `SessionResponse` |
+| `GET` | `/api/bff/sessions/:id` | One conversation, and where it lives | `SessionResponse` |
+| `PATCH` | `/api/bff/sessions/:id` | A conversation's new title | `SessionResponse` |
+| `DELETE` | `/api/bff/sessions/:id` | A conversation, gone | `DeletedResponse` |
+| `POST` | `/api/bff/sessions/:id/abort` | Stop what the conversation is doing | `AcceptedResponse` |
 | `GET` | `/api/bff/pending` | What the agent is waiting for, across one or more working directories | `PendingListResponse` |
 
 ## The shapes
@@ -77,7 +82,43 @@ out which conversation each request belonged to. That is the server's job.
 
 A request belongs to a conversation, so the conversation decides whose it is.
 
-## What it refuses
+### One conversation
+
+The client used to name the working directory next to every conversation it
+asked about, because the versioned API speaks to one agent in one directory at
+a time. Here it names the conversation, and this layer works out where the
+conversation lives.
+
+It works it out in three steps, and the first one that answers wins:
+
+1. **The ledger knows.** It recorded the directory when the conversation came
+   into existence, and it is the authority: a conversation can sit in one
+   person's checkout and still belong to another.
+2. **The agent knows.** Asked about the conversation itself, an agent says
+   where it was worked on.
+3. **The caller's own directories know.** A conversation from before the
+   ledger existed is looked for in the directories the caller named, and the
+   one it turns up in is the place it belongs.
+
+So `directories` is still accepted by every endpoint that takes one
+conversation - it is the third step, and it is a fallback rather than the
+answer. A client that knows a conversation's directory does not have to say
+which one it is; a client that does not know it says the directories it works
+in, and this layer finds the conversation among them.
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `POST /api/bff/sessions` | `{ "title"?: string, "directory": string }` | `SessionResponse` |
+| `PATCH /api/bff/sessions/:id` | `{ "title": string }` | `SessionResponse` |
+| `DELETE /api/bff/sessions/:id` | - | `DeletedResponse` |
+| `POST /api/bff/sessions/:id/abort` | - | `AcceptedResponse` |
+
+A conversation that is created here is written down in the ledger with the
+person who asked for it, in the same moment the conversation comes into
+existence - which is what lets every later request tell one person's
+conversation from another's.
+
+### What it refuses
 
 - **No session, no list.** The same rule the rest of the server uses - one
   session, or no session - answering in the same envelope.
@@ -88,3 +129,7 @@ A request belongs to a conversation, so the conversation decides whose it is.
   whose conversations those are is answered here.
 - **A pending request that is not yours.** A permission belongs to a
   conversation, so the conversation decides whose request it is.
+
+A conversation that is not yours is answered exactly like one that does not
+exist: `404`, with the same words. A caller who may not have it should not be
+able to learn that it is there.

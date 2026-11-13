@@ -102,7 +102,7 @@ describe('这一层出的待办', () => {
 
     const asked = provider.calls.filter((call) => call.method === 'listPendingPermissions')
     expect(asked).toHaveLength(2)
-    expect(asked.map((call) => (call.args[0] as { directory?: string }).directory)).toEqual([
+    expect(asked.map((call) => call.context?.directory)).toEqual([
       '/work',
       '/other',
     ])

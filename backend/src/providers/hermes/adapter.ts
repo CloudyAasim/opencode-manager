@@ -252,6 +252,9 @@ export class HermesProvider implements AgentProvider {
       updatedAt: numberOf(record.ended_at) ?? numberOf(record.started_at) ?? 0,
       archived: record.archived === true,
       status: 'idle',
+      // Hermes keeps what it wrote down and does not take it back, so there is
+      // no point to roll a conversation back to.
+      revert: null,
     }
   }
 

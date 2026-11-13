@@ -63,6 +63,7 @@ describe('Hermes', () => {
       updatedAt: 2000,
       archived: false,
       status: 'idle',
+      revert: null,
     })
     expect(page.nextCursor).toBeNull()
   })

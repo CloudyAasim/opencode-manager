@@ -69,6 +69,20 @@ export type Agent = z.infer<typeof AgentSchema>
 export const SessionStatusSchema = z.enum(['idle', 'busy', 'unknown'])
 export type SessionStatus = z.infer<typeof SessionStatusSchema>
 
+/**
+ * The message a conversation was rolled back to.
+ *
+ * A conversation can be undone to one of its messages: everything after that
+ * message stops counting. A conversation that was never rolled back says so -
+ * "null" and "we were not told" are the same thing here, and both are
+ * answerable.
+ */
+export const SessionRevertSchema = z.object({
+  messageId: z.string(),
+  partId: z.string().nullable(),
+})
+export type SessionRevert = z.infer<typeof SessionRevertSchema>
+
 export const SessionSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),
@@ -87,6 +101,10 @@ export const SessionSchema = z.object({
   updatedAt: z.number(),
   archived: z.boolean(),
   status: SessionStatusSchema,
+  /**
+   * Where the conversation was rolled back to, when it was rolled back.
+   */
+  revert: SessionRevertSchema.nullable(),
 })
 export type Session = z.infer<typeof SessionSchema>
 

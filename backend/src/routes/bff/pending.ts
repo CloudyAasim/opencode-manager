@@ -3,12 +3,11 @@ import type { Database } from 'bun:sqlite'
 import { PendingListResponseSchema } from '@opencode-manager/shared/api/v1'
 import type { Session } from '../../auth'
 import type { ProviderRegistry } from '../../providers/registry'
-import { principalFrom, principalIsAdmin, resolveAccessRoots } from '../../auth/ownership'
-import { isWithinRoots } from '../../auth/access-scope'
+import { principalFrom, resolveAccessRoots } from '../../auth/ownership'
 import { callerVisiblePendingRequests } from '../../services/session-scope'
 import { fail, handle, ok } from '../api-v1/respond'
 import { agentIdOf } from '../api-v1/params'
-import { directoriesOf } from './params'
+import { checkedDirectoriesOf, directoriesOf } from './params'
 
 /**
  * What the agent is waiting for, across every working directory.
@@ -40,12 +39,8 @@ export function createBffPendingRoutes(registry: ProviderRegistry, database: Dat
 
       // A directory is the caller's to name only if it is one of theirs. A
       // directory that is not theirs has no business being named at all.
-      if (!principalIsAdmin(principal)) {
-        const strayed = directories.filter((directory) => !isWithinRoots(directory, roots))
-        if (strayed.length > 0) {
-          return fail(c, 403, 'forbidden', 'A working directory that is not yours was named')
-        }
-      }
+      const checked = checkedDirectoriesOf(c, principal, roots)
+      if (checked instanceof Response) return checked
 
       const provider = registry.resolve(agentIdOf(c))
 

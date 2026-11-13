@@ -29,6 +29,15 @@ export interface FakeProviderOptions {
 export interface FakeProviderCall {
   method: string
   args: unknown[]
+  /**
+   * The working directory the call was made about, when it was made about one.
+   *
+   * It is kept beside the arguments rather than among them, because the
+   * arguments mean different things in different methods - and a test that
+   * has to know which position the directory sits in is a test that breaks
+   * when a method grows an argument.
+   */
+  context?: ProviderContext
 }
 
 /**
@@ -69,19 +78,34 @@ export class FakeAgentProvider implements AgentProvider {
     if (this.failWith) throw this.failWith
   }
 
+  private recordAbout(method: string, context: ProviderContext, args: unknown[]): void {
+    this.calls.push({ method, args, context })
+    if (this.failWith) throw this.failWith
+  }
+
   async status(): Promise<ProviderStatus> {
     this.record('status')
     return this.statusValue
   }
 
   async listSessions(context: ProviderContext, params?: ListSessionsParams): Promise<SessionPage> {
-    this.record('listSessions', context, params)
-    return { items: this.sessions, nextCursor: this.nextCursor }
+    this.recordAbout('listSessions', context, [params])
+    // A session that does not say where it was worked on is given the
+    // directory it was asked about - the same rule the real adapters follow.
+    return {
+      items: this.sessions.map((session) => ({
+        ...session,
+        directory: session.directory ?? context.directory ?? null,
+      })),
+      nextCursor: this.nextCursor,
+    }
   }
 
-  async getSession(id: string, _context: ProviderContext): Promise<Session | null> {
-    this.record('getSession', id)
-    return this.sessions.find((session) => session.id === id) ?? null
+  async getSession(id: string, context: ProviderContext): Promise<Session | null> {
+    this.recordAbout('getSession', context, [id])
+    const found = this.sessions.find((session) => session.id === id)
+    if (!found) return null
+    return { ...found, directory: found.directory ?? context.directory ?? null }
   }
 
   async createSession(input: CreateSessionInput): Promise<Session> {
@@ -97,13 +121,14 @@ export class FakeAgentProvider implements AgentProvider {
       updatedAt: 1,
       archived: false,
       status: 'idle',
+      revert: null,
     }
     this.sessions = [...this.sessions, session]
     return session
   }
 
-  async renameSession(id: string, title: string, _context: ProviderContext): Promise<Session> {
-    this.record('renameSession', id, title)
+  async renameSession(id: string, title: string, context: ProviderContext): Promise<Session> {
+    this.recordAbout('renameSession', context, [id, title])
     const found = this.sessions.find((session) => session.id === id)
     if (!found) throw new Error(`no session ${id}`)
     const renamed = { ...found, title }
@@ -111,8 +136,8 @@ export class FakeAgentProvider implements AgentProvider {
     return renamed
   }
 
-  async deleteSession(id: string, _context: ProviderContext): Promise<void> {
-    this.record('deleteSession', id)
+  async deleteSession(id: string, context: ProviderContext): Promise<void> {
+    this.recordAbout('deleteSession', context, [id])
     this.sessions = this.sessions.filter((session) => session.id !== id)
   }
 
@@ -125,17 +150,17 @@ export class FakeAgentProvider implements AgentProvider {
     this.record('sendPrompt', sessionId, input)
   }
 
-  async abortSession(sessionId: string, _context: ProviderContext): Promise<void> {
-    this.record('abortSession', sessionId)
+  async abortSession(sessionId: string, context: ProviderContext): Promise<void> {
+    this.recordAbout('abortSession', context, [sessionId])
   }
 
   async listPendingPermissions(context: ProviderContext): Promise<PendingPermission[]> {
-    this.record('listPendingPermissions', context)
+    this.recordAbout('listPendingPermissions', context, [])
     return this.pendingPermissions
   }
 
   async listPendingQuestions(context: ProviderContext): Promise<PendingQuestion[]> {
-    this.record('listPendingQuestions', context)
+    this.recordAbout('listPendingQuestions', context, [])
     return this.pendingQuestions
   }
 }
@@ -175,7 +200,7 @@ export function makePendingQuestion(overrides: Partial<PendingQuestion> = {}): P
 }
 
 export function makeSession(overrides: Partial<Session> = {}): Session {
-  return {
+  const session: Session = {
     id: 'session-1',
     agentId: 'fake',
     title: 'A session',
@@ -186,8 +211,12 @@ export function makeSession(overrides: Partial<Session> = {}): Session {
     updatedAt: 2000,
     archived: false,
     status: 'idle',
-    ...overrides,
+    revert: null,
   }
+  // A field that is not given stays as it was, rather than becoming
+  // undefined: the shape says the field is there, and null is what it says
+  // when there is nothing to say.
+  return { ...session, ...overrides, revert: overrides.revert ?? session.revert }
 }
 
 export function makeMessage(overrides: Partial<Message> = {}): Message {

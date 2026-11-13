@@ -158,7 +158,7 @@ describe('版本化 API', () => {
 
     await app.request('/api/v1/sessions?cursor=cur_1&limit=25&search=deploy')
 
-    expect(provider.calls[0]?.args[1]).toEqual({ limit: 25, cursor: 'cur_1', search: 'deploy' })
+    expect(provider.calls[0]?.args[0]).toEqual({ limit: 25, cursor: 'cur_1', search: 'deploy' })
   })
 
   it('条数不是个数的时候，就当没有条数，而不是报错', async () => {
@@ -168,7 +168,7 @@ describe('版本化 API', () => {
     const res = await app.request('/api/v1/sessions?limit=lots')
 
     expect(res.status).toBe(200)
-    expect(provider.calls[0]?.args[1]).toEqual({})
+    expect(provider.calls[0]?.args[0]).toEqual({})
   })
 
   it('空游标就是没有游标', async () => {
@@ -177,7 +177,7 @@ describe('版本化 API', () => {
 
     await app.request('/api/v1/sessions?cursor=%20%20')
 
-    expect(provider.calls[0]?.args[1]).toEqual({})
+    expect(provider.calls[0]?.args[0]).toEqual({})
   })
 
   it('别人的会话不该出现在列表里', async () => {
@@ -213,7 +213,7 @@ describe('版本化 API', () => {
 
     await app.request('/api/v1/sessions?directory=%2Fwork')
 
-    expect(provider.calls[0]?.args[0]).toEqual({ directory: '/work' })
+    expect(provider.calls[0]?.context).toEqual({ directory: '/work' })
   })
 
   it('开一个新会话', async () => {

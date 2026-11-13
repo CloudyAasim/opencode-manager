@@ -6,6 +6,7 @@ import type {
   PendingQuestionInfo,
   PendingRequestTool,
   Session,
+  SessionRevert,
   SessionStatus,
   ToolCallState,
 } from '@opencode-manager/shared/api/v1'
@@ -112,6 +113,21 @@ export function toMessage(raw: unknown, agentId: string): Message {
   }
 }
 
+/**
+ * Where a conversation was rolled back to.
+ *
+ * The agent says which message it was rolled back to. A conversation that was
+ * never rolled back says nothing, and a conversation rolled back to something
+ * that is not a message is treated as never rolled back: there is no point to
+ * go back to.
+ */
+function toSessionRevert(raw: unknown): SessionRevert | null {
+  const record = asRecord(raw)
+  const messageId = asString(record?.messageID)
+  if (!messageId) return null
+  return { messageId, partId: asString(record?.partID) ?? null }
+}
+
 export function toSession(
   raw: unknown,
   agentId: string,
@@ -143,6 +159,7 @@ export function toSession(
     updatedAt: asNumber(time?.updated) ?? 0,
     archived: asNumber(time?.archived) !== null,
     status,
+    revert: toSessionRevert(record?.revert),
   }
 }
 
@@ -358,12 +375,67 @@ export class OpenCodeProvider implements AgentProvider {
   }
 
   async deleteSession(id: string, context: ProviderContext): Promise<void> {
-    await this.write({
+    const response = await this.client.forward({
       method: 'DELETE',
       path: this.sessionPath(id),
-      context,
-      sessionId: id,
+      directory: context.directory,
     })
+
+    if (response.ok) return
+
+    const status = response.status
+    const body = await response.text().catch(() => '')
+
+    // A conversation filed inside a working area cannot be removed by
+    // removing the conversation when that area is already gone, and the agent
+    // says so with an error rather than with a conversation that is still
+    // there. The area is what has to go instead.
+    //
+    // The browser used to do this itself, from an error message it had
+    // guessed at, and it knew the working area's id because it had the
+    // conversation on screen. Here the id is read from the agent, and the
+    // guessing is gone: the words that mean "the area is gone" are the
+    // agent's own.
+    if (status === 500 || body.includes('Workspace not found')) {
+      const workspaceId = await this.workspaceIdOf(id, context)
+      if (workspaceId && (await this.removeWorkspace(workspaceId, context))) return
+    }
+
+    throw this.translate(new UpstreamError(status, body), id)
+  }
+
+  /**
+   * The working area a conversation is filed in, when it is filed in one.
+   */
+  private async workspaceIdOf(id: string, context: ProviderContext): Promise<string | null> {
+    try {
+      const raw = await this.readJson<unknown>(this.sessionPath(id), context, id)
+      const record = asRecord(raw)
+      const location = asRecord(record?.location)
+      return asString(location?.workspaceID) ?? asString(record?.workspaceID) ?? null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Removing a working area, and whether it went.
+   *
+   * The endpoint is the agent's, and it is experimental there - which is
+   * exactly why it belongs here and not in the layer above: the layer above
+   * asks for a working area to go and does not know what one is.
+   */
+  private async removeWorkspace(id: string, context: ProviderContext): Promise<boolean> {
+    try {
+      const response = await this.client.forward({
+        method: 'DELETE',
+        path: `/experimental/workspace/${encodeURIComponent(id)}`,
+        directory: context.directory,
+      })
+      return response.ok
+    } catch {
+      return false
+    }
   }
 
   async listMessages(sessionId: string, context: ProviderContext): Promise<Message[]> {

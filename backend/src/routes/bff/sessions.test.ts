@@ -86,7 +86,7 @@ describe('给前端的那一层', () => {
 
     const asked = provider.calls.filter((call) => call.method === 'listSessions')
     expect(asked).toHaveLength(2)
-    expect(asked.map((call) => (call.args[0] as { directory?: string }).directory)).toEqual(['/work', '/other'])
+    expect(asked.map((call) => call.context?.directory)).toEqual(['/work', '/other'])
   })
 
   it('条数、搜索和游标都要跟着目录一起送到 agent 那里', async () => {
@@ -96,7 +96,7 @@ describe('给前端的那一层', () => {
     await app.request('/api/bff/sessions?directories=/work&limit=25&search=deploy&cursors=' + encodeURIComponent(JSON.stringify({ '/work': 'cur_1' })))
 
     const asked = provider.calls.find((call) => call.method === 'listSessions')
-    expect(asked?.args[1]).toEqual({ limit: 25, cursor: 'cur_1', search: 'deploy' })
+    expect(asked?.args[0]).toEqual({ limit: 25, cursor: 'cur_1', search: 'deploy' })
   })
 
   it('每个目录下一页的位置要各自记着', async () => {
@@ -137,7 +137,7 @@ describe('给前端的那一层', () => {
 
     expect(res.status).toBe(200)
     const asked = provider.calls.find((call) => call.method === 'listSessions')
-    expect(asked?.args[1]).toEqual({ limit: undefined, cursor: undefined, search: undefined })
+    expect(asked?.args[0]).toEqual({ limit: undefined, cursor: undefined, search: undefined })
   })
 
   it('登录了才有这个门', async () => {
