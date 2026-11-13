@@ -115,11 +115,12 @@ export const SessionList = ({
 
   const handleRename = useCallback(
     (session: { id: string; directory?: string | null }, title: string) => {
+      // The layer works out where the conversation lives, so the title is the
+      // only thing to say here.
       updateSession.mutate({
         sessionID: session.id,
         title,
-        ...(session.directory ? { directory: session.directory } : {}),
-      } as { sessionID: string; title: string });
+      });
     },
     [updateSession],
   );
