@@ -12,6 +12,13 @@ import { useSessionStatus } from '@/stores/sessionStatusStore'
 type CommandType = components['schemas']['Command']
 
 interface CommandHandlerProps {
+  /**
+   * Where the layer the client talks to lives.
+   *
+   * A conversation is created through it rather than through the agent: the
+   * layer knows who asked for it, and the browser does not have to say.
+   */
+  serverUrl: string
   opcodeUrl: string
   sessionID: string
   directory?: string
@@ -24,6 +31,7 @@ interface CommandHandlerProps {
 }
 
 export function useCommandHandler({
+  serverUrl,
   opcodeUrl,
   sessionID,
   directory,
@@ -36,7 +44,7 @@ export function useCommandHandler({
 }: CommandHandlerProps) {
   const navigate = useNavigate()
   const { t } = useI18n()
-  const createSession = useCreateSession(opcodeUrl, directory)
+  const createSession = useCreateSession(serverUrl, directory)
   const { model, modelString } = useModelSelection(opcodeUrl, directory)
   const setSessionStatus = useSessionStatus((state) => state.setStatus)
   const [loading, setLoading] = useState(false)
@@ -77,9 +85,7 @@ export function useCommandHandler({
         case 'new':
         case 'clear': {
           try {
-            const newSession = await createSession.mutateAsync({
-              agent: undefined
-            })
+            const newSession = await createSession.mutateAsync({})
             if (newSession?.id) {
               const currentPath = window.location.pathname
               const repoMatch = currentPath.match(/\/repos\/(\d+)\/sessions\//)

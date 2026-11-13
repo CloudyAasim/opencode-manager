@@ -37,7 +37,7 @@ import { hasMissingDirectory } from "@/features/repos/repo-usability";
 import { WorkspaceManager } from "@/features/repos/WorkspaceManager";
 import { CreateWorkspaceDialog } from "@/features/repos/CreateWorkspaceDialog";
 import { workspaceLabel } from "@/api/repos";
-import { OPENCODE_API_ENDPOINT } from "@/config";
+import { API_BASE_URL, OPENCODE_API_ENDPOINT } from "@/config";
 import { useSSE } from "@/hooks/useSSE";
 import { useUIState } from "@/stores/uiStateStore";
 import { useSettings } from "@/hooks/useSettings";
@@ -450,14 +450,14 @@ export function SessionDetail() {
     contentVersion: messagesContentVersion,
     onScrollStateChange: setShowScrollButton
   });
-  const abortSession = useAbortSession(opcodeUrl, sessionDirectory, sessionId);
-  const updateSession = useUpdateSession(opcodeUrl, sessionDirectory);
-  const createSession = useCreateSession(opcodeUrl, sessionDirectory);
+  const abortSession = useAbortSession(API_BASE_URL, opcodeUrl, sessionDirectory, sessionId);
+  const updateSession = useUpdateSession(API_BASE_URL);
+  const createSession = useCreateSession(API_BASE_URL, sessionDirectory);
   // Reached only when the project has no session yet. Nothing is created until
   // the first message: a create response with no id throws rather than becoming
   // a path and a POST to it.
   const ensureSessionForNewConversation = useCallback(async () => {
-    const created = await createSession.mutateAsync({ agent: undefined })
+    const created = await createSession.mutateAsync({})
     if (!created?.id) throw new Error('The session could not be created')
     navigate(
       projectSessionPath(repoId, created.id, activeTab) +
@@ -585,7 +585,7 @@ export function SessionDetail() {
 
   const handleNewSession = useCallback(async () => {
     try {
-      const newSession = await createSession.mutateAsync({ agent: undefined });
+      const newSession = await createSession.mutateAsync({});
       if (newSession?.id) {
         navigate(`/repos/${repoId}/sessions/${newSession.id}${sessionRouteSuffix}`);
       }
@@ -860,7 +860,6 @@ export function SessionDetail() {
         {opcodeUrl && (
           <SessionRail open={railOpen} onClose={() => setRailOpen(false)}>
             <SessionList
-              opcodeUrl={opcodeUrl}
               directory={repoDirectory}
               activeSessionID={sessionId || undefined}
               onSelectSession={(sessionID) => {
@@ -1091,7 +1090,6 @@ export function SessionDetail() {
           <div className="overflow-y-auto max-h-[60vh] mt-4">
             {opcodeUrl && (
               <SessionList
-                opcodeUrl={opcodeUrl}
                 directory={repoDirectory}
                 activeSessionID={sessionId || undefined}
                 onSelectSession={(sessionID) => {

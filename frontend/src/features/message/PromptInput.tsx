@@ -20,6 +20,7 @@ import { useI18n } from '@/lib/i18n'
 import { useCancellableTimer } from '@/hooks/use-cancellable-timer'
 
 import { usePermissions } from '@/contexts/EventContext'
+import { API_BASE_URL } from '@/config'
 import { ArrowDown, Upload, X, Mic, MicOff } from 'lucide-react'
 
 import { SquareFill } from '@/components/ui/square-fill'
@@ -228,9 +229,10 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
   const sendPrompt = useSendPrompt(opcodeUrl, directory)
   const sendShell = useSendShell(opcodeUrl, directory)
   const isPromptSubmitPending = sendPrompt.isPending || sendShell.isPending
-  const abortSession = useAbortSession(opcodeUrl, directory, sessionID)
+  const abortSession = useAbortSession(API_BASE_URL, opcodeUrl, directory, sessionID)
   const { filterCommands } = useCommands(opcodeUrl)
   const { executeCommand } = useCommandHandler({
+    serverUrl: API_BASE_URL,
     opcodeUrl,
     sessionID,
     directory,

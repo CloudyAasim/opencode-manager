@@ -24,63 +24,52 @@ describe('useDeleteSession', () => {
     vi.unstubAllGlobals()
   })
 
-  it('falls back to workspace delete for stale workspace session deletes', async () => {
-    fetchMock
-      .mockResolvedValueOnce(new Response('Workspace not found: wrk_stale', { status: 500 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }))
-
+  const wrapperFor = () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-    const wrapper = ({ children }: { children: ReactNode }) => (
+    return ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
+  }
 
-    const { result } = renderHook(() => useDeleteSession('/api/opencode', ['/w/stale']), { wrapper })
+  it('删除问的是这一层，而不是 agent', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ deleted: true, id: 'ses_1' }), {
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const { result } = renderHook(() => useDeleteSession('', ['/w/existing']), { wrapper: wrapperFor() })
 
     await act(async () => {
-      await result.current.mutateAsync([
-        { id: 'ses_1', directory: '/w/stale', workspaceID: 'wrk_stale' },
-        { id: 'ses_2', directory: '/w/stale', workspaceID: 'wrk_stale' },
-      ])
+      await result.current.mutateAsync([{ id: 'ses_1', directory: '/w/existing' }])
     })
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      'http://localhost/api/opencode/session/ses_1?directory=%2Fw%2Fstale',
-      expect.objectContaining({ method: 'DELETE' }),
-    )
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      'http://localhost/api/opencode/experimental/workspace/wrk_stale?directory=%2Fw%2Fstale',
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const url = new URL(String(fetchMock.mock.calls[0]![0]))
+    expect(url.pathname).toBe('/api/bff/sessions/ses_1')
+    // The directory is a fallback for a conversation the layer cannot place
+    // on its own - not the address of the conversation.
+    expect(url.searchParams.getAll('directories')).toEqual(['/w/existing'])
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({ method: 'DELETE' }),
     )
   })
 
-  it('falls back to workspace delete for OpenCode unknown session delete failures', async () => {
-    fetchMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        name: 'UnknownError',
-        data: { message: 'Unexpected server error. Check server logs for details.' },
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }))
-
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  it('删不掉的时候要说得出来', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        error: { code: 'not_found', message: 'No session is known under that id' },
+      }), { status: 404, headers: { 'Content-Type': 'application/json' } }),
     )
 
-    const { result } = renderHook(() => useDeleteSession('/api/opencode', ['/w/existing']), { wrapper })
+    const { result } = renderHook(() => useDeleteSession('', ['/w/existing']), { wrapper: wrapperFor() })
 
     await act(async () => {
-      await result.current.mutateAsync([{ id: 'ses_1', directory: '/w/existing', workspaceID: 'wrk_existing' }])
+      await expect(
+        result.current.mutateAsync([{ id: 'ses_1', directory: '/w/existing' }]),
+      ).rejects.toThrow('Failed to delete 1 session(s)')
     })
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      'http://localhost/api/opencode/experimental/workspace/wrk_existing?directory=%2Fw%2Fexisting',
-      expect.objectContaining({ method: 'DELETE' }),
-    )
   })
 })
 

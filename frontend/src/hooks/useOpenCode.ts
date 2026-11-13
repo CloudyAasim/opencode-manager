@@ -15,7 +15,7 @@ import { showToast } from "../lib/toast";
 import { useI18n } from "../lib/i18n";
 import { useSendErrorStore } from "../stores/sendErrorStore";
 import { useSessionStatus } from "../stores/sessionStatusStore";
-import { invalidateSessionListCaches, messagesQueryKey, sessionListQueryKey, stopQueries } from "../lib/queryInvalidation";
+import { invalidateSessionListCaches, messagesQueryKey, sessionListQueryKey, sessionQuerySession, stopQueries } from "../lib/queryInvalidation";
 import { reconcileConfirmedPrompt } from "../lib/sendErrorReconcile";
 import { buildSessionKey } from "../lib/sessionKey";
 import { toggleSessionPin } from "../api/sessionPins";
@@ -114,6 +114,17 @@ export const useSessionsAcrossDirectories = (
   };
 };
 
+/**
+ * One conversation.
+ *
+ * This one still asks the agent, and it is the last thing on this surface
+ * that does: the detail of a conversation and the event stream about it are
+ * filed in the same cache slot, and the event stream still speaks the
+ * agent's own dialect. A conversation read in the versioned dialect and then
+ * overwritten by one in the agent's would leave the app holding two shapes
+ * for the same thing - so the detail moves when the event stream does, and
+ * not before.
+ */
 export const useSession = (opcodeUrl: string | null | undefined, sessionID: string | undefined, directory?: string) => {
   const client = useOpenCodeClient(opcodeUrl, directory);
 
@@ -153,22 +164,31 @@ export const useMessages = (opcodeUrl: string | null | undefined, sessionID: str
   });
 };
 
+/**
+ * A new conversation.
+ *
+ * The client used to ask the agent for this itself, and the agent's own
+ * endpoint takes nothing but a title - so the agent and the model the
+ * browser sent along were never read by anything. The layer takes a title
+ * and a working directory, and it writes down who asked for it in the same
+ * moment the conversation comes into existence.
+ */
 export const useCreateSession = (
-  opcodeUrl: string | null | undefined,
+  serverUrl: string | null | undefined,
   directory?: string,
   onSuccess?: (session: { id: string }) => void,
 ) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
-      title?: string;
-      agent?: string;
-      model?: string;
-    }) => {
-      if (!client) throw new Error("No client available");
-      return client.createSession(data);
+    mutationFn: async (data: { title?: string }) => {
+      if (serverUrl === undefined || serverUrl === null) throw new Error("The layer the client talks to is not available");
+      if (!directory) throw new Error("No working directory to create the conversation in");
+      const response = await createBffClient(serverUrl).createSession({
+        title: data.title,
+        directory,
+      });
+      return response.session;
     },
     onSuccess: (session) => {
       invalidateSessionListCaches(queryClient);
@@ -184,7 +204,7 @@ export const useCreateSession = (
   });
 };
 
-export type DeleteSessionTarget = string | { id: string; directory?: string; workspaceID?: string };
+export type DeleteSessionTarget = string | { id: string; directory?: string };
 
 const getDeleteSessionTargetId = (target: DeleteSessionTarget) =>
   typeof target === 'string' ? target : target.id;
@@ -192,82 +212,61 @@ const getDeleteSessionTargetId = (target: DeleteSessionTarget) =>
 const getDeleteSessionTargetDirectory = (target: DeleteSessionTarget, fallbackDirectory?: string) =>
   typeof target === 'string' ? fallbackDirectory : target.directory ?? fallbackDirectory;
 
-const getDeleteSessionTargetWorkspaceID = (target: DeleteSessionTarget) =>
-  typeof target === 'string' ? undefined : target.workspaceID;
-
 const getDeleteSessionTargetKey = (target: DeleteSessionTarget, fallbackDirectory?: string) =>
   buildSessionKey(getDeleteSessionTargetDirectory(target, fallbackDirectory), getDeleteSessionTargetId(target));
 
-const isMissingWorkspaceError = (error: unknown) =>
-  error instanceof Error && error.message.includes('Workspace not found:');
-
-const shouldDeleteWorkspaceForSessionDeleteError = (error: unknown) =>
-  isMissingWorkspaceError(error) ||
-  (error instanceof FetchError &&
-    error.statusCode === 500 &&
-    (error.message.includes('Unexpected server error') || error.message === 'Request failed'));
-
-export const useDeleteSession = (opcodeUrl: string | null | undefined, directory?: string | string[]) => {
+/**
+ * Conversations, gone.
+ *
+ * One request per conversation, and the layer works out where each one
+ * lives. The working area an agent files a conversation in is the agent's
+ * own business: when the area is already gone the area is what has to go
+ * instead, and that is the layer's problem now rather than the browser's.
+ *
+ * The working directory is only a fallback - for a conversation that does not
+ * say where it is, and for a target that names no directory of its own.
+ */
+export const useDeleteSession = (
+  serverUrl: string | null | undefined,
+  fallbackDirectory?: string,
+) => {
   const queryClient = useQueryClient();
   const { t } = useI18n();
-  const directories = useMemo(
-    () => (Array.isArray(directory) ? directory : directory ? [directory] : []),
-    [directory],
-  );
-  const primaryDirectory = directories[0];
 
   return useMutation({
     mutationFn: async (sessionIDs: DeleteSessionTarget | DeleteSessionTarget[]) => {
-      if (!opcodeUrl) {
-        throw new Error('OpenCode client not available');
+      if (serverUrl === undefined || serverUrl === null) {
+        throw new Error("The layer the client talks to is not available");
       }
-      
+
       const targets = Array.from(
         new Map(
           (Array.isArray(sessionIDs) ? sessionIDs : [sessionIDs]).map((target) => [
-            getDeleteSessionTargetKey(target, primaryDirectory),
+            getDeleteSessionTargetKey(target, fallbackDirectory),
             target,
           ]),
         ).values(),
       )
-      
-      const results: PromiseSettledResult<void>[] = []
-      const removedWorkspaces = new Set<string>()
-      for (const target of targets) {
-        const workspaceID = getDeleteSessionTargetWorkspaceID(target)
-        if (workspaceID && removedWorkspaces.has(workspaceID)) {
-          results.push({ status: 'fulfilled', value: undefined })
-          continue
-        }
 
-        const client = new OpenCodeClient(
-          opcodeUrl,
-          getDeleteSessionTargetDirectory(target, primaryDirectory),
-        )
+      const results: PromiseSettledResult<void>[] = []
+      for (const target of targets) {
+        const directory = getDeleteSessionTargetDirectory(target, fallbackDirectory)
         try {
-          await client.deleteSession(getDeleteSessionTargetId(target))
-          results.push({ status: 'fulfilled', value: undefined })
+          await createBffClient(serverUrl).deleteSession(
+            getDeleteSessionTargetId(target),
+            directory ? [directory] : [],
+          );
+          results.push({ status: 'fulfilled', value: undefined });
         } catch (reason) {
-          if (workspaceID && shouldDeleteWorkspaceForSessionDeleteError(reason)) {
-            try {
-              await client.deleteWorkspace(workspaceID)
-              removedWorkspaces.add(workspaceID)
-              results.push({ status: 'fulfilled', value: undefined })
-              continue
-            } catch (workspaceReason) {
-              results.push({ status: 'rejected', reason: workspaceReason })
-              continue
-            }
-          }
-          results.push({ status: 'rejected', reason })
+          results.push({ status: 'rejected', reason });
         }
       }
       const failures = results.filter(result => result.status === 'rejected')
-      
+
       if (failures.length > 0) {
         throw new Error(`Failed to delete ${failures.length} session(s)`)
       }
-      
+
       return { deleted: targets.length, results }
     },
     onSuccess: ({ deleted }) => {
@@ -278,7 +277,7 @@ export const useDeleteSession = (opcodeUrl: string | null | undefined, directory
     },
     onSettled: (_data, _error, variables) => {
       invalidateSessionListCaches(queryClient);
-      cleanupSessionPins(queryClient, variables, primaryDirectory);
+      cleanupSessionPins(queryClient, variables, fallbackDirectory);
     },
   });
 };
@@ -305,18 +304,25 @@ const cleanupSessionPins = (
   });
 };
 
-export const useUpdateSession = (opcodeUrl: string | null | undefined, directory?: string) => {
+/**
+ * A conversation's new title.
+ *
+ * The layer is asked, not the agent: it knows where the conversation lives,
+ * so the client does not have to say.
+ */
+export const useUpdateSession = (serverUrl: string | null | undefined) => {
   const queryClient = useQueryClient();
-  const client = useOpenCodeClient(opcodeUrl, directory);
 
   return useMutation({
     mutationFn: async ({ sessionID, title }: { sessionID: string; title: string }) => {
-      if (!client) throw new Error("No client available");
-      return client.updateSession(sessionID, { title });
+      if (serverUrl === undefined || serverUrl === null) throw new Error("The layer the client talks to is not available");
+      const response = await createBffClient(serverUrl).renameSession(sessionID, title);
+      return response.session;
     },
     onSuccess: (_, variables) => {
-      const { sessionID } = variables;
-      queryClient.invalidateQueries({ queryKey: ["opencode", "session", opcodeUrl, sessionID, directory] });
+      queryClient.invalidateQueries({
+        predicate: (query) => sessionQuerySession(query.queryKey) === variables.sessionID,
+      });
       invalidateSessionListCaches(queryClient);
     },
   });
@@ -532,12 +538,19 @@ export const useSendPrompt = (opcodeUrl: string | null | undefined, directory?: 
 const ABORT_RETRY_INTERVAL_MS = 3000;
 const MAX_ABORT_RETRIES = 10;
 
+/**
+ * Stop what a conversation is doing.
+ *
+ * The layer is asked, not the agent. The messages are still the agent's own
+ * - the event stream has not learned the versioned dialect yet - so the
+ * message cache is still filed under the agent's address.
+ */
 export const useAbortSession = (
+  serverUrl: string | null | undefined,
   opcodeUrl: string | null | undefined,
   directory?: string,
   sessionID?: string,
 ) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
   const queryClient = useQueryClient();
   const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
@@ -639,14 +652,17 @@ export const useAbortSession = (
 
   const mutation = useMutation({
     mutationFn: async (targetSessionID: string) => {
-      if (!client) throw new Error("No client available");
-      
+      if (serverUrl === undefined || serverUrl === null) throw new Error("The layer the client talks to is not available");
+
       stopRetrying();
       forceCompleteMessages(targetSessionID);
 
       const attemptAbort = async () => {
         try {
-          await client.abortSession(targetSessionID);
+          await createBffClient(serverUrl).abortSession(
+            targetSessionID,
+            directory ? [directory] : [],
+          );
           stopRetrying();
         } catch {
         void 0

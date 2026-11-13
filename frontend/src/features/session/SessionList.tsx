@@ -16,7 +16,6 @@ import { STORAGE_KEYS } from '@/lib/storage-keys';
 import { API_BASE_URL } from '@/config';
 
 interface SessionListProps {
-  opcodeUrl: string;
   directory?: string;
   directories?: string[];
   createDirectory?: string;
@@ -26,7 +25,6 @@ interface SessionListProps {
 }
 
 export const SessionList = ({
-  opcodeUrl,
   directory,
   directories,
   createDirectory,
@@ -47,9 +45,9 @@ export const SessionList = ({
   [primaryDirectory]);
   const [searchQuery, setSearchQuery] = useState("");
   const { data: sessions, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useSessionsAcrossDirectories(API_BASE_URL, directoriesList, { search: searchQuery, limit: 25 });
-  const deleteSession = useDeleteSession(opcodeUrl, directoriesList);
-  const updateSession = useUpdateSession(opcodeUrl, sessionCreateDirectory);
-  const createSession = useCreateSession(opcodeUrl, sessionCreateDirectory, (newSession) => {
+  const deleteSession = useDeleteSession(API_BASE_URL, primaryDirectory);
+  const updateSession = useUpdateSession(API_BASE_URL);
+  const createSession = useCreateSession(API_BASE_URL, sessionCreateDirectory, (newSession) => {
     onSelectSession(newSession.id);
   });
   const { data: sessionPins } = useSessionPins();
@@ -188,7 +186,7 @@ export const SessionList = ({
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-4 min-h-0 [mask-image:linear-gradient(to_bottom,transparent,black_16px,black)]">
           <Card
             variant="dashed" className="p-6 cursor-pointer hover:bg-accent hover:border-border transition-all"
-            onClick={() => createSession.mutate({ agent: undefined })}
+            onClick={() => createSession.mutate({})}
           >
             <div className="flex flex-col items-center justify-center gap-2 text-center">
               <p className="font-medium">{t('session.list.emptyTitle')}</p>
@@ -202,20 +200,12 @@ export const SessionList = ({
     }
   }
 
-  const getDeleteTarget = (session: { id: string; directory?: string | null; workspaceId?: string | null }): DeleteSessionTarget => {
-    const target: Extract<DeleteSessionTarget, { id: string }> = {
-      id: session.id,
-      directory: session.directory ?? primaryDirectory,
-    };
-    // The list calls it a workspace; the agent calls it a workspace too, but
-    // with its own spelling, and the delete still goes to the agent.
-    if (session.workspaceId) {
-      target.workspaceID = session.workspaceId;
-    }
-    return target;
-  };
+  const getDeleteTarget = (session: { id: string; directory?: string | null }): DeleteSessionTarget => ({
+    id: session.id,
+    directory: session.directory ?? primaryDirectory,
+  });
 
-  const handleDelete = (session: { id: string; directory?: string | null; workspaceId?: string | null }, e: React.MouseEvent) => {
+  const handleDelete = (session: { id: string; directory?: string | null }, e: React.MouseEvent) => {
     e.stopPropagation();
     setSessionToDelete(getDeleteTarget(session));
     setDeleteDialogOpen(true);
@@ -350,7 +340,7 @@ export const SessionList = ({
               title={t('session.list.newSession')}
               disabled={!sessionCreateDirectory || createSession.isPending}
               onClick={() => {
-                createSession.mutate({ agent: undefined });
+                createSession.mutate({});
               }}
             >
               <Plus className="size-4" />

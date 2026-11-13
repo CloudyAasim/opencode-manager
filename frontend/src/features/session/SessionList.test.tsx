@@ -108,7 +108,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a', '/w/b', '/w/c']}
         onSelectSession={vi.fn()}
       />,
@@ -135,9 +134,9 @@ describe('SessionList', () => {
       // is three sessions, not one.
       const deleted = deleteSessionMock.mock.calls[0]![0] as Array<{ directory: string }>
       expect([...deleted].sort((a, b) => a.directory.localeCompare(b.directory))).toEqual([
-        { id: 'ses_same', directory: '/w/a', workspaceID: 'wrk_a' },
-        { id: 'ses_same', directory: '/w/b', workspaceID: 'wrk_b' },
-        { id: 'ses_same', directory: '/w/c', workspaceID: 'wrk_c' },
+        { id: 'ses_same', directory: '/w/a' },
+        { id: 'ses_same', directory: '/w/b' },
+        { id: 'ses_same', directory: '/w/c' },
       ])
     })
   })
@@ -152,7 +151,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a', '/w/a', '/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -172,7 +170,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a', '/w/b']}
         createDirectory="/w/b"
         onSelectSession={vi.fn()}
@@ -190,7 +187,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -210,7 +206,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -234,7 +229,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -258,7 +252,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -278,7 +271,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -294,7 +286,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -315,7 +306,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -345,7 +335,6 @@ describe('SessionList', () => {
     try {
       render(
         <SessionList
-          opcodeUrl="/api/opencode"
           directories={['/w/a']}
           onSelectSession={vi.fn()}
         />,
@@ -377,7 +366,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -397,7 +385,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -418,7 +405,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -445,7 +431,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -463,7 +448,6 @@ describe('SessionList', () => {
 
     render(
       <SessionList
-        opcodeUrl="/api/opencode"
         directories={['/w/a']}
         onSelectSession={vi.fn()}
       />,
@@ -521,7 +505,6 @@ describe('SessionList', () => {
     try {
       const rendered = render(
         <SessionList
-          opcodeUrl="/api/opencode"
           directories={['/w/a']}
           onSelectSession={vi.fn()}
         />,

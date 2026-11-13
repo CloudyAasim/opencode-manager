@@ -232,6 +232,23 @@ export function sessionListQueryKey(
   return ['bff', 'sessions', serverUrl, directories, options]
 }
 
+/**
+ * The conversation a session query belongs to, or null when the key is not one.
+ *
+ * Read off the key that `sessionQueryKey` builds, the same way
+ * `messagesQuerySession` reads its own - so the two cannot drift apart.
+ */
+export function sessionQuerySession(key: readonly unknown[]): string | null {
+  const probe = sessionQueryKey(PROBE, PROBE, PROBE)
+  const fixedSegments = probe.length - 3
+  if (key.length < probe.length) return null
+  for (let i = 0; i < fixedSegments; i++) {
+    if (key[i] !== probe[i]) return null
+  }
+  const sessionID = key[fixedSegments + 1]
+  return typeof sessionID === 'string' ? sessionID : null
+}
+
 /** Whether a query key belongs to a session list. */
 export function isSessionListQueryKey(key: readonly unknown[]): boolean {
   return key[0] === 'bff' && key[1] === 'sessions'

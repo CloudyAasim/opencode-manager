@@ -82,6 +82,7 @@ function bffSessionShape(session: SessionSummary) {
     updatedAt: updated,
     archived: false,
     status: 'idle',
+    revert: null,
   }
 }
 
@@ -148,11 +149,58 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
 
   // The layer the client talks to for its list. It is asked once for every
   // directory, and it answers with the list and one cursor per directory.
+  //
+  // Creating a conversation goes through the same layer: it is the layer that
+  // knows who asked for it, and the client says only which working directory
+  // it is created in.
   await page.route('**/api/bff/sessions', async (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as { title?: string; directory?: string } | null
+      const directory = body?.directory ?? DEFAULT_REPO.fullPath
+      const title = body?.title ?? 'Untitled Session'
+      const id = `ses_created_${state.createdSessions.length + 1}`
+      state.createdSessions.push(id)
+      state.sessionsByDirectory[directory] = [
+        ...(state.sessionsByDirectory[directory] ?? []),
+        { id, directory, title },
+      ]
+      return json(route, { session: bffSessionShape({ id, directory, title }) })
+    }
+
     if (state.latency.sessionsMs) await sleep(state.latency.sessionsMs)
     const directories = new URL(route.request().url()).searchParams.getAll('directories')
     const sessions = directories.flatMap((directory) => state.sessionsByDirectory[directory] ?? [])
     return json(route, { sessions: sessions.map(bffSessionShape), cursors: {} })
+  })
+
+  // One conversation, through the same layer. The client names the
+  // conversation; the layer works out where it lives.
+  await page.route(/.*\/api\/bff\/sessions\/[^/?]+(\/abort)?(\?.*)?$/, async (route) => {
+    const request = route.request()
+    const method = request.method()
+    const pathname = new URL(request.url()).pathname
+    const id = /\/api\/bff\/sessions\/([^/?]+)/.exec(pathname)?.[1] ?? ''
+    const all = Object.values(state.sessionsByDirectory).flat()
+    const match = all.find((session) => session.id === id)
+
+    if (method === 'POST') return json(route, { accepted: true })
+    if (method === 'DELETE') {
+      for (const [directory, sessions] of Object.entries(state.sessionsByDirectory)) {
+        state.sessionsByDirectory[directory] = sessions.filter((session) => session.id !== id)
+      }
+      return json(route, { deleted: true, id })
+    }
+    if (method === 'PATCH') {
+      const body = request.postDataJSON() as { title?: string } | null
+      if (match && body?.title) match.title = body.title
+      return json(route, { session: bffSessionShape(match ?? { id, directory: DEFAULT_REPO.fullPath }) })
+    }
+
+    if (state.latency.sessionMs) await sleep(state.latency.sessionMs)
+    if (state.sessionDetailStatus !== 200) {
+      return json(route, { error: { code: 'not_found', message: 'No session is known under that id' } }, state.sessionDetailStatus)
+    }
+    return json(route, { session: bffSessionShape(match ?? { id, directory: DEFAULT_REPO.fullPath }) })
   })
 
   // The same layer answers for what the agent is waiting for: both kinds in
@@ -174,15 +222,32 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
   // itself. It must not do that any more: merging pages and keeping a cursor
   // per directory is the server's job, and a mock that quietly answered the
   // old call would hide a client that went back to doing it.
-  //
-  // Only the reading of it. Creating a session still goes to the agent - that
-  // is not the list, and it did not move.
   await page.route(/.*\/api\/opencode\/(api\/)?session(\?.*)?$/, (route) => {
     if (route.request().method() !== 'GET') return route.fallback()
     throw new Error('The client asked the agent for its session list; it must ask the layer instead')
   })
 
+  // Creating a conversation goes through the layer too: it is the layer that
+  // knows who asked for it. The agent's own door is closed for that.
+  await page.route(/.*\/api\/opencode\/(api\/)?session(\?.*)?$/, (route) => {
+    if (route.request().method() === 'GET') return route.fallback()
+    throw new Error('The client asked the agent to create a conversation; it must ask the layer instead')
+  })
+
+  // So do renaming it, deleting it and stopping it: the layer knows where the
+  // conversation lives, and the client does not.
+  await page.route(/.*\/api\/opencode\/session\/[^/?]+(\?.*)?$/, (route) => {
+    const method = route.request().method()
+    if (method === 'GET') return route.fallback()
+    throw new Error('The client asked the agent to change a conversation; it must ask the layer instead')
+  })
+
+  await page.route(/.*\/api\/opencode\/session\/[^/?]+\/abort(\?.*)?$/, (route) => {
+    throw new Error('The client asked the agent to stop a conversation; it must ask the layer instead')
+  })
+
   await page.route(/.*\/api\/opencode\/session\/[^/?]+(\?.*)?$/, async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
     if (state.latency.sessionMs) await sleep(state.latency.sessionMs)
     if (state.sessionDetailStatus !== 200) {
       return json(route, { error: 'not found' }, state.sessionDetailStatus)

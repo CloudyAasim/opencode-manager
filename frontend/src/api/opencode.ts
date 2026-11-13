@@ -2,7 +2,6 @@ import type { paths } from './opencode-types'
 import { fetchWrapper, fetchWrapperVoid } from './fetchWrapper'
 
 type SessionResponse = paths['/session/{sessionID}']['get']['responses']['200']['content']['application/json']
-type CreateSessionRequest = NonNullable<paths['/session']['post']['requestBody']>['content']['application/json']
 type MessageListResponse = paths['/session/{sessionID}/message']['get']['responses']['200']['content']['application/json']
 type SendPromptAsyncRequest = NonNullable<paths['/session/{sessionID}/prompt_async']['post']['requestBody']>['content']['application/json']
 type ConfigResponse = paths['/config']['get']['responses']['200']['content']['application/json']
@@ -34,41 +33,17 @@ export class OpenCodeClient {
     return { ...params, directory: this.directory }
   }
 
+  /**
+   * One conversation.
+   *
+   * The last thing on this client that asks the agent about a conversation:
+   * the detail of a conversation and the event stream about it are filed in
+   * the same cache slot, and the event stream still speaks the agent's own
+   * dialect. It moves when the event stream does.
+   */
   async getSession(sessionID: string) {
     return fetchWrapper<SessionResponse>(`${this.baseURL}/session/${sessionID}`, {
       params: this.getParams(),
-    })
-  }
-
-  async createSession(data: CreateSessionRequest) {
-    return fetchWrapper<SessionResponse>(`${this.baseURL}/session`, {
-      method: 'POST',
-      params: this.getParams(),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-  }
-
-  async deleteSession(sessionID: string) {
-    return fetchWrapperVoid(`${this.baseURL}/session/${sessionID}`, {
-      method: 'DELETE',
-      params: this.getParams(),
-    })
-  }
-
-  async deleteWorkspace(workspaceID: string) {
-    return fetchWrapperVoid(`${this.baseURL}/experimental/workspace/${workspaceID}`, {
-      method: 'DELETE',
-      params: this.getParams(),
-    })
-  }
-
-  async updateSession(sessionID: string, data: { title?: string }) {
-    return fetchWrapper(`${this.baseURL}/session/${sessionID}`, {
-      method: 'PATCH',
-      params: this.getParams(),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
     })
   }
 
@@ -78,13 +53,6 @@ export class OpenCodeClient {
       params: this.getParams(),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messageID }),
-    })
-  }
-
-  async abortSession(sessionID: string) {
-    return fetchWrapper(`${this.baseURL}/session/${sessionID}/abort`, {
-      method: 'POST',
-      params: this.getParams(),
     })
   }
 

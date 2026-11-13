@@ -30,6 +30,33 @@ function formatDetails(details: unknown): string | undefined {
   return undefined
 }
 
+/**
+ * The error the server said, in whichever envelope it said it in.
+ *
+ * There are two of them. The older one puts the message in `error`; the
+ * versioned API's puts an object with a code and a message in it. A client
+ * that only understood one of them would show the other as
+ * "[object Object]", which is not an answer to anything.
+ */
+function readError(data: ApiErrorResponse & { message?: string; data?: { message?: unknown } }) {
+  const nested = (data as { error?: unknown }).error
+  const openCodeMessage = typeof data.data?.message === 'string' ? data.data.message : undefined
+
+  if (nested && typeof nested === 'object') {
+    const record = nested as { code?: unknown; message?: unknown }
+    return {
+      message: typeof record.message === 'string' ? record.message : 'Request failed',
+      code: typeof record.code === 'string' ? record.code : data.code,
+    }
+  }
+
+  return {
+    message:
+      typeof nested === 'string' ? nested : data.message || openCodeMessage || 'Request failed',
+    code: data.code,
+  }
+}
+
 async function handleResponse(response: Response): Promise<never> {
   const text = await response.text().catch(() => '')
   const data: ApiErrorResponse = (() => {
@@ -40,15 +67,12 @@ async function handleResponse(response: Response): Promise<never> {
       return { error: text }
     }
   })()
-  const errorData = data as ApiErrorResponse & { message?: string; data?: { message?: unknown } }
-  const openCodeMessage = typeof errorData.data?.message === 'string'
-    ? errorData.data.message
-    : undefined
   const detail = data.detail || formatDetails(data.details)
+  const error = readError(data as ApiErrorResponse & { message?: string; data?: { message?: unknown } })
   throw new FetchError(
-    data.error || errorData.message || openCodeMessage || 'Request failed',
+    error.message,
     response.status,
-    data.code,
+    error.code,
     detail,
     {
       details: data.details,

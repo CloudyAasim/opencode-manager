@@ -45,6 +45,28 @@ export interface BffPendingResponse {
   questions: PendingQuestion[]
 }
 
+/**
+ * One conversation, as the layer answers about it.
+ *
+ * A `Session` is the versioned API's `Session` - there is one truth about
+ * what a session is. What this layer adds is the part that is its own: the
+ * client does not have to say where the conversation lives.
+ */
+export interface BffSessionResponse {
+  session: Session
+}
+
+/** A conversation that is gone. */
+export interface BffDeletedResponse {
+  deleted: true
+  id: string
+}
+
+/** Something the agent has taken on. */
+export interface BffAcceptedResponse {
+  accepted: true
+}
+
 export class BffClient {
   /** The address of the server this layer is on. */
   private baseURL: string
@@ -84,6 +106,83 @@ export class BffClient {
     }
     return fetchWrapper<BffPendingResponse>(
       `${this.baseURL}${BFF_PENDING_ENDPOINT}?${params.toString()}`,
+    )
+  }
+
+  /**
+   * One conversation.
+   *
+   * The client names the conversation and, at most, the working directories
+   * it works in. The layer works out where the conversation lives - the
+   * ledger knows, or the agent knows, or the caller's own directories know -
+   * so the client does not have to keep a map of conversations to
+   * directories, which was one more thing for it to get wrong.
+   */
+  async getSession(sessionId: string, directories: string[] = []): Promise<BffSessionResponse> {
+    return fetchWrapper<BffSessionResponse>(this.sessionUrl(sessionId, directories))
+  }
+
+  /**
+   * A new conversation, in a named working directory.
+   */
+  async createSession(input: { title?: string; directory: string }): Promise<BffSessionResponse> {
+    return fetchWrapper<BffSessionResponse>(`${this.baseURL}${BFF_SESSIONS_ENDPOINT}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+  }
+
+  /**
+   * A conversation's new title.
+   */
+  async renameSession(
+    sessionId: string,
+    title: string,
+    directories: string[] = [],
+  ): Promise<BffSessionResponse> {
+    return fetchWrapper<BffSessionResponse>(this.sessionUrl(sessionId, directories), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    })
+  }
+
+  /**
+   * A conversation, gone.
+   */
+  async deleteSession(sessionId: string, directories: string[] = []): Promise<BffDeletedResponse> {
+    return fetchWrapper<BffDeletedResponse>(this.sessionUrl(sessionId, directories), {
+      method: 'DELETE',
+    })
+  }
+
+  /**
+   * Stop what the conversation is doing.
+   */
+  async abortSession(sessionId: string, directories: string[] = []): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(this.sessionUrl(sessionId, directories, 'abort'), {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * The address of one conversation.
+   *
+   * The directories are a fallback, not the answer: the layer finds the
+   * conversation without them whenever the ledger or the agent knows where
+   * it lives.
+   */
+  private sessionUrl(sessionId: string, directories: string[], action?: string): string {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    const query = params.toString()
+    const suffix = action ? `/${action}` : ''
+    return (
+      `${this.baseURL}${BFF_SESSIONS_ENDPOINT}/${encodeURIComponent(sessionId)}${suffix}` +
+      (query ? `?${query}` : '')
     )
   }
 }
