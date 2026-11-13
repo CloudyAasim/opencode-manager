@@ -307,16 +307,98 @@ describe('给前端的那一层', () => {
     ).toEqual([])
   })
 
+  it('前端不许再自己去问 agent 的对话面', () => {
+    // The conversation is this layer's job, for the same reason the list is:
+    // the layer knows which agent is behind the conversation, where it lives
+    // and whose it is. A client that asks the agent itself has to know all
+    // three, and it keeps the agent's words while the layer answers in the
+    // versioned ones - so one cache slot ends up holding two dialects of the
+    // same conversation.
+    //
+    // The names are what makes this checkable: the layer's client has methods
+    // of its own, so only the agent's client is looked at by name.
+    const AGENT_CLIENT = path.join(FRONTEND_DIR, 'api', 'opencode.ts')
+    const LAYER_CLIENT = path.join(FRONTEND_DIR, 'api', 'bff.ts')
+    const AGENT_ONLY = [
+      'getSession',
+      'listMessages',
+      'sendPrompt',
+      'sendPromptAsync',
+      'revertMessage',
+      'unrevertSession',
+    ]
+    const offenders: string[] = []
+
+    for (const match of read(AGENT_CLIENT).matchAll(
+      new RegExp(`\\basync\\s+(${AGENT_ONLY.join('|')})\\s*\\(`, 'g'),
+    )) {
+      offenders.push(`api/opencode.ts 定义了 ${match[1]}`)
+    }
+    for (const file of frontendSources()) {
+      const source = read(file)
+      for (const match of source.matchAll(
+        new RegExp(`\\basync\\s+(${AGENT_ONLY.join('|')})\\s*\\(`, 'g'),
+      )) {
+        // The layer's own client is allowed to have these names: it is the
+        // one the client is supposed to be talking to.
+        if (file === LAYER_CLIENT) continue
+        offenders.push(`${path.relative(repoRoot, file)} 定义了 ${match[1]}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在自己去问 agent 的对话面：${offenders.join(', ')}`,
+        '前端要问这一层，不要问 agent。',
+        '自己问的话，同一个缓存格子会同时装两种方言：agent 的话和版本化的话。',
+      ].join('\n'),
+    ).toEqual([])
+
+    // The gate above says the client may not ask the agent. It says nothing
+    // about whether there is anything else to ask - so check that the layer's
+    // client really does have the conversation, or the gate is guarding an
+    // empty room.
+    const layer = read(LAYER_CLIENT)
+    for (const method of ['listMessages', 'sendPrompt', 'revertSession']) {
+      expect(layer, `这一层的客户端没有 ${method}`).toMatch(new RegExp(`\\basync\\s+${method}\\s*\\(`))
+    }
+  })
+
+  it('前端不许自己去够 agent 的对话路径', () => {
+    // The names of the methods are one way in; the paths are the other. A
+    // client that builds the agent's conversation path by hand is asking the
+    // agent about the conversation, whatever the method that does it is
+    // called.
+    //
+    // The agent's own type file is the one exception: it describes what the
+    // agent's API looks like so the client can be written against it, and
+    // describing a door is not walking through it.
+    const AGENT_TYPES = path.join(FRONTEND_DIR, 'api', 'opencode-types.ts')
+    const AGENT_CONVERSATION_PATH = /\/session\/[^`'"\s]*?\/(?:message|messages|prompt|prompt_async|revert)\b/g
+    const offenders: string[] = []
+
+    for (const file of frontendSources()) {
+      if (file === AGENT_TYPES) continue
+      const source = read(file)
+      for (const match of source.matchAll(AGENT_CONVERSATION_PATH)) {
+        offenders.push(`${path.relative(repoRoot, file)} 够到了 ${match[0]}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在自己去够 agent 的对话路径：${offenders.join(', ')}`,
+        '前端要问这一层，不要问 agent。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
   it('这一层必须把会话收窄到调用者', () => {
     // One conversation is as much a conversation as a list of them is: an
     // agent knows about conversations, not about people. Without this, one
     // conversation is handed to whoever asked for it.
-    //
-    // The methods that read or change a conversation are all of them now, and
-    // not only the four that create and rename and remove and stop: reading
-    // the messages of a conversation and sending words to it are the same
-    // kind of thing, and a file that does one of those without narrowing it
-    // to the caller hands a conversation to whoever asked.
     const withSession = bffFiles().filter((file) =>
       /\b(getSession|renameSession|deleteSession|abortSession|listMessages|sendPrompt|revertSession)\s*\(/.test(read(file)),
     )
