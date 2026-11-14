@@ -18,8 +18,8 @@ vi.mock('@/api/settings', () => ({
   },
 }))
 
-vi.mock('@/api/opencode', () => ({
-  OpenCodeClient: vi.fn(() => ({
+vi.mock('@/api/bff', () => ({
+  createBffClient: vi.fn(() => ({
     sendCommand: mocks.sendCommand,
   })),
 }))
@@ -150,7 +150,7 @@ describe('RepoSkillsDialog', () => {
   })
 
   describe('load functionality', () => {
-    it('makes skill cards clickable when sessionId and opcodeUrl are provided', async () => {
+    it('makes skill cards clickable when sessionId is provided', async () => {
       mocks.listManagedSkills.mockResolvedValue(mockSkills)
       mocks.sendCommand.mockResolvedValue(undefined)
 
@@ -163,7 +163,6 @@ describe('RepoSkillsDialog', () => {
           onOpenChange={onOpenChange}
           repoId={1}
           sessionId="test-session"
-          opcodeUrl="http://localhost:5551"
           directory="/test/repo"
           onSkillLoaded={onSkillLoaded}
         />,
@@ -212,7 +211,6 @@ describe('RepoSkillsDialog', () => {
           onOpenChange={onOpenChange}
           repoId={1}
           sessionId="test-session"
-          opcodeUrl="http://localhost:5551"
           directory="/test/repo"
           onSkillLoaded={onSkillLoaded}
         />,
@@ -228,10 +226,11 @@ describe('RepoSkillsDialog', () => {
 
       expect(onOpenChange).toHaveBeenCalledWith(false)
       expect(onSkillLoaded).toHaveBeenCalledWith(mockSkills[0])
-      expect(mocks.sendCommand).toHaveBeenCalledWith('test-session', {
-        command: 'test-skill',
-        arguments: '',
-      })
+      expect(mocks.sendCommand).toHaveBeenCalledWith(
+        'test-session',
+        { command: 'test-skill', arguments: '', workingMode: null, model: null },
+        ['/test/repo'],
+      )
     })
 
     it('shows toast error on sendCommand failure', async () => {
@@ -248,7 +247,6 @@ describe('RepoSkillsDialog', () => {
           onOpenChange={onOpenChange}
           repoId={1}
           sessionId="test-session"
-          opcodeUrl="http://localhost:5551"
           directory="/test/repo"
         />,
         { wrapper: createWrapper() }

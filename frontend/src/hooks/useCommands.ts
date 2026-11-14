@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { currentLocale, useI18n } from '@/lib/i18n'
-import { createOpenCodeClient } from '@/api/opencode'
-import type { components } from '@/api/opencode-types'
+import { createBffClient } from '@/api/bff'
+import type { Command } from '@opencode-manager/shared/api/v1'
 
-type CommandType = components['schemas']['Command']
+type CommandType = Command
 
 function sortCommandsByName(commands: CommandType[]): CommandType[] {
   return [...commands].sort((a, b) => a.name.localeCompare(b.name))
@@ -27,150 +27,168 @@ function builtinCommands(t: (key: string) => string): CommandType[] {
     name: 'help',
     description: B('help'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'init',
     description: B('init'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'new',
     description: B('new'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'clear',
     description: B('newAlias'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'sessions',
     description: B('sessions'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'resume',
     description: B('sessionsAlias'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'continue',
     description: B('sessionsAlias2'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'models',
     description: B('models'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'themes',
     description: B('themes'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'share',
     description: B('share'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'unshare',
     description: B('unshare'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'export',
     description: B('export'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'compact',
     description: B('compact'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'summarize',
     description: B('compactAlias'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'undo',
     description: B('undo'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'redo',
     description: B('redo'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'details',
     description: B('details'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   },
   {
     name: 'editor',
     description: B('editor'),
     template: '',
-    agent: '',
-    model: '',
+    workingMode: null,
+    model: null,
+    subtask: false,
     hints: []
   }
   ]
 }
 
-export function useCommands(opcodeUrl: string | null) {
+export function useCommands(serverUrl: string | null) {
   const { t } = useI18n()
   const locale = currentLocale()
   // `t` changes identity when the language does, so the list follows. What
@@ -181,17 +199,16 @@ export function useCommands(opcodeUrl: string | null) {
   const { data: commands, isLoading: loading, error } = useQuery({
     // locale is part of the key: these descriptions are translated, so a
     // cached list from the previous language would be rendered as-is
-    queryKey: ['opencode', 'commands', opcodeUrl, locale],
+    queryKey: ['bff', 'commands', serverUrl, locale],
     queryFn: async () => {
-      const client = createOpenCodeClient(opcodeUrl!)
-      const commandList = await client.listCommands()
-      const allCommands = [...builtins, ...commandList]
+      const response = await createBffClient(serverUrl!).listCommands()
+      const allCommands = [...builtins, ...response.commands]
       const uniqueCommands = allCommands.filter((command, index, self) =>
         index === self.findIndex((c) => c.name === command.name)
       )
       return sortCommandsByName(uniqueCommands)
     },
-    enabled: !!opcodeUrl,
+    enabled: !!serverUrl,
     initialData: sortedBuiltins,
   })
 

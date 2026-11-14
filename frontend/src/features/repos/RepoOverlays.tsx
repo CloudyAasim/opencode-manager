@@ -17,7 +17,6 @@ import type { FileInfo } from '@/types/files'
 // per page: which repo, which directory, which branch.
 interface RepoOverlaysProps {
   repoId: number
-  opcodeUrl: string | null | undefined
   directory: string | undefined
   basePath: string | undefined
   repoName: string
@@ -32,7 +31,6 @@ interface RepoOverlaysProps {
 
 export function RepoOverlays({
   repoId,
-  opcodeUrl,
   directory,
   basePath,
   repoName,
@@ -62,13 +60,12 @@ export function RepoOverlays({
         initialSelectedFile={initialSelectedFile}
         onFileSelect={onFileSelect}
       />
-      {sessionId && opcodeUrl ? (
+      {sessionId ? (
         <RepoSkillsDialog
           open={skillsOpen}
           onOpenChange={setSkillsOpen}
           repoId={repoId}
           sessionId={sessionId}
-          opcodeUrl={opcodeUrl}
           directory={directory}
           onSkillLoaded={onSkillLoaded}
         />

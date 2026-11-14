@@ -11,7 +11,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { API_BASE_URL } from '@/config'
 
 interface EditableUserMessageProps {
-  opcodeUrl: string
   sessionId: string
   directory?: string
   content: string
@@ -21,7 +20,6 @@ interface EditableUserMessageProps {
 }
 
 export const EditableUserMessage = memo(function EditableUserMessage({
-  opcodeUrl,
   sessionId,
   directory,
   content,
@@ -35,7 +33,7 @@ export const EditableUserMessage = memo(function EditableUserMessage({
   const { t } = useI18n()
   const refreshMessage = useRefreshMessage({ serverUrl: API_BASE_URL, sessionId, directory })
   const setIsEditingMessage = useUIState((state) => state.setIsEditingMessage)
-  const sessionAgent = useSessionAgent(API_BASE_URL, opcodeUrl, sessionId, directory)
+  const sessionAgent = useSessionAgent(API_BASE_URL, sessionId, directory)
   const currentMode = sessionAgent.agent
 
   useEffect(() => {

@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useConfig } from './useOpenCode'
-import { useOpenCodeClient } from './useOpenCode'
+import { useAgentDefaults } from './useOpenCode'
 import { useModelStore, modelExists, type ModelSelection } from '@/stores/modelStore'
 import { showErrorToast } from '@/lib/error-toast'
 import { stopQueries } from '@/lib/queryInvalidation'
@@ -28,18 +27,18 @@ const isSameModel = (left: ModelSelection, right: ModelSelection) => (
 )
 
 export function useModelSelection(
+  serverUrl: string | null | undefined,
   opcodeUrl: string | null | undefined,
   directory?: string
 ): UseModelSelectionResult {
-  const { data: config } = useConfig(opcodeUrl, directory)
-  const client = useOpenCodeClient(opcodeUrl, directory)
+  const { data: defaults } = useAgentDefaults(serverUrl, directory)
   const queryClient = useQueryClient()
   const { t } = useI18n()
-  
+
   const { data: providersData } = useQuery({
     queryKey: ['opencode', 'providers', opcodeUrl, directory],
     queryFn: () => getProviders(directory),
-    enabled: !!client,
+    enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 30000,
   })
 
@@ -55,7 +54,7 @@ export function useModelSelection(
   const { data: modelState, isLoading: isModelStateLoading } = useQuery({
     queryKey: [...modelStateQueryKey, opcodeUrl, directory],
     queryFn: () => getOpenCodeModelState(),
-    enabled: !!client,
+    enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 30000,
     placeholderData: keepPreviousData,
   })
@@ -136,10 +135,17 @@ export function useModelSelection(
     })
     .find((value): value is string => Boolean(value))
 
+  // The model the agent defaults to, in the words the model store keeps: one
+  // line of "provider/model". The layer says it in two fields, and this is
+  // where the two become one line again.
+  const configuredModelString = defaults?.model
+    ? `${defaults.model.providerId}/${defaults.model.modelId}`
+    : undefined
+
   useEffect(() => {
     if (isModelStateLoading) return
-    validateAndSyncModel(config?.model, providersData?.providers, modelState?.recent ?? [], defaultModelString)
-  }, [config?.model, isModelStateLoading, modelState?.recent, defaultModelString, providersData, validateAndSyncModel])
+    validateAndSyncModel(configuredModelString, providersData?.providers, modelState?.recent ?? [], defaultModelString)
+  }, [configuredModelString, isModelStateLoading, modelState?.recent, defaultModelString, providersData, validateAndSyncModel])
 
   useEffect(() => {
     if (modelState) {

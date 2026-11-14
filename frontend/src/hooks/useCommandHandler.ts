@@ -1,15 +1,15 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createOpenCodeClient } from '@/api/opencode'
+import { createBffClient } from '@/api/bff'
 import { useCreateSession } from '@/hooks/useOpenCode'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
 import { messageOf } from '@/lib/messageOf'
-import type { components } from '@/api/opencode-types'
+import type { Command } from '@opencode-manager/shared/api/v1'
 import { useSessionStatus } from '@/stores/sessionStatusStore'
 
-type CommandType = components['schemas']['Command']
+type CommandType = Command
 
 interface CommandHandlerProps {
   /**
@@ -45,7 +45,7 @@ export function useCommandHandler({
   const navigate = useNavigate()
   const { t } = useI18n()
   const createSession = useCreateSession(serverUrl, directory)
-  const { model, modelString } = useModelSelection(opcodeUrl, directory)
+  const { model } = useModelSelection(serverUrl, opcodeUrl, directory)
   const setSessionStatus = useSessionStatus((state) => state.setStatus)
   const [loading, setLoading] = useState(false)
 
@@ -53,35 +53,40 @@ export function useCommandHandler({
     if (!opcodeUrl) return
 
     setLoading(true)
-    
+
     try {
-      const client = createOpenCodeClient(opcodeUrl, directory)
-      
+      const client = createBffClient(serverUrl)
+      const directories = directory ? [directory] : []
+      // The model is the versioned API's: two fields, not one line of text.
+      const promptModel = model
+        ? { providerId: model.providerID, modelId: model.modelID }
+        : null
+
       switch (command.name) {
         case 'sessions':
         case 'resume':
         case 'continue':
           onShowSessionsDialog?.()
           break
-          
+
         case 'models':
           onShowModelsDialog?.()
           break
-          
+
         case 'themes': {
           await client.sendCommand(sessionID, {
             command: command.name,
             arguments: args,
-            agent: currentAgent,
-            model: modelString || undefined
-          })
+            workingMode: currentAgent ?? null,
+            model: promptModel,
+          }, directories)
           break
         }
-          
+
         case 'help':
           onShowHelpDialog?.()
           break
-          
+
         case 'new':
         case 'clear': {
           try {
@@ -102,14 +107,14 @@ export function useCommandHandler({
           }
           break
         }
-          
+
         case 'details':
           if (onToggleDetails) {
             const expanded = onToggleDetails()
             showToast.success(expanded ? 'Tool details expanded' : 'Tool details collapsed')
           }
           break
-          
+
         case 'export':
           if (onExportSession) {
             onExportSession()
@@ -129,12 +134,12 @@ export function useCommandHandler({
 
           await client.summarizeSession(
             sessionID,
-            model.providerID,
-            model.modelID
+            { providerId: model.providerID, modelId: model.modelID },
+            directories,
           )
           break
         }
-          
+
         case 'share':
         case 'unshare':
         case 'undo':
@@ -144,9 +149,9 @@ export function useCommandHandler({
           await client.sendCommand(sessionID, {
             command: command.name,
             arguments: args,
-            agent: currentAgent,
-            model: modelString || undefined
-          })
+            workingMode: currentAgent ?? null,
+            model: promptModel,
+          }, directories)
           break
         }
 
@@ -154,9 +159,9 @@ export function useCommandHandler({
           await client.sendCommand(sessionID, {
             command: command.name,
             arguments: args,
-            agent: currentAgent,
-            model: modelString || undefined
-          })
+            workingMode: currentAgent ?? null,
+            model: promptModel,
+          }, directories)
         }
       }
     } catch (error) {
@@ -165,7 +170,7 @@ export function useCommandHandler({
     } finally {
       setLoading(false)
     }
-  }, [t, sessionID, opcodeUrl, directory, onShowSessionsDialog, onShowModelsDialog, onShowHelpDialog, onToggleDetails, onExportSession, createSession, navigate, model, modelString, currentAgent, setSessionStatus])
+  }, [t, sessionID, serverUrl, opcodeUrl, directory, onShowSessionsDialog, onShowModelsDialog, onShowHelpDialog, onToggleDetails, onExportSession, createSession, navigate, model, currentAgent, setSessionStatus])
 
   return {
     executeCommand,

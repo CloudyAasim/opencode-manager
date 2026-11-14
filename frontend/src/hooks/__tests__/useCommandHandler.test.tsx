@@ -8,8 +8,8 @@ const mocks = vi.hoisted(() => ({
   setStatus: vi.fn(),
 }))
 
-vi.mock('@/api/opencode', () => ({
-  createOpenCodeClient: vi.fn().mockImplementation(() => ({
+vi.mock('@/api/bff', () => ({
+  createBffClient: vi.fn().mockImplementation(() => ({
     sendCommand: mocks.sendCommand,
     summarizeSession: mocks.summarizeSession,
   })),
@@ -58,19 +58,23 @@ describe('useCommandHandler', () => {
   })
 
   it('themes command sends command', async () => {
-    mocks.sendCommand.mockResolvedValue({ info: { id: 'asm_1' }, parts: [] })
+    mocks.sendCommand.mockResolvedValue({ accepted: true })
 
     const { result } = renderHook(() => useCommandHandler(baseProps))
     const themesCommand = { name: 'themes' as const }
 
     await result.current.executeCommand(themesCommand, '')
 
-    expect(mocks.sendCommand).toHaveBeenCalledWith('test-session-id', {
-      command: 'themes',
-      arguments: '',
-      agent: 'test-agent',
-      model: 'test-provider/test-model',
-    })
+    expect(mocks.sendCommand).toHaveBeenCalledWith(
+      'test-session-id',
+      {
+        command: 'themes',
+        arguments: '',
+        workingMode: 'test-agent',
+        model: { providerId: 'test-provider', modelId: 'test-model' },
+      },
+      ['/test/dir'],
+    )
   })
 
   it('compact command summarizes session', async () => {
@@ -83,25 +87,29 @@ describe('useCommandHandler', () => {
 
     expect(mocks.summarizeSession).toHaveBeenCalledWith(
       'test-session-id',
-      'test-provider',
-      'test-model'
+      { providerId: 'test-provider', modelId: 'test-model' },
+      ['/test/dir'],
     )
   })
 
   it('unknown command sends command', async () => {
-    mocks.sendCommand.mockResolvedValue({ info: { id: 'asm_1' }, parts: [] })
+    mocks.sendCommand.mockResolvedValue({ accepted: true })
 
     const { result } = renderHook(() => useCommandHandler(baseProps))
     const unknownCommand = { name: 'myskill' as const }
 
     await result.current.executeCommand(unknownCommand, '')
 
-    expect(mocks.sendCommand).toHaveBeenCalledWith('test-session-id', {
-      command: 'myskill',
-      arguments: '',
-      agent: 'test-agent',
-      model: 'test-provider/test-model',
-    })
+    expect(mocks.sendCommand).toHaveBeenCalledWith(
+      'test-session-id',
+      {
+        command: 'myskill',
+        arguments: '',
+        workingMode: 'test-agent',
+        model: { providerId: 'test-provider', modelId: 'test-model' },
+      },
+      ['/test/dir'],
+    )
   })
 
   it('sessions command opens sessions dialog without sending command', async () => {

@@ -43,7 +43,6 @@ vi.mock('@/features/source-control', () => ({
 
 const BASE = {
   repoId: 7,
-  opcodeUrl: 'http://localhost:5551',
   directory: '/repo',
   basePath: '/repo',
   repoName: 'demo',
@@ -91,7 +90,7 @@ describe('RepoOverlays', () => {
     render(<RepoOverlays {...BASE} sessionId="ses_1" />)
 
     expect(skillsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: 'ses_1', opcodeUrl: BASE.opcodeUrl, directory: '/repo' }),
+      expect.objectContaining({ sessionId: 'ses_1', directory: '/repo' }),
     )
   })
 
@@ -100,7 +99,6 @@ describe('RepoOverlays', () => {
 
     const props = skillsMock.mock.calls.at(-1)?.[0] as Record<string, unknown>
     expect(props.sessionId).toBeUndefined()
-    expect(props.opcodeUrl).toBeUndefined()
   })
 
   it('关闭文件浏览器时同时通知页面清掉选中的文件', () => {

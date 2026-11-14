@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, memo, useCallback, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { useSendPrompt, useAbortSession, useSendShell, useAgents } from '@/hooks/useOpenCode'
+import { useSendPrompt, useAbortSession, useSendShell, useWorkingModes } from '@/hooks/useOpenCode'
 import { useCommands } from '@/hooks/useCommands'
 import { useCommandHandler } from '@/hooks/useCommandHandler'
 import { useFileSearch } from '@/hooks/useFileSearch'
 import { useModelSelection } from '@/hooks/useModelSelection'
-import { useOpenCodeClient } from '@/hooks/useOpenCode'
 import { useVariants } from '@/hooks/useVariants'
 import { useShortcutAction } from '@/framework/commands/shortcutRegistry'
 import { useSessionAgent } from '@/hooks/useSessionAgent'
@@ -39,7 +38,7 @@ import { formatModelName, getProviders } from '@/api/providers'
 import { useQuery } from '@tanstack/react-query'
 
 
-import type { components } from '@/api/opencode-types'
+import type { Command } from '@opencode-manager/shared/api/v1'
 import type { FileAttachmentInfo, ImageAttachment } from '@/api/types'
 
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/heic", "image/heif"]
@@ -60,7 +59,7 @@ const VOICE_SEND_SWIPE_DISARM_THRESHOLD = 8
 type VoiceButtonVariant = 'desktop' | 'mobile'
 
 
-type CommandType = components['schemas']['Command']
+type CommandType = Command
 
 export interface PromptInputHandle {
   setPromptValue: (value: string) => void
@@ -223,14 +222,14 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
       fileInputRef.current?.click()
     }
   }), [imageAttachments, clearSTT, isRecording, abortRecording, resetVoiceGestureState])
-  const sessionAgent = useSessionAgent(API_BASE_URL, opcodeUrl, sessionID, directory)
+  const sessionAgent = useSessionAgent(API_BASE_URL, sessionID, directory)
   const currentMode = localMode ?? sessionAgent.agent
   const setStoredAgent = useSessionAgentStore((s) => s.setAgent)
   const sendPrompt = useSendPrompt(API_BASE_URL, opcodeUrl, directory)
-  const sendShell = useSendShell(API_BASE_URL, opcodeUrl, directory)
+  const sendShell = useSendShell(API_BASE_URL, directory)
   const isPromptSubmitPending = sendPrompt.isPending || sendShell.isPending
   const abortSession = useAbortSession(API_BASE_URL, directory, sessionID)
-  const { filterCommands } = useCommands(opcodeUrl)
+  const { filterCommands } = useCommands(API_BASE_URL)
   const { executeCommand } = useCommandHandler({
     serverUrl: API_BASE_URL,
     opcodeUrl,
@@ -251,7 +250,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
     directory
   )
   
-  const { data: agents = [] } = useAgents(opcodeUrl, directory)
+  const { data: agents = [] } = useWorkingModes(API_BASE_URL, directory)
   const failedPrompt = useSendErrorStore((state) => state.errors[sessionID]?.failedPrompt)
   const restoredFailedPromptRef = useRef<string | null>(null)
 
@@ -274,7 +273,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
   
   const mentionItems = useMemo((): MentionItem[] => {
     const filteredAgents = filterAgentsByQuery(
-      agents.map(a => ({ name: a.name, description: a.description })),
+      agents.map(a => ({ name: a.name, description: a.description ?? undefined })),
       mentionQuery
     )
     
@@ -548,7 +547,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
     setStoredAgent(sessionID, agentName)
     const agent = agents.find(a => a.name === agentName)
     if (agent?.model) {
-      setStoredModel({ providerID: agent.model.providerID, modelID: agent.model.modelID })
+      setStoredModel({ providerID: agent.model.providerId, modelID: agent.model.modelId })
     }
   }
 
@@ -1079,15 +1078,13 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
 
   const appliedSessionModelRef = useRef<string | undefined>(undefined)
 
-  const client = useOpenCodeClient(opcodeUrl, directory)
   const { data: providersData } = useQuery({
     queryKey: ['opencode', 'providers', opcodeUrl, directory],
     queryFn: () => getProviders(directory),
-    enabled: !!client,
     staleTime: 30000,
   })
 
-  const { model, modelString, setModel: setStoredModel, restoreSessionModel } = useModelSelection(opcodeUrl, directory)
+  const { model, modelString, setModel: setStoredModel, restoreSessionModel } = useModelSelection(API_BASE_URL, opcodeUrl, directory)
   const setStoreVariant = useModelStore((state) => state.setVariant)
   const clearStoreVariant = useModelStore((state) => state.clearVariant)
 
@@ -1125,7 +1122,7 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
   const isMobile = useMobile()
   const { setShowDialog, hasForSession: hasPermissionsForSession } = usePermissions()
   const hasPendingPermissionForSession = hasPermissionsForSession(sessionID)
-  const { hasVariants, currentVariant, cycleVariant } = useVariants(opcodeUrl, directory)
+  const { hasVariants, currentVariant, cycleVariant } = useVariants(API_BASE_URL, opcodeUrl, directory)
   useShortcutAction('variantCycle', () => {
     if (hasVariants) {
       cycleVariant()
@@ -1348,7 +1345,7 @@ return (
           ) : (
             <>
               <AgentQuickSelect
-                opcodeUrl={opcodeUrl}
+                serverUrl={API_BASE_URL}
                 directory={directory}
                 currentAgent={currentMode}
                 onAgentChange={handleAgentChange}
@@ -1361,6 +1358,7 @@ return (
             ) : (
                !hideSecondaryButtons && (
                   <ModelQuickSelect
+                    serverUrl={API_BASE_URL}
                     opcodeUrl={opcodeUrl}
                     directory={directory}
                   >

@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => ({
   useModelSelection: vi.fn(),
   useVariants: vi.fn(),
   useSessionAgent: vi.fn(),
-  useAgents: vi.fn(),
+  useWorkingModes: vi.fn(),
   useSendPromptMutate: vi.fn(),
   sendPromptPending: vi.fn(() => false),
   useUserBash: vi.fn(),
@@ -44,8 +44,7 @@ vi.mock('@/hooks/useOpenCode', () => ({
   useSendPrompt: () => ({ mutate: mocks.useSendPromptMutate, isPending: mocks.sendPromptPending() }),
   useAbortSession: () => ({ mutate: vi.fn() }),
   useSendShell: () => ({ mutate: vi.fn(), isPending: false }),
-  useOpenCodeClient: () => ({}),
-  useAgents: () => ({ data: [] }),
+  useWorkingModes: () => ({ data: [] }),
 }))
 
 vi.mock('@/hooks/useCommands', () => ({
@@ -198,7 +197,7 @@ describe('PromptInput STT Gesture Tests', () => {
       cycleVariant: vi.fn(),
     })
     mocks.useSessionAgent.mockReturnValue({ agent: 'default' })
-    mocks.useAgents.mockReturnValue({ data: [] })
+    mocks.useWorkingModes.mockReturnValue({ data: [] })
     mocks.useUserBash.mockImplementation((selector) => selector({ addUserBashCommand: vi.fn() }))
     mocks.useSessionAgentStore.mockImplementation((selector) => selector({ setAgent: mockSetAgent }))
     mocks.useSendErrorStore.mockImplementation((selector) => selector({ errors: {} }))

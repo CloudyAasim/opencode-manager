@@ -248,6 +248,71 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
   // - the same words the event stream says them in.
   await page.route('**/api/bff/status', (route) => json(route, { statuses: {} }))
 
+  // The agent's own face comes from the layer as well, in the versioned
+  // dialect: the commands it knows, the ways of working, and the two
+  // defaults. The client draws the command palette from here now, so the
+  // shapes here are the versioned ones.
+  await page.route('**/api/bff/commands', (route) =>
+    json(route, {
+      commands: [
+        {
+          name: 'review',
+          description: 'looks at the code',
+          workingMode: null,
+          model: null,
+          template: null,
+          subtask: false,
+          hints: [],
+        },
+      ],
+    }),
+  )
+  await page.route('**/api/bff/working-modes', (route) =>
+    json(route, {
+      workingModes: [
+        {
+          name: 'build',
+          description: 'writes the code',
+          scope: 'all',
+          hidden: false,
+          color: null,
+          model: null,
+        },
+      ],
+    }),
+  )
+  await page.route('**/api/bff/defaults', (route) =>
+    json(route, { defaults: { model: null, workingMode: null } }),
+  )
+
+  // What hangs on a conversation is asked of the layer, with the conversation
+  // named: a command run in it, a summary written for it, a copy taken of it,
+  // and a line run in its own shell.
+  await page.route(/.*\/api\/bff\/sessions\/[^/?]+\/(commands|summarize|shell)(\?.*)?$/, (route) =>
+    json(route, { accepted: true }),
+  )
+  await page.route(/.*\/api\/bff\/sessions\/[^/?]+\/fork(\?.*)?$/, (route) => {
+    const id = /\/api\/bff\/sessions\/([^/?]+)/.exec(new URL(route.request().url()).pathname)?.[1] ?? ''
+    return json(route, { session: bffSessionShape({ id, directory: DEFAULT_REPO.fullPath }) })
+  })
+
+  // The agent's own door for its own face is closed: the commands it knows,
+  // the ways of working it can be, and the two defaults are the layer's to
+  // answer, in the layer's dialect. A mock that quietly answered the old call
+  // would hide a client that went back to asking the agent.
+  await page.route(/.*\/api\/opencode\/(api\/)?(command|agent)(\?.*)?$/, () => {
+    throw new Error('The client asked the agent about its own face; it must ask the layer instead')
+  })
+
+  // And so is the door for what hangs on a conversation: a command run in it,
+  // a summary written for it, a copy taken of it, a line run in its shell.
+  await page.route(
+    /.*\/api\/opencode\/(api\/)?session\/[^/?]+\/(command|shell|fork|summarize)(\?.*)?$/,
+    () => {
+      throw new Error('The client asked the agent to do something in a conversation; it must ask the layer instead')
+    },
+  )
+
   // The client's own door for the conversation is closed: the conversation is
   // the layer's, in the layer's words. A mock that quietly answered the old
   // call would hide a client that went back to asking the agent.

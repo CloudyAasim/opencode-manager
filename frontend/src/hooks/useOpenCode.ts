@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useEffect, useCallback } from "react";
-import { OpenCodeClient } from "../api/opencode";
 import { createBffClient } from "../api/bff";
 import { FetchError } from "../api/fetchWrapper";
 import type {
@@ -9,7 +8,6 @@ import type {
   ContentPart,
   MessageWithParts,
 } from "../api/types";
-import type { paths } from "../api/opencode-types";
 import type { SendPromptRequest } from "@opencode-manager/shared/api/v1";
 import { parseNetworkError, isGatewayTimeout } from "../lib/opencode-errors";
 import { showToast } from "../lib/toast";
@@ -23,20 +21,11 @@ import { toggleSessionPin } from "../api/sessionPins";
 import { SESSION_PINS_QUERY_KEY } from "./useSessionPins";
 import type { SessionPin } from "@opencode-manager/shared/schemas";
 
-type SendCommandResponse = paths["/session/{sessionID}/command"]["post"]["responses"]["200"]["content"]["application/json"];
-
 const parseModelString = (model: string) => {
   const [providerID, ...rest] = model.split("/");
   const modelID = rest.join("/");
   if (!providerID || !modelID) return undefined;
   return { providerID, modelID };
-};
-
-export const useOpenCodeClient = (opcodeUrl: string | null | undefined, directory?: string) => {
-  return useMemo(
-    () => (opcodeUrl ? new OpenCodeClient(opcodeUrl, directory) : null),
-    [opcodeUrl, directory],
-  );
 };
 
 const SESSION_LIST_PAGE_SIZE = 25
@@ -530,7 +519,11 @@ export const useSendPrompt = (serverUrl: string | null | undefined, opcodeUrl: s
     },
     onSuccess: async (_data, variables) => {
       const { sessionID } = variables;
-      const queryKey = messagesQueryKey(opcodeUrl, sessionID, directory);
+      // The conversation is cached under the layer's address, so it is
+      // invalidated under that address too. Asking for the agent's address
+      // here invalidated a slot nothing was ever filed in, and the
+      // conversation was refilled by the event stream alone.
+      const queryKey = messagesQueryKey(serverUrl, sessionID, directory);
 
       useSendErrorStore.getState().clearError(sessionID);
       await queryClient.invalidateQueries({ queryKey });
@@ -703,12 +696,12 @@ export const useAbortSession = (
 /**
  * Running a command in the conversation's own shell.
  *
- * The shell is still the agent's - there is no layer for it yet - but the
- * message it writes into is the versioned API's, so the cache is filed under
- * the layer's address.
+ * The shell belongs to the conversation, so the conversation is named and the
+ * layer works out where it lives. What the shell writes is a message in the
+ * conversation, so it is read from there - and the cache is filed under the
+ * layer's address, so it holds one shape.
  */
-export const useSendShell = (serverUrl: string | null | undefined, opcodeUrl: string | null | undefined, directory?: string) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
+export const useSendShell = (serverUrl: string | null | undefined, directory?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -721,7 +714,9 @@ export const useSendShell = (serverUrl: string | null | undefined, opcodeUrl: st
       command: string;
       agent?: string;
     }) => {
-      if (!client) throw new Error("No client available");
+      if (serverUrl === undefined || serverUrl === null) {
+        throw new Error("The layer the client talks to is not available");
+      }
 
       const optimisticUserID = `optimistic_user_${Date.now()}_${Math.random()}`;
 
@@ -743,10 +738,11 @@ export const useSendShell = (serverUrl: string | null | undefined, opcodeUrl: st
         (old) => [...(old || []), optimisticMessageWithParts],
       );
 
-      const response = await client.sendShell(sessionID, {
-        command,
-        agent: agent || "general",
-      });
+      const response = await createBffClient(serverUrl).sendShell(
+        sessionID,
+        { command, workingMode: agent ?? null },
+        directory ? [directory] : [],
+      );
 
       return { optimisticUserID, response };
     },
@@ -779,50 +775,71 @@ export const useSendShell = (serverUrl: string | null | undefined, opcodeUrl: st
   });
 };
 
-export const useConfig = (opcodeUrl: string | null | undefined, directory?: string) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
-
+/**
+ * What the agent does by default.
+ *
+ * The client used to read the agent's whole configuration for these two
+ * things - the model a conversation starts on and the way of working it
+ * starts in - which meant holding a shape that is the agent's own, full of
+ * fields the client never reads.
+ *
+ * So the layer answers with the two, and the rest of the configuration stays
+ * where it belongs.
+ */
+export const useAgentDefaults = (serverUrl: string | null | undefined, directory?: string) => {
   return useQuery({
-    queryKey: ["opencode", "config", opcodeUrl, directory],
-    queryFn: () => {
-      if (!client) throw new Error('Missing client')
-      return client.getConfig()
+    queryKey: ["bff", "defaults", serverUrl, directory],
+    queryFn: async () => {
+      if (serverUrl === undefined || serverUrl === null) {
+        throw new Error('The layer the client talks to is not available')
+      }
+      const response = await createBffClient(serverUrl).getDefaults(directory ? [directory] : [])
+      return response.defaults
     },
-    enabled: !!client,
+    enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 60000,
     refetchOnWindowFocus: true,
   });
 };
 
-export const useAgents = (opcodeUrl: string | null | undefined, directory?: string) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
-
+/**
+ * The ways of working a conversation can be had in.
+ *
+ * The word "agent" is taken by the program that does the work, so the ways of
+ * working have a word of their own - and they are asked for through the
+ * layer, in the versioned dialect, so the client holds one shape for them
+ * whichever agent is behind it.
+ */
+export const useWorkingModes = (serverUrl: string | null | undefined, directory?: string) => {
   return useQuery({
-    queryKey: ["opencode", "agents", opcodeUrl, directory],
-    queryFn: () => {
-      if (!client) throw new Error('Missing client')
-      return client.listAgents()
+    queryKey: ["bff", "working-modes", serverUrl, directory],
+    queryFn: async () => {
+      if (serverUrl === undefined || serverUrl === null) {
+        throw new Error('The layer the client talks to is not available')
+      }
+      const response = await createBffClient(serverUrl).listWorkingModes(directory ? [directory] : [])
+      return response.workingModes
     },
-    enabled: !!client,
+    enabled: serverUrl !== undefined && serverUrl !== null,
   });
 };
 
 export const useLoadSkill = (
   serverUrl: string | null | undefined,
-  opcodeUrl: string | null | undefined,
   sessionID: string | undefined,
   directory?: string,
 ) => {
-  const client = useOpenCodeClient(opcodeUrl, directory);
   const queryClient = useQueryClient();
 
   return useMutation<
-    { optimisticUserID: string; response: SendCommandResponse },
+    { optimisticUserID: string; response: unknown },
     Error,
     { skillName: string }
   >({
     mutationFn: async ({ skillName }: { skillName: string }) => {
-      if (!client) throw new Error("No OpenCode client available");
+      if (serverUrl === undefined || serverUrl === null) {
+        throw new Error("The layer the client talks to is not available");
+      }
       if (!sessionID) throw new Error("No active session");
 
       const optimisticUserID = `optimistic_user_${Date.now()}_${Math.random()}`;
@@ -844,7 +861,11 @@ export const useLoadSkill = (
         (old) => [...(old || []), optimisticMessageWithParts],
       );
 
-      const response = await client.sendCommand(sessionID, { command: skillName, arguments: "" });
+      const response = await createBffClient(serverUrl).sendCommand(
+        sessionID,
+        { command: skillName, arguments: '', workingMode: null, model: null },
+        directory ? [directory] : [],
+      );
       return { optimisticUserID, response };
     },
     onError: (error) => {
@@ -858,10 +879,9 @@ export const useLoadSkill = (
       showToast.error(error instanceof Error ? error.message : "Failed to load skill");
     },
     onSuccess: () => {
-      // The command's own answer is still the agent's, in the agent's words.
-      // Putting it into the message cache would leave the cache holding two
-      // shapes for the same conversation, so it is not put there: the cache is
-      // refilled from the layer instead, and then it holds one shape.
+      // The command's own answer is a message in the conversation, and it is
+      // read from there: the cache is refilled from the layer instead, and
+      // then it holds one shape.
       if (!sessionID) return;
       queryClient.invalidateQueries({
         queryKey: messagesQueryKey(serverUrl, sessionID, directory),

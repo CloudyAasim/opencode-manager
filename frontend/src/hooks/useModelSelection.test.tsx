@@ -18,8 +18,7 @@ vi.mock('./useOpenCode', async () => {
   const actual = await vi.importActual('./useOpenCode')
   return {
     ...actual,
-    useConfig: vi.fn(),
-    useOpenCodeClient: vi.fn(),
+    useAgentDefaults: vi.fn(),
   }
 })
 
@@ -35,8 +34,7 @@ vi.mock('@/api/providers', async () => {
   }
 })
 
-const mockUseConfig = vi.mocked(useOpenCodeExports.useConfig)
-const mockUseOpenCodeClient = vi.mocked(useOpenCodeExports.useOpenCodeClient)
+const mockUseAgentDefaults = vi.mocked(useOpenCodeExports.useAgentDefaults)
 const mockGetProviders = vi.mocked(providersApi.getProviders)
 const mockGetOpenCodeModelState = vi.mocked(providersApi.getOpenCodeModelState)
 const mockAddOpenCodeRecentModel = vi.mocked(providersApi.addOpenCodeRecentModel)
@@ -49,8 +47,7 @@ describe('useModelSelection', () => {
     useModelStore.getState().setModel({ providerID: 'test', modelID: 'test-model' })
     useModelStore.getState().setActiveModel({ providerID: 'test', modelID: 'test-model' })
     
-    mockUseConfig.mockReturnValue({ data: undefined, isLoading: false } as any)
-    mockUseOpenCodeClient.mockReturnValue({} as any)
+    mockUseAgentDefaults.mockReturnValue({ data: undefined, isLoading: false } as any)
     mockGetProviders.mockResolvedValue({
       providers: [],
       connected: [],
@@ -81,7 +78,7 @@ describe('useModelSelection', () => {
   const renderHookWithProviders = () => {
     const queryClient = createTestQueryClient()
     return renderHook(
-      () => useModelSelection('http://localhost:5551', '/test'),
+      () => useModelSelection('http://localhost:5551', 'http://localhost:5551', '/test'),
       {
         wrapper: ({ children }) => (
           <QueryClientProvider client={queryClient}>
@@ -295,7 +292,10 @@ describe('useModelSelection', () => {
     }
 
     it('prefers config model over recent and provider default', async () => {
-      mockUseConfig.mockReturnValue({ data: { model: 'anthropic/claude-sonnet-4' }, isLoading: false } as any)
+      mockUseAgentDefaults.mockReturnValue({
+        data: { model: { providerId: 'anthropic', modelId: 'claude-sonnet-4' }, workingMode: null },
+        isLoading: false,
+      } as any)
       mockGetProviders.mockResolvedValue(providersData as any)
       mockGetOpenCodeModelState.mockResolvedValue({
         recent: [{ providerID: 'openai', modelID: 'gpt-4o' }],

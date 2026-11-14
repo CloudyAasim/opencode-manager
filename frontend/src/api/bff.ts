@@ -1,12 +1,19 @@
 import type {
+  AgentDefaults,
+  Command,
   ConversationStatus,
+  ForkRequest,
   MessageWithParts,
   PendingPermission,
   PendingQuestion,
   PermissionResponse,
+  PromptModel,
+  SendCommandRequest,
   SendPromptRequest,
   Session,
   SessionRevert,
+  ShellRequest,
+  WorkingMode,
 } from '@opencode-manager/shared/api/v1'
 import { fetchWrapper } from './fetchWrapper'
 
@@ -31,6 +38,24 @@ export const BFF_PENDING_ENDPOINT = '/api/bff/pending'
  * The same layer, the same rule: the client asks it, and it asks the agent.
  */
 export const BFF_STATUS_ENDPOINT = '/api/bff/status'
+
+/**
+ * Where the commands live.
+ *
+ * The agent's own face, asked through the same layer: the client no longer
+ * holds the agent's words about them.
+ */
+export const BFF_COMMANDS_ENDPOINT = '/api/bff/commands'
+
+/**
+ * Where the ways of working live.
+ */
+export const BFF_WORKING_MODES_ENDPOINT = '/api/bff/working-modes'
+
+/**
+ * Where the defaults live.
+ */
+export const BFF_DEFAULTS_ENDPOINT = '/api/bff/defaults'
 
 /**
  * The layer the client talks to for its session list.
@@ -104,6 +129,30 @@ export interface BffMessageListResponse {
  */
 export interface BffConversationStatusResponse {
   statuses: Record<string, ConversationStatus>
+}
+
+/**
+ * The commands the agent knows.
+ *
+ * The commands are the versioned API's - there is one truth about what a
+ * command is, whichever agent is behind it.
+ */
+export interface BffCommandListResponse {
+  commands: Command[]
+}
+
+/**
+ * The ways of working a conversation can be had in.
+ */
+export interface BffWorkingModeListResponse {
+  workingModes: WorkingMode[]
+}
+
+/**
+ * What the agent does by default.
+ */
+export interface BffAgentDefaultsResponse {
+  defaults: AgentDefaults
 }
 
 export class BffClient {
@@ -331,6 +380,126 @@ export class BffClient {
     return fetchWrapper<BffAcceptedResponse>(
       this.sessionUrl(sessionId, directories, `questions/${encodeURIComponent(questionId)}/reject`),
       { method: 'POST' },
+    )
+  }
+
+  /**
+   * The commands the agent knows.
+   *
+   * The agent's own face, in the versioned dialect: the client draws the same
+   * command palette whichever agent is behind it.
+   */
+  async listCommands(directories: string[] = []): Promise<BffCommandListResponse> {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    const query = params.toString()
+    return fetchWrapper<BffCommandListResponse>(
+      `${this.baseURL}${BFF_COMMANDS_ENDPOINT}` + (query ? `?${query}` : ''),
+    )
+  }
+
+  /**
+   * The ways of working a conversation can be had in.
+   */
+  async listWorkingModes(directories: string[] = []): Promise<BffWorkingModeListResponse> {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    const query = params.toString()
+    return fetchWrapper<BffWorkingModeListResponse>(
+      `${this.baseURL}${BFF_WORKING_MODES_ENDPOINT}` + (query ? `?${query}` : ''),
+    )
+  }
+
+  /**
+   * What the agent does by default.
+   */
+  async getDefaults(directories: string[] = []): Promise<BffAgentDefaultsResponse> {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    const query = params.toString()
+    return fetchWrapper<BffAgentDefaultsResponse>(
+      `${this.baseURL}${BFF_DEFAULTS_ENDPOINT}` + (query ? `?${query}` : ''),
+    )
+  }
+
+  /**
+   * Running a command in one conversation.
+   *
+   * The command hangs on the conversation, so the conversation is named: the
+   * layer works out where it lives and whether it is the caller's.
+   */
+  async sendCommand(
+    sessionId: string,
+    command: SendCommandRequest,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.sessionUrl(sessionId, directories, 'commands'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(command),
+      },
+    )
+  }
+
+  /**
+   * Shortening one conversation.
+   */
+  async summarizeSession(
+    sessionId: string,
+    model: PromptModel,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.sessionUrl(sessionId, directories, 'summarize'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model }),
+      },
+    )
+  }
+
+  /**
+   * Taking a copy of one conversation.
+   */
+  async forkSession(
+    sessionId: string,
+    fork: ForkRequest,
+    directories: string[] = [],
+  ): Promise<BffSessionResponse> {
+    return fetchWrapper<BffSessionResponse>(
+      this.sessionUrl(sessionId, directories, 'fork'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fork),
+      },
+    )
+  }
+
+  /**
+   * Running a command in one conversation's own shell.
+   */
+  async sendShell(
+    sessionId: string,
+    shell: ShellRequest,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.sessionUrl(sessionId, directories, 'shell'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shell),
+      },
     )
   }
 

@@ -11,8 +11,8 @@ const mocks = vi.hoisted(() => ({
   sendCommand: vi.fn(),
 }))
 
-vi.mock('../../api/opencode', () => ({
-  OpenCodeClient: vi.fn().mockImplementation(() => ({
+vi.mock('../../api/bff', () => ({
+  createBffClient: vi.fn().mockImplementation(() => ({
     sendCommand: mocks.sendCommand,
   })),
 }))
@@ -26,7 +26,6 @@ vi.mock('../../lib/toast', () => ({
 }))
 
 const SERVER = 'http://localhost:5551'
-const AGENT = 'http://localhost:5551'
 const SESSION = 'test-session-id'
 const DIRECTORY = '/test/dir'
 
@@ -62,7 +61,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockResolvedValue(mockResponse)
 
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
+      () => useLoadSkill(SERVER, SESSION, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -73,15 +72,16 @@ describe('useLoadSkill', () => {
     })
 
     expect(mocks.sendCommand).toHaveBeenCalledTimes(1)
-    expect(mocks.sendCommand).toHaveBeenCalledWith(SESSION, {
-      command: 'my-skill',
-      arguments: '',
-    })
+    expect(mocks.sendCommand).toHaveBeenCalledWith(
+      SESSION,
+      { command: 'my-skill', arguments: '', workingMode: null, model: null },
+      [DIRECTORY],
+    )
   })
 
   it('throws error when sessionID is undefined', async () => {
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, AGENT, undefined, DIRECTORY),
+      () => useLoadSkill(SERVER, undefined, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -95,9 +95,9 @@ describe('useLoadSkill', () => {
     expect((result.current.error as Error).message).toBe('No active session')
   })
 
-  it('throws error when client is not available', async () => {
+  it('throws error when the layer is not available', async () => {
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, null, SESSION, DIRECTORY),
+      () => useLoadSkill(null, SESSION, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -108,7 +108,7 @@ describe('useLoadSkill', () => {
     })
 
     expect(result.current.error).toBeInstanceOf(Error)
-    expect((result.current.error as Error).message).toBe('No OpenCode client available')
+    expect((result.current.error as Error).message).toBe('The layer the client talks to is not available')
   })
 
   it('calls showToast.error when sendCommand fails', async () => {
@@ -116,7 +116,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockRejectedValue(testError)
 
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
+      () => useLoadSkill(SERVER, SESSION, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -134,7 +134,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockRejectedValue('string error')
 
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
+      () => useLoadSkill(SERVER, SESSION, DIRECTORY),
       { wrapper: createWrapper() }
     )
 
@@ -160,7 +160,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockReturnValue(new Promise(() => {}))
 
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
+      () => useLoadSkill(SERVER, SESSION, DIRECTORY),
       { wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider> },
     )
 
@@ -185,7 +185,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockRejectedValue(testError)
 
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
+      () => useLoadSkill(SERVER, SESSION, DIRECTORY),
       { wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider> },
     )
 
@@ -210,7 +210,7 @@ describe('useLoadSkill', () => {
     mocks.sendCommand.mockRejectedValue(testError)
 
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
+      () => useLoadSkill(SERVER, SESSION, DIRECTORY),
       { wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider> },
     )
 
@@ -224,11 +224,11 @@ describe('useLoadSkill', () => {
     expect(messages).toHaveLength(0)
   })
 
-  it('refills the conversation instead of writing the agent\'s answer into it', async () => {
-    // The command's answer is still the agent's, in the agent's words. Putting
-    // it into the message cache would leave that one cache holding two
-    // shapes for the same conversation - so the cache is refilled from the
-    // layer instead, and then it holds one shape.
+  it('refills the conversation instead of writing the command\'s answer into it', async () => {
+    // The command's answer is a message in the conversation, and it is read
+    // from there. Putting the answer into the message cache would leave that
+    // one cache holding two shapes for the same conversation - so the cache is
+    // refilled from the layer instead, and then it holds one shape.
     const assistant = {
       info: { id: 'asm_skill_1', sessionID: SESSION, role: 'assistant' },
       parts: [{ type: 'text', text: 'done' }]
@@ -244,7 +244,7 @@ describe('useLoadSkill', () => {
     const wrapper = ({ children }: { children: React.ReactNode }) =>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     const { result } = renderHook(
-      () => useLoadSkill(SERVER, AGENT, SESSION, DIRECTORY),
+      () => useLoadSkill(SERVER, SESSION, DIRECTORY),
       { wrapper }
     )
 

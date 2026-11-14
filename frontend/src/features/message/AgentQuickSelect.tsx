@@ -8,29 +8,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useAgents } from '@/hooks/useOpenCode'
+import { useWorkingModes } from '@/hooks/useOpenCode'
 import { useShortcutAction } from '@/framework/commands/shortcutRegistry'
 import { getAgentStyleVars } from '@/lib/agent-colors'
 import { useI18n } from '@/lib/i18n'
+import type { WorkingMode } from '@opencode-manager/shared/api/v1'
 
 interface AgentQuickSelectProps {
-  opcodeUrl: string | null | undefined
+  serverUrl: string | null | undefined
   directory?: string
   currentAgent: string
   onAgentChange: (agent: string) => void
   isBashMode?: boolean
 }
 
-interface AgentInfo {
-  name: string
-  color?: string
-  description?: string
-  mode?: string
-  hidden?: boolean
-}
-
-const findAgentColor = (agents: AgentInfo[], agentName: string): string | undefined => {
-  return agents.find(a => a.name.toLowerCase() === agentName.toLowerCase())?.color
+const findAgentColor = (agents: WorkingMode[], agentName: string): string | undefined => {
+  return agents.find(a => a.name.toLowerCase() === agentName.toLowerCase())?.color ?? undefined
 }
 
 const bashStyleVars: Record<string, string> = {
@@ -51,19 +44,19 @@ const bashStyleVars: Record<string, string> = {
 }
 
 export function AgentQuickSelect({
-  opcodeUrl,
+  serverUrl,
   directory,
   currentAgent,
   onAgentChange,
   isBashMode = false,
 }: AgentQuickSelectProps) {
   const { t } = useI18n()
-  const { data: agents = [] } = useAgents(opcodeUrl, directory)
+  const { data: agents = [] } = useWorkingModes(serverUrl, directory)
 
   const primaryAgents = useMemo(() => {
     return agents.filter(
       (agent) =>
-        (agent.mode === 'primary' || agent.mode === 'all') &&
+        (agent.scope === 'primary' || agent.scope === 'all') &&
         !agent.hidden
     )
   }, [agents])
@@ -96,7 +89,7 @@ export function AgentQuickSelect({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
         {primaryAgents.map((agent) => {
-          const apiColor = agent.color
+          const apiColor = agent.color ?? undefined
           const itemStyleVars = getAgentStyleVars(agent.name, apiColor)
           const isSelected = agent.name.toLowerCase() === currentAgent.toLowerCase()
           

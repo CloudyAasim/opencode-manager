@@ -22,8 +22,8 @@ type RepoSkillsDialogBaseProps = {
 }
 
 type RepoSkillsDialogProps = RepoSkillsDialogBaseProps & (
-  | { sessionId: string; opcodeUrl: string; directory?: string; onSkillLoaded?: (skill: SkillFileInfo) => void }
-  | { sessionId?: undefined; opcodeUrl?: undefined; directory?: undefined; onSkillLoaded?: undefined }
+  | { sessionId: string; directory?: string; onSkillLoaded?: (skill: SkillFileInfo) => void }
+  | { sessionId?: undefined; directory?: undefined; onSkillLoaded?: undefined }
 )
 
 export function RepoSkillsDialog({
@@ -31,7 +31,6 @@ export function RepoSkillsDialog({
   onOpenChange,
   repoId,
   sessionId,
-  opcodeUrl,
   directory,
   onSkillLoaded,
 }: RepoSkillsDialogProps) {
@@ -48,8 +47,11 @@ export function RepoSkillsDialog({
     staleTime: 30000,
   })
 
-  const canLoad = !!sessionId && !!opcodeUrl
-  const loadSkill = useLoadSkill(API_BASE_URL, opcodeUrl, sessionId, directory)
+  // A skill is loaded into a conversation, so the conversation is what has to
+  // be there - the agent's own address is the layer's business, not this
+  // dialog's.
+  const canLoad = !!sessionId
+  const loadSkill = useLoadSkill(API_BASE_URL, sessionId, directory)
 
   const handleLoad = (skill: SkillFileInfo) => {
     loadSkill.mutate({ skillName: skill.name })

@@ -23,7 +23,6 @@ function getMessageTextContent(parts: Part[]): string {
 }
 
 interface MessageThreadProps {
-  opcodeUrl: string
   sessionID: string
   directory?: string
   messages?: MessageWithParts[]
@@ -151,7 +150,6 @@ interface MessageRowProps {
   onUndoMessage?: (restoredPrompt: string) => void
   editingUserMessageId: string | null
   editingForAssistantId: string | null
-  opcodeUrl: string
   sessionID: string
   directory?: string
   onFileClick?: (filePath: string, lineNumber?: number) => void
@@ -172,7 +170,6 @@ const MessageRow = memo(function MessageRow({
   onUndoMessage,
   editingUserMessageId,
   editingForAssistantId,
-  opcodeUrl,
   sessionID,
   directory,
   onFileClick,
@@ -290,7 +287,6 @@ const MessageRow = memo(function MessageRow({
         <div className="space-y-2">
           {msg.role === 'user' && isEditingThisMessage && editingForAssistantId ? (
             <EditableUserMessage
-              opcodeUrl={opcodeUrl}
               sessionId={sessionID}
               directory={directory}
               content={messageTextContent}
@@ -336,11 +332,10 @@ const MessageRow = memo(function MessageRow({
   )
 })
 
-export const MessageThread = memo(function MessageThread({ 
-  opcodeUrl, 
-  sessionID, 
-  directory, 
-  messages, 
+export const MessageThread = memo(function MessageThread({
+  sessionID,
+  directory,
+  messages,
   onFileClick, 
   onChildSessionClick,
   onUndoMessage,
@@ -456,7 +451,6 @@ export const MessageThread = memo(function MessageThread({
       onUndoMessage={onUndoMessage}
       editingUserMessageId={editingUserMessageId}
       editingForAssistantId={editingForAssistantId}
-      opcodeUrl={opcodeUrl}
       sessionID={sessionID}
       directory={directory}
       onFileClick={onFileClick}

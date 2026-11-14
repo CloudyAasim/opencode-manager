@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query'
 import type { CreateScheduleJobRequest, PromptTemplate, ScheduleJob } from '@opencode-manager/shared/types'
 import { useScheduleModels } from '@/hooks/useScheduleModels'
 import { resolveScheduleModel } from '@/lib/schedules/schedule-model'
-import { createOpenCodeClient } from '@/api/opencode'
+import { createBffClient } from '@/api/bff'
 import { settingsApi } from '@/api/settings'
 import { listRepos, listBranches } from '@/api/repos'
 import type { Repo } from '@/api/types'
-import { OPENCODE_API_ENDPOINT } from '@/config'
+import { API_BASE_URL } from '@/config'
 import { Button } from '@/components/ui/button'
 import type { ComboboxOption } from '@/components/ui/combobox'
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
@@ -86,11 +86,14 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
     [model, modelDirty, availableModelKeys, configDefaultModel],
   )
 
-  const { data: agents = [] } = useQuery({
-    queryKey: ['opencode-agents', 'schedule-dialog'],
+  // The ways of working a scheduled conversation can be had in. The layer is
+  // asked, in the versioned dialect, so this dialog does not have to know
+  // which agent drew them or what that agent calls them.
+  const { data: workingModes = [] } = useQuery({
+    queryKey: ['bff', 'working-modes', API_BASE_URL],
     queryFn: async () => {
-      const client = createOpenCodeClient(OPENCODE_API_ENDPOINT)
-      return await client.listAgents()
+      const response = await createBffClient(API_BASE_URL).listWorkingModes()
+      return response.workingModes
     },
     enabled: open,
     staleTime: 5 * 60 * 1000,
@@ -186,12 +189,12 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
   }, [providerModels, configDefaultModel, t])
 
   const agentOptions = useMemo<ComboboxOption[]>(() => {
-    return agents.map((agent) => ({
-      value: agent.name,
-      label: agent.name,
-      description: agent.description,
+    return workingModes.map((mode) => ({
+      value: mode.name,
+      label: mode.name,
+      description: mode.description ?? undefined,
     }))
-  }, [agents])
+  }, [workingModes])
 
   useEffect(() => {
     if (!open) {

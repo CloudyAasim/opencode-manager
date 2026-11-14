@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import type { components } from '@/api/opencode-types'
+import type { Command } from '@opencode-manager/shared/api/v1'
 
-type CommandType = components['schemas']['Command']
+type CommandType = Command
 
 interface UIStateStore {
   isEditingMessage: boolean

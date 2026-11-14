@@ -29,6 +29,17 @@ function read(file: string): string {
   return fs.readFileSync(file, 'utf8')
 }
 
+/**
+ * Read a file that is allowed not to be there.
+ *
+ * The client's door to the agent is one of the doors that are being closed, so
+ * the gates that watch it have to keep working on the day it is gone - and a
+ * gate that throws when the file is missing is a gate that stops guarding.
+ */
+function readIfPresent(file: string): string {
+  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
+}
+
 function importedNames(source: string): string[] {
   const names: string[] = []
   for (const match of source.matchAll(/import\s+(?:type\s+)?([^'"]*?)\s*from\s*['"][^'"]+['"]/g)) {
@@ -208,7 +219,7 @@ describe('给前端的那一层', () => {
     const AGENT_CLIENT = path.join(FRONTEND_DIR, 'api', 'opencode.ts')
     const offenders: string[] = []
 
-    for (const match of read(AGENT_CLIENT).matchAll(/\basync\s+(listSessions(?:Page)?)\s*\(/g)) {
+    for (const match of readIfPresent(AGENT_CLIENT).matchAll(/\basync\s+(listSessions(?:Page)?)\s*\(/g)) {
       offenders.push(`api/opencode.ts 定义了 ${match[1]}`)
     }
     for (const file of frontendSources()) {
@@ -236,7 +247,7 @@ describe('给前端的那一层', () => {
     const AGENT_CLIENT = path.join(FRONTEND_DIR, 'api', 'opencode.ts')
     const offenders: string[] = []
 
-    for (const match of read(AGENT_CLIENT).matchAll(/\basync\s+(listPending(?:Permissions|Questions))\s*\(/g)) {
+    for (const match of readIfPresent(AGENT_CLIENT).matchAll(/\basync\s+(listPending(?:Permissions|Questions))\s*\(/g)) {
       offenders.push(`api/opencode.ts 定义了 ${match[1]}`)
     }
     for (const file of frontendSources()) {
@@ -283,7 +294,7 @@ describe('给前端的那一层', () => {
     const AGENT_ONLY = ['updateSession', 'deleteWorkspace']
     const offenders: string[] = []
 
-    for (const match of read(AGENT_CLIENT).matchAll(
+    for (const match of readIfPresent(AGENT_CLIENT).matchAll(
       /\basync\s+(createSession|updateSession|deleteSession|deleteWorkspace|abortSession)\s*\(/g,
     )) {
       offenders.push(`api/opencode.ts 定义了 ${match[1]}`)
@@ -333,7 +344,7 @@ describe('给前端的那一层', () => {
     ]
     const offenders: string[] = []
 
-    for (const match of read(AGENT_CLIENT).matchAll(
+    for (const match of readIfPresent(AGENT_CLIENT).matchAll(
       new RegExp(`\\basync\\s+(${AGENT_ONLY.join('|')})\\s*\\(`, 'g'),
     )) {
       offenders.push(`api/opencode.ts 定义了 ${match[1]}`)
@@ -377,6 +388,96 @@ describe('给前端的那一层', () => {
     }
   })
 
+  it('前端不许再有问 agent 的那个客户端', () => {
+    // The client that talked to the agent had a door for everything the agent
+    // could be asked. Every one of those doors is the layer's now, so the
+    // client itself is gone - and it must not come back, because a client
+    // that exists is a client that will be used.
+    //
+    // The type file next to it is a different thing: it describes what the
+    // agent's API looks like, and describing a door is not walking through
+    // it. That one is still here, and it is here on purpose.
+    const AGENT_CLIENT = path.join(FRONTEND_DIR, 'api', 'opencode.ts')
+    const AGENT_TYPES = path.join(FRONTEND_DIR, 'api', 'opencode-types.ts')
+
+    expect(
+      fs.existsSync(AGENT_CLIENT),
+      [
+        '前端又有了一个问 agent 的客户端：api/opencode.ts',
+        '这一层现在是前端唯一该问的门，问 agent 的那个客户端不该再存在。',
+        '（api/opencode-types.ts 是另一回事：它描述 agent 的 API 长什么样，不是去问它。）',
+      ].join('\n'),
+    ).toBe(false)
+
+    expect(
+      fs.existsSync(AGENT_TYPES),
+      'api/opencode-types.ts 不见了：还有形状没有搬过来，别把这个门禁当成搬完了',
+    ).toBe(true)
+  })
+
+  it('前端不许再自己去问 agent 的那张面', () => {
+    // The agent's own face - the commands it knows, the ways of working it can
+    // be, the two defaults - is this layer's job, for the same reason the
+    // conversation is: the layer knows which agent is behind it, and it says
+    // it in the versioned dialect. A client that asks the agent itself holds
+    // the agent's words, and the command palette it draws would be the
+    // agent's rather than the app's.
+    //
+    // The names are what makes this checkable: the layer's client has methods
+    // of its own, so only the agent's names are looked at, and only outside
+    // the layer's client.
+    const LAYER_CLIENT = path.join(FRONTEND_DIR, 'api', 'bff.ts')
+    const AGENT_ONLY = [
+      'listCommands',
+      'sendCommand',
+      'summarizeSession',
+      'forkSession',
+      'sendShell',
+      'listAgents',
+      'getConfig',
+      'getEventSourceURL',
+    ]
+    const offenders: string[] = []
+
+    for (const file of frontendSources()) {
+      const source = read(file)
+      for (const match of source.matchAll(
+        new RegExp(`\\basync\\s+(${AGENT_ONLY.join('|')})\\s*\\(`, 'g'),
+      )) {
+        // The layer's own client is allowed to have these names: it is the
+        // one the client is supposed to be talking to.
+        if (file === LAYER_CLIENT) continue
+        offenders.push(`${path.relative(repoRoot, file)} 定义了 ${match[1]}`)
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在自己去问 agent 的那张面：${offenders.join(', ')}`,
+        '前端要问这一层，不要问 agent。',
+        '自己问的话，命令面板画出来的是 agent 的样子，不是这一层的。',
+      ].join('\n'),
+    ).toEqual([])
+
+    // The gate above says the client may not ask the agent. It says nothing
+    // about whether there is anything else to ask - so check that the layer's
+    // client really does have the agent's face, or the gate is guarding an
+    // empty room.
+    const layer = read(LAYER_CLIENT)
+    for (const method of [
+      'listCommands',
+      'sendCommand',
+      'summarizeSession',
+      'forkSession',
+      'sendShell',
+      'listWorkingModes',
+      'getDefaults',
+    ]) {
+      expect(layer, `这一层的客户端没有 ${method}`).toMatch(new RegExp(`\\basync\\s+${method}\\s*\\(`))
+    }
+  })
+
   it('前端不许自己去够 agent 的对话路径', () => {
     // The names of the methods are one way in; the paths are the other. A
     // client that builds the agent's conversation path by hand is asking the
@@ -398,12 +499,28 @@ describe('给前端的那一层', () => {
     // "/permission/{id}/reply" is the agent's, "/permissions/{id}/reply" is
     // this layer's - and the difference is what keeps the two apart.
     const AGENT_WAITING_PATH = /\/(?:permission|question)\/[^`'"\s]*?\/(?:reply|reject)\b/g
+    // The agent's own face has paths too: the commands it knows and the ways
+    // of working it can be sit at the root of its API, and what hangs on a
+    // conversation hangs on its conversation path - "/session/{id}/command" is
+    // the agent's, "/sessions/{id}/commands" is this layer's.
+    //
+    // The two root paths are only counted when they are a whole quoted path,
+    // because "/commands" is also the name of a directory in this app and
+    // "/agent-colors" is a module.
+    const AGENT_FACE_ROOT_PATH = /['"`]\/(?:command|agent)\b/g
+    const AGENT_FACE_SESSION_PATH = /\/session\/[^`'"\s]*?\/(?:command|shell|fork|summarize)\b/g
     const offenders: string[] = []
 
     for (const file of frontendSources()) {
       if (file === AGENT_TYPES) continue
       const source = read(file)
-      for (const pattern of [AGENT_CONVERSATION_PATH, AGENT_STATUS_PATH, AGENT_WAITING_PATH]) {
+      for (const pattern of [
+        AGENT_CONVERSATION_PATH,
+        AGENT_STATUS_PATH,
+        AGENT_WAITING_PATH,
+        AGENT_FACE_ROOT_PATH,
+        AGENT_FACE_SESSION_PATH,
+      ]) {
         for (const match of source.matchAll(pattern)) {
           offenders.push(`${path.relative(repoRoot, file)} 够到了 ${match[0]}`)
         }

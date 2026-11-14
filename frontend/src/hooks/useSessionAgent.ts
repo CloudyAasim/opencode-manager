@@ -1,16 +1,13 @@
 import { useMemo, useRef, useEffect } from 'react'
-import { useMessages, useConfig, useAgents } from './useOpenCode'
+import { useMessages, useAgentDefaults, useWorkingModes } from './useOpenCode'
 import { useSessionAgentStore } from '@/stores/sessionAgentStore'
+import type { WorkingMode } from '@opencode-manager/shared/api/v1'
 
-interface AgentInfo {
-  name: string
-  mode?: string
-  hidden?: boolean
-}
+type AgentInfo = WorkingMode
 
 const getPrimaryAgents = (agents: AgentInfo[] | undefined): AgentInfo[] => {
   return agents?.filter(
-    (agent) => (agent.mode === 'primary' || agent.mode === 'all') && !agent.hidden
+    (agent) => (agent.scope === 'primary' || agent.scope === 'all') && !agent.hidden
   ) ?? []
 }
 
@@ -56,20 +53,19 @@ interface SessionAgentResult {
 
 export function useSessionAgent(
   serverUrl: string | null | undefined,
-  opcodeUrl: string | null | undefined,
   sessionID: string | undefined,
   directory?: string
 ) {
   const { data: messages } = useMessages(serverUrl, sessionID, directory)
-  const { data: config } = useConfig(opcodeUrl, directory)
-  const { data: agents, isSuccess: agentsLoaded } = useAgents(opcodeUrl, directory)
+  const { data: defaults } = useAgentDefaults(serverUrl, directory)
+  const { data: agents, isSuccess: agentsLoaded } = useWorkingModes(serverUrl, directory)
   const storedAgent = useSessionAgentStore((s) => s.agents[sessionID ?? ''] ?? null)
   const setAgent = useSessionAgentStore((s) => s.setAgent)
   const prevRef = useRef<SessionAgentResult>({ agent: 'build', model: undefined, variant: undefined, fromMessage: false })
 
   const defaultAgent = useMemo(
-    () => resolveDefaultSessionAgent(config?.default_agent, agents, agentsLoaded),
-    [config?.default_agent, agents, agentsLoaded]
+    () => resolveDefaultSessionAgent(defaults?.workingMode ?? undefined, agents, agentsLoaded),
+    [defaults?.workingMode, agents, agentsLoaded]
   )
 
   const result = useMemo(() => {

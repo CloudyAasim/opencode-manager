@@ -56,7 +56,7 @@ import { getMessagesContentVersion } from "./sessionContentVersion";
 import { showToast } from "@/lib/toast";
 import { getRepoDisplayName } from "@/lib/utils";
 import { RepoOverlays } from "@/features/repos/RepoOverlays";
-import { createOpenCodeClient } from "@/api/opencode";
+import { createBffClient } from "@/api/bff";
 import { usePermissions, useQuestions, useSSEHealth } from "@/contexts/EventContext";
 import { useSessionStatusForSession } from "@/stores/sessionStatusStore";
 import type { PendingQuestion } from '@opencode-manager/shared/api/v1';
@@ -76,10 +76,10 @@ import { projectSessionPath } from "@/lib/project-session-path";
 import { usePersistentNumberState } from "@/hooks/usePersistentNumberState";
 import { useCommands } from "@/hooks/useCommands";
 import { toPromptMentionPath } from "@/lib/prompt-mention-path";
-import type { components } from "@/api/opencode-types";
+import type { Command } from "@opencode-manager/shared/api/v1";
 import { Row } from '@/components/ui/row'
 
-type CommandType = components['schemas']['Command'];
+type CommandType = Command;
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useLayer } from '@/framework/layer/useLayer'
 import {
@@ -466,7 +466,7 @@ export function SessionDetail() {
     )
     return created.id
   }, [createSession, navigate, repoId, activeTab, isAssistantSession]);
-  const { model, modelString } = useModelSelection(opcodeUrl, sessionDirectory);
+  const { model, modelString } = useModelSelection(API_BASE_URL, opcodeUrl, sessionDirectory);
   const isEditingMessage = useUIState((state) => state.isEditingMessage);
   const setActivePromptFileBasePath = useUIState((state) => state.setActivePromptFileBasePath);
   // The file browser itself is mounted once, by RepoOverlays; the page
@@ -475,7 +475,7 @@ export function SessionDetail() {
   const selectPromptCommand = useUIState((state) => state.selectPromptCommand);
   const selectPromptFile = useUIState((state) => state.selectPromptFile);
   const activePromptFileBasePath = useUIState((state) => state.activePromptFileBasePath);
-  const { filterCommands } = useCommands(opcodeUrl);
+  const { filterCommands } = useCommands(API_BASE_URL);
   const commandList = filterCommands(commandQuery);
 
   const closeCommandsPanel = useCallback(() => {
@@ -597,7 +597,7 @@ export function SessionDetail() {
   }, [createSession, navigate, repoId, sessionRouteSuffix, t]);
 
   const handleCompact = useCallback(async () => {
-    if (!opcodeUrl || !sessionId) return;
+    if (!sessionId) return;
     if (!model?.providerID || !model?.modelID) {
       showToast.error(t('session.actions.noModel'));
       return;
@@ -606,41 +606,54 @@ export function SessionDetail() {
     showToast.loading(t('session.actions.compacting'), { id: `compact-${sessionId}` });
 
     try {
-      const client = createOpenCodeClient(opcodeUrl, sessionDirectory);
-      await client.summarizeSession(sessionId, model.providerID, model.modelID);
+      await createBffClient(API_BASE_URL).summarizeSession(
+        sessionId,
+        { providerId: model.providerID, modelId: model.modelID },
+        sessionDirectory ? [sessionDirectory] : [],
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : t('session.actions.unknownError');
       showToast.error(t('session.actions.compactFailed', { error: message }));
     }
-  }, [opcodeUrl, sessionId, model, sessionDirectory, t]);
+  }, [sessionId, model, sessionDirectory, t]);
 
   const handleUndo = useCallback(async () => {
-    if (!opcodeUrl || !sessionId) return;
+    if (!sessionId) return;
     try {
-      const client = createOpenCodeClient(opcodeUrl, sessionDirectory);
-      await client.sendCommand(sessionId, { command: 'undo', arguments: '' });
+      await createBffClient(API_BASE_URL).sendCommand(
+        sessionId,
+        { command: 'undo', arguments: '', workingMode: null, model: null },
+        sessionDirectory ? [sessionDirectory] : [],
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : t('session.actions.unknownError');
       showToast.error(t('session.actions.undoFailed', { error: message }));
     }
-  }, [opcodeUrl, sessionId, sessionDirectory, t]);
+  }, [sessionId, sessionDirectory, t]);
 
   const handleRedo = useCallback(async () => {
-    if (!opcodeUrl || !sessionId) return;
+    if (!sessionId) return;
     try {
-      const client = createOpenCodeClient(opcodeUrl, sessionDirectory);
-      await client.sendCommand(sessionId, { command: 'redo', arguments: '' });
+      await createBffClient(API_BASE_URL).sendCommand(
+        sessionId,
+        { command: 'redo', arguments: '', workingMode: null, model: null },
+        sessionDirectory ? [sessionDirectory] : [],
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : t('session.actions.unknownError');
       showToast.error(t('session.actions.redoFailed', { error: message }));
     }
-  }, [opcodeUrl, sessionId, sessionDirectory, t]);
+  }, [sessionId, sessionDirectory, t]);
 
   const handleFork = useCallback(async () => {
-    if (!opcodeUrl || !sessionId) return;
+    if (!sessionId) return;
     try {
-      const client = createOpenCodeClient(opcodeUrl, sessionDirectory);
-      const forkedSession = await client.forkSession(sessionId);
+      const response = await createBffClient(API_BASE_URL).forkSession(
+        sessionId,
+        { messageId: null },
+        sessionDirectory ? [sessionDirectory] : [],
+      );
+      const forkedSession = response.session;
       if (forkedSession?.id) {
         navigate(`/repos/${repoId}/sessions/${forkedSession.id}${sessionRouteSuffix}`);
         showToast.success(t('session.actions.forked'));
@@ -649,7 +662,7 @@ export function SessionDetail() {
       const message = error instanceof Error ? error.message : t('session.actions.unknownError');
       showToast.error(t('session.actions.forkFailed', { error: message }));
     }
-  }, [opcodeUrl, sessionId, sessionDirectory, navigate, repoId, sessionRouteSuffix, t]);
+  }, [sessionId, sessionDirectory, navigate, repoId, sessionRouteSuffix, t]);
 
   const handleCloseSession = useCallback(() => {
     navigate(getSessionListPath(isAssistantSession))
@@ -878,7 +891,6 @@ export function SessionDetail() {
           ) : opcodeUrl && sessionDirectory ? (
             <MessageThread
               scrollRef={messageContainerRef}
-              opcodeUrl={opcodeUrl} 
               sessionID={sessionId ?? ''} 
               directory={sessionDirectory}
               messages={messages}
@@ -1106,7 +1118,6 @@ export function SessionDetail() {
 
       <RepoOverlays
         repoId={repoId}
-        opcodeUrl={opcodeUrl}
         directory={repoDirectory}
         basePath={workspaceBasePath}
         repoName={workspaceDisplayName}
