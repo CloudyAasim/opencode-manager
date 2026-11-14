@@ -1,4 +1,6 @@
 import type {
+  AgentDefaults,
+  Command,
   ConversationStatus,
   MessageWithParts,
   PendingPermission,
@@ -6,6 +8,7 @@ import type {
   PermissionResponse,
   Session,
   SessionRevert,
+  WorkingMode,
 } from '@opencode-manager/shared/api/v1'
 import {
   ProviderUnavailableError,
@@ -186,6 +189,75 @@ export abstract class CliAgentProvider implements AgentProvider {
       this.id,
       `${this.label} cannot ask a question: nobody is sitting in front of it`,
     )
+  }
+
+  /**
+   * A program on this machine cannot say what commands it knows.
+   *
+   * It may well have some - a program in a terminal has its own - but this
+   * adapter does not read them, and an empty list would be a claim it cannot
+   * make: it would say "there are no commands" about a program that has some.
+   */
+  async listCommands(): Promise<Command[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what commands it knows`,
+    )
+  }
+
+  /**
+   * A program on this machine is given words, not commands.
+   */
+  async sendCommand(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot run a command`)
+  }
+
+  /**
+   * A program on this machine cannot shorten a conversation.
+   */
+  async summarizeSession(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot shorten a conversation`)
+  }
+
+  /**
+   * A program on this machine cannot take a copy of a conversation.
+   */
+  async forkSession(): Promise<Session> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot take a copy of a conversation`,
+    )
+  }
+
+  /**
+   * A program on this machine has no shell of its own - the shell is the one
+   * the person is sitting in front of.
+   */
+  async sendShell(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} has no shell of its own`)
+  }
+
+  /**
+   * A program on this machine works in one way, and this adapter cannot name
+   * it - so it says so rather than answering with an empty list, which would
+   * be saying "there are none" about a program that has one.
+   */
+  async listWorkingModes(): Promise<WorkingMode[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what ways of working it has`,
+    )
+  }
+
+  /**
+   * What a program on this machine does by default.
+   *
+   * Nothing that can be read, and nothing said: this program keeps no
+   * configuration the manager can see, so it has no default model and no
+   * default way of working to report.
+   */
+  async getDefaults(): Promise<AgentDefaults> {
+    return { model: null, workingMode: null }
   }
 
   /**

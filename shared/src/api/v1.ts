@@ -415,7 +415,13 @@ export const MessageSchema = z.object({
   modelId: z.string().nullable(),
   /** Which provider served the model, when it did. */
   providerId: z.string().nullable(),
-  /** Which agent answered, when the answer came from an agent. */
+  /**
+   * The name of the working mode that answered, when the answer came from one.
+   *
+   * This is the name, not the mode itself: what a mode is - its description,
+   * what it can be used for - is said by the working modes themselves, and a
+   * message only needs to say which one answered.
+   */
   agent: z.string().nullable(),
   /** Which variant of the model answered, when there are several. */
   variant: z.string().nullable(),
@@ -602,7 +608,12 @@ export const SendPromptRequestSchema = z
   .object({
     parts: z.array(PromptPartSchema).min(1),
     model: PromptModelSchema.nullable(),
-    /** Which agent answers, when the caller wants a particular one. */
+    /**
+     * The name of the working mode that answers, when the caller wants a
+     * particular one.
+     *
+     * A null means the agent picks the one it would have picked anyway.
+     */
     agent: z.string().nullable(),
     /** Which variant of that agent answers, when there are several. */
     variant: z.string().nullable(),
@@ -616,6 +627,148 @@ export const SendPromptRequestSchema = z
     },
   )
 export type SendPromptRequest = z.infer<typeof SendPromptRequestSchema>
+
+/**
+ * The agent's own face: what it can be told to do, the ways it can work, and
+ * what it does by default.
+ *
+ * None of these belong to a conversation - a command is not part of a
+ * conversation, and a way of working is not either - but they are said in the
+ * versioned dialect for the same reason everything else is: a client that
+ * draws a command palette must not have to know which agent drew it, or what
+ * that agent calls the thing it drew.
+ */
+
+/**
+ * A named thing the agent can be told to do.
+ *
+ * The words it stands for are the agent's own: a command that has no template
+ * is one the person types out in full, and one that has a template is one the
+ * client fills in for them.
+ */
+export const CommandSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  /** The way of working the command runs as. */
+  workingMode: z.string().nullable(),
+  /** The model the command runs on. */
+  model: PromptModelSchema.nullable(),
+  /** The words the command stands for, when it has any. */
+  template: z.string().nullable(),
+  /** Whether the command hands the work to somebody else. */
+  subtask: z.boolean(),
+  /** What the command is for, in the agent's own words. */
+  hints: z.array(z.string()),
+})
+export type Command = z.infer<typeof CommandSchema>
+
+/**
+ * A way of working.
+ *
+ * The agent can answer a conversation in more than one way, and the ways have
+ * names. The versioned API calls them working modes, so that the word "agent"
+ * stays free for the program that is doing the work - one agent, many ways.
+ */
+export const WorkingModeScopeSchema = z.enum(['primary', 'subagent', 'all'])
+export type WorkingModeScope = z.infer<typeof WorkingModeScopeSchema>
+
+export const WorkingModeSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  /**
+   * Whether this way can lead a conversation, be handed one, or both.
+   *
+   * A way of working that can only be handed work is not something a person
+   * picks for the conversation they are having.
+   */
+  scope: WorkingModeScopeSchema,
+  /** Whether the way is kept out of the list a person picks from. */
+  hidden: z.boolean(),
+  /** The colour the way is drawn in, when it has one. */
+  color: z.string().nullable(),
+  /**
+   * The model this way prefers, when it prefers one.
+   *
+   * A way of working and a model are two different things and the person
+   * picks them separately - but a way of working that has its own model says
+   * so, and a client that drew the list would be drawing it wrongly if it
+   * left that out. So the preference travels with the way.
+   */
+  model: PromptModelSchema.nullable(),
+})
+export type WorkingMode = z.infer<typeof WorkingModeSchema>
+
+/**
+ * What the agent does by default.
+ *
+ * Only the two defaults the client actually reads: the model a conversation
+ * starts on, and the way of working it starts in. The rest of an agent's
+ * configuration is its own business - translating all of it would turn this
+ * shape into a report on one agent rather than a word all of them share.
+ */
+export const AgentDefaultsSchema = z.object({
+  model: PromptModelSchema.nullable(),
+  /** The name of the way of working a conversation starts in. */
+  workingMode: z.string().nullable(),
+})
+export type AgentDefaults = z.infer<typeof AgentDefaultsSchema>
+
+/**
+ * A command to be run in a conversation.
+ *
+ * The words the person typed after the command's name travel with it, because
+ * a command that takes an argument and a command that does not are the same
+ * request with or without words in it.
+ */
+export const SendCommandRequestSchema = z.object({
+  command: z.string().min(1),
+  /** What the person typed after the command's name. */
+  arguments: z.string(),
+  /** The way of working the command runs as. */
+  workingMode: z.string().nullable(),
+  /** The model the command runs on. */
+  model: PromptModelSchema.nullable(),
+})
+export type SendCommandRequest = z.infer<typeof SendCommandRequestSchema>
+
+/**
+ * A command to be run in a conversation's own shell.
+ *
+ * The shell belongs to the conversation, so the way of working it runs as is
+ * named here - and a command with no way of working named is run as the
+ * agent's own default.
+ */
+export const ShellRequestSchema = z.object({
+  command: z.string().min(1),
+  /** The way of working the command runs as. */
+  workingMode: z.string().nullable(),
+})
+export type ShellRequest = z.infer<typeof ShellRequestSchema>
+
+/**
+ * A conversation to be taken a copy of.
+ *
+ * The copy can start from a message rather than from the whole conversation,
+ * and a copy that starts from the whole conversation says so by naming no
+ * message - not by leaving the field out.
+ */
+export const ForkRequestSchema = z.object({
+  /** The message the copy starts from, when it starts from one. */
+  messageId: z.string().nullable(),
+})
+export type ForkRequest = z.infer<typeof ForkRequestSchema>
+
+/**
+ * A conversation to be shortened.
+ *
+ * The model that writes the summary is named, because a summary is an answer
+ * and an answer is written by somebody.
+ */
+export const SummarizeRequestSchema = z.object({
+  /** The model that writes the summary. */
+  model: PromptModelSchema,
+})
+export type SummarizeRequest = z.infer<typeof SummarizeRequestSchema>
 
 export const ApiDescriptorSchema = z.object({
   api: z.literal(API_V1_VERSION),

@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { UpstreamError, type OpenCodeClient } from '../../services/opencode/client'
 import { ProviderProtocolError, ProviderUpstreamError, SessionNotFoundError } from '../contract'
-import { OpenCodeProvider, toMessage, toMessageWithParts, toPart, toSession } from './adapter'
+import {
+  OpenCodeProvider,
+  toAgentDefaults,
+  toCommand,
+  toMessage,
+  toMessageWithParts,
+  toPart,
+  toSession,
+  toWorkingMode,
+} from './adapter'
 
 function clientWith(overrides: Record<string, unknown>): OpenCodeClient {
   return {
@@ -488,5 +497,206 @@ describe('OpenCode 适配器', () => {
     expect(provider.id).toBe('opencode')
     expect(provider.kind).toBe('server')
     expect(provider.capabilities).toContain('prompts')
+  })
+})
+
+describe('agent 自己那张脸，翻译成版本化的话', () => {
+  it('命令：上游的话变成版本化 API 的话', () => {
+    expect(
+      toCommand({
+        name: 'init',
+        description: 'start the project',
+        agent: 'build',
+        model: 'anthropic/claude',
+        mcp: true,
+        template: 'set the project up',
+        subtask: true,
+        hints: ['repository'],
+      }),
+    ).toEqual({
+      name: 'init',
+      description: 'start the project',
+      workingMode: 'build',
+      model: { providerId: 'anthropic', modelId: 'claude' },
+      template: 'set the project up',
+      subtask: true,
+      hints: ['repository'],
+    })
+  })
+
+  it('命令：模型写成两个字段也读得出来', () => {
+    expect(toCommand({ name: 'init', model: { providerID: 'anthropic', modelID: 'claude' } }).model).toEqual(
+      { providerId: 'anthropic', modelId: 'claude' },
+    )
+  })
+
+  it('命令：读不出来的模型就是没有模型，不许编一个出来', () => {
+    expect(toCommand({ name: 'init', model: 'claude' }).model).toBeNull()
+  })
+
+  it('命令：上游没说的东西不许被编出来', () => {
+    expect(toCommand({ name: 'init', template: '' })).toEqual({
+      name: 'init',
+      description: null,
+      workingMode: null,
+      model: null,
+      template: '',
+      subtask: false,
+      hints: [],
+    })
+  })
+
+  it('命令：没有名字的回答是答错了，不是空的', () => {
+    expect(() => toCommand({ description: 'nameless' })).toThrow(ProviderProtocolError)
+  })
+
+  it('工作方式：上游的三种说法都读得出来', () => {
+    expect(toWorkingMode({ name: 'build', mode: 'primary' }).scope).toBe('primary')
+    expect(toWorkingMode({ name: 'review', mode: 'subagent' }).scope).toBe('subagent')
+    expect(toWorkingMode({ name: 'both', mode: 'all' }).scope).toBe('all')
+  })
+
+  it('工作方式：看不懂的说法也照给，宁可多给不可少给', () => {
+    expect(toWorkingMode({ name: 'new', mode: 'something-else' }).scope).toBe('all')
+  })
+
+  it('工作方式：没有名字的回答是答错了', () => {
+    expect(() => toWorkingMode({ mode: 'primary' })).toThrow(ProviderProtocolError)
+  })
+
+  it('工作方式：它偏好的模型跟着它一起出来', () => {
+    expect(toWorkingMode({ name: 'build', model: { providerID: 'anthropic', modelID: 'claude' } }).model)
+      .toEqual({ providerId: 'anthropic', modelId: 'claude' })
+    expect(toWorkingMode({ name: 'build' }).model).toBeNull()
+  })
+
+  it('默认值：模型写成一行字也读得出来', () => {
+    expect(toAgentDefaults({ model: 'anthropic/claude', default_agent: 'build' })).toEqual({
+      model: { providerId: 'anthropic', modelId: 'claude' },
+      workingMode: 'build',
+    })
+  })
+
+  it('默认值：模型写成两个字段也读得出来', () => {
+    expect(toAgentDefaults({ model: { providerID: 'anthropic', modelID: 'claude' } })).toEqual({
+      model: { providerId: 'anthropic', modelId: 'claude' },
+      workingMode: null,
+    })
+  })
+
+  it('默认值：模型名里带斜杠的，斜杠前面那段才是 provider', () => {
+    expect(toAgentDefaults({ model: 'openrouter/anthropic/claude-3.5' }).model).toEqual({
+      providerId: 'openrouter',
+      modelId: 'anthropic/claude-3.5',
+    })
+  })
+
+  it('默认值：什么都没说的，就是没有默认', () => {
+    expect(toAgentDefaults({})).toEqual({ model: null, workingMode: null })
+  })
+
+  it('命令列表：问的是上游的命令那条路', async () => {
+    const getJson = vi.fn(async () => [] as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    await provider.listCommands({ directory: '/work' })
+
+    expect(getJson).toHaveBeenCalledWith('/command', { directory: '/work' })
+  })
+
+  it('跑命令：命令、参数、工作方式和模型都照原样送到', async () => {
+    const forward = vi.fn(async () => new Response('{}', { status: 200 }))
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    await provider.sendCommand(
+      'ses_1',
+      {
+        command: 'init',
+        arguments: 'now',
+        workingMode: 'build',
+        model: { providerId: 'anthropic', modelId: 'claude' },
+      },
+      { directory: '/work' },
+    )
+
+    expect(forward).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'POST',
+        path: '/session/ses_1/command',
+        body: JSON.stringify({
+          command: 'init',
+          arguments: 'now',
+          agent: 'build',
+          model: 'anthropic/claude',
+        }),
+      }),
+    )
+  })
+
+  it('摘要：写摘要的模型按上游的写法送到', async () => {
+    const forward = vi.fn(async () => new Response('{}', { status: 200 }))
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    await provider.summarizeSession(
+      'ses_1',
+      { providerId: 'anthropic', modelId: 'claude' },
+      { directory: '/work' },
+    )
+
+    expect(forward).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'POST',
+        path: '/session/ses_1/summarize',
+        body: JSON.stringify({ providerID: 'anthropic', modelID: 'claude' }),
+      }),
+    )
+  })
+
+  it('副本：拷出来的会话是版本化的会话', async () => {
+    const forward = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ id: 'ses_2', title: 'A copy', time: { created: 1, updated: 2 } }),
+          { status: 200 },
+        ),
+    )
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    const forked = await provider.forkSession('ses_1', { messageId: 'msg_1' }, { directory: '/work' })
+
+    expect(forked.id).toBe('ses_2')
+    expect(forked.agentId).toBe('opencode')
+    expect(forked.directory).toBe('/work')
+    expect(forward).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/session/ses_1/fork',
+        body: JSON.stringify({ messageID: 'msg_1' }),
+      }),
+    )
+  })
+
+  it('shell：没点名工作方式时，用 agent 自己的那个', async () => {
+    const forward = vi.fn(async () => new Response('{}', { status: 200 }))
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    await provider.sendShell('ses_1', { command: 'ls -la', workingMode: null }, { directory: '/work' })
+
+    expect(forward).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/session/ses_1/shell',
+        body: JSON.stringify({ command: 'ls -la', agent: 'general' }),
+      }),
+    )
+  })
+
+  it('工作方式和默认值：问的是上游自己的那两条路', async () => {
+    const getJson = vi.fn(async (path: string) => (path === '/agent' ? [] : {}) as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    await provider.listWorkingModes({ directory: '/work' })
+    await provider.getDefaults({ directory: '/work' })
+
+    expect(getJson).toHaveBeenCalledWith('/agent', { directory: '/work' })
+    expect(getJson).toHaveBeenCalledWith('/config', { directory: '/work' })
   })
 })

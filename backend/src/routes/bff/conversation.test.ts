@@ -472,4 +472,241 @@ describe('这一层出的对话', () => {
     expect(res.status).toBe(404)
     expect(provider.calls.some((call) => call.method === 'replyToQuestion')).toBe(false)
   })
+
+  it('命令要问到会话在哪儿，命令也照原样送到', async () => {
+    const own = ownDirectory()
+    recordAgentSession(database, {
+      sessionId: 'ses-1',
+      userId: 'user-2',
+      username: 'other',
+      role: 'user',
+      directory: own,
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1', directory: own })] })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-1/commands', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        command: 'init',
+        arguments: 'now',
+        workingMode: 'build',
+        model: { providerId: 'anthropic', modelId: 'claude' },
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { accepted: boolean }
+    expect(body).toEqual({ accepted: true })
+
+    const sent = provider.calls.find((call) => call.method === 'sendCommand')
+    expect(directoryOf(sent)).toBe(own)
+    expect(sent?.args[1]).toEqual({
+      command: 'init',
+      arguments: 'now',
+      workingMode: 'build',
+      model: { providerId: 'anthropic', modelId: 'claude' },
+    })
+  })
+
+  it('命令的请求体不合契约，就不该发出去', async () => {
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1' })] })
+    const { app } = createApp([provider], asAdmin)
+
+    const res = await app.request('/api/bff/sessions/ses-1/commands', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: '' }),
+    })
+
+    expect(res.status).toBe(400)
+    const body = await json(res)
+    expect(body.error?.code).toBe('bad_request')
+    expect(provider.calls.some((call) => call.method === 'sendCommand')).toBe(false)
+  })
+
+  it('别人的会话，命令发不出去', async () => {
+    recordAgentSession(database, {
+      sessionId: 'ses-theirs',
+      userId: 'user-1',
+      username: 'user',
+      role: 'admin',
+      directory: ownDirectory(),
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({
+      sessions: [makeSession({ id: 'ses-theirs', directory: ownDirectory() })],
+    })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-theirs/commands', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        command: 'init',
+        arguments: '',
+        workingMode: null,
+        model: null,
+      }),
+    })
+
+    expect(res.status).toBe(404)
+    expect(provider.calls.some((call) => call.method === 'sendCommand')).toBe(false)
+  })
+
+  it('摘要要问到会话在哪儿，写摘要的模型也照原样送到', async () => {
+    const own = ownDirectory()
+    recordAgentSession(database, {
+      sessionId: 'ses-1',
+      userId: 'user-2',
+      username: 'other',
+      role: 'user',
+      directory: own,
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1', directory: own })] })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-1/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: { providerId: 'anthropic', modelId: 'claude' } }),
+    })
+
+    expect(res.status).toBe(200)
+
+    const sent = provider.calls.find((call) => call.method === 'summarizeSession')
+    expect(directoryOf(sent)).toBe(own)
+    expect(sent?.args[1]).toEqual({ providerId: 'anthropic', modelId: 'claude' })
+  })
+
+  it('摘要的请求体不合契约，就不该发出去', async () => {
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1' })] })
+    const { app } = createApp([provider], asAdmin)
+
+    const res = await app.request('/api/bff/sessions/ses-1/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: null }),
+    })
+
+    expect(res.status).toBe(400)
+    expect(provider.calls.some((call) => call.method === 'summarizeSession')).toBe(false)
+  })
+
+  it('拷出来的会话记到账上，记账的是要它的人', async () => {
+    const own = ownDirectory()
+    recordAgentSession(database, {
+      sessionId: 'ses-1',
+      userId: 'user-2',
+      username: 'other',
+      role: 'user',
+      directory: own,
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1', directory: own })] })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-1/fork', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: 'msg-1' }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { session: Session }
+    expect(body.session.id).toBe('ses-1-fork')
+
+    const forked = provider.calls.find((call) => call.method === 'forkSession')
+    expect(directoryOf(forked)).toBe(own)
+    expect(forked?.args[1]).toEqual({ messageId: 'msg-1' })
+
+    const row = database
+      .prepare('SELECT session_id, user_id FROM ocm_agent_session WHERE session_id = ?')
+      .get('ses-1-fork') as { session_id: string; user_id: string } | undefined
+    expect(row?.user_id).toBe('user-2')
+  })
+
+  it('别人的会话，副本拷不出来', async () => {
+    recordAgentSession(database, {
+      sessionId: 'ses-theirs',
+      userId: 'user-1',
+      username: 'user',
+      role: 'admin',
+      directory: ownDirectory(),
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({
+      sessions: [makeSession({ id: 'ses-theirs', directory: ownDirectory() })],
+    })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-theirs/fork', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: null }),
+    })
+
+    expect(res.status).toBe(404)
+    expect(provider.calls.some((call) => call.method === 'forkSession')).toBe(false)
+  })
+
+  it('shell 要问到会话在哪儿，命令也照原样送到', async () => {
+    const own = ownDirectory()
+    recordAgentSession(database, {
+      sessionId: 'ses-1',
+      userId: 'user-2',
+      username: 'other',
+      role: 'user',
+      directory: own,
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({ sessions: [makeSession({ id: 'ses-1', directory: own })] })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-1/shell', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'ls -la', workingMode: 'build' }),
+    })
+
+    expect(res.status).toBe(200)
+
+    const sent = provider.calls.find((call) => call.method === 'sendShell')
+    expect(directoryOf(sent)).toBe(own)
+    expect(sent?.args[1]).toEqual({ command: 'ls -la', workingMode: 'build' })
+  })
+
+  it('别人的会话，shell 发不出去', async () => {
+    recordAgentSession(database, {
+      sessionId: 'ses-theirs',
+      userId: 'user-1',
+      username: 'user',
+      role: 'admin',
+      directory: ownDirectory(),
+      source: 'proxy',
+    })
+
+    const provider = new FakeAgentProvider({
+      sessions: [makeSession({ id: 'ses-theirs', directory: ownDirectory() })],
+    })
+    const { app } = createApp([provider], asSomebodyElse)
+
+    const res = await app.request('/api/bff/sessions/ses-theirs/shell', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'ls -la', workingMode: null }),
+    })
+
+    expect(res.status).toBe(404)
+    expect(provider.calls.some((call) => call.method === 'sendShell')).toBe(false)
+  })
 })

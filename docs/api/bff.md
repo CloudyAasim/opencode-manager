@@ -49,8 +49,15 @@ seventy-five, and it still gets seventy-five.
 | `POST` | `/api/bff/sessions/:id/permissions/:permissionId/reply` | Answering a permission request | `AcceptedResponse` |
 | `POST` | `/api/bff/sessions/:id/questions/:questionId/reply` | Answering a question | `AcceptedResponse` |
 | `POST` | `/api/bff/sessions/:id/questions/:questionId/reject` | Turning a question down | `AcceptedResponse` |
+| `POST` | `/api/bff/sessions/:id/commands` | Running a command in one conversation | `AcceptedResponse` |
+| `POST` | `/api/bff/sessions/:id/summarize` | Shortening one conversation | `AcceptedResponse` |
+| `POST` | `/api/bff/sessions/:id/fork` | Taking a copy of one conversation | `SessionResponse` |
+| `POST` | `/api/bff/sessions/:id/shell` | Running a command in one conversation's own shell | `AcceptedResponse` |
 | `GET` | `/api/bff/pending` | What the agent is waiting for, across one or more working directories | `PendingListResponse` |
 | `GET` | `/api/bff/status` | How busy every conversation is, across one or more working directories | `BffConversationStatusResponse` |
+| `GET` | `/api/bff/commands` | The commands the agent knows | `BffCommandListResponse` |
+| `GET` | `/api/bff/working-modes` | The ways of working a conversation can be had in | `BffWorkingModeListResponse` |
+| `GET` | `/api/bff/defaults` | What the agent does by default | `BffAgentDefaultsResponse` |
 
 ## The shapes
 
@@ -181,6 +188,64 @@ have to know which dialect it is holding.
 
 A status belongs to a conversation, so it is narrowed to the caller the same
 way the conversation list is.
+
+### The agent's own face
+
+The commands the agent knows, the ways of working a conversation can be had in,
+and what the agent does by default. The client used to ask the agent for all
+three itself, and it held the agent's own words about them - so every place
+that drew a command palette, or let a person pick a way of working, had to
+speak those words too.
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `GET /api/bff/commands` | - | `BffCommandListResponse` |
+| `GET /api/bff/working-modes` | - | `BffWorkingModeListResponse` |
+| `GET /api/bff/defaults` | - | `BffAgentDefaultsResponse` |
+
+The commands are the versioned API's `Command`s, the ways of working are the
+versioned API's `WorkingMode`s, and the defaults are the versioned API's
+`AgentDefaults` - there is one truth about what a command is, whichever agent
+is behind it.
+
+The word "agent" is taken by the program that does the work, so the ways of
+working have a word of their own: a `WorkingMode` is what the agent is called
+when it is doing the work rather than the program that is doing it.
+
+`AgentDefaults` carries two things and no more: the model a conversation
+starts on, and the way of working it starts in. The rest of an agent's
+configuration is its own business - translating all of it would turn the
+answer into a report on one agent rather than a word all of them share.
+
+These three are not a person's, so they are not narrowed to the caller the way
+a conversation is. The working directories they are read from are the
+caller's, though: a directory that is not yours is not yours to read the
+agent's own words out of.
+
+When several directories are named, the first one answers - a command or a
+way of working that two directories both have is the same one. The defaults
+are one answer and not a list, so the first directory answers them too.
+
+### What hangs on a conversation
+
+The commands, the shell, the copy and the summary all hang on a conversation,
+so the conversation decides whose they are - and the client names the
+conversation, the same way it names one everywhere else.
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `POST /api/bff/sessions/:id/commands` | `SendCommandRequest` | `AcceptedResponse` |
+| `POST /api/bff/sessions/:id/summarize` | `SummarizeRequest` | `AcceptedResponse` |
+| `POST /api/bff/sessions/:id/fork` | `ForkRequest` | `SessionResponse` |
+| `POST /api/bff/sessions/:id/shell` | `ShellRequest` | `AcceptedResponse` |
+
+A command's answer and a shell's answer are messages in the conversation, so
+they are read from there rather than carried back: a prompt's answer is not
+carried back either, and the two are the same kind of thing.
+
+A copy is a conversation like any other, and it belongs to whoever asked for
+it - so it is written down in the ledger at the moment it is made, the same
+way a conversation made through the browser's other door is.
 
 ### The event stream says the same thing in the same words
 

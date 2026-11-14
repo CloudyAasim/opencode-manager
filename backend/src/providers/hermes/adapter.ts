@@ -1,4 +1,6 @@
 import type {
+  AgentDefaults,
+  Command,
   ConversationStatus,
   Message,
   MessagePart,
@@ -8,6 +10,7 @@ import type {
   PermissionResponse,
   Session,
   SessionRevert,
+  WorkingMode,
 } from '@opencode-manager/shared/api/v1'
 import {
   ProviderUnavailableError,
@@ -212,6 +215,55 @@ export class HermesProvider implements AgentProvider {
       this.id,
       `${this.label} cannot ask a question: nobody is sitting in front of it`,
     )
+  }
+
+  /**
+   * The commands this agent knows.
+   *
+   * The API server this adapter talks to does not say, so it says so: an
+   * empty list would claim the agent has no commands, which is a different
+   * and wrong answer.
+   */
+  async listCommands(): Promise<Command[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what commands it knows`,
+    )
+  }
+
+  async sendCommand(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot run a command`)
+  }
+
+  async summarizeSession(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot shorten a conversation`)
+  }
+
+  async forkSession(): Promise<Session> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot take a copy of a conversation`,
+    )
+  }
+
+  async sendShell(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} has no shell of its own`)
+  }
+
+  async listWorkingModes(): Promise<WorkingMode[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what ways of working it has`,
+    )
+  }
+
+  /**
+   * What this agent does by default.
+   *
+   * Nothing that can be read, and nothing said.
+   */
+  async getDefaults(): Promise<AgentDefaults> {
+    return { model: null, workingMode: null }
   }
 
   /**

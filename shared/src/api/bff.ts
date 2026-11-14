@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { ConversationStatusSchema, SessionSchema } from './v1'
+import {
+  AgentDefaultsSchema,
+  CommandSchema,
+  ConversationStatusSchema,
+  SessionSchema,
+  WorkingModeSchema,
+} from './v1'
 
 /**
  * The shape the web client talks to.
@@ -41,3 +47,38 @@ export const BffConversationStatusResponseSchema = z.object({
   statuses: z.record(z.string(), ConversationStatusSchema),
 })
 export type BffConversationStatusResponse = z.infer<typeof BffConversationStatusResponseSchema>
+
+/**
+ * The commands the agent knows.
+ *
+ * The commands themselves are the versioned API's - there is one truth about
+ * what a command is - so a client that draws a command palette is drawing the
+ * same palette whichever agent is behind it.
+ */
+export const BffCommandListResponseSchema = z.object({
+  commands: z.array(CommandSchema),
+})
+export type BffCommandListResponse = z.infer<typeof BffCommandListResponseSchema>
+
+/**
+ * The ways of working a conversation can be had in.
+ *
+ * The ways themselves are the versioned API's. What this layer adds is that
+ * they come for every working directory at once, the same way the conversation
+ * list does.
+ */
+export const BffWorkingModeListResponseSchema = z.object({
+  workingModes: z.array(WorkingModeSchema),
+})
+export type BffWorkingModeListResponse = z.infer<typeof BffWorkingModeListResponseSchema>
+
+/**
+ * What the agent does by default.
+ *
+ * The defaults are the versioned API's, and they are the only two the client
+ * ever reads - the rest of an agent's configuration stays the agent's.
+ */
+export const BffAgentDefaultsResponseSchema = z.object({
+  defaults: AgentDefaultsSchema,
+})
+export type BffAgentDefaultsResponse = z.infer<typeof BffAgentDefaultsResponseSchema>

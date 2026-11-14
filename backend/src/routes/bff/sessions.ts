@@ -6,13 +6,17 @@ import {
   AcceptedResponseSchema,
   CreateSessionRequestSchema,
   DeletedResponseSchema,
+  ForkRequestSchema,
   MessageListResponseSchema,
   PermissionReplySchema,
   QuestionReplySchema,
   RenameSessionRequestSchema,
+  SendCommandRequestSchema,
   SendPromptRequestSchema,
   SessionResponseSchema,
   SessionRevertSchema,
+  ShellRequestSchema,
+  SummarizeRequestSchema,
 } from '@opencode-manager/shared/api/v1'
 import type { Session } from '../../auth'
 import type { Session as Conversation } from '@opencode-manager/shared/api/v1'
@@ -370,6 +374,147 @@ export function createBffSessionRoutes(registry: ProviderRegistry, database: Dat
 
       const provider = located.provider
       await provider.rejectQuestion(c.req.param('questionId'), contextOf(located.directory))
+      return ok(c, AcceptedResponseSchema, { accepted: true })
+    }),
+  )
+
+  /**
+   * Running a command in a conversation.
+   *
+   * A command hangs on a conversation, so the conversation decides whose it
+   * is - and the layer works out where the conversation lives, the same way
+   * it does for everything else about a conversation.
+   *
+   * The answer is a message in the conversation, so it is read from there
+   * rather than carried back here: a prompt's answer is not carried back
+   * either, and the two are the same kind of thing.
+   */
+  app.post('/:id/commands', (c) =>
+    handle(c, async () => {
+      const body = SendCommandRequestSchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.sendCommand(
+        c.req.param('id'),
+        {
+          command: body.data.command,
+          arguments: body.data.arguments,
+          workingMode: body.data.workingMode,
+          model: body.data.model,
+        },
+        contextOf(located.directory),
+      )
+      return ok(c, AcceptedResponseSchema, { accepted: true })
+    }),
+  )
+
+  /**
+   * Shortening a conversation.
+   *
+   * The model that writes the summary is named by the caller, because a
+   * summary is an answer and an answer is written by somebody.
+   */
+  app.post('/:id/summarize', (c) =>
+    handle(c, async () => {
+      const body = SummarizeRequestSchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.summarizeSession(
+        c.req.param('id'),
+        body.data.model,
+        contextOf(located.directory),
+      )
+      return ok(c, AcceptedResponseSchema, { accepted: true })
+    }),
+  )
+
+  /**
+   * Taking a copy of a conversation.
+   *
+   * The copy is a conversation like any other, and it belongs to whoever
+   * asked for it - so it is written down in the ledger at the moment it is
+   * made, the same way a conversation made through the browser's other door
+   * is.
+   */
+  app.post('/:id/fork', (c) =>
+    handle(c, async () => {
+      const body = ForkRequestSchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      const session = await provider.forkSession(
+        c.req.param('id'),
+        { messageId: body.data.messageId },
+        contextOf(located.directory),
+      )
+
+      const principal = principalFrom(c.get('user'))
+      if (principal) {
+        recordAgentSession(database, {
+          sessionId: session.id,
+          userId: principal.id,
+          username: principal.username ?? null,
+          role: principal.role,
+          directory: session.directory ?? located.directory,
+          source: 'bff',
+        })
+      }
+
+      return ok(c, SessionResponseSchema, { session })
+    }),
+  )
+
+  /**
+   * Running a command in a conversation's own shell.
+   *
+   * The shell belongs to the conversation, so the conversation decides whose
+   * it is.
+   */
+  app.post('/:id/shell', (c) =>
+    handle(c, async () => {
+      const body = ShellRequestSchema.safeParse(await readJson(c))
+      if (!body.success) {
+        return fail(c, 400, 'bad_request', 'The request body does not match the contract', body.error.issues)
+      }
+
+      const located = await locate(c, registry, database)
+      if (located instanceof Response) return located
+      if (!located.session) {
+        return fail(c, 404, 'not_found', 'No session is known under that id')
+      }
+
+      const provider = located.provider
+      await provider.sendShell(
+        c.req.param('id'),
+        { command: body.data.command, workingMode: body.data.workingMode },
+        contextOf(located.directory),
+      )
       return ok(c, AcceptedResponseSchema, { accepted: true })
     }),
   )

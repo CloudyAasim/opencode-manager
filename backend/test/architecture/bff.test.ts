@@ -423,8 +423,11 @@ describe('给前端的那一层', () => {
     // One conversation is as much a conversation as a list of them is: an
     // agent knows about conversations, not about people. Without this, one
     // conversation is handed to whoever asked for it.
+    //
+    // The commands, the shell, the copy and the summary are on the
+    // conversation too - they hang on it - so they are held to the same rule.
     const withSession = bffFiles().filter((file) =>
-      /\b(getSession|renameSession|deleteSession|abortSession|listMessages|sendPrompt|revertSession|respondToPermission|replyToQuestion|rejectQuestion)\s*\(/.test(read(file)),
+      /\b(getSession|renameSession|deleteSession|abortSession|listMessages|sendPrompt|revertSession|respondToPermission|replyToQuestion|rejectQuestion|sendCommand|summarizeSession|forkSession|sendShell)\s*\(/.test(read(file)),
     )
     expect(withSession.length, '没找到出会话的地方，这条门禁正在空跑').toBeGreaterThan(0)
 

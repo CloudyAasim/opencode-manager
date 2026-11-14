@@ -1,8 +1,11 @@
 import type {
   Agent,
   AgentCapability,
+  AgentDefaults,
   AgentKind,
+  Command,
   ConversationStatus,
+  ForkRequest,
   MessageWithParts,
   PendingPermission,
   PendingQuestion,
@@ -10,8 +13,11 @@ import type {
   PromptModel,
   PromptPart,
   PromptTextPart,
+  SendCommandRequest,
   Session,
   SessionRevert,
+  ShellRequest,
+  WorkingMode,
 } from '@opencode-manager/shared/api/v1'
 
 /**
@@ -21,7 +27,22 @@ import type {
  * which agent it was talking to.
  */
 
-export type { Agent, AgentCapability, AgentKind, MessageWithParts, PendingPermission, PendingQuestion, Session }
+export type {
+  Agent,
+  AgentCapability,
+  AgentDefaults,
+  AgentKind,
+  Command,
+  ForkRequest,
+  MessageWithParts,
+  PendingPermission,
+  PendingQuestion,
+  PromptModel,
+  SendCommandRequest,
+  Session,
+  ShellRequest,
+  WorkingMode,
+}
 
 /**
  * Where the agent is working. Every coding agent has one, and the versioned
@@ -160,6 +181,60 @@ export interface AgentProvider {
   replyToQuestion(id: string, answers: string[][], context: ProviderContext): Promise<void>
   /** Turning a question down. */
   rejectQuestion(id: string, context: ProviderContext): Promise<void>
+  /**
+   * The commands the agent knows.
+   *
+   * These are the agent's own, and they are not the conversation's: a command
+   * is something the agent can be told to do, and which commands those are
+   * does not depend on which conversation is open.
+   */
+  listCommands(context: ProviderContext): Promise<Command[]>
+  /**
+   * Running a command in a conversation.
+   *
+   * The answer is part of the conversation, so it is read from there rather
+   * than handed back here - the same way a prompt's answer is.
+   */
+  sendCommand(
+    sessionId: string,
+    command: SendCommandRequest,
+    context: ProviderContext,
+  ): Promise<void>
+  /**
+   * Shortening a conversation.
+   *
+   * The model that writes the summary is named, because a summary is an
+   * answer and an answer is written by somebody.
+   */
+  summarizeSession(sessionId: string, model: PromptModel, context: ProviderContext): Promise<void>
+  /**
+   * Taking a copy of a conversation.
+   *
+   * The copy is a conversation like any other, and it comes back as one - the
+   * caller needs its id to open it.
+   */
+  forkSession(sessionId: string, fork: ForkRequest, context: ProviderContext): Promise<Session>
+  /**
+   * Running a command in a conversation's own shell.
+   *
+   * What the shell writes is part of the conversation, so it is read from
+   * there rather than handed back here.
+   */
+  sendShell(sessionId: string, shell: ShellRequest, context: ProviderContext): Promise<void>
+  /**
+   * The ways of working a conversation can be had in.
+   *
+   * The word "agent" is taken by the program that does the work, so the ways
+   * of working have a word of their own.
+   */
+  listWorkingModes(context: ProviderContext): Promise<WorkingMode[]>
+  /**
+   * What the agent does by default.
+   *
+   * Only the two defaults a client actually reads: the model a conversation
+   * starts on, and the way of working it starts in.
+   */
+  getDefaults(context: ProviderContext): Promise<AgentDefaults>
 }
 
 export class AgentNotFoundError extends Error {

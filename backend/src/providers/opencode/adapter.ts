@@ -1,5 +1,8 @@
 import type {
+  AgentDefaults,
+  Command,
   ConversationStatus,
+  ForkRequest,
   Message,
   MessageError,
   MessagePart,
@@ -9,13 +12,18 @@ import type {
   PendingQuestionInfo,
   PendingRequestTool,
   PermissionResponse,
+  PromptModel,
+  SendCommandRequest,
   Session,
   SessionRevert,
   SessionShare,
   SessionStatus,
+  ShellRequest,
   TimeRange,
   TokenUsage,
   ToolCallState,
+  WorkingMode,
+  WorkingModeScope,
 } from '@opencode-manager/shared/api/v1'
 import { UpstreamError, type OpenCodeClient } from '../../services/opencode/client'
 import {
@@ -553,6 +561,118 @@ export function toPendingQuestion(
   }
 }
 
+/**
+ * The model, said the way the versioned API says it.
+ *
+ * The agent says a model either as two fields or as one line of text
+ * ("provider/model"), and sometimes as both depending on where it is asked.
+ * Reading both is not guessing - it is refusing to answer "which model" with
+ * "nowhere" because the answer moved.
+ */
+export function toPromptModel(raw: unknown): PromptModel | null {
+  const record = asRecord(raw)
+  if (record) {
+    const providerId = asString(record.providerId) ?? asString(record.providerID)
+    const modelId = asString(record.modelId) ?? asString(record.modelID)
+    if (!providerId || !modelId) return null
+    return { providerId, modelId }
+  }
+
+  const text = asString(raw)
+  if (!text) return null
+  // The provider is the first part and the model is the rest: a model name
+  // may itself contain a slash, and splitting it the other way round would
+  // name a provider that does not exist.
+  const [providerId, ...rest] = text.split('/')
+  const modelId = rest.join('/')
+  if (!providerId || !modelId) return null
+  return { providerId, modelId }
+}
+
+/** The model, said the way the agent says it. */
+function modelStringOf(model: PromptModel | null): string | undefined {
+  return model ? `${model.providerId}/${model.modelId}` : undefined
+}
+
+/**
+ * One command, in the versioned dialect.
+ *
+ * The agent says which agent a command runs as; the versioned API says which
+ * way of working it runs as - and says null where the agent says nothing,
+ * because a field that is only sometimes there is a field every reader has to
+ * ask about.
+ */
+export function toCommand(raw: unknown): Command {
+  const record = asRecord(raw)
+  const name = asString(record?.name)
+  if (!name) {
+    throw new ProviderProtocolError(AGENT_ID, 'The agent answered with a command that has no name')
+  }
+
+  return {
+    name,
+    description: asString(record?.description) ?? null,
+    workingMode: asString(record?.agent) ?? null,
+    model: toPromptModel(record?.model),
+    template: asString(record?.template) ?? null,
+    subtask: record?.subtask === true,
+    hints: stringArrayOf(record?.hints),
+  }
+}
+
+/**
+ * One way of working, in the versioned dialect.
+ *
+ * The agent says what a way of working is for in one of three words: it can
+ * lead a conversation, it can be handed one, or it can do both. A scope we
+ * cannot read is offered rather than hidden - a way of working that
+ * disappears because of a word we did not understand is worse than one that is
+ * offered when it should not have been.
+ */
+export function toWorkingMode(raw: unknown): WorkingMode {
+  const record = asRecord(raw)
+  const name = asString(record?.name)
+  if (!name) {
+    throw new ProviderProtocolError(
+      AGENT_ID,
+      'The agent answered with a way of working that has no name',
+    )
+  }
+
+  const mode = asString(record?.mode)
+  const scope: WorkingModeScope =
+    mode === 'primary' || mode === 'subagent' || mode === 'all' ? mode : 'all'
+
+  return {
+    name,
+    description: asString(record?.description) ?? null,
+    scope,
+    hidden: record?.hidden === true,
+    color: asString(record?.color) ?? null,
+    // The model the way prefers, if it prefers one. The agent says it as two
+    // fields; the versioned API says it as two fields too, only named the
+    // other way round.
+    model: toPromptModel(record?.model),
+  }
+}
+
+/**
+ * What the agent does by default.
+ *
+ * Only the two defaults a client actually reads are carried over: the model a
+ * conversation starts on, and the way of working it starts in. The rest of a
+ * configuration is the agent's own business, and translating all of it would
+ * make this shape a report on one agent rather than a word all of them share.
+ */
+export function toAgentDefaults(raw: unknown): AgentDefaults {
+  const record = asRecord(raw)
+  return {
+    model: toPromptModel(record?.model),
+    // The field was renamed once; reading both is not guessing.
+    workingMode: asString(record?.default_agent) ?? asString(record?.defaultAgent) ?? null,
+  }
+}
+
 export interface OpenCodeProviderOptions {
   isReady?: () => boolean
 }
@@ -811,6 +931,122 @@ export class OpenCodeProvider implements AgentProvider {
       path: `/question/${encodeURIComponent(id)}/reject`,
       context,
     })
+  }
+
+  /**
+   * The commands this agent knows.
+   *
+   * The commands are not the conversation's, so they are asked for on purpose
+   * and a failure is a failure: an agent that cannot say what it can be told
+   * to do must not answer "nothing", which is a different and wrong answer.
+   */
+  async listCommands(context: ProviderContext): Promise<Command[]> {
+    const raw = await this.readJson<unknown>('/command', context)
+    const items = Array.isArray(raw) ? raw : []
+    return items.map(toCommand)
+  }
+
+  /**
+   * Running a command in a conversation.
+   *
+   * The answer comes back as a message in the conversation, so it is read from
+   * there rather than carried back here - the same way a prompt's answer is.
+   */
+  async sendCommand(
+    sessionId: string,
+    command: SendCommandRequest,
+    context: ProviderContext,
+  ): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `${this.sessionPath(sessionId)}/command`,
+      body: JSON.stringify({
+        command: command.command,
+        arguments: command.arguments,
+        ...(command.workingMode ? { agent: command.workingMode } : {}),
+        ...(command.model ? { model: modelStringOf(command.model) } : {}),
+      }),
+      headers: { 'Content-Type': 'application/json' },
+      context,
+      sessionId,
+    })
+  }
+
+  /**
+   * Shortening a conversation.
+   */
+  async summarizeSession(
+    sessionId: string,
+    model: PromptModel,
+    context: ProviderContext,
+  ): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `${this.sessionPath(sessionId)}/summarize`,
+      body: JSON.stringify({
+        providerID: model.providerId,
+        modelID: model.modelId,
+      }),
+      headers: { 'Content-Type': 'application/json' },
+      context,
+      sessionId,
+    })
+  }
+
+  /**
+   * Taking a copy of a conversation.
+   *
+   * The copy is a conversation like any other, and it is read back from the
+   * agent rather than guessed at here.
+   */
+  async forkSession(sessionId: string, fork: ForkRequest, context: ProviderContext): Promise<Session> {
+    const raw = await this.write({
+      method: 'POST',
+      path: `${this.sessionPath(sessionId)}/fork`,
+      body: JSON.stringify(fork.messageId ? { messageID: fork.messageId } : {}),
+      headers: { 'Content-Type': 'application/json' },
+      context,
+      sessionId,
+    })
+    return toSession(raw, this.id, 'unknown', context.directory)
+  }
+
+  /**
+   * Running a command in a conversation's own shell.
+   *
+   * The shell needs a way of working even when the caller did not name one,
+   * and the one to use then is this agent's own catch-all - the way of
+   * working that is meant for everything.
+   */
+  async sendShell(sessionId: string, shell: ShellRequest, context: ProviderContext): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `${this.sessionPath(sessionId)}/shell`,
+      body: JSON.stringify({
+        command: shell.command,
+        agent: shell.workingMode ?? 'general',
+      }),
+      headers: { 'Content-Type': 'application/json' },
+      context,
+      sessionId,
+    })
+  }
+
+  /**
+   * The ways of working a conversation can be had in.
+   */
+  async listWorkingModes(context: ProviderContext): Promise<WorkingMode[]> {
+    const raw = await this.readJson<unknown>('/agent', context)
+    const items = Array.isArray(raw) ? raw : []
+    return items.map(toWorkingMode)
+  }
+
+  /**
+   * What this agent does by default.
+   */
+  async getDefaults(context: ProviderContext): Promise<AgentDefaults> {
+    const raw = await this.readJson<unknown>('/config', context)
+    return toAgentDefaults(raw)
   }
 
   private sessionPath(id: string): string {

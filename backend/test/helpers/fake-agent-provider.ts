@@ -1,4 +1,6 @@
 import type {
+  AgentDefaults,
+  Command,
   ConversationStatus,
   Message,
   MessagePart,
@@ -8,15 +10,20 @@ import type {
   PermissionResponse,
   Session,
   SessionRevert,
+  WorkingMode,
 } from '@opencode-manager/shared/api/v1'
 import type {
   AgentProvider,
   CreateSessionInput,
+  ForkRequest,
   ListSessionsParams,
+  PromptModel,
   ProviderContext,
   ProviderStatus,
+  SendCommandRequest,
   SendPromptInput,
   SessionPage,
+  ShellRequest,
 } from '../../src/providers/contract'
 
 export interface FakeProviderOptions {
@@ -30,6 +37,9 @@ export interface FakeProviderOptions {
   pendingPermissions?: PendingPermission[]
   pendingQuestions?: PendingQuestion[]
   statuses?: Record<string, ConversationStatus>
+  commands?: Command[]
+  workingModes?: WorkingMode[]
+  defaults?: AgentDefaults
 }
 
 export interface FakeProviderCall {
@@ -67,6 +77,9 @@ export class FakeAgentProvider implements AgentProvider {
   pendingPermissions: PendingPermission[]
   pendingQuestions: PendingQuestion[]
   statuses: Record<string, ConversationStatus>
+  commands: Command[]
+  workingModes: WorkingMode[]
+  defaults: AgentDefaults
 
   constructor(options: FakeProviderOptions = {}) {
     this.id = options.id ?? 'fake'
@@ -79,6 +92,9 @@ export class FakeAgentProvider implements AgentProvider {
     this.pendingPermissions = options.pendingPermissions ?? []
     this.pendingQuestions = options.pendingQuestions ?? []
     this.statuses = options.statuses ?? {}
+    this.commands = options.commands ?? []
+    this.workingModes = options.workingModes ?? []
+    this.defaults = options.defaults ?? { model: null, workingMode: null }
   }
 
   private record(method: string, ...args: unknown[]): void {
@@ -201,6 +217,63 @@ export class FakeAgentProvider implements AgentProvider {
 
   async rejectQuestion(id: string, context: ProviderContext): Promise<void> {
     this.recordAbout('rejectQuestion', context, [id])
+  }
+
+  async listCommands(context: ProviderContext): Promise<Command[]> {
+    this.recordAbout('listCommands', context, [])
+    return this.commands
+  }
+
+  async sendCommand(
+    sessionId: string,
+    command: SendCommandRequest,
+    context: ProviderContext,
+  ): Promise<void> {
+    this.recordAbout('sendCommand', context, [sessionId, command])
+  }
+
+  async summarizeSession(
+    sessionId: string,
+    model: PromptModel,
+    context: ProviderContext,
+  ): Promise<void> {
+    this.recordAbout('summarizeSession', context, [sessionId, model])
+  }
+
+  async forkSession(
+    sessionId: string,
+    fork: ForkRequest,
+    context: ProviderContext,
+  ): Promise<Session> {
+    this.recordAbout('forkSession', context, [sessionId, fork])
+    const found = this.sessions.find((session) => session.id === sessionId)
+    if (!found) throw new Error(`no session ${sessionId}`)
+    const forked: Session = {
+      ...found,
+      id: `${found.id}-fork`,
+      title: `${found.title} (fork)`,
+      parentId: found.id,
+    }
+    this.sessions = [...this.sessions, forked]
+    return forked
+  }
+
+  async sendShell(
+    sessionId: string,
+    shell: ShellRequest,
+    context: ProviderContext,
+  ): Promise<void> {
+    this.recordAbout('sendShell', context, [sessionId, shell])
+  }
+
+  async listWorkingModes(context: ProviderContext): Promise<WorkingMode[]> {
+    this.recordAbout('listWorkingModes', context, [])
+    return this.workingModes
+  }
+
+  async getDefaults(context: ProviderContext): Promise<AgentDefaults> {
+    this.recordAbout('getDefaults', context, [])
+    return this.defaults
   }
 }
 
