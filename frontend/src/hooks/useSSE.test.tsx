@@ -780,4 +780,33 @@ describe('useSSE', () => {
       window.requestAnimationFrame = origRAF
     }
   })
+
+  it('asks the layer how busy everything is even when the layer is this origin', async () => {
+    // An empty address is the layer whose address is the origin this page was
+    // served from. Read as "no server" it quietly switches off the status
+    // sync, and the page then only knows what the stream happens to say.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
+    const { unmount } = renderHook(() => useSSE('', AGENT, '/repo', 'session-1'), { wrapper })
+
+    await waitFor(() => expect(MockEventSource.instances).toHaveLength(1))
+
+    act(() => {
+      MockEventSource.instances[0].emit('connected', { clientId: 'client-1' })
+    })
+
+    await waitFor(() => {
+      expect(mocks.listStatuses).toHaveBeenCalled()
+    })
+
+    // Unmount while the fetch mock is still in place: the stream says
+    // goodbye over the network on the way out, and that is this test's
+    // business, not the next one's.
+    unmount()
+  })
 })

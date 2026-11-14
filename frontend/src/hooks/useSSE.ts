@@ -17,6 +17,21 @@ import { useCancellableTimer } from './use-cancellable-timer'
 
 const STATUS_POLL_INTERVAL_MS = 15000
 
+/**
+ * Whether the layer's address is known at all.
+ *
+ * The empty string is an address, not the absence of one: it means "the
+ * origin this page was served from", which is where most deployments live
+ * and where every installed client lives. Reading it as "no server" quietly
+ * turns off everything that is gated on it - the batcher, the status poll,
+ * the sync - and nothing says so.
+ *
+ * The agent's address is the other thing entirely: that one is never empty,
+ * and an empty one really does mean there is no agent to talk to.
+ */
+const hasLayerAddress = (serverUrl: string | null | undefined): serverUrl is string =>
+  serverUrl !== undefined && serverUrl !== null
+
 const getEventDirectory = (event: SSEEvent): string | undefined => {
   const directory = (event as { directory?: unknown }).directory
   return typeof directory === 'string' ? directory : undefined
@@ -103,7 +118,7 @@ export const useSSE = (
   }, [schedule])
 
   useEffect(() => {
-    if (!serverUrl) {
+    if (!hasLayerAddress(serverUrl)) {
       batcherRef.current?.destroy()
       batcherRef.current = null
       return
@@ -382,7 +397,7 @@ export const useSSE = (
   }, [t, queryClient, serverUrl, opcodeUrl, directorySet, resolveCacheDirectory, setSessionStatus, setSessionTodos, currentSessionId, handleRestartServer])
 
   const fetchInitialData = useCallback(async () => {
-    if (!serverUrl || directoriesList.length === 0 || !mountedRef.current) return
+    if (!hasLayerAddress(serverUrl) || directoriesList.length === 0 || !mountedRef.current) return
     const syncVersion = ++statusSyncVersionRef.current
 
     try {
@@ -398,7 +413,7 @@ export const useSSE = (
   }, [serverUrl, directoriesList, replaceSessionStatuses])
 
   useEffect(() => {
-    if (!serverUrl || directoriesList.length === 0 || isConnected) return
+    if (!hasLayerAddress(serverUrl) || directoriesList.length === 0 || isConnected) return
 
     const interval = setInterval(() => {
       void fetchInitialData().catch(() => undefined)
@@ -409,7 +424,7 @@ export const useSSE = (
 
   const syncCurrentSession = useCallback(() => {
     const sessionId = sessionIdRef.current
-    if (!sessionId || !serverUrl || !primaryDirectory) return
+    if (!sessionId || !hasLayerAddress(serverUrl) || !primaryDirectory) return
 
     queryClient.invalidateQueries({
       queryKey: sessionQueryKey(serverUrl, sessionId, primaryDirectory),

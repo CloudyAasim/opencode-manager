@@ -196,7 +196,7 @@ export function useCommands(serverUrl: string | null) {
   // the locale explicitly - and a gate asserts that it does.
   const builtins = useMemo(() => builtinCommands(t), [t])
   const sortedBuiltins = useMemo(() => sortCommandsByName(builtins), [builtins])
-  const { data: commands, isLoading: loading, error } = useQuery({
+  const { data: loaded, isFetching, error } = useQuery({
     // locale is part of the key: these descriptions are translated, so a
     // cached list from the previous language would be rendered as-is
     queryKey: ['bff', 'commands', serverUrl, locale],
@@ -208,9 +208,32 @@ export function useCommands(serverUrl: string | null) {
       )
       return sortCommandsByName(uniqueCommands)
     },
-    enabled: !!serverUrl,
-    initialData: sortedBuiltins,
+    // The layer's address is allowed to be the empty string - that means "the
+    // origin this page was served from", which is where most deployments
+    // live and where the installed client always is. An empty address is
+    // therefore a layer, not the absence of one; only an address that is not
+    // there at all means there is nothing to ask.
+    //
+    // This used to ask the agent, whose address is never empty, and the
+    // difference did not show until the client moved the question to the
+    // layer: the command list then simply never arrived anywhere.
+    enabled: serverUrl !== undefined && serverUrl !== null,
+    // The built-in commands are what to show while the layer is being asked -
+    // they are not the answer to the question.
+    //
+    // `initialData` would say they were the answer, and then the query would
+    // never ask: the app's own stale time is a minute, so the built-ins would
+    // sit there looking fresh and the layer's list would never arrive. That
+    // is what happened - the palette drew the built-ins and nothing else, and
+    // nothing on screen said the rest was missing.
+    //
+    // A placeholder is not kept in the cache, so the question is still asked.
+    placeholderData: sortedBuiltins,
   })
+
+  // A question that failed has no answer to show, but the built-ins are still
+  // commands this app knows how to run.
+  const commands = loaded ?? sortedBuiltins
 
   const filterCommands = (query: string) => {
     if (!query.trim()) return commands
@@ -227,7 +250,7 @@ export function useCommands(serverUrl: string | null) {
 
   return {
     commands,
-    loading,
+    loading: isFetching,
     error: error ? t('shell.commands.loadFailed') : null,
     filterCommands
   }

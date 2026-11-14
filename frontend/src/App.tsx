@@ -1,5 +1,5 @@
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useCallback, Suspense } from 'react'
 import { Toaster } from 'sonner'
@@ -30,22 +30,9 @@ import { onNotificationClick } from '@/lib/serviceWorker'
 import { useAuth } from '@/hooks/useAuth'
 import { useServerHealth } from '@/hooks/useServerHealth'
 import { usePrefetchRoutes } from '@/hooks/usePrefetchRoutes'
+import { createQueryClient } from '@/lib/queryClient'
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60,
-      gcTime: 1000 * 60 * 30,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-      retry: 1,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
-    },
-    mutations: {
-      retry: 0,
-    },
-  },
-})
+const queryClient = createQueryClient()
 
 function SSHHostKeyDialogWrapper() {
   const { sshHostKey } = useEventContext()

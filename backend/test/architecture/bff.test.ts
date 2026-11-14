@@ -536,6 +536,96 @@ describe('给前端的那一层', () => {
     ).toEqual([])
   })
 
+  it('客户端不许把这一层的地址当成可有可无', () => {
+    // 这一层的地址可以是空的。空串说的是「就是你打开这个页面的那个地方」，
+    // 大多数部署住在那里，每一个装好的客户端也住在那里。把它读成「没有
+    // 服务器」，挂在它下面的东西就会悄悄停掉——而页面看着还是好的，只是
+    // 从此不再问，也没有任何东西说它不再问了。
+    //
+    // agent 的地址是另一回事：那个地址不会是空的，空了是真的没有人在。
+    //
+    // 例外只有一个文件：那里的空串说的是「这个人没有选过服务器」，那是
+    // 一个选择，不是一个地址。
+    const LAYER_ADDRESSES = ['serverUrl', 'API_BASE_URL']
+    const EXCEPTION = path.join(FRONTEND_DIR, 'lib', 'server-selection.ts')
+    const offenders: string[] = []
+
+    for (const file of frontendSources()) {
+      if (file === EXCEPTION) continue
+      const source = read(file)
+      for (const name of LAYER_ADDRESSES) {
+        const patterns = [
+          // `!serverUrl`, `!!serverUrl` - the address read as a yes/no.
+          new RegExp(`!\\s*${name}\\b`, 'g'),
+          // `serverUrl && ...` - the same question, asked the other way round.
+          new RegExp(`\\b${name}\\s*&&`, 'g'),
+          // A ternary, but not an optional property: `serverUrl?:` is a type.
+          new RegExp(`\\b${name}\\s*\\?\\s*[^:\\s]`, 'g'),
+        ]
+        for (const pattern of patterns) {
+          for (const match of source.matchAll(pattern)) {
+            offenders.push(`${path.relative(repoRoot, file)} 写了 ${match[0].trim()}`)
+          }
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `前端把这一层的地址当成了可有可无：${offenders.join(', ')}`,
+        '这一层的地址为空串时说的是「就是你打开这个页面的那个地方」，不是「没有服务器」。',
+        '照这么写，挂在它下面的东西会悄悄停掉，页面却看着还是好的。',
+      ].join('\n'),
+    ).toEqual([])
+
+    // The gate above says the address may not be read as a yes/no. It says
+    // nothing about what a reader is supposed to find instead - so check
+    // that the honest way of asking is there at all, or the gate is only
+    // complaining about a shape nobody uses.
+    const honest = frontendSources().filter((file) =>
+      /serverUrl !== undefined && serverUrl !== null|hasLayerAddress\(/.test(read(file)),
+    )
+    expect(
+      honest.length,
+      '前端一处也没有诚实的写法，这条门禁正在空跑',
+    ).toBeGreaterThan(0)
+  })
+
+  it('app 和测试必须住在同一个世界里', () => {
+    // staleTime 是查询活着的那个世界的一部分：一个**被本地答了的**查询，
+    // 在那段时间里看起来是新鲜的，而新鲜的查询不会再问一次。
+    //
+    // 命令列表就是这样被本地答了的——用内置命令——于是这一层一次也没被问过。
+    // 而测试之所以没发现，是因为测试自己造了一个**没有** staleTime 的
+    // QueryClient：那是另一个世界，app 在里面做的事它一件也看不见。
+    //
+    // 所以 app 的客户端得只有一份，测试也得用它。
+    const FACTORY = path.join(FRONTEND_DIR, 'lib', 'queryClient.ts')
+    const COMMAND_TEST = path.join(FRONTEND_DIR, 'hooks', 'useCommands.test.tsx')
+
+    expect(
+      fs.existsSync(FACTORY),
+      [
+        '前端的 query 客户端不在 lib/queryClient.ts 了。',
+        '测试就没有同一个世界可以待——而 app 的 staleTime 正是命令列表没到的原因。',
+      ].join('\n'),
+    ).toBe(true)
+
+    expect(
+      read(path.join(FRONTEND_DIR, 'App.tsx')),
+      [
+        'App.tsx 自己造了一个 query 客户端。',
+        '它和测试用的那份已经是两个世界了，而这两份的数字不一样的时候没人会发现。',
+      ].join('\n'),
+    ).toMatch(/createQueryClient\(\)/)
+
+    expect(
+      readIfPresent(COMMAND_TEST),
+      '命令列表的测试没有用 app 的 query 客户端，它跑的世界和 app 不是同一个',
+    ).toMatch(/createQueryClient\(\)/)
+  })
+
   it('这一层必须把会话收窄到调用者', () => {
     // One conversation is as much a conversation as a list of them is: an
     // agent knows about conversations, not about people. Without this, one
