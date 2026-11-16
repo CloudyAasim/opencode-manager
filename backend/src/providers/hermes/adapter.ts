@@ -9,6 +9,8 @@ import type {
   PendingPermission,
   PendingQuestion,
   PermissionResponse,
+  ProviderAuthMethods,
+  ProviderOAuthAuthorization,
   Session,
   SessionRevert,
   WorkingMode,
@@ -244,6 +246,40 @@ export class HermesProvider implements AgentProvider {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot say what models it has`,
+    )
+  }
+
+  /**
+   * How each provider may be logged in.
+   *
+   * The API server this adapter talks to does not say, so it says so: an empty
+   * map would claim that nobody can be logged in here, which is a different
+   * and wrong answer.
+   */
+  async listProviderAuthMethods(): Promise<ProviderAuthMethods> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say how its providers may be logged in`,
+    )
+  }
+
+  /**
+   * Starting an authorization.
+   */
+  async authorizeProviderAuth(): Promise<ProviderOAuthAuthorization> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot log a provider in`,
+    )
+  }
+
+  /**
+   * Finishing an authorization.
+   */
+  async completeProviderAuth(): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot log a provider in`,
     )
   }
 

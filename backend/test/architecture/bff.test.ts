@@ -146,6 +146,47 @@ function routeFiles(): string[] {
   return found.sort()
 }
 
+/**
+ * Where each of the manager's own route factories is mounted.
+ *
+ * The doors of a factory are relative to where it hangs, so the full address
+ * of a door is the mount plus the door. The layer under `/api` is mounted
+ * there, and the layer the client talks to is mounted at `/api/bff`.
+ */
+function managerMounts(): Map<string, string> {
+  const source = read(path.join(repoRoot, 'backend/src/index.ts'))
+  const mounts = new Map<string, string>()
+  for (const match of source.matchAll(/app\.route\(\s*'([^']+)'\s*,\s*([A-Za-z0-9_]+)/g)) {
+    mounts.set(match[2]!, match[1]!)
+  }
+  for (const match of source.matchAll(/protectedApi\.route\(\s*'([^']+)'\s*,\s*([A-Za-z0-9_]+)/g)) {
+    mounts.set(match[2]!, `/api${match[1]!}`)
+  }
+  return mounts
+}
+
+/**
+ * Every door the manager serves, with the address it answers on.
+ *
+ * The layer the client talks to is in here too - it is a set of doors like any
+ * other - so a gate that is about the manager's own doors has to be able to
+ * leave it out.
+ */
+function managerDoors(): { file: string; full: string; bare: string }[] {
+  const mounts = managerMounts()
+  const doors: { file: string; full: string; bare: string }[] = []
+  for (const file of routeFiles()) {
+    const source = read(file)
+    const factory = source.match(/export\s+function\s+([A-Za-z0-9_]+)/)?.[1]
+    const prefix = factory ? (mounts.get(factory) ?? '') : ''
+    for (const match of source.matchAll(/app\.(get|post|put|patch|delete)\(\s*'([^']*)'/g)) {
+      const bare = match[2] === '/' ? '' : (match[2] ?? '')
+      doors.push({ file, bare, full: `${prefix}${bare}` })
+    }
+  }
+  return doors
+}
+
 describe('给前端的那一层', () => {
   it('门禁自己看得见东西', () => {
     expect(bffFiles().length, 'routes/bff/ 下一个文件都没有了，这条门禁正在空跑').toBeGreaterThan(1)
@@ -957,6 +998,131 @@ describe('给前端的那一层', () => {
         `manager 的路由里还在自己开工具服务器的门：${offenders.join(', ')}`,
         '工具服务器这件事是这一层的话：要问就问这一层，它用版本化的话回答。',
         'agent 的那条路是契约那一头的事（provider.connectMcpServer 那一族）。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('模型怎么登录这件事，manager 不许再自己开门', () => {
+    // The manager used to have seven doors of its own for this: three that
+    // went straight to the agent for the ways a provider may be logged in and
+    // for the authorizations themselves, and four for the credentials. The
+    // client now asks one place for all of it - the layer, which asks the
+    // agent through the contract and answers in the versioned dialect.
+    //
+    // So the manager's own routes must not carry a door for this family
+    // again. The trigger is the path itself, and it is precise without any
+    // exceptions: the tool server's own authorization is '/api/mcp-oauth-proxy'
+    // (that dash is not a slash), and the key for a git repository is
+    // '/:id/git-credential' (that one is singular). Both are different
+    // families, and both stay where they are.
+    const offenders: string[] = []
+
+    for (const door of managerDoors()) {
+      if (door.file.startsWith(BFF_DIR + path.sep)) continue
+      for (const address of [door.full, door.bare]) {
+        if (/\/oauth/i.test(address) || /\/credentials/i.test(address)) {
+          offenders.push(
+            `${path.relative(repoRoot, door.file)} 还有一扇模型怎么登录的门：${door.full}`,
+          )
+          break
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `manager 的路由里还在自己开模型登录的门：${offenders.join(', ')}`,
+        '模型怎么登录是这一层的话：/api/bff/provider-auth。',
+        'agent 的那条路是契约那一头的事（provider.authorizeProviderAuth 那一族）。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('模型怎么登录这件事，前端不许再绕过这一层', () => {
+    // The client used to ask the manager's own doors for these - and the
+    // manager answered them in its older words, and the agent's for the ways
+    // themselves. Now it asks the layer, which is the only place that knows
+    // how a model gets logged in.
+    const offenders: string[] = []
+
+    for (const file of frontendSources()) {
+      const source = read(file)
+      source.split(/\r?\n/).forEach((line, index) => {
+        // The client's own module for this is '@/api/oauth' - and that module
+        // now asks the layer. Only the server's address is a bypass, so the
+        // '@' in front of it is what tells them apart.
+        if (/(?<!@)\/api\/oauth/.test(line) || /(?<!@)\/api\/providers\/credentials/.test(line)) {
+          offenders.push(
+            `${path.relative(repoRoot, file)}:${index + 1} 还在绕过这一层问登录的事：${line.trim()}`,
+          )
+        }
+        if (/agent-oauth/.test(line)) {
+          offenders.push(
+            `${path.relative(repoRoot, file)}:${index + 1} 还在拿 agent 的错话：${line.trim()}`,
+          )
+        }
+      })
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在绕过这一层问登录的事：${offenders.join(', ')}`,
+        '模型怎么登录是这一层的话：/api/bff/provider-auth。',
+        'agent 的错话是 agent 的：这一层把它翻成自己的话，客户端只该看到翻好的。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('agent 的那条路（模型的登录）只留在契约那一头', () => {
+    // The ways a provider may be logged in, and the authorizations themselves,
+    // are the agent's. The route that asks for them belongs to the contract,
+    // and to nothing else: a route file that spells the agent's own path is a
+    // route file that has learned a second dialect.
+    const offenders: string[] = []
+
+    for (const file of routeFiles()) {
+      const source = read(file)
+      source.split(/\r?\n/).forEach((line, index) => {
+        const spelled = line.replace(/\\\//g, '/')
+        if (/\/provider\/.*(?:oauth|auth\b)/.test(spelled)) {
+          offenders.push(
+            `${path.relative(repoRoot, file)}:${index + 1} 还在自己拼 agent 的模型登录那条路`,
+          )
+        }
+      })
+    }
+
+    expect(
+      offenders,
+      [
+        `manager 的路由里还在自己拼 agent 的模型登录那条路：${offenders.join(', ')}`,
+        'agent 的那条路是契约那一头的事（provider.authorizeProviderAuth 那一族）。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('这一层不许拿 agent 的错话', () => {
+    // The agent has its own names for its own failures, and they are kept
+    // where they belong: in the adapter that speaks to it. The layer answers
+    // in this layer's words, so a client is told "the code is missing" rather
+    // than the name the agent happens to use for it.
+    const offenders: string[] = []
+
+    for (const file of bffFiles()) {
+      for (const spec of importSpecifiers(read(file))) {
+        if (spec.includes('agent-oauth')) {
+          offenders.push(`${path.basename(file)} 引入了 ${spec}`)
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `这一层还在拿 agent 的错话：${offenders.join(', ')}`,
+        'agent 的错话由适配器翻译，翻译完了才轮到这一层。',
       ].join('\n'),
     ).toEqual([])
   })

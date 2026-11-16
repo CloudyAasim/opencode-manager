@@ -1,42 +1,62 @@
-import { API_BASE_URL } from "@/config"
+import { API_BASE_URL } from '@/config'
 import type {
-  OAuthAuthorizeRequest,
-  OAuthAuthorizeResponse,
-  OAuthCallbackRequest,
   ProviderAuthMethod,
-} from '@opencode-manager/shared/schemas'
-import { fetchWrapper } from "./fetchWrapper"
+  ProviderOAuthAuthorization,
+} from '@opencode-manager/shared/api/v1'
+import { createBffClient } from './bff'
 
-// These are the shapes the manager's own doors answer in. They used to be
-// borrowed from the agent's generated API description, which described doors
-// this client never walks through: the manager validates these requests and
-// these answers with its own schemas, so those are the ones the client should
-// be written against.
-export type { OAuthAuthorizeResponse, OAuthCallbackRequest, ProviderAuthMethod }
+/**
+ * The ways a provider may be logged in, and the authorizations started with
+ * them.
+ *
+ * The client used to ask the manager's own doors for these, and those doors
+ * answered in the manager's older words - and, for the ways themselves, in
+ * the agent's: a list of methods the client never checked against anything,
+ * and errors that named the agent's own failures.
+ *
+ * Now it asks the layer, which asks the agent in the agent's own words and
+ * hands back this layer's.
+ */
+export type { ProviderAuthMethod, ProviderOAuthAuthorization }
 
-export interface ProviderAuthMethods {
-  [providerId: string]: ProviderAuthMethod[]
+function client() {
+  return createBffClient(API_BASE_URL)
 }
 
 export const oauthApi = {
-  authorize: async (providerId: string, method: number, inputs?: OAuthAuthorizeRequest['inputs']): Promise<OAuthAuthorizeResponse> =>
-    fetchWrapper(`${API_BASE_URL}/api/oauth/${providerId}/oauth/authorize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ method, inputs }),
-    }),
+  /**
+   * How each provider may be logged in.
+   */
+  async getAuthMethods(): Promise<Record<string, ProviderAuthMethod[]>> {
+    const answer = await client().listProviderAuthMethods()
+    return answer.methods ?? {}
+  },
 
-  callback: async (providerId: string, request: OAuthCallbackRequest): Promise<boolean> =>
-    fetchWrapper(`${API_BASE_URL}/api/oauth/${providerId}/oauth/callback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    }),
+  /**
+   * Starting an authorization.
+   */
+  async authorize(
+    providerId: string,
+    method: number,
+    inputs?: Record<string, string>,
+  ): Promise<ProviderOAuthAuthorization> {
+    const answer = await client().authorizeProviderAuth(providerId, {
+      method,
+      inputs: inputs ?? null,
+    })
+    return answer.authorization
+  },
 
-  getAuthMethods: async (): Promise<ProviderAuthMethods> => {
-    const { providers, ...rest } = await fetchWrapper<{ providers?: ProviderAuthMethods } & ProviderAuthMethods>(
-      `${API_BASE_URL}/api/oauth/auth-methods`
-    )
-    return providers || rest
+  /**
+   * Finishing an authorization.
+   */
+  async callback(
+    providerId: string,
+    request: { method: number; code?: string },
+  ): Promise<void> {
+    await client().completeProviderAuth(providerId, {
+      method: request.method,
+      code: request.code ?? null,
+    })
   },
 }

@@ -11,6 +11,8 @@ import type {
   PermissionResponse,
   PromptModel,
   Provider,
+  ProviderAuthMethod,
+  ProviderOAuthAuthorization,
   SendCommandRequest,
   SendPromptRequest,
   Session,
@@ -214,6 +216,39 @@ export interface BffFileSearchResponse {
  */
 export interface BffMcpServerListResponse {
   servers: McpServer[]
+}
+
+/**
+ * Where the ways of logging a model in live.
+ *
+ * It is the layer the client talks to, like everything else here: the client
+ * used to ask the manager's own doors for these, and those doors spoke the
+ * manager's older words - and, for the ways themselves, the agent's.
+ */
+export const BFF_PROVIDER_AUTH_ENDPOINT = '/api/bff/provider-auth'
+
+/**
+ * How each provider may be logged in.
+ *
+ * The ways themselves are the versioned API's - there is one truth about what
+ * a way of logging in is.
+ */
+export interface BffProviderAuthMethodsResponse {
+  methods: Record<string, ProviderAuthMethod[]>
+}
+
+/**
+ * An authorization that has been started.
+ */
+export interface BffProviderOAuthAuthorizationResponse {
+  authorization: ProviderOAuthAuthorization
+}
+
+/**
+ * The providers that have credentials.
+ */
+export interface BffProviderCredentialListResponse {
+  credentials: string[]
 }
 
 export class BffClient {
@@ -701,6 +736,82 @@ export class BffClient {
     return (
       `${this.baseURL}${BFF_MCP_ENDPOINT}/${encodeURIComponent(name)}/${action}` +
       (query ? `?${query}` : '')
+    )
+  }
+
+  /**
+   * The ways a provider may be logged in.
+   */
+  async listProviderAuthMethods(): Promise<BffProviderAuthMethodsResponse> {
+    return fetchWrapper<BffProviderAuthMethodsResponse>(
+      `${this.baseURL}${BFF_PROVIDER_AUTH_ENDPOINT}/methods`,
+    )
+  }
+
+  /**
+   * Starting an authorization.
+   */
+  async authorizeProviderAuth(
+    providerId: string,
+    request: { method: number; inputs: Record<string, string> | null },
+  ): Promise<BffProviderOAuthAuthorizationResponse> {
+    return fetchWrapper<BffProviderOAuthAuthorizationResponse>(
+      `${this.baseURL}${BFF_PROVIDER_AUTH_ENDPOINT}/${encodeURIComponent(providerId)}/authorize`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    )
+  }
+
+  /**
+   * Finishing an authorization.
+   */
+  async completeProviderAuth(
+    providerId: string,
+    request: { method: number; code: string | null },
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      `${this.baseURL}${BFF_PROVIDER_AUTH_ENDPOINT}/${encodeURIComponent(providerId)}/callback`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    )
+  }
+
+  /**
+   * The providers that have credentials.
+   */
+  async listProviderCredentials(): Promise<BffProviderCredentialListResponse> {
+    return fetchWrapper<BffProviderCredentialListResponse>(
+      `${this.baseURL}${BFF_PROVIDER_AUTH_ENDPOINT}/credentials`,
+    )
+  }
+
+  /**
+   * Writing a credential down.
+   */
+  async setProviderCredential(providerId: string, apiKey: string): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      `${this.baseURL}${BFF_PROVIDER_AUTH_ENDPOINT}/credentials/${encodeURIComponent(providerId)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey }),
+      },
+    )
+  }
+
+  /**
+   * Taking a credential away.
+   */
+  async deleteProviderCredential(providerId: string): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      `${this.baseURL}${BFF_PROVIDER_AUTH_ENDPOINT}/credentials/${encodeURIComponent(providerId)}`,
+      { method: 'DELETE' },
     )
   }
 

@@ -9,7 +9,7 @@ import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash
 import { PanelMessage } from '@/components/ui/panel-message'
 import { providerCredentialsApi, getProviders } from '@/api/providers'
 import type { Provider } from '@/api/providers'
-import { oauthApi, type OAuthAuthorizeResponse } from '@/api/oauth'
+import { oauthApi, type ProviderOAuthAuthorization } from '@/api/oauth'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { OAuthAuthorizeDialog } from './OAuthAuthorizeDialog'
 import { OAuthCallbackDialog } from './OAuthCallbackDialog'
@@ -23,7 +23,7 @@ export function ProviderSettings() {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false)
   const [oauthCallbackDialogOpen, setOauthCallbackDialogOpen] = useState(false)
-  const [oauthResponse, setOauthResponse] = useState<OAuthAuthorizeResponse | null>(null)
+  const [oauthResponse, setOauthResponse] = useState<ProviderOAuthAuthorization | null>(null)
   const [oauthMethodIndex, setOauthMethodIndex] = useState<number | null>(null)
   const [connectedExpanded, setConnectedExpanded] = useState(false)
   const [availableExpanded, setAvailableExpanded] = useState(true)
@@ -78,7 +78,7 @@ export function ProviderSettings() {
     setDeleteTarget(null)
   }
 
-  const handleOAuthAuthorize = (response: OAuthAuthorizeResponse, methodIndex: number) => {
+  const handleOAuthAuthorize = (response: ProviderOAuthAuthorization, methodIndex: number) => {
     setOauthResponse(response)
     setOauthMethodIndex(methodIndex)
     setOauthDialogOpen(false)

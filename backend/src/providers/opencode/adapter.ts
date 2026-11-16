@@ -19,6 +19,10 @@ import type {
   PermissionResponse,
   PromptModel,
   Provider,
+  ProviderAuthMethods,
+  ProviderOAuthAuthorization,
+  ProviderOAuthAuthorizeRequest,
+  ProviderOAuthCallbackRequest,
   SendCommandRequest,
   Session,
   SessionRevert,
@@ -34,6 +38,7 @@ import type {
 } from '@opencode-manager/shared/api/v1'
 import { UpstreamError, type OpenCodeClient } from '../../services/opencode/client'
 import {
+  ProviderAuthError,
   ProviderProtocolError,
   ProviderUpstreamError,
   SessionNotFoundError,
@@ -48,6 +53,11 @@ import {
   type SendPromptInput,
   type SessionPage,
 } from '../contract'
+import {
+  toProviderAuthFailure,
+  toProviderAuthMethods,
+  toProviderOAuthAuthorization,
+} from './oauth'
 
 const AGENT_ID = 'opencode'
 
@@ -1411,6 +1421,99 @@ export class OpenCodeProvider implements AgentProvider {
     )
     if (!Array.isArray(raw)) return []
     return raw.filter((entry): entry is string => typeof entry === 'string')
+  }
+
+  /**
+   * How each provider may be logged in.
+   *
+   * The agent's own list of ways is read here and given back in this layer's
+   * words: a client that draws the list of ways to log in draws the same list
+   * whichever agent is behind it.
+   */
+  async listProviderAuthMethods(context: ProviderContext): Promise<ProviderAuthMethods> {
+    const raw = await this.readJson<unknown>('/provider/auth', context)
+    return toProviderAuthMethods(raw)
+  }
+
+  /**
+   * Starting an authorization.
+   */
+  async authorizeProviderAuth(
+    providerId: string,
+    request: ProviderOAuthAuthorizeRequest,
+    context: ProviderContext,
+  ): Promise<ProviderOAuthAuthorization> {
+    const raw = await this.authRequest(
+      `/provider/${encodeURIComponent(providerId)}/oauth/authorize`,
+      {
+        method: request.method,
+        ...(request.inputs !== null ? { inputs: request.inputs } : {}),
+      },
+      context,
+    )
+    const authorization = toProviderOAuthAuthorization(raw)
+    if (!authorization) {
+      throw new ProviderProtocolError(
+        this.id,
+        'The agent answered with an authorization that cannot be drawn',
+      )
+    }
+    return authorization
+  }
+
+  /**
+   * Finishing an authorization.
+   *
+   * The provider keeps the authorization, so the provider is the one that is
+   * told it is over.
+   */
+  async completeProviderAuth(
+    providerId: string,
+    request: ProviderOAuthCallbackRequest,
+    context: ProviderContext,
+  ): Promise<void> {
+    await this.authRequest(
+      `/provider/${encodeURIComponent(providerId)}/oauth/callback`,
+      {
+        method: request.method,
+        ...(request.code !== null ? { code: request.code } : {}),
+      },
+      context,
+    )
+  }
+
+  /**
+   * A request about logging in.
+   *
+   * A failure here is neither "no session" nor "the agent is down": it is the
+   * provider saying no. The reason it said no is this layer's word for it,
+   * because the agent's own names are the agent's business.
+   */
+  private async authRequest(
+    path: string,
+    body: Record<string, unknown>,
+    context: ProviderContext,
+  ): Promise<unknown> {
+    const response = await this.client.forward({
+      method: 'POST',
+      path,
+      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+      directory: context.directory,
+    })
+
+    if (!response.ok) {
+      const failure = toProviderAuthFailure(await response.text().catch(() => ''))
+      throw new ProviderAuthError(failure.reason, failure.detail ?? undefined)
+    }
+
+    const text = await response.text()
+    if (!text) return null
+    try {
+      return JSON.parse(text) as unknown
+    } catch {
+      throw new ProviderProtocolError(this.id, 'The agent answered with something that is not JSON')
+    }
   }
 
   /**

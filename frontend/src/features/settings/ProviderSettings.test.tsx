@@ -6,7 +6,7 @@ import { ProviderSettings } from './ProviderSettings'
 import { getProviders, providerCredentialsApi } from '@/api/providers'
 import { oauthApi } from '@/api/oauth'
 import type { Provider } from '@/api/providers'
-import type { OAuthAuthorizeResponse } from '@/api/oauth'
+import type { ProviderOAuthAuthorization } from '@/api/oauth'
 import type { ReactNode } from 'react'
 import { showErrorToast } from '@/lib/error-toast'
 
@@ -42,7 +42,7 @@ vi.mock('./OAuthAuthorizeDialog', () => ({
     providerName: string
     methods: unknown[]
     onOpenChange: (open: boolean) => void
-    onSuccess: (response: OAuthAuthorizeResponse, methodIndex: number) => void
+    onSuccess: (response: ProviderOAuthAuthorization, methodIndex: number) => void
   }) => (open ? <div data-testid="oauth-authorize-dialog">{providerId}</div> : null),
 }))
 
@@ -54,7 +54,7 @@ vi.mock('./OAuthCallbackDialog', () => ({
     open: boolean
     providerId: string
     providerName: string
-    authResponse: OAuthAuthorizeResponse
+    authResponse: ProviderOAuthAuthorization
     methodIndex: number
     onOpenChange: (open: boolean) => void
     onSuccess: () => void

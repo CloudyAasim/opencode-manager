@@ -1,9 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { UserProviderService } from '../services/user-providers'
-import { SetCredentialRequestSchema } from '../../../shared/src/schemas/auth'
 import { logger } from '../utils/logger'
-import { getAccessScope } from '../auth/access-scope'
 import type { OpenCodeClient } from '../services/opencode/client'
 import type { OpenCodeSupervisor } from '../services/opencode-supervisor'
 import {
@@ -23,8 +20,6 @@ const UpdateModelStateSchema = z.object({
 
 export function createProvidersRoutes(_openCodeClient: OpenCodeClient, _openCodeSupervisor?: OpenCodeSupervisor) {
   const app = new Hono()
-  const userProviderService = new UserProviderService()
-  const currentUsername = () => getAccessScope()?.username ?? null
 
   app.get('/model-state', async (c) => {
     try {
@@ -64,67 +59,14 @@ export function createProvidersRoutes(_openCodeClient: OpenCodeClient, _openCode
     }
   })
 
-  app.get('/credentials', async (c) => {
-    try {
-      const username = currentUsername()
-      const providers = username ? await userProviderService.list(username) : []
-      return c.json({ providers })
-    } catch (error) {
-      logger.error('Failed to list provider credentials:', error)
-      return c.json({ error: 'Failed to list provider credentials' }, 500)
-    }
-  })
-
-  app.get('/:id/credentials/status', async (c) => {
-    try {
-      const providerId = c.req.param('id')
-      const username = currentUsername()
-      const hasCredentials = username ? await userProviderService.has(username, providerId) : false
-      return c.json({ hasCredentials })
-    } catch (error) {
-      logger.error('Failed to check credential status:', error)
-      return c.json({ error: 'Failed to check credential status' }, 500)
-    }
-  })
-
-  app.post('/:id/credentials', async (c) => {
-    try {
-      const username = currentUsername()
-      if (!username) {
-        return c.json({ error: 'Unauthorized' }, 401)
-      }
-      const providerId = c.req.param('id')
-      const body = await c.req.json()
-      const validated = SetCredentialRequestSchema.parse(body)
-
-      await userProviderService.set(username, providerId, validated.apiKey)
-
-      return c.json({ success: true })
-    } catch (error) {
-      logger.error('Failed to set provider credentials:', error)
-      if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.issues }, 400)
-      }
-      return c.json({ error: 'Failed to set provider credentials' }, 500)
-    }
-  })
-
-  app.delete('/:id/credentials', async (c) => {
-    try {
-      const username = currentUsername()
-      if (!username) {
-        return c.json({ error: 'Unauthorized' }, 401)
-      }
-      const providerId = c.req.param('id')
-
-      await userProviderService.delete(username, providerId)
-
-      return c.json({ success: true })
-    } catch (error) {
-      logger.error('Failed to delete provider credentials:', error)
-      return c.json({ error: 'Failed to delete provider credentials' }, 500)
-    }
-  })
+  /**
+   * The credentials of a provider are not asked for here any more.
+   *
+   * They are the manager's own - written into the configuration of the person
+   * who typed them - and they are now kept behind the layer the client talks
+   * to, so that the client asks one place how a model gets logged in rather
+   * than two.
+   */
 
   return app
 }

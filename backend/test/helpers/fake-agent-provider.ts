@@ -10,6 +10,10 @@ import type {
   PendingPermission,
   PendingQuestion,
   PermissionResponse,
+  ProviderAuthMethods,
+  ProviderOAuthAuthorization,
+  ProviderOAuthAuthorizeRequest,
+  ProviderOAuthCallbackRequest,
   Session,
   SessionRevert,
   WorkingMode,
@@ -46,6 +50,8 @@ export interface FakeProviderOptions {
   providerList?: ProviderList
   files?: string[]
   mcpServers?: McpServer[]
+  providerAuthMethods?: ProviderAuthMethods
+  providerAuthorization?: ProviderOAuthAuthorization
 }
 
 export interface FakeProviderCall {
@@ -89,6 +95,8 @@ export class FakeAgentProvider implements AgentProvider {
   providerList: ProviderList
   files: string[]
   mcpServers: McpServer[]
+  providerAuthMethods: ProviderAuthMethods
+  providerAuthorization: ProviderOAuthAuthorization
 
   constructor(options: FakeProviderOptions = {}) {
     this.id = options.id ?? 'fake'
@@ -107,6 +115,12 @@ export class FakeAgentProvider implements AgentProvider {
     this.providerList = options.providerList ?? { providers: [], default: {} }
     this.files = options.files ?? []
     this.mcpServers = options.mcpServers ?? []
+    this.providerAuthMethods = options.providerAuthMethods ?? {}
+    this.providerAuthorization = options.providerAuthorization ?? {
+      url: 'https://example.invalid/authorize',
+      method: 'code',
+      instructions: 'Paste the code back.',
+    }
   }
 
   private record(method: string, ...args: unknown[]): void {
@@ -339,6 +353,29 @@ export class FakeAgentProvider implements AgentProvider {
     context: ProviderContext,
   ): Promise<void> {
     this.recordAbout('completeMcpAuth', context, [name, code])
+  }
+
+  async listProviderAuthMethods(context: ProviderContext): Promise<ProviderAuthMethods> {
+    this.recordAbout('listProviderAuthMethods', context, [])
+    return this.providerAuthMethods
+  }
+
+  async authorizeProviderAuth(
+    providerId: string,
+    request: ProviderOAuthAuthorizeRequest,
+    context: ProviderContext,
+  ): Promise<ProviderOAuthAuthorization> {
+    this.recordAbout('authorizeProviderAuth', context, [providerId, request])
+    if (this.failWith) throw this.failWith
+    return this.providerAuthorization
+  }
+
+  async completeProviderAuth(
+    providerId: string,
+    request: ProviderOAuthCallbackRequest,
+    context: ProviderContext,
+  ): Promise<void> {
+    this.recordAbout('completeProviderAuth', context, [providerId, request])
   }
 }
 

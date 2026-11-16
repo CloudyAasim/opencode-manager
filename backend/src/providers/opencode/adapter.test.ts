@@ -1086,3 +1086,81 @@ describe('OpenCode 的工具服务器', () => {
     expect(forward.mock.calls[4]![0].body).toBe(JSON.stringify({ code: 'the-code' }))
   })
 })
+
+describe('模型怎么登录：agent 的话，翻译成这一层的话', () => {
+  it('每个 provider 怎么登录：问的是上游自己那一条，答的是这一层的话', async () => {
+    const getJson = vi.fn(async () => ({
+      anthropic: [{ type: 'oauth', label: 'Claude Pro / Max' }],
+    }))
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const methods = await provider.listProviderAuthMethods({ directory: '/work' })
+
+    expect(methods).toEqual({
+      anthropic: [{ type: 'oauth', label: 'Claude Pro / Max', prompts: null }],
+    })
+    expect(getJson).toHaveBeenCalledWith('/provider/auth', { directory: '/work' })
+  })
+
+  it('开始一次授权：走的是上游自己那一条，答的是这一层的话', async () => {
+    const forward = vi.fn(async (_request: { path: string; body?: string }) =>
+      new Response(
+        JSON.stringify({
+          url: 'https://example.invalid/authorize',
+          method: 'code',
+          instructions: 'Paste the code back.',
+        }),
+        { status: 200 },
+      ),
+    )
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    const authorization = await provider.authorizeProviderAuth(
+      'anthropic',
+      { method: 0, inputs: { email: 'you@example.com' } },
+      {},
+    )
+
+    expect(authorization).toEqual({
+      url: 'https://example.invalid/authorize',
+      method: 'code',
+      instructions: 'Paste the code back.',
+    })
+    expect(forward.mock.calls[0]![0]).toMatchObject({
+      method: 'POST',
+      path: '/provider/anthropic/oauth/authorize',
+      body: JSON.stringify({ method: 0, inputs: { email: 'you@example.com' } }),
+    })
+  })
+
+  it('没有 answers 的时候，请求里就没有那一项', async () => {
+    const forward = vi.fn(async (_request: { path: string; body?: string }) => new Response('true', { status: 200 }))
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    await provider.completeProviderAuth('anthropic', { method: 0, code: null }, {})
+
+    expect(forward.mock.calls[0]![0]).toMatchObject({
+      method: 'POST',
+      path: '/provider/anthropic/oauth/callback',
+      body: JSON.stringify({ method: 0 }),
+    })
+  })
+
+  it('上游不肯的时候，错是这一层的错，理由也是这一层的话', async () => {
+    const forward = vi.fn(async (_request: { path: string; body?: string }) =>
+      new Response(
+        JSON.stringify({ name: 'ProviderAuthOauthCodeMissing', data: { message: 'no code' } }),
+        { status: 400 },
+      ),
+    )
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    await expect(
+      provider.authorizeProviderAuth('anthropic', { method: 0, inputs: null }, {}),
+    ).rejects.toMatchObject({
+      name: 'ProviderAuthError',
+      reason: 'code_missing',
+      detail: 'no code',
+    })
+  })
+})

@@ -17,6 +17,11 @@ import type {
   PromptPart,
   PromptTextPart,
   Provider,
+  ProviderAuthFailure,
+  ProviderAuthMethods,
+  ProviderOAuthAuthorization,
+  ProviderOAuthAuthorizeRequest,
+  ProviderOAuthCallbackRequest,
   SendCommandRequest,
   Session,
   SessionRevert,
@@ -46,6 +51,11 @@ export type {
   PendingQuestion,
   PromptModel,
   Provider,
+  ProviderAuthFailure,
+  ProviderAuthMethods,
+  ProviderOAuthAuthorization,
+  ProviderOAuthAuthorizeRequest,
+  ProviderOAuthCallbackRequest,
   SendCommandRequest,
   Session,
   ShellRequest,
@@ -321,6 +331,42 @@ export interface AgentProvider {
    * agent is the one that knows what to do with it.
    */
   completeMcpAuth(name: string, code: string, context: ProviderContext): Promise<void>
+  /**
+   * How each provider may be logged in.
+   *
+   * The ways a person may get in are the provider's business, but they are said
+   * in the versioned dialect: a client that draws the list of ways to log in
+   * draws the same list whichever agent is behind it.
+   *
+   * An agent that cannot log anybody in says so by refusing: an empty map
+   * would claim "nobody can be logged in here" about an agent that has dozens
+   * of providers.
+   */
+  listProviderAuthMethods(context: ProviderContext): Promise<ProviderAuthMethods>
+  /**
+   * Starting an authorization.
+   *
+   * The answer is where the person is to go and what they are to do there -
+   * said in the versioned dialect, so a client does not have to know what the
+   * provider calls it.
+   */
+  authorizeProviderAuth(
+    providerId: string,
+    request: ProviderOAuthAuthorizeRequest,
+    context: ProviderContext,
+  ): Promise<ProviderOAuthAuthorization>
+  /**
+   * Finishing an authorization.
+   *
+   * The provider keeps the authorization, so the provider is told that it is
+   * over. A provider that refuses says why, in the versioned dialect: which of
+   * the reasons it is, not the provider's own name for it.
+   */
+  completeProviderAuth(
+    providerId: string,
+    request: ProviderOAuthCallbackRequest,
+    context: ProviderContext,
+  ): Promise<void>
 }
 
 export class AgentNotFoundError extends Error {
@@ -334,6 +380,25 @@ export class SessionNotFoundError extends Error {
   constructor(public readonly sessionId: string) {
     super(`No session is known under "${sessionId}"`)
     this.name = 'SessionNotFoundError'
+  }
+}
+
+/**
+ * A provider refused to let anybody in.
+ *
+ * The reason is this layer's own word for what went wrong - "the code is
+ * missing", "the provider said no" - and not the provider's own name for it.
+ * A provider's internal tags are its business; a client that is told one of
+ * them has been handed a second dialect to learn.
+ */
+export class ProviderAuthError extends Error {
+  constructor(
+    public readonly reason: ProviderAuthFailure,
+    /** What the provider said, when it said anything. */
+    public readonly detail?: string,
+  ) {
+    super('The provider refused the authorization')
+    this.name = 'ProviderAuthError'
   }
 }
 

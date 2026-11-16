@@ -5,6 +5,9 @@ import {
   ConversationStatusSchema,
   McpServerConfigSchema,
   McpServerSchema,
+  ProviderAuthMethodsSchema,
+  ProviderCredentialListSchema,
+  ProviderOAuthAuthorizationSchema,
   ProviderSchema,
   SessionSchema,
   WorkingModeSchema,
@@ -157,3 +160,41 @@ export const BffAddMcpServerRequestSchema = z.object({
   config: McpServerConfigSchema,
 })
 export type BffAddMcpServerRequest = z.infer<typeof BffAddMcpServerRequestSchema>
+
+/**
+ * How each provider may be logged in.
+ *
+ * The ways themselves are the versioned API's - there is one truth about what
+ * a way of logging in is. What this layer adds is the name: the client asks
+ * this layer for the ways, and it does not have to know which agent is behind
+ * them or what the agent calls them.
+ */
+export const BffProviderAuthMethodsResponseSchema = z.object({
+  methods: ProviderAuthMethodsSchema,
+})
+export type BffProviderAuthMethodsResponse = z.infer<typeof BffProviderAuthMethodsResponseSchema>
+
+/**
+ * An authorization that has been started.
+ *
+ * The authorization is the versioned API's: where to go, and what to do there.
+ */
+export const BffProviderOAuthAuthorizationResponseSchema = z.object({
+  authorization: ProviderOAuthAuthorizationSchema,
+})
+export type BffProviderOAuthAuthorizationResponse = z.infer<
+  typeof BffProviderOAuthAuthorizationResponseSchema
+>
+
+/**
+ * The providers that have credentials.
+ *
+ * It is a list of names, not of providers: a provider with no credentials is
+ * a name, not a way to work.
+ */
+export const BffProviderCredentialListResponseSchema = z.object({
+  credentials: ProviderCredentialListSchema,
+})
+export type BffProviderCredentialListResponse = z.infer<
+  typeof BffProviderCredentialListResponseSchema
+>

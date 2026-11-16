@@ -6,14 +6,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Loader2, ExternalLink, CheckCircle } from 'lucide-react'
 import { CopyButton } from '@/components/ui/copy-button'
 import { showToast } from '@/lib/toast'
-import { oauthApi, type OAuthAuthorizeResponse } from '@/api/oauth'
+import { oauthApi, type ProviderOAuthAuthorization } from '@/api/oauth'
 import { mapOAuthError } from '@/lib/oauthErrors'
 import { useI18n } from '@/lib/i18n'
 
 interface OAuthCallbackDialogProps {
   providerId: string
   providerName: string
-  authResponse: OAuthAuthorizeResponse
+  authResponse: ProviderOAuthAuthorization
   methodIndex: number
   open: boolean
   onOpenChange: (open: boolean) => void

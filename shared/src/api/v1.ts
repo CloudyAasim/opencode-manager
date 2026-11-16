@@ -833,6 +833,140 @@ export const ProviderSchema = z.object({
 export type Provider = z.infer<typeof ProviderSchema>
 
 /**
+ * A question a provider asks before it will let anybody in.
+ *
+ * It is a question about one thing - a key, a code, a choice - and the answer
+ * goes back to the provider as a set of named answers. Which questions there
+ * are is the provider's business; that they are asked and answered by name is
+ * this layer's.
+ *
+ * The shape is flat rather than a choice of two: a question that is not a
+ * choice has no options, and a question that is always asked has no condition.
+ * Saying "none" is one word; making the client ask which of the fields is
+ * there is two.
+ */
+export const PromptFieldSchema = z.object({
+  type: z.enum(['text', 'select']),
+  /** What the answer is called. */
+  key: z.string(),
+  /** What the person is asked. */
+  message: z.string(),
+  /** What the person is shown before they answer. */
+  placeholder: z.string().nullable(),
+  /** The choices, when it is a choice. */
+  options: z.array(z.object({
+    label: z.string(),
+    value: z.string(),
+    /** What else is worth knowing about this choice, when there is anything. */
+    hint: z.string().nullable(),
+  })).nullable(),
+  /**
+   * The answer that makes this question asked, when it is asked at all.
+   *
+   * It is one answer and not a condition: the answer equals the value. The
+   * agent spells that with an operator of its own, and this layer does not
+   * carry the operator - it carries what the condition means.
+   */
+  when: z.object({
+    key: z.string(),
+    value: z.string(),
+  }).nullable(),
+})
+export type PromptField = z.infer<typeof PromptFieldSchema>
+
+/**
+ * One way of logging in to a provider.
+ *
+ * There are two kinds that matter: an API key, which is typed in, and an
+ * authorization, which is done somewhere else and comes back as a code. Which
+ * of them a provider offers is the provider's business; that they are named
+ * the same way everywhere is this layer's.
+ */
+export const ProviderAuthMethodSchema = z.object({
+  type: z.enum(['oauth', 'api']),
+  label: z.string(),
+  /** What the provider asks before it will let anybody in. */
+  prompts: z.array(PromptFieldSchema).nullable(),
+})
+export type ProviderAuthMethod = z.infer<typeof ProviderAuthMethodSchema>
+
+/**
+ * How each provider may be logged in.
+ *
+ * A provider that is not in here cannot be logged in at all - it is not that
+ * it has no methods, it is that it is not a provider anybody may log in to.
+ */
+export const ProviderAuthMethodsSchema = z.record(z.string(), z.array(ProviderAuthMethodSchema))
+export type ProviderAuthMethods = z.infer<typeof ProviderAuthMethodsSchema>
+
+/**
+ * An authorization that has been started.
+ *
+ * The URL is where the person goes, and the method says what happens there:
+ * either the provider answers on its own ('auto'), or it hands back a code
+ * that has to be pasted in ('code').
+ */
+export const ProviderOAuthAuthorizationSchema = z.object({
+  url: z.string(),
+  method: z.enum(['auto', 'code']),
+  /** What the person is told to do while they are out. */
+  instructions: z.string(),
+})
+export type ProviderOAuthAuthorization = z.infer<typeof ProviderOAuthAuthorizationSchema>
+
+/**
+ * Starting an authorization.
+ *
+ * The method is which of the provider's ways of logging in is being used - the
+ * one in the list, counted from zero - and the answers are what the provider
+ * asked for, by name.
+ */
+export const ProviderOAuthAuthorizeRequestSchema = z.object({
+  method: z.number(),
+  inputs: z.record(z.string(), z.string()).nullable(),
+})
+export type ProviderOAuthAuthorizeRequest = z.infer<typeof ProviderOAuthAuthorizeRequestSchema>
+
+/**
+ * Finishing an authorization.
+ *
+ * The code is there only when the provider asked for one; a provider that
+ * answers on its own does not have one to give.
+ */
+export const ProviderOAuthCallbackRequestSchema = z.object({
+  method: z.number(),
+  code: z.string().nullable(),
+})
+export type ProviderOAuthCallbackRequest = z.infer<typeof ProviderOAuthCallbackRequestSchema>
+
+/**
+ * Why an authorization did not work.
+ *
+ * These are this layer's words, not the provider's: the provider says what
+ * happened in its own names, and this is where those names are translated.
+ * A client that is told "the code is missing" can say so; a client that is
+ * told a provider's internal tag cannot.
+ */
+export const ProviderAuthFailureSchema = z.enum([
+  'invalid_request',
+  'bad_request',
+  'authorization_missing',
+  'code_missing',
+  'callback_failed',
+  'validation_failed',
+])
+export type ProviderAuthFailure = z.infer<typeof ProviderAuthFailureSchema>
+
+/**
+ * A provider that may be logged in to, and whether it is.
+ *
+ * The list is of the providers that have credentials, not of every provider
+ * there is: a provider with no credentials is a name, not a way to work.
+ */
+export const ProviderCredentialListSchema = z.array(z.string())
+export type ProviderCredentialList = z.infer<typeof ProviderCredentialListSchema>
+
+/**
  * The state a tool server is in.
  *
  * The agent names five of them and they mean five different things: a server

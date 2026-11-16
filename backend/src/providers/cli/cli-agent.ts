@@ -7,6 +7,8 @@ import type {
   PendingPermission,
   PendingQuestion,
   PermissionResponse,
+  ProviderAuthMethods,
+  ProviderOAuthAuthorization,
   Session,
   SessionRevert,
   WorkingMode,
@@ -218,6 +220,40 @@ export abstract class CliAgentProvider implements AgentProvider {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot say what models it has`,
+    )
+  }
+
+  /**
+   * How each provider may be logged in.
+   *
+   * The program has its own ways of being logged in, and this adapter does
+   * not read them. An empty map would be a claim it cannot make: it would say
+   * "nobody can be logged in here" about a program that has providers.
+   */
+  async listProviderAuthMethods(): Promise<ProviderAuthMethods> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say how its providers may be logged in`,
+    )
+  }
+
+  /**
+   * Starting an authorization.
+   */
+  async authorizeProviderAuth(): Promise<ProviderOAuthAuthorization> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot log a provider in`,
+    )
+  }
+
+  /**
+   * Finishing an authorization.
+   */
+  async completeProviderAuth(): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot log a provider in`,
     )
   }
 

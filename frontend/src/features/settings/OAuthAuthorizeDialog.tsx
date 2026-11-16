@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ExternalLink } from 'lucide-react'
-import { oauthApi, type OAuthAuthorizeResponse, type ProviderAuthMethod } from '@/api/oauth'
+import { oauthApi, type ProviderOAuthAuthorization, type ProviderAuthMethod } from '@/api/oauth'
 import { mapOAuthError } from '@/lib/oauthErrors'
 import { useI18n } from '@/lib/i18n'
 
@@ -16,7 +16,7 @@ interface OAuthAuthorizeDialogProps {
   methods: ProviderAuthMethod[]
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess: (response: OAuthAuthorizeResponse, methodIndex: number) => void
+  onSuccess: (response: ProviderOAuthAuthorization, methodIndex: number) => void
 }
 
 type OAuthPrompt = NonNullable<ProviderAuthMethod['prompts']>[number]
@@ -198,7 +198,7 @@ export function OAuthAuthorizeDialog({
                             id={prompt.key}
                             value={methodInputs[prompt.key] || ''}
                             onChange={(e) => handlePromptChange(index, prompt.key, e.target.value)}
-                            placeholder={prompt.placeholder}
+                            placeholder={prompt.placeholder ?? undefined}
                             disabled={isLoading}
                           />
                         </div>
@@ -214,7 +214,7 @@ export function OAuthAuthorizeDialog({
                               <SelectValue placeholder={t('settingsPanels.oauthAuthorize.selectOption')} />
                             </SelectTrigger>
                             <SelectContent>
-                              {prompt.options.map((option) => (
+                              {(prompt.options ?? []).map((option) => (
                                 <SelectItem key={option.value} value={option.value}>
                                   {option.label}
                                 </SelectItem>

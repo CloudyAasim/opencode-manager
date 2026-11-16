@@ -12,6 +12,7 @@ import { createBffDefaultRoutes } from './defaults'
 import { createBffProviderRoutes } from './providers'
 import { createBffFileRoutes } from './files'
 import { createBffMcpRoutes } from './mcp'
+import { createBffProviderAuthRoutes } from './provider-auth'
 import { fail } from '../api-v1/respond'
 
 /**
@@ -35,6 +36,14 @@ import { fail } from '../api-v1/respond'
  */
 export interface BffOptions {
   auth: AuthInstance
+  /**
+   * What has to happen once a provider has been logged in to.
+   *
+   * The credential is in the hands of the agent, and the agent is kept running
+   * by the manager - so the manager is the one that says what has to happen
+   * afterwards. The layer only says that it is done.
+   */
+  afterAuthorization?: () => Promise<void>
 }
 
 export function createBffRoutes(registry: ProviderRegistry, database: Database, options: BffOptions) {
@@ -61,6 +70,7 @@ export function createBffRoutes(registry: ProviderRegistry, database: Database, 
   app.route('/providers', createBffProviderRoutes(registry, database))
   app.route('/files', createBffFileRoutes(registry, database))
   app.route('/mcp', createBffMcpRoutes(registry, database))
+  app.route('/provider-auth', createBffProviderAuthRoutes(registry, options.afterAuthorization))
 
   return app
 }

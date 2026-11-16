@@ -37,7 +37,6 @@ function getAppVersion(): Promise<string> {
   return appVersion
 }
 import { createProvidersRoutes } from './routes/providers'
-import { createOAuthRoutes } from './routes/oauth'
 import { createSSERoutes } from './routes/sse'
 import { createSSHRoutes } from './routes/ssh'
 import { createNotificationRoutes } from './routes/notifications'
@@ -86,7 +85,7 @@ import { readOpenCodeConfigFile } from './services/opencode-config-file'
 import { seedOpenCodeConfigFile } from './services/opencode-config-apply'
 import { OpenCodeSupervisor } from './services/opencode-supervisor'
 import { OpenCodeRestartCoordinator } from './services/opencode-restart-coordinator'
-import { setOpenCodeRestartCoordinator } from './services/opencode-restart'
+import { setOpenCodeRestartCoordinator, reloadOpenCodeConfig } from './services/opencode-restart'
 import { logger } from './utils/logger'
 import { 
   getWorkspacePath, 
@@ -510,7 +509,6 @@ protectedApi.route('/settings', createSettingsRoutes(db, gitAuthService, openCod
   protectedApi.route('/files', createFileRoutes())
   protectedApi.route('/filesystem', createFilesystemRoutes())
 protectedApi.route('/providers', createProvidersRoutes(openCodeClient, openCodeSupervisor))
-protectedApi.route('/oauth', createOAuthRoutes(openCodeClient, openCodeSupervisor))
 protectedApi.route('/tts', createTTSRoutes(db))
 protectedApi.route('/stt', createSTTRoutes(db))
 protectedApi.route('/sse', createSSERoutes(db))
@@ -530,7 +528,15 @@ app.route('/api/opencode', createAuthenticatedOpenCodeProxyRoutes(openCodeClient
 // this for the things it wants, and this asks the layers underneath. The
 // client never reaches for `/api/v1` itself, because that contract is meant
 // to be free to move and a client bound to it would move with it.
-app.route('/api/bff', createBffRoutes(providerRegistry, db, { auth }))
+app.route('/api/bff', createBffRoutes(providerRegistry, db, {
+  auth,
+  // A provider that has just been logged in to has a credential the agent is
+  // not holding yet, so the agent is told to read its configuration again.
+  // That is the manager's own work: the manager is the one keeping it running.
+  afterAuthorization: async () => {
+    await reloadOpenCodeConfig(openCodeSupervisor)
+  },
+}))
 
 const isProduction = ENV.SERVER.NODE_ENV === 'production'
 

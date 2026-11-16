@@ -24,6 +24,9 @@ import {
   PendingPermissionSchema,
   PendingQuestionSchema,
   PromptModelSchema,
+  PromptFieldSchema,
+  ProviderAuthMethodSchema,
+  ProviderOAuthAuthorizationSchema,
   ProviderSchema,
   RenameSessionRequestSchema,
   SendCommandRequestSchema,
@@ -101,6 +104,13 @@ export function buildV1JsonSchema(): Record<string, unknown> {
       McpServerState: z.toJSONSchema(McpServerStateSchema),
       McpServer: z.toJSONSchema(McpServerSchema),
       McpServerConfig: z.toJSONSchema(McpServerConfigSchema),
+      // How a provider may be logged in. Like the catalogue and the tool
+      // servers, they are the versioned API's language rather than one of its
+      // own endpoints - but a client that is told about a provider and not
+      // about the ways of getting in has been told half the truth.
+      PromptField: z.toJSONSchema(PromptFieldSchema),
+      ProviderAuthMethod: z.toJSONSchema(ProviderAuthMethodSchema),
+      ProviderOAuthAuthorization: z.toJSONSchema(ProviderOAuthAuthorizationSchema),
       SendCommandRequest: z.toJSONSchema(SendCommandRequestSchema),
       ShellRequest: z.toJSONSchema(ShellRequestSchema),
       ForkRequest: z.toJSONSchema(ForkRequestSchema),

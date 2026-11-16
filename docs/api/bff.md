@@ -67,6 +67,12 @@ seventy-five, and it still gets seventy-five.
 | `POST` | `/api/bff/mcp/:name/auth/authenticate` | Asking a tool server to authorize itself | `AcceptedResponse` |
 | `POST` | `/api/bff/mcp/:name/auth/callback` | Finishing an authorization | `AcceptedResponse` |
 | `DELETE` | `/api/bff/mcp/:name/auth` | Taking the authorization away | `AcceptedResponse` |
+| `GET` | `/api/bff/provider-auth/methods` | How each provider may be logged in | `BffProviderAuthMethodsResponse` |
+| `POST` | `/api/bff/provider-auth/:providerId/authorize` | Starting an authorization | `BffProviderOAuthAuthorizationResponse` |
+| `POST` | `/api/bff/provider-auth/:providerId/callback` | Finishing an authorization | `AcceptedResponse` |
+| `GET` | `/api/bff/provider-auth/credentials` | The providers that have credentials | `BffProviderCredentialListResponse` |
+| `POST` | `/api/bff/provider-auth/credentials/:providerId` | Writing a credential down | `AcceptedResponse` |
+| `DELETE` | `/api/bff/provider-auth/credentials/:providerId` | Taking a credential away | `AcceptedResponse` |
 
 ## The shapes
 
@@ -330,6 +336,91 @@ and so it is always the administrator's.
 
 A server the agent did not speak of is `unknown`: it is written down, and
 nobody has said whether it works.
+
+### How a model gets logged in
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `GET /api/bff/provider-auth/methods` | - | `BffProviderAuthMethodsResponse` |
+| `POST /api/bff/provider-auth/:providerId/authorize` | `{ "method": number, "inputs": object \| null }` | `BffProviderOAuthAuthorizationResponse` |
+| `POST /api/bff/provider-auth/:providerId/callback` | `{ "method": number, "code": string \| null }` | `AcceptedResponse` |
+| `GET /api/bff/provider-auth/credentials` | - | `BffProviderCredentialListResponse` |
+| `POST /api/bff/provider-auth/credentials/:providerId` | `{ "apiKey": string }` | `AcceptedResponse` |
+| `DELETE /api/bff/provider-auth/credentials/:providerId` | - | `AcceptedResponse` |
+
+There is no separate door for "does this one have credentials": the list says
+which providers do, and asking again would be the same question twice.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `methods` | object | The ways each provider may be logged in, by provider name |
+| `authorization` | `ProviderOAuthAuthorization` | Where to go, and what to do there |
+| `credentials` | `string[]` | The providers that have credentials |
+
+A way of logging in is the versioned API's - there is one truth about what a
+way of logging in is:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `type` | `"oauth" \| "api"` | Whether a key is typed in, or an authorization is done elsewhere |
+| `label` | `string` | What it is called |
+| `prompts` | `PromptField[] \| null` | What the provider asks before it will let anybody in |
+
+A question is flat rather than a choice of two shapes: a question that is not
+a choice has no options, and a question that is always asked has no
+condition. Saying "none" is one word; making the client ask which of the
+fields is there is two.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `type` | `"text" \| "select"` | Whether it is typed in or picked |
+| `key` | `string` | What the answer is called |
+| `message` | `string` | What the person is asked |
+| `placeholder` | `string \| null` | What the person is shown before they answer |
+| `options` | `{ label, value, hint }[] \| null` | The choices, when it is a choice |
+| `when` | `{ key, value } \| null` | The answer that makes this question asked |
+
+A condition is one answer, not a condition: the answer equals the value. The
+agent spells that with an operator of its own, and this layer carries what the
+condition means rather than how it is spelled - and drops a question whose
+condition it does not understand, because asking it unconditionally would ask a
+question that should not have been asked.
+
+An authorization is the versioned API's as well:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `url` | `string` | Where the person goes |
+| `method` | `"auto" \| "code"` | Whether the provider answers on its own, or hands back a code |
+| `instructions` | `string` | What the person is told to do while they are out |
+
+The client used to ask the manager's own doors for these, and those doors
+answered in the manager's older words - and, for the ways themselves, in the
+agent's: a list of methods the client never checked against anything, and
+errors that named the agent's own failures.
+
+So the ways are asked for through the contract now, and the failures are said
+in this layer's words. The reason travels in the details of the failure,
+because the versioned vocabulary of codes is a coarse one - "bad request"
+alone cannot tell a missing code from a rejected one:
+
+```json
+{ "error": { "code": "bad_request", "message": "The provider refused the authorization",
+             "details": { "reason": "code_missing", "detail": "field: code" } } }
+```
+
+| Reason | Meaning |
+| --- | --- |
+| `invalid_request` | The request was not one the provider could answer |
+| `bad_request` | The provider said no, and did not say why |
+| `authorization_missing` | There is no authorization in progress to finish |
+| `code_missing` | The provider wants a code, and there was none |
+| `callback_failed` | The provider rejected the authorization |
+| `validation_failed` | What was given did not pass the provider's checks |
+
+The credentials are the manager's own - they are written into the
+configuration of the person who typed them - and they are the one half of
+this family that the agent is not asked about.
 
 ### What hangs on a conversation
 

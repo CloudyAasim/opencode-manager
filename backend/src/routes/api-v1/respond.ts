@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger'
 import type { ApiErrorCode } from '@opencode-manager/shared/api/v1'
 import {
   AgentNotFoundError,
+  ProviderAuthError,
   ProviderProtocolError,
   ProviderUnavailableError,
   ProviderUpstreamError,
@@ -51,6 +52,16 @@ export function failFromError(c: Context, error: unknown): Response {
   }
   if (error instanceof ProviderUpstreamError) {
     return fail(c, 502, 'upstream_error', error.message)
+  }
+  if (error instanceof ProviderAuthError) {
+    // The reason is this layer's own word for what went wrong, and it travels
+    // in the details because the versioned vocabulary of codes is a coarse one:
+    // a client that is told "bad request" alone cannot tell a missing code
+    // from a rejected one, and it would show the same words for both.
+    return fail(c, 400, 'bad_request', error.message, {
+      reason: error.reason,
+      ...(error.detail ? { detail: error.detail } : {}),
+    })
   }
   logger.error('Unexpected failure while serving the v1 API', error)
   return fail(c, 500, 'internal_error', 'Something went wrong')

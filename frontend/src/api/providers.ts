@@ -296,30 +296,27 @@ export function formatProviderName(
   return provider.name || provider.id;
 }
 
+/**
+ * The credentials of the providers.
+ *
+ * They used to be asked for at the manager's own doors, which answered in the
+ * manager's older words. Now they are asked for at the layer the client talks
+ * to, which answers in the versioned ones.
+ *
+ * There is no separate door for "does this one have credentials": the list
+ * says which providers do, and asking again would be the same question twice.
+ */
 export const providerCredentialsApi = {
   list: async (): Promise<string[]> => {
-    const { providers } = await fetchWrapper<{ providers: string[] }>(`${API_BASE_URL}/api/providers/credentials`);
-    return providers;
-  },
-
-  getStatus: async (providerId: string): Promise<boolean> => {
-    const { hasCredentials } = await fetchWrapper<{ hasCredentials: boolean }>(
-      `${API_BASE_URL}/api/providers/${providerId}/credentials/status`
-    );
-    return hasCredentials;
+    const answer = await createBffClient(API_BASE_URL).listProviderCredentials();
+    return answer.credentials ?? [];
   },
 
   set: async (providerId: string, apiKey: string): Promise<void> => {
-    await fetchWrapper(`${API_BASE_URL}/api/providers/${providerId}/credentials`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey }),
-    });
+    await createBffClient(API_BASE_URL).setProviderCredential(providerId, apiKey);
   },
 
   delete: async (providerId: string): Promise<void> => {
-    await fetchWrapper(`${API_BASE_URL}/api/providers/${providerId}/credentials`, {
-      method: 'DELETE',
-    });
+    await createBffClient(API_BASE_URL).deleteProviderCredential(providerId);
   },
 };
