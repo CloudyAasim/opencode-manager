@@ -271,6 +271,7 @@ export function toPiMessages(entries: PiEntry[]): MessageWithParts[] {
               error: null,
               input: null,
               metadata: null,
+              todos: null,
               raw: null,
               time: null,
             },

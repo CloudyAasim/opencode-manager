@@ -33,6 +33,7 @@ import {
   SessionSchema,
   ShellRequestSchema,
   SummarizeRequestSchema,
+  TodoSchema,
   TokenUsageSchema,
   ToolCallSchema,
   WorkingModeSchema,
@@ -64,6 +65,10 @@ export function buildV1JsonSchema(): Record<string, unknown> {
       MessagePart: z.toJSONSchema(MessagePartSchema),
       ToolCall: z.toJSONSchema(ToolCallSchema),
       TokenUsage: z.toJSONSchema(TokenUsageSchema),
+      // The tasks the agent writes down for itself. They are part of the
+      // conversation - a call that wrote them carries them - so a client that
+      // is told about a tool call is told about the tasks it wrote.
+      Todo: z.toJSONSchema(TodoSchema),
       ConversationStatus: z.toJSONSchema(ConversationStatusSchema),
       ConversationEvent: z.toJSONSchema(ConversationEventSchema),
       PendingPermission: z.toJSONSchema(PendingPermissionSchema),

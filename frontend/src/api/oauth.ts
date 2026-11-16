@@ -1,21 +1,25 @@
 import { API_BASE_URL } from "@/config"
-import type { components, operations } from "./opencode-types"
+import type {
+  OAuthAuthorizeRequest,
+  OAuthAuthorizeResponse,
+  OAuthCallbackRequest,
+  ProviderAuthMethod,
+} from '@opencode-manager/shared/schemas'
 import { fetchWrapper } from "./fetchWrapper"
 
-type OpenCodeAuthorizeRequest = NonNullable<operations["provider.oauth.authorize"]["requestBody"]>["content"]["application/json"]
-
-export type OAuthAuthorizeResponse = components["schemas"]["ProviderAuthAuthorization"]
-
-export type OAuthCallbackRequest = NonNullable<operations["provider.oauth.callback"]["requestBody"]>["content"]["application/json"]
-
-export type ProviderAuthMethod = components["schemas"]["ProviderAuthMethod"]
+// These are the shapes the manager's own doors answer in. They used to be
+// borrowed from the agent's generated API description, which described doors
+// this client never walks through: the manager validates these requests and
+// these answers with its own schemas, so those are the ones the client should
+// be written against.
+export type { OAuthAuthorizeResponse, OAuthCallbackRequest, ProviderAuthMethod }
 
 export interface ProviderAuthMethods {
   [providerId: string]: ProviderAuthMethod[]
 }
 
 export const oauthApi = {
-  authorize: async (providerId: string, method: number, inputs?: OpenCodeAuthorizeRequest["inputs"]): Promise<OAuthAuthorizeResponse> =>
+  authorize: async (providerId: string, method: number, inputs?: OAuthAuthorizeRequest['inputs']): Promise<OAuthAuthorizeResponse> =>
     fetchWrapper(`${API_BASE_URL}/api/oauth/${providerId}/oauth/authorize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

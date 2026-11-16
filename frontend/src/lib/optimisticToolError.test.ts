@@ -40,6 +40,7 @@ function runningToolMessage(messageID: string, callID: string): MessageWithParts
           error: null,
           input: { command: 'ls' },
           metadata: null,
+          todos: null,
           time: { start: 100, end: null },
         },
       },
@@ -81,6 +82,7 @@ describe('optimisticallyErrorToolPart', () => {
       error: null,
       input: { command: 'ls' },
       metadata: null,
+      todos: null,
       time: { start: 100, end: 200 },
     }
     seed(queryClient, [message])

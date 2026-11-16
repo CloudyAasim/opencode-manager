@@ -231,6 +231,7 @@ describe('Hermes', () => {
         error: null,
         input: null,
         metadata: null,
+        todos: null,
         raw: null,
         time: null,
       },

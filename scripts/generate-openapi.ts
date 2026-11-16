@@ -38,36 +38,15 @@ async function generateOpenAPISpec() {
   }
 }
 
-async function generateTypeScript(specPath: string) {
-  console.log('\n📝 Generating TypeScript types...')
-  
-  const outputPath = join(__dirname, '../frontend/src/api/opencode-types.ts')
-  const { spawnSync } = await import('child_process')
-  
-  try {
-    const result = spawnSync('npx', ['openapi-typescript', specPath, '-o', outputPath], {
-      cwd: join(__dirname, '..'),
-      stdio: 'inherit'
-    })
-    
-    if (result.status !== 0) {
-      throw new Error(`openapi-typescript exited with code ${result.status}`)
-    }
-    
-    console.log(`✅ TypeScript types generated at ${outputPath}`)
-  } catch (error) {
-    console.error('❌ Failed to generate TypeScript types:', error)
-    process.exit(1)
-  }
-}
-
 async function main() {
-  console.log('🚀 Generating OpenCode API types...\n')
-  
+  console.log('🚀 Recording the OpenCode API description...\n')
+
   const specPath = await generateOpenAPISpec()
-  await generateTypeScript(specPath)
-  
-  console.log('\n✨ Done!')
+
+  console.log(`\n✨ Done. The description of the agent's API is at ${specPath}`)
+  console.log('   The frontend does not get a copy of it any more: the shapes it')
+  console.log('   needs are the versioned ones, and a copy of the agent\'s words in')
+  console.log('   the client is how the client learned to speak two dialects.')
 }
 
 main()

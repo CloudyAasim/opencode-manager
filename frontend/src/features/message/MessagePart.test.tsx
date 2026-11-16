@@ -303,6 +303,7 @@ describe('MessagePart', () => {
         error: null,
         input: { command: 'echo big' },
         metadata: null,
+        todos: null,
         time: { start: Date.now(), end: Date.now() + 100 },
       },
     })
@@ -383,6 +384,7 @@ describe('MessagePart', () => {
         error: null,
         input: { filePath: '/test/file.txt' },
         metadata: null,
+        todos: null,
         time: { start: Date.now(), end: Date.now() + 100 },
       },
     })
@@ -485,6 +487,7 @@ describe('MessagePart', () => {
           error: null,
           input: { description: 'Review changes' },
           metadata: { sessionId: 'child-session' },
+          todos: null,
           time: { start: Date.now(), end: Date.now() + 100 },
         },
       }

@@ -5,7 +5,6 @@ import type { ReactNode } from 'react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PendingPermission, PendingQuestion } from '@opencode-manager/shared/api/v1'
-import type { QuestionRequest } from '@/api/types'
 import { EventProvider, useEventContext, usePermissions, useQuestions, useSSEHealth } from './EventContext'
 
 const mocks = vi.hoisted(() => ({
@@ -121,12 +120,18 @@ const secondPendingPermission: PendingPermission = {
 }
 
 /**
- * What the stream says: the agent's own dialect, which is the one thing the
- * app is allowed to hold in the agent's words.
+ * What the stream says.
+ *
+ * The stream used to speak the agent's dialect for this, and the app had to
+ * learn a second dialect to watch the same thing it had already learned one
+ * dialect for. It speaks the versioned one now - the same words the list the
+ * client asks for is in - so a question is one shape whether it was asked for
+ * or watched for.
  */
-const agentQuestionEvent: QuestionRequest = {
+const versionedQuestionEvent: PendingQuestion = {
   id: 'question-1',
-  sessionID: 'session-1',
+  sessionId: 'session-1',
+  directory: '/repo',
   questions: [
     {
       question: 'Continue?',
@@ -140,6 +145,7 @@ const agentQuestionEvent: QuestionRequest = {
       multiple: false,
     },
   ],
+  tool: null,
 }
 
 function Harness() {
@@ -501,7 +507,10 @@ describe('EventProvider questions', () => {
     act(() => {
       onEvent({
         type: 'question.asked',
-        properties: agentQuestionEvent,
+        properties: {
+          sessionId: versionedQuestionEvent.sessionId,
+          question: versionedQuestionEvent,
+        },
         directory: '/repo',
       })
     })

@@ -219,6 +219,7 @@ export function toClaudeMessages(records: ClaudeLine[]): MessageWithParts[] {
             error: null,
             input: null,
             metadata: null,
+            todos: null,
             raw: null,
             time: null,
           },

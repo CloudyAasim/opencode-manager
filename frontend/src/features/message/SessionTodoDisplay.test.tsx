@@ -3,17 +3,17 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SessionTodoDisplay } from './SessionTodoDisplay'
 import { useSessionTodos } from '@/stores/sessionTodosStore'
-import type { Todo } from './SessionTodoDisplay'
+import type { Todo } from '@opencode-manager/shared/api/v1'
 
 const activeTodos: Todo[] = [
-  { id: '1', content: 'Implement mobile header fix', status: 'in_progress', priority: 'high' },
-  { id: '2', content: 'Add regression tests', status: 'pending', priority: 'medium' },
-  { id: '3', content: 'Verify completed item grouping', status: 'completed', priority: 'low' },
+  { content: 'Implement mobile header fix', status: 'in_progress', priority: 'high' },
+  { content: 'Add regression tests', status: 'pending', priority: 'medium' },
+  { content: 'Verify completed item grouping', status: 'completed', priority: 'low' },
 ]
 
 const allCompletedTodos: Todo[] = [
-  { id: '1', content: 'Task one', status: 'completed', priority: 'high' },
-  { id: '2', content: 'Task two', status: 'completed', priority: 'medium' },
+  { content: 'Task one', status: 'completed', priority: 'high' },
+  { content: 'Task two', status: 'completed', priority: 'medium' },
 ]
 
 describe('SessionTodoDisplay', () => {
@@ -90,9 +90,9 @@ describe('SessionTodoDisplay', () => {
     expect(screen.queryByText('Tasks: 1/3 complete')).not.toBeInTheDocument()
 
     const updatedTodos: Todo[] = [
-      { id: '1', content: 'Implement mobile header fix', status: 'completed', priority: 'high' },
-      { id: '2', content: 'Add regression tests', status: 'pending', priority: 'medium' },
-      { id: '3', content: 'Verify completed item grouping', status: 'completed', priority: 'low' },
+      { content: 'Implement mobile header fix', status: 'completed', priority: 'high' },
+      { content: 'Add regression tests', status: 'pending', priority: 'medium' },
+      { content: 'Verify completed item grouping', status: 'completed', priority: 'low' },
     ]
     useSessionTodos.getState().setTodos('session-1', updatedTodos)
 

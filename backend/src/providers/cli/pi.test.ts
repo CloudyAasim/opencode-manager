@@ -103,6 +103,7 @@ describe('Pi 的会话', () => {
         error: null,
         input: null,
         metadata: null,
+        todos: null,
         raw: null,
         time: null,
       },

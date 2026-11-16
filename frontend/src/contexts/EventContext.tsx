@@ -3,7 +3,6 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo, u
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { createBffClient } from '@/api/bff'
-import { toPendingPermission, toPendingQuestion } from '@/api/pending'
 import { listRepos } from '@/api/repos'
 import type { PendingPermission, PendingQuestion } from '@opencode-manager/shared/api/v1'
 import type { PermissionResponse, SSEEvent, SSHHostKeyRequest, Repo } from '@/api/types'
@@ -497,28 +496,29 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       const event = data as SSEEvent
       
       switch (event.type) {
-        case 'permission.asked':
-          if ('permission' in event.properties && 'sessionID' in event.properties) {
-            rememberSessionDirectory(event.properties.sessionID as string, event.directory)
-            // The stream speaks the agent's dialect; the app keeps the
-            // versioned one, so the two meet here and only here.
-            addPermission(toPendingPermission(event.properties, event.directory))
-          }
+        case 'permission.asked': {
+          // The stream speaks the same dialect as the list the client asks
+          // for, so a permission is one shape whether it was asked for or
+          // watched for.
+          const permission = event.properties.permission
+          rememberSessionDirectory(permission.sessionId, event.directory)
+          addPermission(permission)
           break
+        }
         case 'permission.replied':
-          if ('requestID' in event.properties && 'sessionID' in event.properties) {
+          if ('requestId' in event.properties && 'sessionId' in event.properties) {
             removePermission(
-              event.properties.requestID as string,
-              event.properties.sessionID as string
+              event.properties.requestId as string,
+              event.properties.sessionId as string
             )
           }
           break
-        case 'question.asked':
-          if ('questions' in event.properties && 'sessionID' in event.properties && 'id' in event.properties) {
-            rememberSessionDirectory(event.properties.sessionID as string, event.directory)
-            addQuestion(toPendingQuestion(event.properties, event.directory))
-          }
+        case 'question.asked': {
+          const question = event.properties.question
+          rememberSessionDirectory(question.sessionId, event.directory)
+          addQuestion(question)
           break
+        }
         case 'ssh.host-key-request':
           if ('requestId' in event.properties && 'host' in event.properties) {
             setSSHHostKeyRequest(event.properties as SSHHostKeyRequest)
@@ -526,10 +526,10 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
           break
         case 'question.replied':
         case 'question.rejected':
-          if ('requestID' in event.properties && 'sessionID' in event.properties) {
-            const sessionID = event.properties.sessionID as string
+          if ('requestId' in event.properties && 'sessionId' in event.properties) {
+            const sessionID = event.properties.sessionId as string
             removeQuestion(
-              event.properties.requestID as string,
+              event.properties.requestId as string,
               sessionID
             )
             queryClient.invalidateQueries({ 

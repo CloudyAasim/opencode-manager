@@ -2,18 +2,18 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { ChevronDown, ChevronRight, X } from 'lucide-react'
 import { TodoItem } from './TodoItem'
 import { useSessionTodosForSession } from '@/stores/sessionTodosStore'
-import type { components } from '@/api/opencode-types'
+import type { Todo } from '@opencode-manager/shared/api/v1'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
-
-export type Todo = components['schemas']['Todo']
 
 interface SessionTodoDisplayProps {
   sessionID: string | undefined
 }
 
+// A task has no name of its own - the agent does not give it one - so what
+// tells one apart from another is what it says and where it stands.
 const todoSignature = (todos: Todo[]) =>
-  todos.map((t) => `${t.id}:${t.status}`).join(',')
+  todos.map((t) => `${t.content}:${t.status}`).join(',')
 
 export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
   const { t } = useI18n()
@@ -65,8 +65,8 @@ export function SessionTodoDisplay({ sessionID }: SessionTodoDisplayProps) {
           </div>
         )}
         <div>
-          {items.map((todo) => (
-            <div key={todo.id}>
+          {items.map((todo, index) => (
+            <div key={`${todo.content}-${index}`}>
               <TodoItem todo={todo} compact />
             </div>
           ))}

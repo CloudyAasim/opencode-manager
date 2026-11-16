@@ -179,6 +179,7 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
         error: null,
         input: null,
         metadata: null,
+        todos: null,
         raw: null,
         time: null,
       },
@@ -191,6 +192,105 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
       mime: null,
       url: '',
     })
+  })
+
+  it('片段：工具写的待办，翻译成版本化的待办', () => {
+    // The agent keeps its task list in the tool's own words. The versioned
+    // shape says it in its own words - the same ones the event stream says
+    // it in - so a client that reads a conversation and a client that
+    // watches one are talking about the same tasks.
+    const part = toPart({
+      id: 'p9',
+      type: 'tool',
+      tool: 'todowrite',
+      state: {
+        status: 'completed',
+        metadata: {
+          todos: [{ content: 'write it', status: 'pending', priority: 'high' }],
+        },
+      },
+    })
+
+    expect(part.type === 'tool' ? part.state.todos : null).toEqual([
+      { content: 'write it', status: 'pending', priority: 'high' },
+    ])
+  })
+
+  it('片段：待办也可以从工具打印出来的那一份里读', () => {
+    // The tool says its list twice: in the metadata it leaves behind, and in
+    // what it printed. Either one is the agent's own words, and either one
+    // is read.
+    const part = toPart({
+      id: 'p10',
+      type: 'tool',
+      tool: 'todowrite',
+      state: {
+        status: 'completed',
+        output: JSON.stringify([{ content: 'write it', status: 'pending', priority: 'high' }]),
+      },
+    })
+
+    expect(part.type === 'tool' ? part.state.todos : null).toEqual([
+      { content: 'write it', status: 'pending', priority: 'high' },
+    ])
+  })
+
+  it('片段：agent 自己的规格说待办有名字，方言不跟着说', () => {
+    // The agent's specification says a task carries an id. The agent that is
+    // running does not send one, so the dialect does not repeat a promise
+    // nobody made.
+    const part = toPart({
+      id: 'p11',
+      type: 'tool',
+      tool: 'todowrite',
+      state: {
+        status: 'completed',
+        metadata: {
+          todos: [{ id: 'todo_1', content: 'write it', status: 'pending', priority: 'high' }],
+        },
+      },
+    })
+
+    expect(part.type === 'tool' ? part.state.todos : null).toEqual([
+      { content: 'write it', status: 'pending', priority: 'high' },
+    ])
+  })
+
+  it('片段：不是写待办的工具，没有待办', () => {
+    // Which tool keeps a task list is the agent's vocabulary, and it is
+    // read here, in the layer that talks to the agent - not by a client.
+    const part = toPart({
+      id: 'p12',
+      type: 'tool',
+      tool: 'bash',
+      state: {
+        status: 'completed',
+        metadata: { todos: [{ content: 'write it', status: 'pending', priority: 'high' }] },
+      },
+    })
+
+    expect(part.type === 'tool' ? part.state.todos : null).toBeNull()
+  })
+
+  it('片段：读不出来的待办被丢掉，其余的还在', () => {
+    const part = toPart({
+      id: 'p13',
+      type: 'tool',
+      tool: 'todowrite',
+      state: {
+        status: 'completed',
+        metadata: {
+          todos: [
+            { status: 'pending', priority: 'high' },
+            { content: 'ship it', status: 'completed', priority: 'low' },
+          ],
+        },
+      },
+    })
+
+    expect(part.type === 'tool' ? part.state.todos : null).toEqual([
+      { content: 'ship it', status: 'completed', priority: 'low' },
+    ])
   })
 
   it('片段：看不懂的片段不许被丢掉，也不许被当成文字', () => {
@@ -216,6 +316,7 @@ describe('OpenCode 的形状翻译成归一化的形状', () => {
         error: null,
         input: null,
         metadata: null,
+        todos: null,
         raw: null,
         time: null,
       },

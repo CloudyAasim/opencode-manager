@@ -16,8 +16,12 @@ type SSEEventListener = (directory: string, event: SSEEvent) => void
  * The translator is given the event the agent sent and answers with the event
  * as it should travel, or with null when the event cannot be read and is
  * better dropped than carried half-translated.
+ *
+ * It is also given the working directory the event came from: an event about
+ * what the agent is waiting for has to say where that is, and this layer is
+ * the one that knows.
  */
-export type SSEEventTranslator = (event: unknown) => unknown | null
+export type SSEEventTranslator = (event: unknown, directory?: string | null) => unknown | null
 
 interface SSEClient {
   id: string
@@ -461,7 +465,7 @@ class SSEAggregator {
     // holding one shape and not two. The translator is handed to this layer by
     // whoever knows which agent is behind it: this layer knows how to carry an
     // event, not what an event means.
-    const translated = this.eventTranslator ? this.eventTranslator(parsed) : parsed
+    const translated = this.eventTranslator ? this.eventTranslator(parsed, directory) : parsed
     if (translated === null) return
 
     // An event nobody translated is the agent's own words, and they travel as

@@ -5,7 +5,7 @@ import { useUIState } from '@/stores/uiStateStore'
 
 const mocks = vi.hoisted(() => ({
   useSessionStatus: vi.fn(),
-  useSessionTodos: vi.fn(),
+  setTodos: vi.fn(),
   useSettings: vi.fn(),
   usePermissions: vi.fn(),
   useQuestions: vi.fn(),
@@ -18,7 +18,10 @@ vi.mock('@/stores/sessionStatusStore', () => ({
 }))
 
 vi.mock('@/stores/sessionTodosStore', () => ({
-  useSessionTodos: mocks.useSessionTodos,
+  // The store is asked for the setter, not for the store: the selector is
+  // what the component uses, so the mock has to run it.
+  useSessionTodos: (selector: (state: { setTodos: typeof mocks.setTodos }) => unknown) =>
+    selector({ setTodos: mocks.setTodos }),
 }))
 
 vi.mock('@/hooks/useSettings', () => ({
@@ -74,6 +77,24 @@ const createTaskToolPart = (description: string, sessionId: string | undefined) 
     error: null,
     title: 'Task',
     metadata: sessionId ? { sessionId } : null,
+    todos: null,
+    time: { start: Date.now(), end: Date.now() + 100 },
+  },
+})
+
+const createTodoToolPart = (todos: unknown[] | null) => ({
+  type: 'tool' as const,
+  id: 'part-6',
+  callId: 'call-2',
+  name: 'todowrite',
+  state: {
+    status: 'completed' as const,
+    input: null,
+    output: null,
+    error: null,
+    title: '1 todos',
+    metadata: null,
+    todos,
     time: { start: Date.now(), end: Date.now() + 100 },
   },
 })
@@ -152,7 +173,7 @@ const createUserMessage = (id: string, text: string) => ({
 describe('MessageThread', () => {
   beforeEach(() => {
     mocks.useSessionStatus.mockReturnValue({ type: 'idle' })
-    mocks.useSessionTodos.mockReturnValue({ setTodos: vi.fn() })
+    mocks.setTodos.mockClear()
     mocks.usePermissions.mockReturnValue({
       getForCallID: vi.fn(() => null),
     })
@@ -484,5 +505,55 @@ describe('MessageThread', () => {
       }),
       expect.any(Object),
     )
+  })
+
+  it('the tasks a call wrote down are the tasks the conversation has', () => {
+    setupSettings({
+      simpleChatMode: false,
+      showReasoning: false,
+    })
+
+    const messages = [
+      createUserMessage('1', 'Hello'),
+      createAssistantMessage('2', [
+        createTodoToolPart([
+          { content: 'write it', status: 'pending', priority: 'high' },
+        ]),
+      ]),
+    ]
+
+    render(
+      <MessageThread
+        opcodeUrl="http://localhost:5551"
+        sessionID="test-session"
+        messages={messages as any}
+      />
+    )
+
+    expect(mocks.setTodos).toHaveBeenCalledWith('test-session', [
+      { content: 'write it', status: 'pending', priority: 'high' },
+    ])
+  })
+
+  it('a call that wrote no tasks does not change the tasks', () => {
+    setupSettings({
+      simpleChatMode: false,
+      showReasoning: false,
+    })
+
+    const messages = [
+      createUserMessage('1', 'Hello'),
+      createAssistantMessage('2', [createTodoToolPart(null)]),
+    ]
+
+    render(
+      <MessageThread
+        opcodeUrl="http://localhost:5551"
+        sessionID="test-session"
+        messages={messages as any}
+      />
+    )
+
+    expect(mocks.setTodos).not.toHaveBeenCalled()
   })
 })

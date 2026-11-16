@@ -1,5 +1,14 @@
-import { ConversationEventSchema } from '@opencode-manager/shared/api/v1'
-import { toConversationStatus, toMessage, toMessageError, toPart, toSession } from './adapter'
+import { ConversationEventSchema, type Todo } from '@opencode-manager/shared/api/v1'
+import {
+  toConversationStatus,
+  toMessage,
+  toMessageError,
+  toPart,
+  toPendingPermission,
+  toPendingQuestion,
+  toSession,
+  toTodo,
+} from './adapter'
 
 /**
  * What the agent says about a conversation, said in the versioned dialect.
@@ -15,10 +24,15 @@ import { toConversationStatus, toMessage, toMessageError, toPart, toSession } fr
  * itself, and they are said by the same translator that says it over HTTP.
  * There is one translation of an agent's message, not two that can disagree.
  *
- * The events that are not about the conversation - what it is waiting for,
- * which version of the program is running - are left as the agent says them.
- * They carry no shape of a conversation, so they cannot put two shapes into
- * one place.
+ * What the agent is waiting for belongs to the same conversation, and it is
+ * said in the same words for the same reason: the client asks for the
+ * permissions and questions it has to answer over HTTP, and watches them
+ * change over the stream. Two dialects for one permission would mean the
+ * client had to learn the agent's words to watch the thing it had already
+ * learned one dialect for.
+ *
+ * The events that are not about the conversation - which version of the
+ * program is running - are left as the agent says them.
  */
 
 const AGENT_ID = 'opencode'
@@ -46,14 +60,14 @@ function asString(value: unknown): string | null {
  * exists to prevent - so an event of the conversation's that cannot be read
  * is dropped rather than passed on.
  */
-export function toVersionedEvent(raw: unknown): unknown {
+export function toVersionedEvent(raw: unknown, directory?: string | null): unknown {
   const event = asRecord(raw)
   const type = asString(event?.type)
   const properties = asRecord(event?.properties)
   if (!type || !properties) return raw
 
   try {
-    const translation = translate(type, properties)
+    const translation = translate(type, properties, directory ?? null)
     if (translation.kind === 'not-ours') return raw
 
     // The shape is the judge. An event of the conversation's that cannot be
@@ -89,7 +103,11 @@ function event(value: unknown): Translation {
   return { kind: 'ours', event: value }
 }
 
-function translate(type: string, properties: Record<string, unknown>): Translation {
+function translate(
+  type: string,
+  properties: Record<string, unknown>,
+  directory: string | null,
+): Translation {
   if (type === 'session.created') {
     const session = toSession(properties.info, AGENT_ID)
     return event({ type, properties: { sessionId: session.id, session } })
@@ -180,6 +198,74 @@ function translate(type: string, properties: Record<string, unknown>): Translati
     const messageId = asString(properties.messageID)
     if (!sessionId || !messageId) return NOTHING_TO_SAY
     return event({ type, properties: { sessionId, messageId } })
+  }
+
+  if (type === 'todo.updated') {
+    const sessionId = asString(properties.sessionID)
+    if (!sessionId) return NOTHING_TO_SAY
+    const todos = Array.isArray(properties.todos) ? properties.todos : []
+    return event({
+      type,
+      properties: {
+        sessionId,
+        todos: todos.map(toTodo).filter((todo): todo is Todo => todo !== null),
+      },
+    })
+  }
+
+  if (type === 'permission.asked') {
+    // The same translation the list over HTTP is said with, so a permission
+    // is one shape whether it was asked for or watched for.
+    return event({
+      type,
+      properties: {
+        sessionId: asString(properties.sessionID) ?? '',
+        permission: toPendingPermission(properties, AGENT_ID, directory ?? undefined),
+      },
+    })
+  }
+
+  if (type === 'permission.replied') {
+    const sessionId = asString(properties.sessionID)
+    const requestId = asString(properties.requestID)
+    const reply = asString(properties.reply)
+    if (!sessionId || !requestId) return NOTHING_TO_SAY
+    if (reply !== 'once' && reply !== 'always' && reply !== 'reject') return NOTHING_TO_SAY
+    return event({ type, properties: { sessionId, requestId, reply } })
+  }
+
+  if (type === 'question.asked') {
+    return event({
+      type,
+      properties: {
+        sessionId: asString(properties.sessionID) ?? '',
+        question: toPendingQuestion(properties, AGENT_ID, directory ?? undefined),
+      },
+    })
+  }
+
+  if (type === 'question.replied') {
+    const sessionId = asString(properties.sessionID)
+    const requestId = asString(properties.requestID)
+    if (!sessionId || !requestId) return NOTHING_TO_SAY
+    const answers = Array.isArray(properties.answers) ? properties.answers : []
+    return event({
+      type,
+      properties: {
+        sessionId,
+        requestId,
+        answers: answers.map((answer) =>
+          Array.isArray(answer) ? answer.filter((entry): entry is string => typeof entry === 'string') : [],
+        ),
+      },
+    })
+  }
+
+  if (type === 'question.rejected') {
+    const sessionId = asString(properties.sessionID)
+    const requestId = asString(properties.requestID)
+    if (!sessionId || !requestId) return NOTHING_TO_SAY
+    return event({ type, properties: { sessionId, requestId } })
   }
 
   return NOT_OURS

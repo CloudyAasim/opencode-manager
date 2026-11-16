@@ -498,6 +498,7 @@ export class HermesProvider implements AgentProvider {
           error: null,
           input: null,
           metadata: null,
+          todos: null,
           raw: null,
           time: null,
         },

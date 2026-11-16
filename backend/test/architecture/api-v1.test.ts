@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { repoRoot } from '../helpers/repo-root'
 import { buildV1JsonSchema } from '@opencode-manager/shared/api/v1-schema'
+import { TodoSchema } from '@opencode-manager/shared/api/v1'
 
 const API_V1_DIR = path.join(repoRoot, 'backend/src/routes/api-v1')
 const API_V1_DOC = path.join(repoRoot, 'docs/api/v1.md')
@@ -138,6 +139,18 @@ describe('版本化 API 的形状', () => {
       AGENT_WORD.test(source),
       'shared/src/api/v1.ts 里出现了某一个 agent 的名字，形状就不再是所有后端共用的形状',
     ).toBe(false)
+  })
+
+  it('待办不许许一个 agent 从没许过的名字', () => {
+    // The agent's own specification says a task carries an id. The agent that
+    // is actually running does not send one - not in the list it keeps, not
+    // in the tool call it writes that list with. An id in the contract would
+    // be a promise nobody made, and a client that reads it would wait for
+    // something that never comes.
+    expect(
+      Object.keys(TodoSchema.shape).sort(),
+      '版本化的待办不许带 id：agent 从来不发它，方言也不许替它编一个',
+    ).toEqual(['content', 'priority', 'status'])
   })
 
   it('v1 的每个响应都得先过形状', () => {

@@ -656,6 +656,36 @@
                     }
                   ]
                 },
+                "todos": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "content": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "priority": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "content",
+                          "status",
+                          "priority"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "raw": {
                   "anyOf": [
                     {
@@ -704,6 +734,7 @@
                 "error",
                 "input",
                 "metadata",
+                "todos",
                 "raw",
                 "time"
               ],
@@ -1212,6 +1243,36 @@
                 }
               ]
             },
+            "todos": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "content": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "priority": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "content",
+                      "status",
+                      "priority"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "raw": {
               "anyOf": [
                 {
@@ -1260,6 +1321,7 @@
             "error",
             "input",
             "metadata",
+            "todos",
             "raw",
             "time"
           ],
@@ -1299,6 +1361,27 @@
         "reasoning",
         "cacheRead",
         "cacheWrite"
+      ],
+      "additionalProperties": false
+    },
+    "Todo": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "status",
+        "priority"
       ],
       "additionalProperties": false
     },
@@ -2363,6 +2446,36 @@
                                 }
                               ]
                             },
+                            "todos": {
+                              "anyOf": [
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "content": {
+                                        "type": "string"
+                                      },
+                                      "status": {
+                                        "type": "string"
+                                      },
+                                      "priority": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "content",
+                                      "status",
+                                      "priority"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "raw": {
                               "anyOf": [
                                 {
@@ -2411,6 +2524,7 @@
                             "error",
                             "input",
                             "metadata",
+                            "todos",
                             "raw",
                             "time"
                           ],
@@ -2950,6 +3064,403 @@
               "required": [
                 "sessionId",
                 "messageId"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "properties"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "todo.updated"
+            },
+            "properties": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string"
+                },
+                "todos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "content": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "priority": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "content",
+                      "status",
+                      "priority"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "sessionId",
+                "todos"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "properties"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "permission.asked"
+            },
+            "properties": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string"
+                },
+                "permission": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sessionId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "directory": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "permission": {
+                      "type": "string"
+                    },
+                    "patterns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "always": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "tool": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "messageId": {
+                              "type": "string"
+                            },
+                            "callId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "messageId",
+                            "callId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "sessionId",
+                    "directory",
+                    "permission",
+                    "patterns",
+                    "metadata",
+                    "always",
+                    "tool"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "sessionId",
+                "permission"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "properties"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "permission.replied"
+            },
+            "properties": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string"
+                },
+                "reply": {
+                  "type": "string",
+                  "enum": [
+                    "once",
+                    "always",
+                    "reject"
+                  ]
+                }
+              },
+              "required": [
+                "sessionId",
+                "requestId",
+                "reply"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "properties"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "question.asked"
+            },
+            "properties": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string"
+                },
+                "question": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sessionId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "directory": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "question": {
+                            "type": "string"
+                          },
+                          "header": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "description"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "multiple": {
+                            "default": false,
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "question",
+                          "header",
+                          "options",
+                          "multiple"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "tool": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "messageId": {
+                              "type": "string"
+                            },
+                            "callId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "messageId",
+                            "callId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "sessionId",
+                    "directory",
+                    "questions",
+                    "tool"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "sessionId",
+                "question"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "properties"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "question.replied"
+            },
+            "properties": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string"
+                },
+                "answers": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "sessionId",
+                "requestId",
+                "answers"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "properties"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "question.rejected"
+            },
+            "properties": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "sessionId",
+                "requestId"
               ],
               "additionalProperties": false
             }
@@ -3912,6 +4423,36 @@
                                 }
                               ]
                             },
+                            "todos": {
+                              "anyOf": [
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "content": {
+                                        "type": "string"
+                                      },
+                                      "status": {
+                                        "type": "string"
+                                      },
+                                      "priority": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "content",
+                                      "status",
+                                      "priority"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "raw": {
                               "anyOf": [
                                 {
@@ -3960,6 +4501,7 @@
                             "error",
                             "input",
                             "metadata",
+                            "todos",
                             "raw",
                             "time"
                           ],

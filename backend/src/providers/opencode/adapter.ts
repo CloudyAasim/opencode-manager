@@ -27,6 +27,7 @@ import type {
   ShellRequest,
   TimeRange,
   TokenUsage,
+  Todo,
   ToolCallState,
   WorkingMode,
   WorkingModeScope,
@@ -174,6 +175,73 @@ export function toMessageError(raw: unknown): MessageError {
  * called "other" and keeps whatever words it had, because a client that loses
  * a piece of a conversation has lost part of the answer.
  */
+/**
+ * The tools that keep a task list.
+ *
+ * The agent names its own tools, so these names are the agent's vocabulary
+ * and not this layer's. They live here, in the layer that talks to the
+ * agent, and not in a client: a client should have to know what a task is,
+ * not which tool a task list happens to come from.
+ */
+const TASK_TOOLS = new Set(['todowrite', 'todoread'])
+
+/**
+ * A task the agent wrote down, in the versioned dialect.
+ *
+ * A task without words cannot be drawn and cannot be told apart from another
+ * one, so it is not a task this layer can say. The rest of the list is still
+ * worth saying.
+ *
+ * The agent's own specification says a task carries a name of its own, but
+ * the agent that is running does not send one, so there is no name to carry
+ * across - and none is invented, because a made-up name would be a promise
+ * the agent never made.
+ */
+export function toTodo(raw: unknown): Todo | null {
+  const record = asRecord(raw)
+  const content = asString(record?.content)
+  if (!content) return null
+  return {
+    content,
+    status: asString(record?.status) ?? '',
+    priority: asString(record?.priority) ?? '',
+  }
+}
+
+/**
+ * The tasks a tool call wrote down, in the versioned dialect.
+ *
+ * The tool says its list twice - in the metadata it leaves behind and in what
+ * it printed - and either one is the agent's own words. Here they are said in
+ * this layer's words, in the same words the event stream says them in, so a
+ * client that reads a conversation and a client that watches one are talking
+ * about the same tasks.
+ *
+ * Null when the call was not about tasks at all.
+ */
+function toTodos(name: string, state: Record<string, unknown> | null): Todo[] | null {
+  if (!TASK_TOOLS.has(name)) return null
+
+  const metadata = asRecord(state?.metadata)
+  const list = Array.isArray(metadata?.todos) ? metadata.todos : todosInOutput(state?.output)
+  if (!list) return null
+
+  return list.map(toTodo).filter((todo): todo is Todo => todo !== null)
+}
+
+function todosInOutput(output: unknown): unknown[] | null {
+  const text = asString(output)
+  if (!text) return null
+  try {
+    const parsed: unknown = JSON.parse(text)
+    if (Array.isArray(parsed)) return parsed
+    const record = asRecord(parsed)
+    return Array.isArray(record?.todos) ? record.todos : null
+  } catch {
+    return null
+  }
+}
+
 export function toPart(raw: unknown): MessagePart {
   const record = asRecord(raw)
   const id = asString(record?.id) ?? ''
@@ -200,6 +268,7 @@ export function toPart(raw: unknown): MessagePart {
 
   if (type === 'tool') {
     const state = asRecord(record?.state)
+    const name = asString(record?.tool) ?? ''
     // The tool's own metadata and the state it is in say different things,
     // and the conversation a task handed off to is sometimes in one and
     // sometimes in the other. They are folded into one place, so a client
@@ -213,7 +282,7 @@ export function toPart(raw: unknown): MessagePart {
       id,
       type: 'tool',
       callId: asString(record?.callID) ?? '',
-      name: asString(record?.tool) ?? '',
+      name,
       state: {
         status: toolStateOf(state),
         title: asString(state?.title) ?? null,
@@ -221,6 +290,7 @@ export function toPart(raw: unknown): MessagePart {
         error: asString(state?.error) ?? null,
         input: asOpenRecord(state?.input),
         metadata: Object.keys(metadata).length > 0 ? metadata : null,
+        todos: toTodos(name, state),
         raw: asString(state?.raw) ?? null,
         time: toTimeRange(asRecord(state?.time)),
       },

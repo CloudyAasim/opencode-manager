@@ -1,7 +1,5 @@
 import { create } from 'zustand'
-import type { components } from '@/api/opencode-types'
-
-type Todo = components['schemas']['Todo']
+import type { Todo } from '@opencode-manager/shared/api/v1'
 
 interface SessionTodosStore {
   todos: Map<string, Todo[]>

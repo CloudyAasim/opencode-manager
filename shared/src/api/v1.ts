@@ -196,6 +196,32 @@ export const TimeRangeSchema = z.object({
 export type TimeRange = z.infer<typeof TimeRangeSchema>
 
 /**
+ * A task the agent has written down for itself.
+ *
+ * Where the task stands and how urgent it is are the agent's own words: it
+ * says "pending", "in_progress", "completed" and "cancelled" today, and it is
+ * free to say something else tomorrow. So they are its words and not a list
+ * this layer believes in - a layer that believed in a list would have to
+ * invent an answer for a word it had not heard, and the list would be a
+ * promise the agent never made.
+ *
+ * A task has no name of its own here either, and that is not an oversight.
+ * The agent's own specification says a task carries an id, but the agent that
+ * is actually running has never sent one - not in the list it keeps, not in
+ * the tool call it writes that list with. So there is no id to carry across
+ * and none is made up: a task is what it says, and where it stands.
+ */
+export const TodoSchema = z.object({
+  /** What the task is. */
+  content: z.string(),
+  /** The agent's own word for where the task stands. */
+  status: z.string(),
+  /** The agent's own word for how urgent the task is. */
+  priority: z.string(),
+})
+export type Todo = z.infer<typeof TodoSchema>
+
+/**
  * A tool call, and how far it got.
  *
  * The call is named and numbered, and the state says where it got to: a call
@@ -204,7 +230,10 @@ export type TimeRange = z.infer<typeof TimeRangeSchema>
  *
  * What the tool was called with, and what it left behind, is the agent's own
  * - a tool is called with whatever its caller decided to call it with - so
- * those two are open.
+ * those two are open. What a tool leaves behind that this layer knows how to
+ * say is not open: a task list is said in this layer's words, in the tool
+ * call that wrote it, so that a client reading the conversation and a client
+ * watching it are told about the same tasks in the same words.
  */
 export const ToolCallSchema = z.object({
   callId: z.string(),
@@ -221,6 +250,14 @@ export const ToolCallSchema = z.object({
     error: z.string().nullable(),
     input: z.record(z.string(), z.unknown()).nullable(),
     metadata: z.record(z.string(), z.unknown()).nullable(),
+    /**
+     * The tasks this call wrote down, in this layer's words.
+     *
+     * Null when the call wrote no tasks this layer knows how to say: a call
+     * that is not about tasks, or one whose agent keeps its tasks in words
+     * this layer has not learned yet.
+     */
+    todos: z.array(TodoSchema).nullable(),
     /** The call as it was written down, before it was made sense of. */
     raw: z.string().nullable(),
     time: TimeRangeSchema.nullable(),
@@ -1018,10 +1055,16 @@ export type DeletedResponse = z.infer<typeof DeletedResponseSchema>
  * answers have to be the same words or the client is holding two dialects of
  * one thing.
  *
- * The events that are not here are not about the conversation: what it is
- * waiting for, which version of the program is running. Those say what the
- * agent says about them, and a client that wants them reads them the way the
- * agent says them.
+ * The events that are not here are not about the conversation: which version
+ * of the program is running. Those say what the agent says about them, and a
+ * client that wants them reads them the way the agent says them.
+ *
+ * What the agent is waiting for is here too, and for the same reason as the
+ * list: a client that polled for the permissions and questions it has to
+ * answer and then watched the stream change is holding one shape and not two.
+ * The stream used to be the one place where the agent's dialect survived into
+ * the client - the client had to learn a second dialect to watch the same
+ * thing it had already learned one dialect for.
  */
 export const ConversationEventSchema = z.discriminatedUnion('type', [
   z.object({
@@ -1106,6 +1149,50 @@ export const ConversationEventSchema = z.discriminatedUnion('type', [
     properties: z.object({
       sessionId: z.string(),
       messageId: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('todo.updated'),
+    properties: z.object({
+      sessionId: z.string(),
+      todos: z.array(TodoSchema),
+    }),
+  }),
+  z.object({
+    type: z.literal('permission.asked'),
+    properties: z.object({
+      sessionId: z.string(),
+      permission: PendingPermissionSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('permission.replied'),
+    properties: z.object({
+      sessionId: z.string(),
+      requestId: z.string(),
+      reply: PermissionResponseSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('question.asked'),
+    properties: z.object({
+      sessionId: z.string(),
+      question: PendingQuestionSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('question.replied'),
+    properties: z.object({
+      sessionId: z.string(),
+      requestId: z.string(),
+      answers: z.array(z.array(z.string())),
+    }),
+  }),
+  z.object({
+    type: z.literal('question.rejected'),
+    properties: z.object({
+      sessionId: z.string(),
+      requestId: z.string(),
     }),
   }),
 ])

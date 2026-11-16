@@ -1,7 +1,5 @@
-import type { components } from '@/api/opencode-types'
+import type { Todo } from '@opencode-manager/shared/api/v1'
 import { CheckCircle2, Circle } from 'lucide-react'
-
-export type Todo = components['schemas']['Todo']
 
 interface TodoItemProps {
   todo: Todo

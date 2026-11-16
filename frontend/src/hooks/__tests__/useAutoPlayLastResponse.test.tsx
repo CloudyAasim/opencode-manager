@@ -80,6 +80,7 @@ const createAssistantMessageWithoutText = (id: string): MessageWithParts => ({
         error: 'Question rejected',
         input: {},
         metadata: null,
+        todos: null,
         raw: null,
         time: {
           start: Date.now(),

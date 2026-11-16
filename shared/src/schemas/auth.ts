@@ -53,6 +53,7 @@ export const ProviderAuthMethodSchema = z.object({
   label: z.string(),
   prompts: z.array(PromptFieldSchema).optional(),
 });
+export type ProviderAuthMethod = z.infer<typeof ProviderAuthMethodSchema>;
 
 export const ProviderAuthMethodsSchema = z.record(z.string(), z.array(ProviderAuthMethodSchema));
 
@@ -60,17 +61,20 @@ export const OAuthAuthorizeRequestSchema = z.object({
   method: z.number(),
   inputs: z.record(z.string(), z.string()).optional(),
 });
+export type OAuthAuthorizeRequest = z.infer<typeof OAuthAuthorizeRequestSchema>;
 
 export const OAuthAuthorizeResponseSchema = z.object({
   url: z.string(),
   method: z.enum(["auto", "code"]),
   instructions: z.string(),
 });
+export type OAuthAuthorizeResponse = z.infer<typeof OAuthAuthorizeResponseSchema>;
 
 export const OAuthCallbackRequestSchema = z.object({
   method: z.number(),
   code: z.string().optional(),
 });
+export type OAuthCallbackRequest = z.infer<typeof OAuthCallbackRequestSchema>;
 
 export const ProviderAuthMethodsResponseSchema = z.object({
   providers: z.record(z.string(), z.array(ProviderAuthMethodSchema)),

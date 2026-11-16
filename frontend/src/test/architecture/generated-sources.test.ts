@@ -33,6 +33,11 @@ function withTempFile<T>(name: string, contents: string, run: (file: string) => 
  * The rules below exist because an exclusion that stops matching is the quiet
  * kind of regression: nothing turns red, the generated file simply rejoins the
  * scan set and the i18n false positives come back with it.
+ *
+ * The file those rules were written for is gone now - the shapes it described
+ * are the versioned ones, and the client borrowed nothing from it in the end.
+ * The rules stay because the next generated file needs nothing added to any
+ * list either.
  */
 describe('生成文件不参与手写代码的规则', () => {
   it('门禁自己看得见东西', () => {
@@ -40,7 +45,7 @@ describe('生成文件不参与手写代码的规则', () => {
     expect(graph.files.length, '源文件少得可疑，这门禁多半跑在空集上').toBeGreaterThan(100)
     expect(
       graph.files.some((file) => file.endsWith('opencode-types.ts')),
-      'opencode-types.ts 回到了扫描集里，批次 1a 等于没做',
+      'opencode-types.ts 回到了扫描集里：那份文件已经删掉了，它要是回来也得是生成文件',
     ).toBe(false)
     expect(
       graph.files.some((file) => relativeTo(graph, file) === 'App.tsx'),

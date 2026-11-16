@@ -23,7 +23,6 @@ export interface Repo {
   directoryExists?: boolean
 }
 
-import type { components } from './opencode-types'
 import type {
   ConversationEvent,
   Message as VersionedMessage,
@@ -40,67 +39,21 @@ import type {
  * is the same conversation in both. So the shapes are the versioned API's -
  * one truth about what a message is - and the client holds one dialect, not
  * two: the one it reads and the one it is told about.
+ *
+ * What the agent is waiting for is the same story: the client asks for the
+ * permissions and questions it has to answer over HTTP and watches them
+ * change over the stream, so both answers are the versioned ones and the
+ * client never has to learn a second dialect to watch the thing it already
+ * learned one dialect for.
  */
 export type Message = VersionedMessage
 export type Part = VersionedPart
 export type Session = VersionedSession
-export type PermissionRequest = components['schemas']['PermissionRequest']
 export type PermissionResponse = VersionedPermissionResponse
-
-export type QuestionOption = components['schemas']['QuestionOption']
-export type QuestionInfo = components['schemas']['QuestionInfo']
-export type QuestionRequest = components['schemas']['QuestionRequest']
-export type QuestionAnswer = components['schemas']['QuestionAnswer']
 
 export type MessageWithParts = VersionedMessageWithParts
 
 export type MessageListResponse = MessageWithParts[]
-
-export interface SSETodoUpdatedEvent {
-  type: 'todo.updated'
-  properties: {
-    sessionID: string
-    todos: components['schemas']['Todo'][]
-  }
-}
-
-export interface SSEPermissionAskedEvent {
-  type: 'permission.asked'
-  properties: PermissionRequest
-  directory?: string
-}
-
-export interface SSEPermissionRepliedEvent {
-  type: 'permission.replied'
-  properties: {
-    sessionID: string
-    permissionID: string
-    response: string
-  }
-}
-
-export interface SSEQuestionAskedEvent {
-  type: 'question.asked'
-  properties: QuestionRequest
-  directory?: string
-}
-
-export interface SSEQuestionRepliedEvent {
-  type: 'question.replied'
-  properties: {
-    sessionID: string
-    requestID: string
-    answers: QuestionAnswer[]
-  }
-}
-
-export interface SSEQuestionRejectedEvent {
-  type: 'question.rejected'
-  properties: {
-    sessionID: string
-    requestID: string
-  }
-}
 
 export interface SSEInstallationUpdatedEvent {
   type: 'installation.updated'
@@ -138,19 +91,18 @@ export interface SSESSHHostKeyRequestEvent {
  * Everything the stream can say.
  *
  * The conversation's own events are the versioned API's - the same words the
- * conversation itself is read in, and that includes how busy it is, because
- * the client is told about that over the stream and asks for it over HTTP.
- * The rest are the agent's, because they are not about the conversation:
- * what it is waiting for, which version of the program is running.
+ * conversation itself is read in, and that includes how busy it is and what
+ * the agent is waiting for, because the client is told about those over the
+ * stream and asks for them over HTTP. The rest are the agent's, because they
+ * are not about the conversation: which version of the program is running.
+ *
+ * The directory is not part of the event but part of the envelope the event
+ * travels in, so it is added here: the stream says where an event came from,
+ * and a client that has to know that would otherwise have to dig it out of
+ * the frame.
  */
 export type SSEEvent =
-  | ConversationEvent
-  | SSETodoUpdatedEvent
-  | SSEPermissionAskedEvent
-  | SSEPermissionRepliedEvent
-  | SSEQuestionAskedEvent
-  | SSEQuestionRepliedEvent
-  | SSEQuestionRejectedEvent
+  | (ConversationEvent & { directory?: string })
   | SSEInstallationUpdatedEvent
   | SSEInstallationUpdateAvailableEvent
   | SSELspUpdatedEvent

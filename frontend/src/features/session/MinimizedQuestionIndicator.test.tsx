@@ -1,13 +1,15 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MinimizedQuestionIndicator } from './MinimizedQuestionIndicator'
-import type { QuestionRequest } from '@/api/types'
+import type { PendingQuestion } from '@opencode-manager/shared/api/v1'
 
 const question = {
   id: 'q-1',
-  sessionID: 's-1',
+  sessionId: 's-1',
+  directory: '/repo',
   questions: [{ header: 'Pick a branch', options: [] }],
-} as unknown as QuestionRequest
+  tool: null,
+} as unknown as PendingQuestion
 
 /**
  * The dismiss button used to carry `hidden sm:block`, which on a phone meant

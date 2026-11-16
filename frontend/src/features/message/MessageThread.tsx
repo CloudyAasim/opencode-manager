@@ -10,7 +10,6 @@ import type { Message, Part, MessageWithParts } from '@/api/types'
 import { useSessionStatusForSession } from '@/stores/sessionStatusStore'
 import { useSessionTodos } from '@/stores/sessionTodosStore'
 import { useSettings } from '@/hooks/useSettings'
-import type { Todo } from '@/features/message/SessionTodoDisplay'
 import { useI18n } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 
@@ -382,8 +381,12 @@ export const MessageThread = memo(function MessageThread({
 
     const allParts = messages.flatMap(m => m.parts)
 
+    // The tasks a conversation has now are the ones the last call wrote down.
+    // Which tool that was is not this client's business: the server says
+    // whether a call wrote tasks, and says it in the same words it says
+    // them over the stream.
     const latestTodoPart = allParts
-      .filter((part): part is Extract<Part, { type: 'tool' }> => part.type === 'tool' && (part.name === 'todowrite' || part.name === 'todoread'))
+      .filter((part): part is Extract<Part, { type: 'tool' }> => part.type === 'tool' && Array.isArray(part.state.todos))
       .filter(part => part.state.status === 'completed' && part.state.time)
       .sort((a, b) => {
         const aEndTime = a.state.time?.end ?? 0
@@ -392,24 +395,7 @@ export const MessageThread = memo(function MessageThread({
       })[0]
 
     if (latestTodoPart) {
-      const state = latestTodoPart.state
-      let todos: Todo[] = []
-
-      const metadataTodos = state.metadata?.todos
-      if (Array.isArray(metadataTodos)) {
-        todos = metadataTodos as Todo[]
-      } else if (state.output) {
-        try {
-          const parsed = JSON.parse(state.output)
-          todos = Array.isArray(parsed)
-            ? parsed as Todo[]
-            : parsed?.todos ? parsed.todos as Todo[]
-            : []
-        } catch {
-          todos = []
-        }
-      }
-
+      const todos = latestTodoPart.state.todos ?? []
       if (todos.length > 0) {
         setSessionTodos(sessionID, todos)
       }

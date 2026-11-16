@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import type { QuestionRequest } from '@/api/types'
+import type { PendingQuestion } from '@opencode-manager/shared/api/v1'
 import { SessionDetail } from '../SessionDetail'
 
 const mocks = vi.hoisted(() => ({
@@ -167,7 +167,7 @@ vi.mock('@/features/source-control', () => ({
 }))
 
 vi.mock('@/features/session/QuestionPrompt', () => ({
-  QuestionPrompt: ({ question }: { question: QuestionRequest }) => (
+  QuestionPrompt: ({ question }: { question: PendingQuestion }) => (
     <div data-testid="question-prompt">{question.id}</div>
   ),
 }))
@@ -186,10 +186,11 @@ vi.mock('@/features/message/PromptInput', () => ({
 
 const VIEWED_SESSION_ID = 'viewed-session'
 
-function createQuestion(id: string, sessionID: string): QuestionRequest {
+function createQuestion(id: string, sessionID: string): PendingQuestion {
   return {
     id,
-    sessionID,
+    sessionId: sessionID,
+    directory: '/test/repo',
     questions: [
       {
         question: 'Continue?',
@@ -198,6 +199,7 @@ function createQuestion(id: string, sessionID: string): QuestionRequest {
         multiple: false,
       },
     ],
+    tool: null,
   }
 }
 
@@ -225,7 +227,7 @@ describe('SessionDetail question prompt session scoping', () => {
     mocks.useSessionStatusForSession.mockReturnValue({ type: 'idle' })
   })
 
-  const renderWithQuestions = (questionsBySession: Record<string, QuestionRequest>, current: QuestionRequest | null) => {
+  const renderWithQuestions = (questionsBySession: Record<string, PendingQuestion>, current: PendingQuestion | null) => {
     mocks.useQuestions.mockReturnValue({
       current,
       getForSession: vi.fn((sessionID: string) => questionsBySession[sessionID] ?? null),

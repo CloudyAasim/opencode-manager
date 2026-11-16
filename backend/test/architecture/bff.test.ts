@@ -394,9 +394,13 @@ describe('给前端的那一层', () => {
     // client itself is gone - and it must not come back, because a client
     // that exists is a client that will be used.
     //
-    // The type file next to it is a different thing: it describes what the
-    // agent's API looks like, and describing a door is not walking through
-    // it. That one is still here, and it is here on purpose.
+    // The description of the agent's API went with it. It used to sit next to
+    // the client as an exception - "describing a door is not walking through
+    // it" - and for a while that was true: nothing read it at runtime. But
+    // the client did read it, at compile time, and the shapes it borrowed
+    // from it were the agent's words: the tasks it draws, the permissions it
+    // answers, the questions it asks. Every one of those is now said in the
+    // versioned dialect, so there is nothing left to borrow.
     const AGENT_CLIENT = path.join(FRONTEND_DIR, 'api', 'opencode.ts')
     const AGENT_TYPES = path.join(FRONTEND_DIR, 'api', 'opencode-types.ts')
 
@@ -405,14 +409,18 @@ describe('给前端的那一层', () => {
       [
         '前端又有了一个问 agent 的客户端：api/opencode.ts',
         '这一层现在是前端唯一该问的门，问 agent 的那个客户端不该再存在。',
-        '（api/opencode-types.ts 是另一回事：它描述 agent 的 API 长什么样，不是去问它。）',
       ].join('\n'),
     ).toBe(false)
 
     expect(
       fs.existsSync(AGENT_TYPES),
-      'api/opencode-types.ts 不见了：还有形状没有搬过来，别把这个门禁当成搬完了',
-    ).toBe(true)
+      [
+        '前端又有了一份 agent 的 API 描述：api/opencode-types.ts',
+        '那份文件里全是 agent 的词，而前端今天说的每一句话都是版本化的那些。',
+        '形状都搬过来了，这份描述就没有理由再留在前端。',
+        '（真的还需要它的时候，它是 scripts/opencode-spec.json 里的那份记录。）',
+      ].join('\n'),
+    ).toBe(false)
   })
 
   it('前端不许再自己去问 agent 的那张面', () => {
@@ -489,10 +497,6 @@ describe('给前端的那一层', () => {
     // those in the versioned dialect too, and a client that asked the agent
     // for them would be holding the agent's words beside the versioned ones.
     //
-    // The agent's own type file is the one exception: it describes what the
-    // agent's API looks like so the client can be written against it, and
-    // describing a door is not walking through it.
-    const AGENT_TYPES = path.join(FRONTEND_DIR, 'api', 'opencode-types.ts')
     const AGENT_CONVERSATION_PATH = /\/session\/[^`'"\s]*?\/(?:message|messages|prompt|prompt_async|revert)\b/g
     const AGENT_STATUS_PATH = /\/session\/status\b/g
     // The agent's waiting paths are singular and this layer's are plural -
@@ -512,7 +516,6 @@ describe('给前端的那一层', () => {
     const offenders: string[] = []
 
     for (const file of frontendSources()) {
-      if (file === AGENT_TYPES) continue
       const source = read(file)
       for (const pattern of [
         AGENT_CONVERSATION_PATH,
@@ -715,14 +718,9 @@ describe('给前端的那一层', () => {
       /\/find\/file\b/g,
     ]
     const LAYER_CLIENT = path.join(FRONTEND_DIR, 'api', 'bff.ts')
-    // The agent's own type file is the one exception: it describes what the
-    // agent's API looks like so the client can be written against it, and
-    // describing a door is not walking through it.
-    const AGENT_TYPES = path.join(FRONTEND_DIR, 'api', 'opencode-types.ts')
     const offenders: string[] = []
 
     for (const file of frontendSources()) {
-      if (file === AGENT_TYPES) continue
       const source = read(file)
       for (const pattern of AGENT_PATHS) {
         for (const match of source.matchAll(pattern)) {
@@ -780,14 +778,9 @@ describe('给前端的那一层', () => {
       /\/api\/opencode\/config\b/g,
     ]
     const LAYER_CLIENT = path.join(FRONTEND_DIR, 'api', 'bff.ts')
-    // The agent's own type file is the one exception: it describes what the
-    // agent's API looks like so the client can be written against it, and
-    // describing a door is not walking through it.
-    const AGENT_TYPES = path.join(FRONTEND_DIR, 'api', 'opencode-types.ts')
     const offenders: string[] = []
 
     for (const file of frontendSources()) {
-      if (file === AGENT_TYPES) continue
       const source = read(file)
       for (const pattern of AGENT_PATHS) {
         for (const match of source.matchAll(pattern)) {
@@ -831,5 +824,69 @@ describe('给前端的那一层', () => {
       asking.length,
       '前端一处也没问这一层的工具服务器，那上面那条门禁就只是在说一件没有发生的事',
     ).toBeGreaterThan(0)
+  })
+
+  it('前端不许再自己拿着 agent 的那几样形状', () => {
+    // The tasks, the permissions and the questions are the agent's words.
+    // The client used to borrow them - from a description of the agent's API
+    // - and then had to learn a second dialect to watch the same thing it had
+    // already learned one dialect for.
+    //
+    // The names are what makes this checkable. A name the versioned API also
+    // uses is not a name the agent's: the versioned ones say "Pending", so
+    // "PendingQuestionInfo" is not "QuestionInfo".
+    const AGENT_SHAPES = [
+      'PermissionRequest',
+      'QuestionRequest',
+      'QuestionAnswer',
+      'QuestionOption',
+      'QuestionInfo',
+    ]
+    const offenders: string[] = []
+
+    for (const file of frontendSources()) {
+      const source = read(file)
+      for (const shape of AGENT_SHAPES) {
+        if (new RegExp(`\\b${shape}\\b`).test(source)) {
+          offenders.push(`${path.relative(repoRoot, file)} 还在用 ${shape}`)
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在用 agent 的那几样形状：${offenders.join(', ')}`,
+        '这些形状是 agent 的话，而前端今天说的每一句话都是版本化的那些。',
+        '要问就去问这一层：它已经用版本化的话回答了。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('前端不许再从 agent 留下的东西里挖待办', () => {
+    // The call that wrote the tasks says them, in the versioned dialect, in
+    // the call itself. The client does not dig them out of what the tool
+    // left behind: that space is the agent's own and open, and a client that
+    // reads it is holding a second dialect again - one that can be wrong in
+    // a way the server never was.
+    const offenders: string[] = []
+
+    for (const file of frontendSources()) {
+      const source = read(file)
+      source.split(/\r?\n/).forEach((line, index) => {
+        if (/metadata[^\n]*todos/.test(line)) {
+          offenders.push(`${path.relative(repoRoot, file)}:${index + 1} 还在从 agent 留下的东西里挖待办`)
+        }
+      })
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在自己挖待办：${offenders.join(', ')}`,
+        '待办是版本化的话，写在写它的那次调用里：state.todos。',
+        '要从 agent 留下的东西里挖，就等于又拿了一份 agent 的话。',
+      ].join('\n'),
+    ).toEqual([])
   })
 })

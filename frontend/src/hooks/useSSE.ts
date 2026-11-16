@@ -322,11 +322,11 @@ export const useSSE = (
       }
 
       case 'todo.updated':
-        if ('sessionID' in event.properties && 'todos' in event.properties) {
-          const { sessionID, todos } = event.properties
-          setSessionTodos(sessionID, todos)
+        if ('sessionId' in event.properties && 'todos' in event.properties) {
+          const { sessionId, todos } = event.properties
+          setSessionTodos(sessionId, todos)
           queryClient.invalidateQueries({
-            queryKey: ['opencode', 'todos', opcodeUrl, sessionID, cacheDirectory]
+            queryKey: ['opencode', 'todos', opcodeUrl, sessionId, cacheDirectory]
           })
         }
         break
@@ -383,10 +383,10 @@ export const useSSE = (
 
       case 'question.replied':
       case 'question.rejected': {
-        if (!('sessionID' in event.properties)) break
-        const { sessionID } = event.properties
+        if (!('sessionId' in event.properties)) break
+        const { sessionId } = event.properties
         queryClient.invalidateQueries({
-          queryKey: messagesQueryKey(serverUrl, sessionID, cacheDirectory)
+          queryKey: messagesQueryKey(serverUrl, sessionId, cacheDirectory)
         })
         break
       }
