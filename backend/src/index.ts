@@ -228,6 +228,7 @@ providerRegistry.register(new HermesProvider())
 import { DEFAULT_AGENTS_MD } from './constants'
 import { formatPersistenceWarning, readMountInfo, reportPersistence } from './services/persistence-check'
 import { logDirectoryReconciliation, reconcileRepoDirectories } from './services/repo/directory-state'
+import { runBootDuties } from './services/boot-duties'
 
 let ipcServer: IPCServer | undefined
 const gitAuthService = new GitAuthService()
@@ -289,6 +290,18 @@ async function ensureDefaultAgentsMdExists(): Promise<void> {
   }
 }
 
+// The supervisor and the settings it reads are made before the bootstrap
+// below rather than inside it: a bootstrap that fails half-way must not
+// leave the host without a supervisor, because a host without a supervisor
+// answers 503 to every door that talks to an agent.
+try {
+  const supervisorSettings = new SettingsService(db)
+  supervisorSettings.initializeLastKnownGoodConfig()
+  openCodeSupervisor = new OpenCodeSupervisor(opencodeServerManager, supervisorSettings)
+} catch (error) {
+  logger.error('Could not prepare the agent supervisor; the agent will not be started', error)
+}
+
 try {
   if (ENV.SERVER.NODE_ENV === 'production' && !ENV.AUTH.SECRET) {
     logger.error('AUTH_SECRET is required in production mode')
@@ -335,36 +348,74 @@ try {
   await ensureHomeStateImported()
   await ensureDefaultAgentsMdExists()
 
-  const settingsService = new SettingsService(db)
-  settingsService.initializeLastKnownGoodConfig()
-
-  openCodeSupervisor = new OpenCodeSupervisor(opencodeServerManager, settingsService)
-
   await migrateGlobalSkills()
 
   await installAssistantWorkspace({ db })
   logger.info('Assistant workspace installed')
 
-  ipcServer = await createIPCServer(process.env.STORAGE_PATH || undefined)
-  await gitAuthService.initialize(ipcServer, db)
-  logger.info(`Git IPC server running at ${ipcServer.ipcHandlePath}`)
-
-  await userAdminService.ensureAdminFromEnv()
-  if (userAdminService.countUsers() === 0) {
-    logger.warn('No user accounts exist. Set ADMIN_EMAIL and ADMIN_PASSWORD and restart to bootstrap the first administrator.')
-  }
-  terminalManager.start()
-  opencodeServerManager.setDatabase(db)
-  const openCodeStatus = await openCodeSupervisor.start()
-  if (openCodeStatus.healthy) {
-    logger.info(`OpenCode server running on port ${openCodeStatus.port}`)
-  } else {
-    logger.warn(`OpenCode server unavailable after startup recovery: ${openCodeStatus.lastError ?? openCodeStatus.state}`)
-  }
-
 } catch (error) {
   logger.error('Failed to initialize workspace:', error)
 }
+
+// The rest of the host's life does not depend on the workspace above being
+// perfect. These duties used to sit inside that block, so a failure
+// anywhere in the bootstrap - a credential door this runtime could not
+// open, a directory that was not writable - skipped all of them at once,
+// and the host came up answering 503 to everything.
+//
+// Each duty is its own thing with its own failure, and each is reported.
+await runBootDuties([
+  {
+    name: 'git credential door',
+    run: async () => {
+      ipcServer = await createIPCServer(process.env.STORAGE_PATH || undefined)
+      logger.info(`Git IPC server running at ${ipcServer.ipcHandlePath}`)
+    },
+  },
+  {
+    // Without a door the credential service still starts: git simply has
+    // nobody to ask, which is a smaller loss than not coming up at all.
+    name: 'git credential service',
+    run: async () => {
+      await gitAuthService.initialize(ipcServer, db)
+    },
+  },
+  {
+    // The first administrator is a consequence of the environment naming
+    // one, not of the workspace being ready.
+    name: 'administrator account',
+    run: async () => {
+      await userAdminService.ensureAdminFromEnv()
+      if (userAdminService.countUsers() === 0) {
+        logger.warn('No user accounts exist. Set ADMIN_EMAIL and ADMIN_PASSWORD and restart to bootstrap the first administrator.')
+      }
+    },
+  },
+  {
+    name: 'terminal manager',
+    run: () => {
+      terminalManager.start()
+    },
+  },
+  {
+    // The agent is the last thing, because everything before it is a thing
+    // the host does for itself. Without the supervisor there is no agent,
+    // and every door that talks to one says so.
+    name: 'agent supervisor',
+    run: async () => {
+      if (!openCodeSupervisor) {
+        throw new Error('the supervisor was never created')
+      }
+      opencodeServerManager.setDatabase(db)
+      const openCodeStatus = await openCodeSupervisor.start()
+      if (openCodeStatus.healthy) {
+        logger.info(`OpenCode server running on port ${openCodeStatus.port}`)
+      } else {
+        logger.warn(`OpenCode server unavailable after startup recovery: ${openCodeStatus.lastError ?? openCodeStatus.state}`)
+      }
+    },
+  },
+])
 
 const settingsServiceForSchedules = new SettingsService(db)
 const credentialProvider = new CredentialProvider(db)

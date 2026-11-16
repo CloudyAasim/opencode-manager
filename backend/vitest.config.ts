@@ -18,6 +18,9 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       'src/routes/repos.test.ts',
+      // Runs under Bun, not under this runner: the transport it checks is
+      // the one the product ships on, and Node opens sockets Node opens.
+      'src/ipc/ipc-transport.test.ts',
     ],
     coverage: {
       provider: 'v8',

@@ -224,6 +224,48 @@ describe('backend entrypoint', () => {
   })
 
   /**
+   * A door that will not open is a smaller loss than a host that never came
+   * up. The credential door used to sit inside the workspace bootstrap, where
+   * its failure skipped the administrator, the terminal manager and the agent
+   * supervisor - and the host answered 503 to everything, saying so in one
+   * line of log.
+   */
+  it('comes up even when the git credential door cannot be opened', async () => {
+    const { createIPCServer } = await import('../src/ipc/ipcServer')
+    vi.mocked(createIPCServer).mockRejectedValueOnce(
+      new Error("ENOENT: no such file or directory, listen '\\\\.\\pipe\\opencode-git-0123456789-sock'"),
+    )
+
+    await import('../src/index')
+
+    expect(supervisorMock.start).toHaveBeenCalledTimes(1)
+    expect(serverManagerMock.setDatabase).toHaveBeenCalledTimes(1)
+    expect(serveMock).toHaveBeenCalledTimes(1)
+
+    const options = serveMock.mock.calls[0]![0] as { fetch: (request: Request) => Promise<Response> }
+    const response = await options.fetch(new Request('http://localhost/'))
+    expect(response.status).toBe(200)
+  })
+
+  /**
+   * The workspace is the host's room, not the host's life. A room that
+   * cannot be prepared must not keep the host from answering.
+   */
+  it('comes up even when the workspace bootstrap fails', async () => {
+    const { installAssistantWorkspace } = await import('../src/services/assistant-mode')
+    vi.mocked(installAssistantWorkspace).mockRejectedValueOnce(new Error('the workspace is read-only'))
+
+    await import('../src/index')
+
+    expect(supervisorMock.start).toHaveBeenCalledTimes(1)
+    expect(serveMock).toHaveBeenCalledTimes(1)
+
+    const options = serveMock.mock.calls[0]![0] as { fetch: (request: Request) => Promise<Response> }
+    const response = await options.fetch(new Request('http://localhost/'))
+    expect(response.status).toBe(200)
+  })
+
+  /**
    * Built assets are content-hashed and served immutable, so their gzip is
    * never going to change. Recompressing one per request cost seconds on a
    * 900 KB entry chunk; the build writes a .gz and this hands it over as-is.

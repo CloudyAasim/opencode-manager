@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { spawn } from 'child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
-import { basename, join } from 'path'
+import { join } from 'path'
 import * as http from 'http'
 import { randomUUID } from 'crypto'
-import { createIPCServer } from '../../src/ipc/ipcServer'
+import { createIPCServer, resolveIPCHandlePath } from '../../src/ipc/ipcServer'
 import type { IPCServer } from '../../src/ipc/ipcServer'
 import { repoRoot } from '../helpers/repo-root'
 
@@ -85,19 +85,16 @@ async function startRawServer(socketPath: string, body: string): Promise<void> {
 }
 
 /**
- * Where a raw server listens, in the form the platform accepts.
+ * Where a raw server listens, in the form the runtime accepts.
  *
- * On Windows the path a `net.Server` is given is a named pipe, and a
- * filesystem path is not a valid pipe name: the listen fails with EACCES
- * before the server is reachable at all. The product already makes this
- * conversion - `getIPCHandlePath` in src/ipc/ipcServer.ts - so the test
- * mirrors it and speaks the same transport the product does.
+ * The product decides this for itself - `resolveIPCHandlePath` in
+ * src/ipc/ipcServer.ts - because the transport a runtime can open is the
+ * transport the server has to use. The test asks the product rather than
+ * copying the rule, so the two cannot drift apart: a mirror is a promise
+ * about the future that nobody checks.
  */
-function rawHandle(name: string): string {
-  if (process.platform === 'win32') {
-    return `\\\\.\\pipe\\ocm-askpass-${basename(dir)}-${name}`
-  }
-  return join(dir, `${name}.sock`)
+async function rawHandle(name: string): Promise<string> {
+  return resolveIPCHandlePath(`askpass-raw-${name}`)
 }
 
 beforeEach(() => {
@@ -199,7 +196,7 @@ describe('askpass-main', () => {
   })
 
   it('writes a newline and exits 1 when the response body is not JSON', async () => {
-    const socketPath = rawHandle('raw')
+    const socketPath = await rawHandle('raw')
     await startRawServer(socketPath, 'not-json')
 
     const result = await runAskpass(buildEnv({
@@ -217,7 +214,7 @@ describe('askpass-main', () => {
     const result = await runAskpass(buildEnv({
       VSCODE_GIT_ASKPASS_PIPE: outputPath,
       VSCODE_GIT_ASKPASS_TYPE: 'https',
-      VSCODE_GIT_IPC_HANDLE: rawHandle('missing'),
+      VSCODE_GIT_IPC_HANDLE: await rawHandle('missing'),
     }))
 
     expect(result.status).toBe(1)
@@ -347,7 +344,7 @@ describe('askpass-main in-process', () => {
   })
 
   it('writes a newline and exits 1 when the response body is not JSON', async () => {
-    const socketPath = rawHandle('raw-in-process')
+    const socketPath = await rawHandle('raw-in-process')
     await startRawServer(socketPath, 'not-json')
 
     const result = await runAskpassInProcess({
@@ -364,7 +361,7 @@ describe('askpass-main in-process', () => {
     const result = await runAskpassInProcess({
       VSCODE_GIT_ASKPASS_PIPE: outputPath,
       VSCODE_GIT_ASKPASS_TYPE: 'https',
-      VSCODE_GIT_IPC_HANDLE: rawHandle('missing-in-process'),
+      VSCODE_GIT_IPC_HANDLE: await rawHandle('missing-in-process'),
     })
 
     expect(result.code).toBe(1)
