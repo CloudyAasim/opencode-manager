@@ -110,10 +110,18 @@ async function readBody(
     if (total > maxBytes) {
       // Too big to be worth a validator. The rest of the stream still has
       // to reach the client, so it is put back together here.
+      //
+      // The chunks that were read *before* the one that crossed the limit
+      // are the head of the body, and they go back in first. Dropping them
+      // would send a body that starts in the middle - a JSON answer that
+      // does not parse, and an answer about something else entirely.
       const restore = () =>
         new Response(
           new ReadableStream<Uint8Array>({
             start(controller) {
+              for (const chunk of chunks) {
+                controller.enqueue(chunk)
+              }
               controller.enqueue(value)
               const pump = async () => {
                 try {

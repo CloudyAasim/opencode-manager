@@ -167,6 +167,41 @@ describe('createConditionalGetMiddleware', () => {
     expect(await res.text()).toBe('0123456789'.repeat(20))
   })
 
+  it('delivers a body that arrives in pieces, whole', async () => {
+    // The two tests above hand the middleware a body that arrives in one
+    // piece, so the piece that crosses the limit is also the first one -
+    // and there is nothing before it to lose.
+    //
+    // A big payload does not arrive that way. It comes in pieces, several of
+    // them fit under the limit, and the one that crosses it is somewhere in
+    // the middle. Those earlier pieces are the head of the body: dropping
+    // them sends an answer that starts in the middle of itself.
+    //
+    // This is not a shape anybody thought of on purpose - it is the shape
+    // the catalogue of models has, and that answer is four megabytes long.
+    const app = new Hono()
+    app.use('/api/*', createConditionalGetMiddleware({ maxBodyBytes: 1000 }))
+    app.get('/api/chunky', (c) => {
+      const encoder = new TextEncoder()
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (let index = 0; index < 50; index++) {
+            controller.enqueue(encoder.encode(`chunk-${index}-${'y'.repeat(90)}\n`))
+          }
+          controller.close()
+        },
+      })
+      return c.body(body, 200, { 'Content-Type': 'application/json' })
+    })
+
+    const res = await app.request('/api/chunky')
+    const text = await res.text()
+
+    expect(text.split('\n').filter(Boolean)).toHaveLength(50)
+    expect(text.startsWith('chunk-0-')).toBe(true)
+    expect(text.trimEnd().endsWith(`chunk-49-${'y'.repeat(90)}`)).toBe(true)
+  })
+
   it('skips the paths it was told to skip', async () => {
     const app = new Hono()
     app.use('/api/*', createConditionalGetMiddleware({ skipPrefixes: ['/api/sse/'] }))
