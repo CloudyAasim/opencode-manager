@@ -9,6 +9,8 @@ import { createBffStatusRoutes } from './status'
 import { createBffCommandRoutes } from './commands'
 import { createBffWorkingModeRoutes } from './working-modes'
 import { createBffDefaultRoutes } from './defaults'
+import { createBffProviderRoutes } from './providers'
+import { createBffFileRoutes } from './files'
 import { fail } from '../api-v1/respond'
 
 /**
@@ -55,6 +57,8 @@ export function createBffRoutes(registry: ProviderRegistry, database: Database, 
   app.route('/commands', createBffCommandRoutes(registry, database))
   app.route('/working-modes', createBffWorkingModeRoutes(registry, database))
   app.route('/defaults', createBffDefaultRoutes(registry, database))
+  app.route('/providers', createBffProviderRoutes(registry, database))
+  app.route('/files', createBffFileRoutes(registry, database))
 
   return app
 }

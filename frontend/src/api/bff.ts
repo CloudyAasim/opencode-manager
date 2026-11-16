@@ -8,6 +8,7 @@ import type {
   PendingQuestion,
   PermissionResponse,
   PromptModel,
+  Provider,
   SendCommandRequest,
   SendPromptRequest,
   Session,
@@ -56,6 +57,21 @@ export const BFF_WORKING_MODES_ENDPOINT = '/api/bff/working-modes'
  * Where the defaults live.
  */
 export const BFF_DEFAULTS_ENDPOINT = '/api/bff/defaults'
+
+/**
+ * Where the catalogue of models lives.
+ *
+ * The client used to ask the agent for this itself, and got the agent's own
+ * catalogue back - megabytes long, and with the provider's credentials in it.
+ * Now it asks this layer, which asks the agent in its own dialect and hands
+ * back the versioned one.
+ */
+export const BFF_PROVIDERS_ENDPOINT = '/api/bff/providers'
+
+/**
+ * Where the files that match a word live.
+ */
+export const BFF_FILES_ENDPOINT = '/api/bff/files'
 
 /**
  * The layer the client talks to for its session list.
@@ -153,6 +169,27 @@ export interface BffWorkingModeListResponse {
  */
 export interface BffAgentDefaultsResponse {
   defaults: AgentDefaults
+}
+
+/**
+ * The models that may be picked.
+ *
+ * The providers and the models are the versioned API's - there is one truth
+ * about what a model is. What this layer adds is that the catalogue is asked
+ * for once, in one dialect, instead of every place that draws a picker reading
+ * the agent's own words and translating them in the browser.
+ */
+export interface BffProviderListResponse {
+  providers: Provider[]
+  /** The model each provider starts on, when it has one. */
+  default: Record<string, string>
+}
+
+/**
+ * The files that match a word.
+ */
+export interface BffFileSearchResponse {
+  files: string[]
 }
 
 export class BffClient {
@@ -500,6 +537,39 @@ export class BffClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shell),
       },
+    )
+  }
+
+  /**
+   * The models that may be picked.
+   *
+   * The catalogue belongs to the agent rather than to a working directory, so
+   * the directory is named only so that the layer can say whose agent it is.
+   */
+  async listProviders(directories: string[] = []): Promise<BffProviderListResponse> {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    const query = params.toString()
+    return fetchWrapper<BffProviderListResponse>(
+      `${this.baseURL}${BFF_PROVIDERS_ENDPOINT}` + (query ? `?${query}` : ''),
+    )
+  }
+
+  /**
+   * The files that match a word.
+   *
+   * A file search is about a working directory, so one is named - and it has
+   * to be the caller's.
+   */
+  async searchFiles(query: string, directories: string[] = []): Promise<BffFileSearchResponse> {
+    const params = new URLSearchParams({ query })
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    return fetchWrapper<BffFileSearchResponse>(
+      `${this.baseURL}${BFF_FILES_ENDPOINT}/search?${params.toString()}`,
     )
   }
 

@@ -692,4 +692,71 @@ describe('给前端的那一层', () => {
       ].join('\n'),
     ).toEqual([])
   })
+
+  it('前端不许再自己去问 agent 的模型目录和找文件', () => {
+    // The catalogue of models is this layer's job, for the same reason the
+    // command palette is: the layer asks the agent in the agent's dialect and
+    // answers in the versioned one. A client that asks the agent itself holds
+    // the agent's words - and the agent's catalogue carries the provider's
+    // credentials, which the browser has no reason to see.
+    //
+    // The file search is this layer's job because a file belongs to a working
+    // directory: the layer checks that the directory being searched is the
+    // caller's, and a client that builds the agent's own path cannot.
+    //
+    // The paths are what makes this checkable: a name is not enough, because
+    // the same method name could be talking to the layer.
+    const AGENT_PATHS = [
+      // The catalogue the agent knows.
+      /\/api\/opencode\/provider\b/g,
+      // The providers of the configuration, as the agent's own API has them.
+      /\/config\/providers\b/g,
+      // The files that match a word.
+      /\/find\/file\b/g,
+    ]
+    const LAYER_CLIENT = path.join(FRONTEND_DIR, 'api', 'bff.ts')
+    // The agent's own type file is the one exception: it describes what the
+    // agent's API looks like so the client can be written against it, and
+    // describing a door is not walking through it.
+    const AGENT_TYPES = path.join(FRONTEND_DIR, 'api', 'opencode-types.ts')
+    const offenders: string[] = []
+
+    for (const file of frontendSources()) {
+      if (file === AGENT_TYPES) continue
+      const source = read(file)
+      for (const pattern of AGENT_PATHS) {
+        for (const match of source.matchAll(pattern)) {
+          offenders.push(`${path.relative(repoRoot, file)} 够到了 ${match[0]}`)
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        `前端还在自己去问 agent 的模型目录和找文件：${offenders.join(', ')}`,
+        '前端要问这一层，不要问 agent。',
+        '自己问的话，浏览器会拿到一整份目录——连同里面的密钥——而目录是谁的、文件在谁的目录里，都没人管。',
+      ].join('\n'),
+    ).toEqual([])
+
+    // The gate above says the client may not ask the agent. It says nothing
+    // about whether there is anything else to ask - so check that the layer's
+    // client really does have the catalogue and the file search, or the gate
+    // is guarding an empty room.
+    const layer = read(LAYER_CLIENT)
+    for (const method of ['listProviders', 'searchFiles']) {
+      expect(layer, `这一层的客户端没有 ${method}`).toMatch(new RegExp(`\\basync\\s+${method}\\s*\\(`))
+    }
+
+    // ...and that the client really does ask the layer for them, rather than
+    // having quietly stopped asking altogether.
+    const asking = frontendSources().filter(
+      (file) => file !== LAYER_CLIENT && /\b(listProviders|searchFiles)\s*\(/.test(read(file)),
+    )
+    expect(
+      asking.length,
+      '前端一处也没问这一层的模型目录和找文件，那上面那条门禁就只是在说一件没有发生的事',
+    ).toBeGreaterThan(0)
+  })
 })

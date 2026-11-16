@@ -700,3 +700,161 @@ describe('agent 自己那张脸，翻译成版本化的话', () => {
     expect(getJson).toHaveBeenCalledWith('/config', { directory: '/work' })
   })
 })
+
+describe('OpenCode 的模型目录', () => {
+  /**
+   * The catalogue as the agent really answers it: the providers, each with
+   * its own configuration - credentials included - and its models under the
+   * keys the agent knows them by.
+   */
+  const catalogue = {
+    all: [
+      {
+        id: 'anthropic',
+        name: 'Anthropic',
+        source: 'builtin',
+        env: ['ANTHROPIC_API_KEY'],
+        options: { apiKey: 'sk-ant-should-never-travel' },
+        models: {
+          'claude-sonnet-4': {
+            id: 'claude-sonnet-4',
+            providerID: 'anthropic',
+            api: { id: 'claude-sonnet-4', npm: '@ai-sdk/anthropic' },
+            name: 'Claude Sonnet 4',
+            capabilities: {
+              temperature: true,
+              reasoning: true,
+              attachment: true,
+              toolcall: true,
+              input: { text: true, audio: false, image: true, video: false, pdf: true },
+              output: { text: true, audio: false, image: false, video: false, pdf: false },
+            },
+            cost: { input: 3, output: 15, cache: { read: 0.3, write: 3.75 } },
+            limit: { context: 200000, output: 64000 },
+            variants: { high: { reasoningEffort: 'high' } },
+          },
+        },
+      },
+      {
+        id: 'github-copilot',
+        name: 'GitHub Copilot',
+        source: 'builtin',
+        env: [],
+        options: {},
+        models: {
+          'claude-opus-4.7-fast': {
+            id: 'claude-opus-4.7-fast',
+            providerID: 'github-copilot',
+            // The upstream API knows this model by a different name. The
+            // catalogue's key is the one a conversation is started with.
+            api: { id: 'claude-opus-4.7', npm: '@ai-sdk/anthropic' },
+            name: 'Claude Opus 4.7 Fast',
+          },
+        },
+      },
+    ],
+    connected: ['anthropic'],
+    default: { anthropic: 'claude-sonnet-4' },
+  }
+
+  it('目录问一次，出来的就是版本化的方言', async () => {
+    const getJson = vi.fn(async () => catalogue as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const answer = await provider.listProviders({ directory: '/work' })
+
+    expect(getJson).toHaveBeenCalledWith('/provider', { directory: '/work' })
+    expect(answer.default).toEqual({ anthropic: 'claude-sonnet-4' })
+    expect(answer.providers).toHaveLength(2)
+    expect(answer.providers[0]).toEqual({
+      id: 'anthropic',
+      name: 'Anthropic',
+      env: ['ANTHROPIC_API_KEY'],
+      connected: true,
+      models: [
+        {
+          id: 'claude-sonnet-4',
+          name: 'Claude Sonnet 4',
+          limit: { context: 200000, output: 64000 },
+          cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
+          capabilities: {
+            attachment: true,
+            reasoning: true,
+            temperature: true,
+            toolCall: true,
+          },
+          modalities: { input: ['text', 'image', 'pdf'], output: ['text'] },
+          variants: { high: { reasoningEffort: 'high' } },
+        },
+      ],
+    })
+  })
+
+  it('模型的身份是目录里的那个键，不是上游 API 认得的那个名字', async () => {
+    const getJson = vi.fn(async () => catalogue as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const answer = await provider.listProviders({ directory: '/work' })
+
+    const copilot = answer.providers.find((entry) => entry.id === 'github-copilot')
+    expect(copilot?.models[0]?.id).toBe('claude-opus-4.7-fast')
+  })
+
+  it('模型没说的事是不知道，不是不花钱也不是没有限制', async () => {
+    const getJson = vi.fn(async () => catalogue as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const answer = await provider.listProviders({ directory: '/work' })
+
+    const copilot = answer.providers.find((entry) => entry.id === 'github-copilot')
+    expect(copilot?.models[0]?.limit).toBeNull()
+    expect(copilot?.models[0]?.cost).toBeNull()
+    expect(copilot?.models[0]?.capabilities).toBeNull()
+    expect(copilot?.models[0]?.modalities).toBeNull()
+    expect(copilot?.models[0]?.variants).toBeNull()
+  })
+
+  it('密钥不出这一层：provider 自己那份配置不跟着走', async () => {
+    const getJson = vi.fn(async () => catalogue as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const answer = await provider.listProviders({ directory: '/work' })
+
+    // 浏览器以前拿到的是一整份目录，连同 provider 的 apiKey。那份目录有
+    // 八兆，密钥就在里面——而画一个模型选择器根本不需要它。
+    const text = JSON.stringify(answer)
+    expect(text).not.toContain('sk-ant-should-never-travel')
+    expect(text).not.toContain('apiKey')
+    expect(text).not.toContain('options')
+  })
+
+  it('目录拿住一会儿：问两次，agent 只被问一次', async () => {
+    const getJson = vi.fn(async () => catalogue as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const first = await provider.listProviders({ directory: '/work' })
+    const second = await provider.listProviders({ directory: '/work' })
+
+    expect(getJson).toHaveBeenCalledTimes(1)
+    expect(second).toBe(first)
+  })
+})
+
+describe('OpenCode 的找文件', () => {
+  it('问的是上游自己的那条路，答案是相对路径', async () => {
+    const getJson = vi.fn(async () => ['src/index.ts', 'README.md'] as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const files = await provider.searchFiles('index', { directory: '/work' })
+
+    expect(getJson).toHaveBeenCalledWith('/find/file?query=index', { directory: '/work' })
+    expect(files).toEqual(['src/index.ts', 'README.md'])
+  })
+
+  it('上游答的不是一串路径，就是没有文件', async () => {
+    const getJson = vi.fn(async () => ({ not: 'a list' }) as unknown)
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    expect(await provider.searchFiles('index', { directory: '/work' })).toEqual([])
+  })
+})

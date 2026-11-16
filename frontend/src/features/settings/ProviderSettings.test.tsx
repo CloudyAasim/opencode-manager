@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProviderSettings } from './ProviderSettings'
 import { getProviders, providerCredentialsApi } from '@/api/providers'
 import { oauthApi } from '@/api/oauth'
-import type { Provider, Model } from '@/api/providers'
+import type { Provider } from '@/api/providers'
 import type { OAuthAuthorizeResponse } from '@/api/oauth'
 import type { ReactNode } from 'react'
 import { showErrorToast } from '@/lib/error-toast'
@@ -95,9 +95,16 @@ function providerFixture(id: string, name: string, modelCount: number): Provider
     id,
     name,
     env: [],
-    models: Object.fromEntries(
-      Array.from({ length: modelCount }, (_, index) => [`model-${index}`, {} as Model]),
-    ),
+    models: Array.from({ length: modelCount }, (_, index) => ({
+      id: `model-${index}`,
+      name: `Model ${index}`,
+      limit: null,
+      cost: null,
+      capabilities: null,
+      modalities: null,
+      variants: null,
+    })),
+    connected: false,
   }
 }
 

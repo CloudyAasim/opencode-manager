@@ -244,7 +244,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
   })
   
   const { files: searchResults } = useFileSearch(
-    opcodeUrl,
+    API_BASE_URL,
     mentionQuery,
     showMentionSuggestions,
     directory
@@ -1115,7 +1115,7 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
     }
 
     const provider = providersData?.providers.find((item) => item.id === model.providerID)
-    const modelData = provider?.models?.[model.modelID]
+    const modelData = provider?.models.find((item) => item.id === model.modelID)
 
     return modelData ? formatModelName(modelData) : model.modelID || currentModel
   }, [currentModel, model, providersData])

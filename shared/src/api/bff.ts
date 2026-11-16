@@ -3,6 +3,7 @@ import {
   AgentDefaultsSchema,
   CommandSchema,
   ConversationStatusSchema,
+  ProviderSchema,
   SessionSchema,
   WorkingModeSchema,
 } from './v1'
@@ -82,3 +83,35 @@ export const BffAgentDefaultsResponseSchema = z.object({
   defaults: AgentDefaultsSchema,
 })
 export type BffAgentDefaultsResponse = z.infer<typeof BffAgentDefaultsResponseSchema>
+
+/**
+ * The models that may be picked.
+ *
+ * The providers and the models are the versioned API's - there is one truth
+ * about what a model is. What this layer adds is that the agent's catalogue
+ * is asked once, in one dialect, instead of every place that draws a picker
+ * reading the agent's own words and translating them in the browser.
+ */
+export const BffProviderListResponseSchema = z.object({
+  providers: z.array(ProviderSchema),
+  /**
+   * The model each provider starts on, when it has one.
+   *
+   * A provider without a default model is not an error: it has models, and
+   * the person picks one.
+   */
+  default: z.record(z.string(), z.string()),
+})
+export type BffProviderListResponse = z.infer<typeof BffProviderListResponseSchema>
+
+/**
+ * The files that match a word.
+ *
+ * The paths are the agent's own - it knows the working directory they are in
+ * - and the layer does not shorten them, because a path that is not the whole
+ * path is not a path.
+ */
+export const BffFileSearchResponseSchema = z.object({
+  files: z.array(z.string()),
+})
+export type BffFileSearchResponse = z.infer<typeof BffFileSearchResponseSchema>

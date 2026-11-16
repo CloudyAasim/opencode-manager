@@ -1,119 +1,46 @@
 import { API_BASE_URL } from "@/config";
 import { settingsApi } from "./settings";
 import { fetchWrapper } from "./fetchWrapper";
+import { createBffClient } from "./bff";
 import type { OpenCodeConfigFile } from "./types/settings";
+import type { Model, Provider as VersionedProvider } from "@opencode-manager/shared/api/v1";
 
+export type { Model };
+
+/**
+ * Where a provider came from, as the client can tell.
+ *
+ * The agent's catalogue does not say: it says which providers are connected,
+ * not which of them the person wrote down. The client works that out from the
+ * configuration file, which is the manager's own business.
+ */
 export type ProviderSource = "configured" | "local" | "builtin";
 
-export interface OpenCodeModel {
-  id: string;
-  providerID: string;
-  name: string;
-  api: {
-    id: string;
-    url?: string;
-    npm: string;
-  };
-  status: "active" | "deprecated";
-  headers: Record<string, string>;
-  options: Record<string, unknown>;
-  cost: {
-    input: number;
-    output: number;
-    cache?: {
-      read: number;
-      write: number;
-    };
-  };
-  limit: {
-    context: number;
-    output: number;
-  };
-  capabilities: {
-    temperature: boolean;
-    reasoning: boolean;
-    attachment: boolean;
-    toolcall: boolean;
-    input: {
-      text: boolean;
-      audio: boolean;
-      image: boolean;
-      video: boolean;
-      pdf: boolean;
-    };
-    output: {
-      text: boolean;
-      audio: boolean;
-      image: boolean;
-      video: boolean;
-      pdf: boolean;
-    };
-  };
-  variants?: Record<string, Record<string, unknown>>;
-}
-
-export interface OpenCodeProvider {
-  id: string;
-  source: "custom" | "builtin";
-  name: string;
-  env: string[];
-  options: Record<string, unknown>;
-  models: Record<string, OpenCodeModel>;
-}
-
-export interface Model {
-  id: string;
-  key?: string;
-  name: string;
-  release_date?: string;
-  attachment?: boolean;
-  reasoning?: boolean;
-  temperature?: boolean;
-  tool_call?: boolean;
-  cost?: {
-    input: number;
-    output: number;
-    cache_read?: number;
-    cache_write?: number;
-  };
-  limit?: {
-    context: number;
-    output: number;
-  };
-  modalities?: {
-    input: ("text" | "audio" | "image" | "video" | "pdf")[];
-    output: ("text" | "audio" | "image" | "video" | "pdf")[];
-  };
-  experimental?: boolean;
-  status?: "alpha" | "beta";
-  options?: Record<string, unknown>;
-  provider?: {
-    npm: string;
-  };
-  variants?: Record<string, Record<string, unknown>>;
-}
-
-export interface Provider {
-  id: string;
-  name: string;
-  api?: string;
-  env: string[];
-  npm?: string;
-  models: Record<string, Model>;
-  options?: Record<string, unknown>;
+/**
+ * A provider of models.
+ *
+ * The provider and its models are the versioned API's - there is one truth
+ * about what a model is, and the client does not get to have its own. What the
+ * client adds is the one thing the catalogue cannot say: where the provider
+ * came from.
+ */
+export interface Provider extends VersionedProvider {
   source?: ProviderSource;
-  isConnected?: boolean;
 }
 
-export interface ProviderWithModels {
-  id: string;
-  name: string;
+/**
+ * A provider, and where it came from.
+ *
+ * The configuration file knows two things the catalogue does not: the address
+ * the provider's own API is at, and the package that API comes from. Both are
+ * the person's own settings, so both stay on this side of the line.
+ */
+export interface ProviderWithModels extends Provider {
+  /** The address the provider's own API is at, when the configuration says so. */
   api?: string;
-  env: string[];
+  /** The package the provider's API comes from, when the configuration says so. */
   npm?: string;
-  models: Model[];
   source: ProviderSource;
-  isConnected: boolean;
 }
 
 export interface ModelSelection {
@@ -145,6 +72,11 @@ interface ConfigModel {
     context?: number;
     output?: number;
   };
+  modalities?: {
+    input?: ("text" | "audio" | "image" | "video" | "pdf")[];
+    output?: ("text" | "audio" | "image" | "video" | "pdf")[];
+  };
+  variants?: Record<string, Record<string, unknown>>;
   [key: string]: unknown;
 }
 
@@ -156,11 +88,17 @@ function classifyProviderSource(providerId: string, isFromConfig: boolean): Prov
   return "configured";
 }
 
-
-interface OpenCodeProviderResponse {
-  all: OpenCodeProvider[];
-  connected: string[];
-  default: Record<string, string>;
+/**
+ * The model a provider knows by this name.
+ *
+ * A model has one name: the one it is known by inside its provider, which is
+ * also the name a conversation is started with. The catalogue used to carry a
+ * second name for the same model - the one the provider's own API knows it by
+ * - and a client that held both had to guess which of them a conversation
+ * wanted.
+ */
+export function findModel(provider: Provider, modelID: string): Model | undefined {
+  return provider.models.find((model) => model.id === modelID);
 }
 
 export interface ProvidersResult {
@@ -169,73 +107,36 @@ export interface ProvidersResult {
   default: Record<string, string>;
 }
 
-async function getProvidersFromOpenCodeServer(directory?: string): Promise<ProvidersResult> {
+/**
+ * The catalogue of models, as this layer answers it.
+ *
+ * The client used to ask the agent for this itself, by building the agent's
+ * own path, and it got the agent's own catalogue back: megabytes long, in the
+ * agent's vocabulary, and with the provider's credentials in it. Now it asks
+ * the layer the client talks to, which asks the agent in the agent's dialect
+ * and hands back the versioned one.
+ */
+export async function getProviders(directory?: string): Promise<ProvidersResult> {
   try {
-    const response = await fetchWrapper<OpenCodeProviderResponse>(`${API_BASE_URL}/api/opencode/provider`, {
-      params: { directory },
-    });
+    const response = await createBffClient(API_BASE_URL).listProviders(
+      directory ? [directory] : [],
+    );
 
-    if (response?.all && Array.isArray(response.all)) {
-      const connectedSet = new Set(response.connected || []);
+    const providers = response.providers ?? [];
 
-      const providers = response.all.map((openCodeProvider: OpenCodeProvider) => {
-        const models: Record<string, Model> = {};
-
-        Object.entries(openCodeProvider.models).forEach(([modelId, openCodeModel]) => {
-          models[modelId] = {
-            id: openCodeModel.api.id || modelId,
-            key: modelId,
-            name: openCodeModel.name,
-            attachment: openCodeModel.capabilities.attachment,
-            reasoning: openCodeModel.capabilities.reasoning,
-            temperature: openCodeModel.capabilities.temperature,
-            tool_call: openCodeModel.capabilities.toolcall,
-            cost: {
-              input: openCodeModel.cost.input,
-              output: openCodeModel.cost.output,
-              cache_read: openCodeModel.cost.cache?.read ?? 0,
-              cache_write: openCodeModel.cost.cache?.write ?? 0,
-            },
-            limit: {
-              context: openCodeModel.limit.context,
-              output: openCodeModel.limit.output,
-            },
-            modalities: {
-              input: Object.keys(openCodeModel.capabilities.input).filter(
-                (key) => openCodeModel.capabilities.input[key as keyof typeof openCodeModel.capabilities.input]
-              ) as ("text" | "audio" | "image" | "video" | "pdf")[],
-              output: Object.keys(openCodeModel.capabilities.output).filter(
-                (key) => openCodeModel.capabilities.output[key as keyof typeof openCodeModel.capabilities.output]
-              ) as ("text" | "audio" | "image" | "video" | "pdf")[],
-            },
-            provider: {
-              npm: openCodeModel.api.npm,
-            },
-            variants: openCodeModel.variants,
-          };
-        });
-
-        return {
-          id: openCodeProvider.id,
-          name: openCodeProvider.name,
-          env: openCodeProvider.env,
-          models,
-          options: openCodeProvider.options,
-          isConnected: connectedSet.has(openCodeProvider.id),
-        };
-      });
-
-      return { providers, connected: response.connected || [], default: response.default || {} };
-    }
+    return {
+      providers,
+      // Which providers are ready to be used is a fact about each provider,
+      // so it travels with it. The list of names is only a convenience for
+      // the places that ask "is this one connected?" once.
+      connected: providers.filter((provider) => provider.connected).map((provider) => provider.id),
+      default: response.default ?? {},
+    };
   } catch {
-  void 0
+    void 0
   }
 
   return { providers: [], connected: [], default: {} };
-}
-
-export async function getProviders(directory?: string): Promise<ProvidersResult> {
-  return await getProvidersFromOpenCodeServer(directory);
 }
 
 export async function getOpenCodeModelState(): Promise<OpenCodeModelState> {
@@ -266,6 +167,14 @@ export async function toggleOpenCodeFavoriteModel(model: ModelSelection): Promis
   });
 }
 
+/**
+ * The providers the person wrote down.
+ *
+ * These are not the agent's catalogue - they are the configuration file's own
+ * providers, and the two are merged afterwards. A model the configuration file
+ * describes is a model the file says nothing about except its name and its
+ * limits, so everything else about it is unknown rather than absent.
+ */
 function buildConfiguredProviders(connectedIds: Set<string>, config: OpenCodeConfigFile): ProviderWithModels[] {
   if (!config.content.provider) return [];
 
@@ -283,13 +192,25 @@ function buildConfiguredProviders(connectedIds: Set<string>, config: OpenCodeCon
         if (!modelConfig || typeof modelConfig !== "object") continue;
 
         models.push({
-          id: typeof modelConfig.id === 'string' ? modelConfig.id : modelId,
-          key: modelId,
+          // The key is the model's name - the same name the catalogue would
+          // give it, because that is the name a conversation is started with.
+          id: modelId,
           name: modelConfig.name || modelId,
-          limit: modelConfig.limit ? {
-            context: modelConfig.limit.context || 0,
-            output: modelConfig.limit.output || 0,
-          } : undefined,
+          limit: modelConfig.limit
+            ? {
+                context: modelConfig.limit.context || 0,
+                output: modelConfig.limit.output || 0,
+              }
+            : null,
+          cost: null,
+          capabilities: null,
+          modalities: modelConfig.modalities
+            ? {
+                input: modelConfig.modalities.input ?? [],
+                output: modelConfig.modalities.output ?? [],
+              }
+            : null,
+          variants: modelConfig.variants ?? null,
         });
       }
     }
@@ -297,12 +218,12 @@ function buildConfiguredProviders(connectedIds: Set<string>, config: OpenCodeCon
     result.push({
       id: providerId,
       name: providerConfig.name || providerId,
-      api: providerConfig.api || providerConfig.options?.baseURL,
       env: [],
-      npm: providerConfig.npm,
       models,
+      connected: connectedIds.has(providerId),
+      api: providerConfig.api || providerConfig.options?.baseURL,
+      npm: providerConfig.npm,
       source,
-      isConnected: connectedIds.has(providerId),
     });
   }
 
@@ -327,32 +248,25 @@ export async function getProvidersWithModels(directory?: string, config?: OpenCo
     : [];
   const configuredIds = new Set(configuredProviders.map((p) => p.id));
 
+  // The catalogue's models are already in the versioned dialect, so they are
+  // handed over as they are. Re-keying them here is what used to give the
+  // same model two names.
   const builtinResult: ProviderWithModels[] = builtinProviders
     .filter((provider) => !configuredIds.has(provider.id))
-    .map((provider) => {
-      const models = Object.entries(provider.models || {}).map(([id, model]) => ({
-        ...model,
-        id: model.id || id,
-        key: id,
-        name: model.name || id,
-      }));
-      return {
-        id: provider.id,
-        name: provider.name,
-        api: provider.api,
-        env: provider.env || [],
-        npm: provider.npm,
-        models,
-        source: "builtin" as ProviderSource,
-        isConnected: provider.isConnected ?? false,
-      };
-    });
+    .map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      env: provider.env || [],
+      models: provider.models,
+      connected: provider.connected,
+      source: "builtin" as ProviderSource,
+    }));
 
   const allProviders = [...configuredProviders, ...builtinResult];
 
   allProviders.sort((a, b) => {
-    if (a.isConnected !== b.isConnected) {
-      return a.isConnected ? -1 : 1;
+    if (a.connected !== b.connected) {
+      return a.connected ? -1 : 1;
     }
     return a.name.localeCompare(b.name);
   });
@@ -369,7 +283,7 @@ export async function getModel(
   const provider = providers.find((p) => p.id === providerId);
   if (!provider) return null;
 
-  return provider.models.find((m) => m.id === modelId) || null;
+  return findModel(provider, modelId) ?? null;
 }
 
 export function formatModelName(model: Model): string {

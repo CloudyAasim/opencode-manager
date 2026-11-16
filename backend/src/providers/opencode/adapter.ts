@@ -7,12 +7,15 @@ import type {
   MessageError,
   MessagePart,
   MessageWithParts,
+  Model,
+  ModelModality,
   PendingPermission,
   PendingQuestion,
   PendingQuestionInfo,
   PendingRequestTool,
   PermissionResponse,
   PromptModel,
+  Provider,
   SendCommandRequest,
   Session,
   SessionRevert,
@@ -36,12 +39,22 @@ import {
   type CreateSessionInput,
   type ListSessionsParams,
   type ProviderContext,
+  type ProviderList,
   type ProviderStatus,
   type SendPromptInput,
   type SessionPage,
 } from '../contract'
 
 const AGENT_ID = 'opencode'
+
+/**
+ * How long the catalogue is held before it is asked for again.
+ *
+ * It changes when the configuration changes, and the configuration changes
+ * when a person changes it - which is rare enough that a short moment of
+ * staleness costs nothing, against an agent that takes seconds to answer.
+ */
+const PROVIDER_CATALOGUE_TTL_MS = 30_000
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -673,6 +686,121 @@ export function toAgentDefaults(raw: unknown): AgentDefaults {
   }
 }
 
+/**
+ * What may be handed to a model, and what it may answer with.
+ *
+ * The agent says it as a map of names to yes-or-no; the versioned API says it
+ * as a list of the ones that are yes. A name the agent does not know is not in
+ * the list, because the list is what the model can actually take.
+ */
+const MODALITIES: readonly ModelModality[] = ['text', 'audio', 'image', 'video', 'pdf']
+
+function modalitiesOf(
+  capabilities: Record<string, unknown> | null,
+): { input: ModelModality[]; output: ModelModality[] } | null {
+  if (!capabilities) return null
+  const input = asRecord(capabilities.input)
+  const output = asRecord(capabilities.output)
+  return {
+    input: MODALITIES.filter((modality) => input?.[modality] === true),
+    output: MODALITIES.filter((modality) => output?.[modality] === true),
+  }
+}
+
+/**
+ * The other spellings of the same model.
+ *
+ * A variant is a set of options, so only the ones that are sets of options
+ * travel - a variant that is not one is not a variant, it is a mistake in the
+ * agent's answer.
+ */
+function variantsOf(raw: unknown): Record<string, Record<string, unknown>> | null {
+  const record = asRecord(raw)
+  if (!record) return null
+  const variants: Record<string, Record<string, unknown>> = {}
+  for (const [name, value] of Object.entries(record)) {
+    const options = asRecord(value)
+    if (options) variants[name] = options
+  }
+  return variants
+}
+
+/**
+ * One model, in the versioned dialect.
+ *
+ * The agent's catalogue says a great deal about each model, and most of it is
+ * its own business. What travels is the part a client draws: what the model
+ * is called, how much it can take in and give back, what it costs, and what
+ * it can do.
+ *
+ * Every one of those may be null, because a model that says nothing about its
+ * cost has an unknown cost rather than a free one.
+ *
+ * The name the model is known by is the one its provider knows it by - the key
+ * it sits under in the catalogue - because that is the name a conversation is
+ * started with.
+ */
+export function toModel(raw: unknown, id: string): Model {
+  const record = asRecord(raw)
+  const capabilities = asRecord(record?.capabilities)
+  const cost = asRecord(record?.cost)
+  const cache = asRecord(cost?.cache)
+  const limit = asRecord(record?.limit)
+
+  return {
+    id,
+    name: asString(record?.name) ?? id,
+    limit: limit
+      ? { context: asNumber(limit.context) ?? 0, output: asNumber(limit.output) ?? 0 }
+      : null,
+    cost: cost
+      ? {
+          input: asNumber(cost.input) ?? 0,
+          output: asNumber(cost.output) ?? 0,
+          cacheRead: asNumber(cache?.read) ?? 0,
+          cacheWrite: asNumber(cache?.write) ?? 0,
+        }
+      : null,
+    capabilities: capabilities
+      ? {
+          attachment: capabilities.attachment === true,
+          reasoning: capabilities.reasoning === true,
+          temperature: capabilities.temperature === true,
+          toolCall: capabilities.toolcall === true,
+        }
+      : null,
+    modalities: modalitiesOf(capabilities),
+    variants: variantsOf(record?.variants),
+  }
+}
+
+/**
+ * One provider, in the versioned dialect.
+ *
+ * The agent's answer carries the provider's own configuration - including the
+ * credentials it uses - and none of that travels. A client that draws a
+ * picker needs to know which provider is ready and which models it has; the
+ * rest is the provider's business, and the browser is not where it belongs.
+ */
+export function toProvider(raw: unknown, connected: ReadonlySet<string>): Provider {
+  const record = asRecord(raw)
+  const id = asString(record?.id)
+  if (!id) {
+    throw new ProviderProtocolError(AGENT_ID, 'The agent answered with a provider that has no name')
+  }
+
+  const models = asRecord(record?.models)
+  return {
+    id,
+    name: asString(record?.name) ?? id,
+    env: stringArrayOf(record?.env),
+    models: models
+      ? Object.entries(models).map(([modelId, model]) => toModel(model, modelId))
+      : [],
+    connected: connected.has(id),
+  }
+}
+
 export interface OpenCodeProviderOptions {
   isReady?: () => boolean
 }
@@ -693,6 +821,14 @@ export class OpenCodeProvider implements AgentProvider {
     private readonly client: OpenCodeClient,
     private readonly options: OpenCodeProviderOptions = {},
   ) {}
+
+  /**
+   * The catalogue, held for a moment.
+   *
+   * A private field rather than a shared cache, because the catalogue is the
+   * agent's and this is the only thing that talks to it.
+   */
+  private providerCatalogue: { at: number; answer: ProviderList } | null = null
 
   async status(): Promise<ProviderStatus> {
     if (this.options.isReady && !this.options.isReady()) {
@@ -1047,6 +1183,58 @@ export class OpenCodeProvider implements AgentProvider {
   async getDefaults(context: ProviderContext): Promise<AgentDefaults> {
     const raw = await this.readJson<unknown>('/config', context)
     return toAgentDefaults(raw)
+  }
+
+  /**
+   * The models that may be picked.
+   *
+   * The catalogue is the agent's own, and it is expensive to produce: the
+   * agent takes seconds to answer and the answer is megabytes long. It also
+   * changes only when the configuration does, so it is held for a moment and
+   * asked for again after that - otherwise every page that opens a picker
+   * would pay for the whole catalogue, and every client of the server would
+   * pay for it separately.
+   */
+  async listProviders(context: ProviderContext): Promise<ProviderList> {
+    const held = this.providerCatalogue
+    const now = Date.now()
+    if (held && now - held.at < PROVIDER_CATALOGUE_TTL_MS) {
+      return held.answer
+    }
+
+    const raw = await this.readJson<unknown>('/provider', context)
+    const record = asRecord(raw)
+    const all = Array.isArray(record?.all) ? record.all : []
+    const connected = new Set(stringArrayOf(record?.connected))
+    const defaults = asRecord(record?.default) ?? {}
+
+    const answer: ProviderList = {
+      providers: all.map((provider) => toProvider(provider, connected)),
+      default: Object.fromEntries(
+        Object.entries(defaults).filter(
+          (entry): entry is [string, string] => typeof entry[1] === 'string',
+        ),
+      ),
+    }
+
+    this.providerCatalogue = { at: now, answer }
+    return answer
+  }
+
+  /**
+   * The files that match a word.
+   *
+   * The paths are the agent's own - it knows the working directory they are
+   * in - and they are not shortened, because a path that is not the whole path
+   * is not a path.
+   */
+  async searchFiles(query: string, context: ProviderContext): Promise<string[]> {
+    const raw = await this.readJson<unknown>(
+      `/find/file?query=${encodeURIComponent(query)}`,
+      context,
+    )
+    if (!Array.isArray(raw)) return []
+    return raw.filter((entry): entry is string => typeof entry === 'string')
   }
 
   private sessionPath(id: string): string {

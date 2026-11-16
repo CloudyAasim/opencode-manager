@@ -33,7 +33,9 @@ const config = makeOpenCodeConfigFile({
 describe('getProvidersWithModels', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockFetchWrapper.mockResolvedValue({ all: [], connected: [], default: {} })
+    // The catalogue arrives from the layer the client talks to, in the
+    // versioned dialect: the providers, and the model each one starts on.
+    mockFetchWrapper.mockResolvedValue({ providers: [], default: {} })
   })
 
   it('uses the supplied config instead of re-reading it', async () => {
@@ -58,5 +60,41 @@ describe('getProvidersWithModels', () => {
     const providers = await getProvidersWithModels(undefined)
 
     expect(providers).toEqual([])
+  })
+
+  it('the catalogue is asked of the layer, in the versioned dialect', async () => {
+    mockFetchWrapper.mockResolvedValue({
+      providers: [
+        {
+          id: 'anthropic',
+          name: 'Anthropic',
+          env: [],
+          models: [
+            {
+              id: 'claude-sonnet-4',
+              name: 'Claude Sonnet 4',
+              limit: { context: 200000, output: 64000 },
+              cost: null,
+              capabilities: null,
+              modalities: null,
+              variants: null,
+            },
+          ],
+          connected: true,
+        },
+      ],
+      default: { anthropic: 'claude-sonnet-4' },
+    })
+
+    const providers = await getProvidersWithModels(undefined, config)
+
+    const anthropic = providers.find((provider) => provider.id === 'anthropic')
+    expect(anthropic?.source).toBe('builtin')
+    expect(anthropic?.connected).toBe(true)
+    expect(anthropic?.models.map((model) => model.id)).toEqual(['claude-sonnet-4'])
+
+    // The catalogue is asked of the layer, not of the agent.
+    const asked = String(mockFetchWrapper.mock.calls[0]?.[0] ?? '')
+    expect(asked).toContain('/api/bff/providers')
   })
 })

@@ -148,11 +148,21 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
     return json(route, [])
   })
 
-  // The list of providers the agent knows, in the shape the app reads it in.
-  // The catch-all above answers every agent path with an empty list, and this
-  // one is not a list - it is an object with a list in it.
-  await page.route(/.*\/api\/opencode\/(api\/)?config\/providers(\?.*)?$/, (route) =>
-    json(route, { providers: [], connected: [], default: {} }),
+  // The catalogue of models and the file search are asked of the layer now,
+  // so the agent's own paths for them are refused outright rather than
+  // answered with an empty list. An empty list would look like "there are no
+  // models" about an agent that has thousands, and a test that cannot tell
+  // the difference is a test that does not guard anything.
+  await page.route(
+    /.*\/api\/opencode\/(api\/)?(provider|config\/providers|find\/file)(\?.*)?$/,
+    (route) =>
+      route.fulfill({
+        status: 501,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: { code: 'not_implemented', message: 'The client must not ask the agent for this' },
+        }),
+      }),
   )
 
   // The layer the client talks to for its list. It is asked once for every
@@ -283,6 +293,40 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
   )
   await page.route('**/api/bff/defaults', (route) =>
     json(route, { defaults: { model: null, workingMode: null } }),
+  )
+
+  // The catalogue of models comes from the layer too, in the versioned
+  // dialect: the providers, the models of each, and which of the providers
+  // is ready to be used. The credentials stay on the other side of the line.
+  await page.route(/.*\/api\/bff\/providers(\?.*)?$/, (route) =>
+    json(route, {
+      providers: [
+        {
+          id: 'anthropic',
+          name: 'Anthropic',
+          env: ['ANTHROPIC_API_KEY'],
+          models: [
+            {
+              id: 'claude-sonnet-4',
+              name: 'Claude Sonnet 4',
+              limit: { context: 200000, output: 64000 },
+              cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
+              capabilities: { attachment: true, reasoning: true, temperature: true, toolCall: true },
+              modalities: { input: ['text', 'image'], output: ['text'] },
+              variants: null,
+            },
+          ],
+          connected: true,
+        },
+      ],
+      default: { anthropic: 'claude-sonnet-4' },
+    }),
+  )
+
+  // The files that match a word, asked of the layer: a file always belongs to
+  // a working directory, and it has to be the caller's.
+  await page.route(/.*\/api\/bff\/files\/search(\?.*)?$/, (route) =>
+    json(route, { files: ['src/index.ts', 'README.md'] }),
   )
 
   // What hangs on a conversation is asked of the layer, with the conversation

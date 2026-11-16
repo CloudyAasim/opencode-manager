@@ -3,7 +3,7 @@ import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Search, Star, Tra
 import { PanelMessage } from '@/components/ui/panel-message'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { useVariants } from '@/hooks/useVariants'
-import { formatModelName, formatProviderName, getProviders } from '@/api/providers'
+import { formatModelName, formatProviderName, findModel, getProviders } from '@/api/providers'
 import { useQuery } from '@tanstack/react-query'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import {
@@ -233,7 +233,7 @@ export function ModelQuickSelect({
 
     for (const provider of providers) {
       const providerName = formatProviderName(provider)
-      const count = Object.keys(provider.models || {}).length
+      const count = provider.models.length
       nextProviderById.set(provider.id, provider)
 
       if (count > 0) {
@@ -241,7 +241,7 @@ export function ModelQuickSelect({
           id: provider.id,
           label: providerName,
           count,
-          isConnected: provider.isConnected ?? false,
+          isConnected: provider.connected,
           searchText: createSearchText(providerName, provider.id),
         })
       }
@@ -262,7 +262,7 @@ export function ModelQuickSelect({
 
   const toModelListItem = useCallback((selection: { providerID: string, modelID: string }): ModelListItem => {
     const provider = providerById.get(selection.providerID)
-    const providerModel = provider?.models?.[selection.modelID]
+    const providerModel = provider ? findModel(provider, selection.modelID) : undefined
 
     if (!provider || !providerModel) {
       return createFallbackModelListItem(selection.providerID, selection.modelID)
@@ -278,8 +278,8 @@ export function ModelQuickSelect({
       const provider = providerById.get(providerItem.id)
       if (!provider) continue
 
-      for (const [modelID, providerModel] of Object.entries(provider.models || {})) {
-        result.push(createModelListItem(provider, modelID, providerModel))
+      for (const providerModel of provider.models) {
+        result.push(createModelListItem(provider, providerModel.id, providerModel))
         if (result.length === 3) return result
       }
     }
@@ -301,8 +301,8 @@ export function ModelQuickSelect({
     for (const provider of providers) {
       const providerModels: ModelListItem[] = []
 
-      for (const [modelID, providerModel] of Object.entries(provider.models || {})) {
-        const item = createModelListItem(provider, modelID, providerModel)
+      for (const providerModel of provider.models) {
+        const item = createModelListItem(provider, providerModel.id, providerModel)
         nextAllModels.push(item)
         providerModels.push(item)
       }

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useModelStore, modelExists } from '@/stores/modelStore'
-import type { Provider } from '@/api/providers'
+import type { Model, Provider } from '@/api/providers'
 
 beforeEach(() => {
   useModelStore.setState({
@@ -10,14 +10,32 @@ beforeEach(() => {
   })
 })
 
+/**
+ * A model, in the versioned dialect.
+ *
+ * The catalogue says more about a model than this - what it costs, what it
+ * can do - and all of that may be unknown, which is what null means. A test
+ * that only cares about the name says so.
+ */
+function makeModel(id: string, name: string): Model {
+  return {
+    id,
+    name,
+    limit: null,
+    cost: null,
+    capabilities: null,
+    modalities: null,
+    variants: null,
+  }
+}
+
 function makeProvider(overrides: Partial<Provider>): Provider {
   return {
     id: overrides.id ?? 'test-provider',
     name: overrides.name ?? 'Test Provider',
-    models: overrides.models ?? {},
+    models: overrides.models ?? [],
     env: [],
-    isConnected: true,
-    options: {},
+    connected: true,
     ...overrides,
   }
 }
@@ -25,7 +43,7 @@ function makeProvider(overrides: Partial<Provider>): Provider {
 const openaiProviders = [
   makeProvider({
     id: 'openai',
-    models: { 'gpt-4o': { id: 'gpt-4o', name: 'GPT-4o' } },
+    models: [makeModel('gpt-4o', 'GPT-4o')],
   }),
 ]
 
@@ -116,7 +134,7 @@ describe('validateAndSyncModel', () => {
     const providers = [
       makeProvider({
         id: 'openrouter',
-        models: { 'qwen/qwen3-235b-a22b': { id: 'qwen/qwen3-235b-a22b', name: 'Qwen3 235B' } },
+        models: [makeModel('qwen/qwen3-235b-a22b', 'Qwen3 235B')],
       }),
     ]
 
@@ -133,7 +151,7 @@ describe('validateAndSyncModel', () => {
     const providers = [
       makeProvider({
         id: 'anthropic',
-        models: { 'claude-sonnet-4': { id: 'claude-sonnet-4', name: 'Claude Sonnet 4' } },
+        models: [makeModel('claude-sonnet-4', 'Claude Sonnet 4')],
       }),
     ]
 
@@ -367,11 +385,11 @@ describe('modelExists', () => {
   const providers = [
     makeProvider({
       id: 'openai',
-      models: { 'gpt-4o': { id: 'gpt-4o', name: 'GPT-4o' } },
+      models: [makeModel('gpt-4o', 'GPT-4o')],
     }),
     makeProvider({
       id: 'anthropic',
-      models: { 'claude-sonnet-4': { id: 'claude-sonnet-4', name: 'Claude Sonnet 4' } },
+      models: [makeModel('claude-sonnet-4', 'Claude Sonnet 4')],
     }),
   ]
 

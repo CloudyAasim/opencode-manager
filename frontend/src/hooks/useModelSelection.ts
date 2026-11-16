@@ -130,7 +130,9 @@ export function useModelSelection(
 
   const defaultModelString = (providersData?.providers ?? [])
     .map((provider) => {
-      const modelID = providersData?.default?.[provider.id] || Object.keys(provider.models || {})[0]
+      // The model the provider starts on is the one the catalogue names; when
+      // it names none, the first model it has is the next best thing.
+      const modelID = providersData?.default?.[provider.id] || provider.models[0]?.id
       return modelID ? `${provider.id}/${modelID}` : null
     })
     .find((value): value is string => Boolean(value))
@@ -163,7 +165,9 @@ export function useModelSelection(
     if (!providers) return false
 
     const isAvailable = providers.some(
-      (provider) => provider.id === nextModel.providerID && provider.models && nextModel.modelID in provider.models
+      (provider) =>
+        provider.id === nextModel.providerID &&
+        provider.models.some((m) => m.id === nextModel.modelID)
     )
 
     if (!isAvailable) return false

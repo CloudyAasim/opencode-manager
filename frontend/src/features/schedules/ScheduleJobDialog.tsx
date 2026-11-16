@@ -160,10 +160,9 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
       const [providerId, ...modelParts] = configDefaultModel.split('/')
       const modelId = modelParts.join('/')
       const provider = providerModels.find((p) => p.id === providerId)
-      const providerModel = provider?.models.find((m) => m.key === modelId || m.id === modelId)
+      const providerModel = provider?.models.find((m) => m.id === modelId)
       configuredValues.add(configDefaultModel)
       if (providerModel) {
-        configuredValues.add(`${providerId}/${providerModel.key ?? providerModel.id}`)
         configuredValues.add(`${providerId}/${providerModel.id}`)
       }
       configuredModels.push({
@@ -176,11 +175,11 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
 
     const allModels = providerModels.flatMap((provider) =>
       provider.models
-        .filter((providerModel) => !configuredValues.has(`${provider.id}/${providerModel.key ?? providerModel.id}`))
+        .filter((providerModel) => !configuredValues.has(`${provider.id}/${providerModel.id}`))
         .map((providerModel) => ({
-          value: `${provider.id}/${providerModel.key ?? providerModel.id}`,
-          label: providerModel.name || providerModel.key || providerModel.id,
-          description: `${provider.id}/${providerModel.key ?? providerModel.id}`,
+          value: `${provider.id}/${providerModel.id}`,
+          label: providerModel.name || providerModel.id,
+          description: `${provider.id}/${providerModel.id}`,
           group: provider.name,
         })),
     )

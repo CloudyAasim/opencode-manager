@@ -7,14 +7,22 @@ import {
 import type { ProviderWithModels } from '@/api/providers'
 import type { OpenCodeConfigFile } from '@/api/types/settings'
 
-function makeProvider(id: string, models: Array<{ id: string; key?: string }>): ProviderWithModels {
+function makeProvider(id: string, models: Array<{ id: string }>): ProviderWithModels {
   return {
     id,
     name: id,
     env: [],
-    models: models.map((model) => ({ ...model, name: model.key ?? model.id })),
+    models: models.map((model) => ({
+      id: model.id,
+      name: model.id,
+      limit: null,
+      cost: null,
+      capabilities: null,
+      modalities: null,
+      variants: null,
+    })),
     source: 'builtin',
-    isConnected: true,
+    connected: true,
   }
 }
 
@@ -29,15 +37,17 @@ function makeConfigFile(content: Record<string, unknown>): OpenCodeConfigFile {
 }
 
 describe('buildAvailableModelKeys', () => {
-  it('collects provider/model keys and backing model ids', () => {
+  it('一个模型只有一个名字：目录里那个键', () => {
+    // 目录以前给同一个模型两个名字：目录里的键，和上游 API 认得的那个。
+    // 存下来的选择可以是其中任何一个，于是「这个模型还在不在」这件事有两
+    // 个答案。现在只有一个名字，也只有一种写法算对。
     const keys = buildAvailableModelKeys([
-      makeProvider('openai', [{ id: 'backing-gpt-5', key: 'gpt-5' }]),
+      makeProvider('openai', [{ id: 'gpt-5' }]),
       makeProvider('anthropic', [{ id: 'claude-sonnet-4' }]),
     ])
 
     expect(keys).toEqual(new Set([
       'openai/gpt-5',
-      'openai/backing-gpt-5',
       'anthropic/claude-sonnet-4',
     ]))
   })

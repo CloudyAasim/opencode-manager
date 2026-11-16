@@ -19,6 +19,7 @@ import type {
   ListSessionsParams,
   PromptModel,
   ProviderContext,
+  ProviderList,
   ProviderStatus,
   SendCommandRequest,
   SendPromptInput,
@@ -40,6 +41,8 @@ export interface FakeProviderOptions {
   commands?: Command[]
   workingModes?: WorkingMode[]
   defaults?: AgentDefaults
+  providerList?: ProviderList
+  files?: string[]
 }
 
 export interface FakeProviderCall {
@@ -80,6 +83,8 @@ export class FakeAgentProvider implements AgentProvider {
   commands: Command[]
   workingModes: WorkingMode[]
   defaults: AgentDefaults
+  providerList: ProviderList
+  files: string[]
 
   constructor(options: FakeProviderOptions = {}) {
     this.id = options.id ?? 'fake'
@@ -95,6 +100,8 @@ export class FakeAgentProvider implements AgentProvider {
     this.commands = options.commands ?? []
     this.workingModes = options.workingModes ?? []
     this.defaults = options.defaults ?? { model: null, workingMode: null }
+    this.providerList = options.providerList ?? { providers: [], default: {} }
+    this.files = options.files ?? []
   }
 
   private record(method: string, ...args: unknown[]): void {
@@ -274,6 +281,22 @@ export class FakeAgentProvider implements AgentProvider {
   async getDefaults(context: ProviderContext): Promise<AgentDefaults> {
     this.recordAbout('getDefaults', context, [])
     return this.defaults
+  }
+
+  async listProviders(context: ProviderContext): Promise<ProviderList> {
+    this.recordAbout('listProviders', context, [])
+    return this.providerList
+  }
+
+  async searchFiles(query: string, context: ProviderContext): Promise<string[]> {
+    this.recordAbout('searchFiles', context, [query])
+    // The files are matched the way a name is matched: what was asked for
+    // has to be somewhere in the name. A fake that ignored the word would
+    // hand back the same list for every question, and a test could not tell
+    // whether the layer passed the question on.
+    const needle = query.trim().toLowerCase()
+    if (!needle) return []
+    return this.files.filter((file) => file.toLowerCase().includes(needle))
   }
 }
 

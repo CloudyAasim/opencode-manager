@@ -11,7 +11,9 @@ export function buildAvailableModelKeys(providers: ProviderWithModels[]): Set<st
   const keys = new Set<string>()
   for (const provider of providers) {
     for (const model of provider.models) {
-      keys.add(`${provider.id}/${model.key ?? model.id}`)
+      // A model has one name, and it is the one it is known by inside its
+      // provider. The catalogue used to carry a second name for the same
+      // model, and a stored choice could be written in either.
       keys.add(`${provider.id}/${model.id}`)
     }
   }

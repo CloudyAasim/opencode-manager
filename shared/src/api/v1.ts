@@ -714,6 +714,88 @@ export const AgentDefaultsSchema = z.object({
 export type AgentDefaults = z.infer<typeof AgentDefaultsSchema>
 
 /**
+ * What may be handed to a model, and what it may answer with.
+ *
+ * The agent's own catalogue says more than this about its models - it says
+ * what each of them can read and write, in a vocabulary of its own. What
+ * travels here is the part a client draws: the list of what may be given to a
+ * model, and the list of what comes back.
+ */
+export const ModelModalitySchema = z.enum(['text', 'audio', 'image', 'video', 'pdf'])
+export type ModelModality = z.infer<typeof ModelModalitySchema>
+
+/**
+ * A model somebody can pick.
+ *
+ * An agent's catalogue is large - thousands of models across hundreds of
+ * providers - and most of what it knows about a model is its own business. So
+ * this says the four things a client actually asks about: what the model is
+ * called, how much it can take in and give back, what it costs, and what it
+ * can do.
+ *
+ * Every one of those may be null: a model that says nothing about its cost is
+ * a model whose cost is unknown, not a model that is free.
+ */
+export const ModelSchema = z.object({
+  /** The name the agent knows the model by, inside its provider. */
+  id: z.string(),
+  name: z.string(),
+  /** How much the model can take in, and how much it can say back. */
+  limit: z
+    .object({
+      context: z.number(),
+      output: z.number(),
+    })
+    .nullable(),
+  /** What the model costs, per token. */
+  cost: z
+    .object({
+      input: z.number(),
+      output: z.number(),
+      cacheRead: z.number(),
+      cacheWrite: z.number(),
+    })
+    .nullable(),
+  /** What the model can do. */
+  capabilities: z
+    .object({
+      attachment: z.boolean(),
+      reasoning: z.boolean(),
+      temperature: z.boolean(),
+      toolCall: z.boolean(),
+    })
+    .nullable(),
+  /** What may be handed to the model, and what it may answer with. */
+  modalities: z
+    .object({
+      input: z.array(ModelModalitySchema),
+      output: z.array(ModelModalitySchema),
+    })
+    .nullable(),
+  /** The other spellings of the same model, when it has any. */
+  variants: z.record(z.string(), z.record(z.string(), z.unknown())).nullable(),
+})
+export type Model = z.infer<typeof ModelSchema>
+
+/**
+ * A provider of models.
+ *
+ * The provider is the thing a model belongs to, and whether it is connected
+ * says whether it may be used at all: a provider without its credentials is
+ * a name, not a way to work.
+ */
+export const ProviderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** The environment the provider needs, by name. */
+  env: z.array(z.string()),
+  models: z.array(ModelSchema),
+  /** Whether the provider is ready to be used. */
+  connected: z.boolean(),
+})
+export type Provider = z.infer<typeof ProviderSchema>
+
+/**
  * A command to be run in a conversation.
  *
  * The words the person typed after the command's name travel with it, because

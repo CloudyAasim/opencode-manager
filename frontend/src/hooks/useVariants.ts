@@ -31,8 +31,8 @@ export function useVariants(
    const currentModel = useMemo(() => {
      if (!model || isLoading || !providersData?.providers || providersData.providers.length === 0) return null
      for (const provider of providersData.providers) {
-      if (provider.id === model.providerID && provider.models) {
-        const modelData = provider.models[model.modelID]
+      if (provider.id === model.providerID) {
+        const modelData = provider.models.find((m) => m.id === model.modelID)
         if (modelData) {
           return modelData
         }

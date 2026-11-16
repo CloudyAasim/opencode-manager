@@ -25,7 +25,7 @@ interface ModelStore {
 export function modelExists(model: ModelSelection | null, providers: Provider[]): boolean {
   if (!model) return false
   return providers.some(
-    (p) => p.id === model.providerID && p.models && model.modelID in p.models
+    (p) => p.id === model.providerID && p.models.some((m) => m.id === model.modelID)
   )
 }
 

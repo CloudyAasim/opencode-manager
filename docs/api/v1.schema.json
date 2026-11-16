@@ -5001,6 +5001,388 @@
       ],
       "additionalProperties": false
     },
+    "ModelModality": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "string",
+      "enum": [
+        "text",
+        "audio",
+        "image",
+        "video",
+        "pdf"
+      ]
+    },
+    "Model": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "context": {
+                  "type": "number"
+                },
+                "output": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "context",
+                "output"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "input": {
+                  "type": "number"
+                },
+                "output": {
+                  "type": "number"
+                },
+                "cacheRead": {
+                  "type": "number"
+                },
+                "cacheWrite": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "input",
+                "output",
+                "cacheRead",
+                "cacheWrite"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "capabilities": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "attachment": {
+                  "type": "boolean"
+                },
+                "reasoning": {
+                  "type": "boolean"
+                },
+                "temperature": {
+                  "type": "boolean"
+                },
+                "toolCall": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "attachment",
+                "reasoning",
+                "temperature",
+                "toolCall"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "modalities": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "input": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "audio",
+                      "image",
+                      "video",
+                      "pdf"
+                    ]
+                  }
+                },
+                "output": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "audio",
+                      "image",
+                      "video",
+                      "pdf"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "input",
+                "output"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "variants": {
+          "anyOf": [
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "limit",
+        "cost",
+        "capabilities",
+        "modalities",
+        "variants"
+      ],
+      "additionalProperties": false
+    },
+    "Provider": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "env": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "limit": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "context": {
+                        "type": "number"
+                      },
+                      "output": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "context",
+                      "output"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cost": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "input": {
+                        "type": "number"
+                      },
+                      "output": {
+                        "type": "number"
+                      },
+                      "cacheRead": {
+                        "type": "number"
+                      },
+                      "cacheWrite": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "input",
+                      "output",
+                      "cacheRead",
+                      "cacheWrite"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "capabilities": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "attachment": {
+                        "type": "boolean"
+                      },
+                      "reasoning": {
+                        "type": "boolean"
+                      },
+                      "temperature": {
+                        "type": "boolean"
+                      },
+                      "toolCall": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "attachment",
+                      "reasoning",
+                      "temperature",
+                      "toolCall"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "modalities": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "input": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "text",
+                            "audio",
+                            "image",
+                            "video",
+                            "pdf"
+                          ]
+                        }
+                      },
+                      "output": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "text",
+                            "audio",
+                            "image",
+                            "video",
+                            "pdf"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "input",
+                      "output"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "variants": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "limit",
+              "cost",
+              "capabilities",
+              "modalities",
+              "variants"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "connected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "env",
+        "models",
+        "connected"
+      ],
+      "additionalProperties": false
+    },
     "SendCommandRequest": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",

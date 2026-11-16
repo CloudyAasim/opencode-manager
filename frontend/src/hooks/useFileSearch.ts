@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchWrapper } from '@/api/fetchWrapper'
+import { createBffClient } from '@/api/bff'
 import { useCancellableTimer } from './use-cancellable-timer'
 
 export interface FileSearchResult {
@@ -9,8 +9,20 @@ export interface FileSearchResult {
   error: Error | null
 }
 
+/**
+ * The files that match a word.
+ *
+ * The client used to ask the agent about this itself, by building the agent's
+ * own path out of the address it had been given for it. So the door it walked
+ * through was the agent's, and the answer came back in the agent's words.
+ *
+ * It asks the layer the client talks to now. The layer asks the agent, and
+ * checks first that the working directory being searched is the caller's - a
+ * file search without a directory to search is not a search, it is a question
+ * about somebody else's files.
+ */
 export function useFileSearch(
-  opcodeUrl: string | null,
+  serverUrl: string | null | undefined,
   query: string,
   enabled: boolean = true,
   directory?: string
@@ -24,22 +36,20 @@ export function useFileSearch(
   }, [query, schedule, cancel])
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['file-search', opcodeUrl, debouncedQuery, directory],
+    queryKey: ['bff', 'file-search', serverUrl, debouncedQuery, directory],
     queryFn: async () => {
-      if (!opcodeUrl || !debouncedQuery) return []
-      
-      const params = new URLSearchParams({ query: debouncedQuery })
-      if (directory) {
-        params.append('directory', directory)
-      }
-      
-      const data = await fetchWrapper<string[]>(
-        `${opcodeUrl}/find/file?${params.toString()}`
+      const response = await createBffClient(serverUrl!).searchFiles(
+        debouncedQuery,
+        directory ? [directory] : [],
       )
-      
-      return data
+      return response.files ?? []
     },
-    enabled: enabled && !!opcodeUrl && !!debouncedQuery,
+    enabled:
+      enabled &&
+      serverUrl !== undefined &&
+      serverUrl !== null &&
+      !!debouncedQuery &&
+      !!directory,
     staleTime: 60000,
   })
 

@@ -7,12 +7,14 @@ import type {
   ConversationStatus,
   ForkRequest,
   MessageWithParts,
+  Model,
   PendingPermission,
   PendingQuestion,
   PermissionResponse,
   PromptModel,
   PromptPart,
   PromptTextPart,
+  Provider,
   SendCommandRequest,
   Session,
   SessionRevert,
@@ -35,9 +37,11 @@ export type {
   Command,
   ForkRequest,
   MessageWithParts,
+  Model,
   PendingPermission,
   PendingQuestion,
   PromptModel,
+  Provider,
   SendCommandRequest,
   Session,
   ShellRequest,
@@ -62,6 +66,20 @@ export interface ProviderContext {
 export interface ProviderStatus {
   status: 'ready' | 'degraded' | 'unavailable'
   detail?: string
+}
+
+/**
+ * The catalogue of models.
+ *
+ * The providers and the models are the versioned API's - there is one truth
+ * about what a model is. What the agent adds is the answer about which of
+ * its providers is ready to be used, and which model each provider starts
+ * on.
+ */
+export interface ProviderList {
+  providers: Provider[]
+  /** The model each provider starts on, when it has one. */
+  default: Record<string, string>
 }
 
 export interface CreateSessionInput {
@@ -235,6 +253,23 @@ export interface AgentProvider {
    * starts on, and the way of working it starts in.
    */
   getDefaults(context: ProviderContext): Promise<AgentDefaults>
+  /**
+   * The models that may be picked.
+   *
+   * The catalogue is the agent's own, and it is large - thousands of models
+   * across hundreds of providers. An agent that cannot say what models it
+   * has says so by refusing: an empty catalogue would claim "there are no
+   * models" about an agent that has thousands.
+   */
+  listProviders(context: ProviderContext): Promise<ProviderList>
+  /**
+   * The files that match a word.
+   *
+   * An agent that cannot look through its working directory says so by
+   * refusing: an empty list would claim "there are no files" about a
+   * directory that is full of them.
+   */
+  searchFiles(query: string, context: ProviderContext): Promise<string[]>
 }
 
 export class AgentNotFoundError extends Error {

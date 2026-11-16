@@ -15,10 +15,13 @@ import {
   MessageListResponseSchema,
   MessagePartSchema,
   MessageSchema,
+  ModelModalitySchema,
+  ModelSchema,
   PendingListResponseSchema,
   PendingPermissionSchema,
   PendingQuestionSchema,
   PromptModelSchema,
+  ProviderSchema,
   RenameSessionRequestSchema,
   SendCommandRequestSchema,
   SendPromptRequestSchema,
@@ -76,6 +79,13 @@ export function buildV1JsonSchema(): Record<string, unknown> {
       Command: z.toJSONSchema(CommandSchema),
       WorkingMode: z.toJSONSchema(WorkingModeSchema),
       AgentDefaults: z.toJSONSchema(AgentDefaultsSchema),
+      // The catalogue of models. It is not an answer of the versioned API's
+      // own endpoints yet, but it is the versioned API's language - and a
+      // client that is told about a Model and a Provider but not about what
+      // they are has been told half the truth.
+      ModelModality: z.toJSONSchema(ModelModalitySchema),
+      Model: z.toJSONSchema(ModelSchema),
+      Provider: z.toJSONSchema(ProviderSchema),
       SendCommandRequest: z.toJSONSchema(SendCommandRequestSchema),
       ShellRequest: z.toJSONSchema(ShellRequestSchema),
       ForkRequest: z.toJSONSchema(ForkRequestSchema),

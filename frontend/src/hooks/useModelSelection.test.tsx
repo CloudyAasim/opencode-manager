@@ -5,6 +5,7 @@ import { useModelSelection } from './useModelSelection'
 import { useModelStore, type ModelSelection } from '@/stores/modelStore'
 import * as useOpenCodeExports from './useOpenCode'
 import * as providersApi from '@/api/providers'
+import type { Model } from '@/api/providers'
 
 const createTestQueryClient = () => new QueryClient({
   defaultOptions: {
@@ -40,6 +41,25 @@ const mockGetOpenCodeModelState = vi.mocked(providersApi.getOpenCodeModelState)
 const mockAddOpenCodeRecentModel = vi.mocked(providersApi.addOpenCodeRecentModel)
 const mockRemoveOpenCodeRecentModel = vi.mocked(providersApi.removeOpenCodeRecentModel)
 const mockToggleOpenCodeFavoriteModel = vi.mocked(providersApi.toggleOpenCodeFavoriteModel)
+
+/**
+ * A model, in the versioned dialect.
+ *
+ * The catalogue says more about a model than this, and all of that may be
+ * unknown - which is what null means. A test that only cares about the name
+ * says so.
+ */
+function makeModel(id: string, name: string): Model {
+  return {
+    id,
+    name,
+    limit: null,
+    cost: null,
+    capabilities: null,
+    modalities: null,
+    variants: null,
+  }
+}
 
 describe('useModelSelection', () => {
   beforeEach(() => {
@@ -107,12 +127,9 @@ describe('useModelSelection', () => {
         {
           id: 'anthropic',
           name: 'Anthropic',
-          models: {
-            'claude-sonnet-4': { id: 'claude-sonnet-4', name: 'Claude Sonnet 4' },
-          },
-          isConnected: true,
+          models: [makeModel('claude-sonnet-4', 'Claude Sonnet 4')],
           env: [],
-          options: {},
+          connected: true,
         },
       ],
       connected: ['anthropic'],
@@ -144,12 +161,9 @@ describe('useModelSelection', () => {
         {
           id: 'anthropic',
           name: 'Anthropic',
-          models: {
-            'claude-sonnet-4': { id: 'claude-sonnet-4', name: 'Claude Sonnet 4' },
-          },
-          isConnected: true,
+          models: [makeModel('claude-sonnet-4', 'Claude Sonnet 4')],
           env: [],
-          options: {},
+          connected: true,
         },
       ],
       connected: ['anthropic'],
@@ -194,18 +208,16 @@ describe('useModelSelection', () => {
           {
             id: 'AI2',
             name: 'AI2',
-            models: { foo: { id: 'foo', name: 'Foo' } },
-            isConnected: true,
+            models: [makeModel('foo', 'Foo')],
             env: [],
-            options: {},
+            connected: true,
           },
           {
             id: 'VLLM',
             name: 'VLLM',
-            models: { bar: { id: 'bar', name: 'Bar' } },
-            isConnected: true,
+            models: [makeModel('bar', 'Bar')],
             env: [],
-            options: {},
+            connected: true,
           },
         ],
         connected: ['AI2', 'VLLM'],
@@ -268,23 +280,16 @@ describe('useModelSelection', () => {
         {
           id: 'anthropic',
           name: 'Anthropic',
-          models: {
-            'claude-sonnet-4': { id: 'claude-sonnet-4', name: 'Claude Sonnet 4' },
-            'claude-opus-4': { id: 'claude-opus-4', name: 'Claude Opus 4' },
-          },
-          isConnected: true,
+          models: [makeModel('claude-sonnet-4', 'Claude Sonnet 4'), makeModel('claude-opus-4', 'Claude Opus 4')],
           env: [],
-          options: {},
+          connected: true,
         },
         {
           id: 'openai',
           name: 'OpenAI',
-          models: {
-            'gpt-4o': { id: 'gpt-4o', name: 'GPT-4o' },
-          },
-          isConnected: true,
+          models: [makeModel('gpt-4o', 'GPT-4o')],
           env: [],
-          options: {},
+          connected: true,
         },
       ],
       connected: ['anthropic', 'openai'],
@@ -395,12 +400,9 @@ describe('useModelSelection', () => {
         {
           id: 'anthropic',
           name: 'Anthropic',
-          models: {
-            'claude-sonnet-4': { id: 'claude-sonnet-4', name: 'Claude Sonnet 4' },
-          },
-          isConnected: true,
+          models: [makeModel('claude-sonnet-4', 'Claude Sonnet 4')],
           env: [],
-          options: {},
+          connected: true,
         },
       ],
       connected: ['anthropic'],

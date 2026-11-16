@@ -58,6 +58,8 @@ seventy-five, and it still gets seventy-five.
 | `GET` | `/api/bff/commands` | The commands the agent knows | `BffCommandListResponse` |
 | `GET` | `/api/bff/working-modes` | The ways of working a conversation can be had in | `BffWorkingModeListResponse` |
 | `GET` | `/api/bff/defaults` | What the agent does by default | `BffAgentDefaultsResponse` |
+| `GET` | `/api/bff/providers` | The models that may be picked | `BffProviderListResponse` |
+| `GET` | `/api/bff/files/search` | The files that match a word | `BffFileSearchResponse` |
 
 ## The shapes
 
@@ -225,6 +227,53 @@ agent's own words out of.
 When several directories are named, the first one answers - a command or a
 way of working that two directories both have is the same one. The defaults
 are one answer and not a list, so the first directory answers them too.
+
+### The catalogue of models
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `GET /api/bff/providers` | - | `BffProviderListResponse` |
+| `GET /api/bff/files/search` | - | `BffFileSearchResponse` |
+
+The client used to ask the agent for its catalogue itself, by building the
+agent's own path, and it got the agent's own catalogue back: megabytes long,
+in the agent's vocabulary, and with the provider's credentials in it. Every
+place that drew a model picker had to speak those words too.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `providers` | `Provider[]` | Every provider the agent knows, and the models of each |
+| `default` | object | The model each provider starts on, by provider name |
+
+A `Provider` and a `Model` are the versioned API's - there is one truth about
+what a model is. A model is known by one name: the one it is known by inside
+its provider, which is also the name a conversation is started with. A model
+that says nothing about its cost has an unknown cost rather than a free one,
+so the cost, the limits, the capabilities and the modalities may all be null.
+
+The credentials do not travel. A client that draws a picker needs to know
+which provider is ready to be used and which models it has; the rest is the
+provider's business, and the browser is not where it belongs.
+
+The catalogue belongs to the agent rather than to a working directory, so the
+directory is named only so that the layer can say whose agent it is. The
+client asks this layer once, and every place that draws a picker reads the
+same answer.
+
+### The files that match a word
+
+`GET /api/bff/files/search?query=<word>` answers with the paths that match.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `files` | `string[]` | The paths, as the agent knows them |
+
+The paths come back whole, and relative to the working directory they are in:
+a path that is not the whole path is not a path.
+
+A file search is about a working directory, so one has to be named, and it has
+to be the caller's - a directory that is not yours is refused rather than
+searched. A search without a word is a bad request, not an empty list.
 
 ### What hangs on a conversation
 

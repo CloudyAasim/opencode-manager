@@ -19,6 +19,7 @@ import {
   type CreateSessionInput,
   type ListSessionsParams,
   type ProviderContext,
+  type ProviderList,
   type ProviderStatus,
   type SendPromptInput,
   type SessionPage,
@@ -202,6 +203,34 @@ export abstract class CliAgentProvider implements AgentProvider {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot say what commands it knows`,
+    )
+  }
+
+  /**
+   * The models that may be picked.
+   *
+   * A program in a terminal has models of its own, but this adapter does not
+   * read them, and an empty catalogue would be a claim it cannot make: it
+   * would say "there are no models" about a program that has some.
+   */
+  async listProviders(): Promise<ProviderList> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what models it has`,
+    )
+  }
+
+  /**
+   * The files that match a word.
+   *
+   * The program knows its own working directory, but this adapter does not
+   * look through it, and an empty list would claim "there are no files" about
+   * a directory that is full of them.
+   */
+  async searchFiles(): Promise<string[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot look through its working directory`,
     )
   }
 

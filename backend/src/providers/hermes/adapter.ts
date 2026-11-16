@@ -21,6 +21,7 @@ import {
   type CreateSessionInput,
   type ListSessionsParams,
   type ProviderContext,
+  type ProviderList,
   type ProviderStatus,
   type SendPromptInput,
   type SessionPage,
@@ -228,6 +229,33 @@ export class HermesProvider implements AgentProvider {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot say what commands it knows`,
+    )
+  }
+
+  /**
+   * The models that may be picked.
+   *
+   * The API server this adapter talks to does not say, so it says so: an
+   * empty catalogue would claim the agent has no models, which is a different
+   * and wrong answer.
+   */
+  async listProviders(): Promise<ProviderList> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what models it has`,
+    )
+  }
+
+  /**
+   * The files that match a word.
+   *
+   * The API server this adapter talks to does not say, so it says so: an
+   * empty list would claim there is nothing to find.
+   */
+  async searchFiles(): Promise<string[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot look through its working directory`,
     )
   }
 

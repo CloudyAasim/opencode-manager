@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useMessages } from './useOpenCode'
 import { useQuery } from '@tanstack/react-query'
-import { fetchWrapper } from '@/api/fetchWrapper'
+import { getProviders } from '@/api/providers'
 
 interface ContextUsage {
   totalTokens: number
@@ -11,41 +11,20 @@ interface ContextUsage {
   isLoading: boolean
 }
 
-interface ModelLimit {
-  context: number
-  output: number
-}
-
-interface ProviderModel {
-  id: string
-  name: string
-  limit: ModelLimit
-}
-
-interface Provider {
-  id: string
-  name: string
-  models: Record<string, ProviderModel>
-}
-
-interface ProvidersResponse {
-  providers: Provider[]
-}
-
-async function fetchProviders(opcodeUrl: string): Promise<ProvidersResponse> {
-  return fetchWrapper<ProvidersResponse>(`${opcodeUrl}/config/providers`)
-}
-
 export const useContextUsage = (serverUrl: string | null | undefined, opcodeUrl: string | null | undefined, sessionID: string | undefined, directory?: string): ContextUsage => {
   const { data: messages, isLoading: messagesLoading } = useMessages(serverUrl, sessionID, directory)
 
+  // The catalogue comes from the layer the client talks to, like everything
+  // else. It used to be asked of the agent directly, at a path the client
+  // built itself - and the answer it read back was the agent's own, in the
+  // agent's own words.
+  //
+  // The key is the one the model pickers use, so that the catalogue is asked
+  // for once rather than once per place that draws it.
   const { data: providersData } = useQuery({
-    queryKey: ['providers', opcodeUrl],
-    queryFn: () => {
-      if (!opcodeUrl) throw new Error('opcodeUrl is required')
-      return fetchProviders(opcodeUrl)
-    },
-    enabled: !!opcodeUrl,
+    queryKey: ['opencode', 'providers', opcodeUrl, directory],
+    queryFn: () => getProviders(directory),
+    enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -77,15 +56,19 @@ export const useContextUsage = (serverUrl: string | null | undefined, opcodeUrl:
 
     let contextLimit: number | null = null
     if (currentModel && providersData) {
-      const [providerId, modelId] = currentModel.split('/')
+      // A model's name may itself contain slashes - the catalogue has names
+      // like "auto/anthropic/claude-opus-4.7" - so only the first slash
+      // separates the provider from the model. Splitting on every slash cut
+      // the name in half, and the model was then not in the catalogue at all.
+      const [providerId, ...modelParts] = currentModel.split('/')
+      const modelId = modelParts.join('/')
+
       // The list of providers may be missing from the answer, and a page that
       // cannot say how much of the context is used is still a page.
       const provider = (providersData.providers ?? []).find(p => p.id === providerId)
-      if (provider?.models) {
-        const model = provider.models[modelId]
-        if (model?.limit) {
-          contextLimit = model.limit.context
-        }
+      const model = provider?.models.find(m => m.id === modelId)
+      if (model?.limit) {
+        contextLimit = model.limit.context
       }
     }
 
@@ -98,7 +81,7 @@ export const useContextUsage = (serverUrl: string | null | undefined, opcodeUrl:
         isLoading: messagesLoading
       }
     }
-    
+
     const totalTokens = sumTokens(latestAssistantMessage)
 
     const usagePercentage = contextLimit ? (totalTokens / contextLimit) * 100 : null
