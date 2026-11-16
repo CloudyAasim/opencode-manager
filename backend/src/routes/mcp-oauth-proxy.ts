@@ -16,12 +16,56 @@ import { getWorkspacePath } from '@opencode-manager/shared/config/env'
 
 const StartSchema = z.object({
   serverName: z.string(),
-  serverUrl: z.string().url(),
+  serverUrl: z.string().url().optional(),
   scope: z.string().optional(),
   clientId: z.string().optional(),
-  clientSecret: z.string().optional(),
   directory: z.string().optional(),
 })
+
+/**
+ * What the configuration says about one server.
+ *
+ * The agent is asked, because the agent is the one that read the document the
+ * server was written down in - and the document is also where the credentials
+ * of every model provider on the host live, which is why only this one
+ * server is taken out of it.
+ */
+interface ServerOAuth {
+  url?: string
+  scope?: string
+  clientId?: string
+  clientSecret?: string
+}
+
+async function readServerOAuth(
+  openCodeClient: OpenCodeClient,
+  serverName: string,
+  directory: string | undefined,
+): Promise<ServerOAuth | null> {
+  try {
+    const config = await openCodeClient.getJson<Record<string, unknown>>('/config', {
+      directory: directory ?? undefined,
+    })
+    const servers = config?.mcp as Record<string, unknown> | undefined
+    const server = servers?.[serverName] as Record<string, unknown> | undefined
+    if (!server) return null
+
+    const oauth = server.oauth as Record<string, unknown> | undefined
+    const read = (value: unknown): string | undefined =>
+      typeof value === 'string' && value ? value : undefined
+
+    return {
+      url: read(server.url),
+      scope: read(oauth?.scope),
+      clientId: read(oauth?.clientId),
+      clientSecret: read(oauth?.clientSecret),
+    }
+  } catch {
+    // A server that is not in the configuration is not refused here: the
+    // caller may know about one that was added while the agent was up.
+    return null
+  }
+}
 
 function getMcpAuthPath(): string {
   return path.join(getWorkspacePath(), '.opencode/state/opencode/mcp-auth.json')
@@ -153,7 +197,7 @@ export function createMcpOauthProxyRoutes(
   app.post('/start', async (c) => {
     try {
       const body = await c.req.json()
-      const { serverName, serverUrl, scope, clientId, clientSecret, directory } = StartSchema.parse(body)
+      const { serverName, serverUrl, scope, clientId, directory } = StartSchema.parse(body)
 
       // The flow ends in a working directory: the server it authenticates
       // for is connected there, and the directory decides whose sessions
@@ -178,19 +222,35 @@ export function createMcpOauthProxyRoutes(
         : c.req.header('origin') || `http://${c.req.header('host') || 'localhost:5003'}`
       const callbackUrl = `${origin}/api/mcp-oauth-proxy/callback`
 
-      const metadata = await discoverOAuthMetadata(serverUrl)
+      // The server that is written down is the one being authorized, so its
+      // own configuration is read first. What the caller said is only used
+      // for a server that is not written down anywhere - a server that was
+      // added while the agent was up.
+      //
+      // The secret is never taken from the caller. It is read out of the
+      // configuration the person wrote it into, and it goes no further than
+      // the token exchange it belongs to: a client that draws a list of
+      // servers has no reason to hold one.
+      const configured = await readServerOAuth(openCodeClient, serverName, directory)
+      const resolvedServerUrl = configured?.url ?? serverUrl
+      if (!resolvedServerUrl) {
+        return c.json({ error: 'This MCP server has no address to authorize' }, 400)
+      }
+      const resolvedScope = configured?.scope ?? scope
+
+      const metadata = await discoverOAuthMetadata(resolvedServerUrl)
       if (!metadata) {
         return c.json({ error: 'OAuth metadata discovery failed for this MCP server' }, 400)
       }
 
       let resolvedClientId = clientId
-      let resolvedClientSecret = clientSecret
+      let resolvedClientSecret = configured?.clientSecret
 
       if (!resolvedClientId) {
         if (!metadata.registration_endpoint) {
           return c.json({ error: 'Server does not support dynamic client registration and no clientId provided' }, 400)
         }
-        const registered = await registerClient(serverUrl, metadata.registration_endpoint, callbackUrl, clientSecret)
+        const registered = await registerClient(resolvedServerUrl, metadata.registration_endpoint, callbackUrl, resolvedClientSecret)
         resolvedClientId = registered.client_id
         resolvedClientSecret = registered.client_secret
         logger.info(`Registered OAuth client for ${serverName}: ${resolvedClientId}`)
@@ -202,7 +262,7 @@ export function createMcpOauthProxyRoutes(
 
       storeMcpOAuthFlow(state, {
         serverName,
-        serverUrl,
+        serverUrl: resolvedServerUrl,
         codeVerifier,
         clientId: resolvedClientId,
         clientSecret: resolvedClientSecret,
@@ -218,8 +278,8 @@ export function createMcpOauthProxyRoutes(
       authUrl.searchParams.set('state', state)
       authUrl.searchParams.set('code_challenge', codeChallenge)
       authUrl.searchParams.set('code_challenge_method', 'S256')
-      if (scope) {
-        authUrl.searchParams.set('scope', scope)
+      if (resolvedScope) {
+        authUrl.searchParams.set('scope', resolvedScope)
       }
 
       return c.json({ authorizationUrl: authUrl.toString(), flowId: state })

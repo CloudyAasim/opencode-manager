@@ -2,6 +2,8 @@ import type {
   AgentDefaults,
   Command,
   ConversationStatus,
+  McpServer,
+  McpServerConfig,
   Message,
   MessagePart,
   MessageWithParts,
@@ -43,6 +45,7 @@ export interface FakeProviderOptions {
   defaults?: AgentDefaults
   providerList?: ProviderList
   files?: string[]
+  mcpServers?: McpServer[]
 }
 
 export interface FakeProviderCall {
@@ -85,6 +88,7 @@ export class FakeAgentProvider implements AgentProvider {
   defaults: AgentDefaults
   providerList: ProviderList
   files: string[]
+  mcpServers: McpServer[]
 
   constructor(options: FakeProviderOptions = {}) {
     this.id = options.id ?? 'fake'
@@ -102,6 +106,7 @@ export class FakeAgentProvider implements AgentProvider {
     this.defaults = options.defaults ?? { model: null, workingMode: null }
     this.providerList = options.providerList ?? { providers: [], default: {} }
     this.files = options.files ?? []
+    this.mcpServers = options.mcpServers ?? []
   }
 
   private record(method: string, ...args: unknown[]): void {
@@ -297,6 +302,43 @@ export class FakeAgentProvider implements AgentProvider {
     const needle = query.trim().toLowerCase()
     if (!needle) return []
     return this.files.filter((file) => file.toLowerCase().includes(needle))
+  }
+
+  async listMcpServers(context: ProviderContext): Promise<McpServer[]> {
+    this.recordAbout('listMcpServers', context, [])
+    return this.mcpServers
+  }
+
+  async addMcpServer(
+    name: string,
+    config: McpServerConfig,
+    context: ProviderContext,
+  ): Promise<void> {
+    this.recordAbout('addMcpServer', context, [name, config])
+  }
+
+  async connectMcpServer(name: string, context: ProviderContext): Promise<void> {
+    this.recordAbout('connectMcpServer', context, [name])
+  }
+
+  async disconnectMcpServer(name: string, context: ProviderContext): Promise<void> {
+    this.recordAbout('disconnectMcpServer', context, [name])
+  }
+
+  async authenticateMcpServer(name: string, context: ProviderContext): Promise<void> {
+    this.recordAbout('authenticateMcpServer', context, [name])
+  }
+
+  async removeMcpAuth(name: string, context: ProviderContext): Promise<void> {
+    this.recordAbout('removeMcpAuth', context, [name])
+  }
+
+  async completeMcpAuth(
+    name: string,
+    code: string,
+    context: ProviderContext,
+  ): Promise<void> {
+    this.recordAbout('completeMcpAuth', context, [name, code])
   }
 }
 

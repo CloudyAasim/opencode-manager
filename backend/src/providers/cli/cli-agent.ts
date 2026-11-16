@@ -2,6 +2,7 @@ import type {
   AgentDefaults,
   Command,
   ConversationStatus,
+  McpServer,
   MessageWithParts,
   PendingPermission,
   PendingQuestion,
@@ -231,6 +232,53 @@ export abstract class CliAgentProvider implements AgentProvider {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot look through its working directory`,
+    )
+  }
+
+  /**
+   * The tool servers.
+   *
+   * A program in a terminal has no tool servers of its own to speak of, and an
+   * empty list would claim "there are none" about a host that may have
+   * hundreds.
+   */
+  async listMcpServers(): Promise<McpServer[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what tool servers it has`,
+    )
+  }
+
+  async addMcpServer(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot add a tool server`)
+  }
+
+  async connectMcpServer(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot start a tool server`)
+  }
+
+  async disconnectMcpServer(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot stop a tool server`)
+  }
+
+  async authenticateMcpServer(): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot authorize a tool server`,
+    )
+  }
+
+  async removeMcpAuth(): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot take an authorization away`,
+    )
+  }
+
+  async completeMcpAuth(): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot finish an authorization`,
     )
   }
 

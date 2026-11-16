@@ -5,6 +5,7 @@ import type {
   Message,
   MessagePart,
   MessageWithParts,
+  McpServer,
   PendingPermission,
   PendingQuestion,
   PermissionResponse,
@@ -256,6 +257,52 @@ export class HermesProvider implements AgentProvider {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot look through its working directory`,
+    )
+  }
+
+  /**
+   * The tool servers.
+   *
+   * The API server this adapter talks to does not say, so it says so: an
+   * empty list would claim there are none.
+   */
+  async listMcpServers(): Promise<McpServer[]> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what tool servers it has`,
+    )
+  }
+
+  async addMcpServer(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot add a tool server`)
+  }
+
+  async connectMcpServer(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot start a tool server`)
+  }
+
+  async disconnectMcpServer(): Promise<void> {
+    throw new ProviderUnavailableError(this.id, `${this.label} cannot stop a tool server`)
+  }
+
+  async authenticateMcpServer(): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot authorize a tool server`,
+    )
+  }
+
+  async removeMcpAuth(): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot take an authorization away`,
+    )
+  }
+
+  async completeMcpAuth(): Promise<void> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot finish an authorization`,
     )
   }
 

@@ -60,6 +60,13 @@ seventy-five, and it still gets seventy-five.
 | `GET` | `/api/bff/defaults` | What the agent does by default | `BffAgentDefaultsResponse` |
 | `GET` | `/api/bff/providers` | The models that may be picked | `BffProviderListResponse` |
 | `GET` | `/api/bff/files/search` | The files that match a word | `BffFileSearchResponse` |
+| `GET` | `/api/bff/mcp` | The tool servers the agent knows | `BffMcpServerListResponse` |
+| `POST` | `/api/bff/mcp` | Adding a tool server | `AcceptedResponse` |
+| `POST` | `/api/bff/mcp/:name/connect` | Starting a tool server | `AcceptedResponse` |
+| `POST` | `/api/bff/mcp/:name/disconnect` | Stopping a tool server | `AcceptedResponse` |
+| `POST` | `/api/bff/mcp/:name/auth/authenticate` | Asking a tool server to authorize itself | `AcceptedResponse` |
+| `POST` | `/api/bff/mcp/:name/auth/callback` | Finishing an authorization | `AcceptedResponse` |
+| `DELETE` | `/api/bff/mcp/:name/auth` | Taking the authorization away | `AcceptedResponse` |
 
 ## The shapes
 
@@ -274,6 +281,55 @@ a path that is not the whole path is not a path.
 A file search is about a working directory, so one has to be named, and it has
 to be the caller's - a directory that is not yours is refused rather than
 searched. A search without a word is a bad request, not an empty list.
+
+### The tool servers
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `GET /api/bff/mcp` | - | `BffMcpServerListResponse` |
+| `POST /api/bff/mcp` | `{ "name": string, "config": McpServerConfig }` | `AcceptedResponse` |
+| `POST /api/bff/mcp/:name/connect` | - | `AcceptedResponse` |
+| `POST /api/bff/mcp/:name/disconnect` | - | `AcceptedResponse` |
+| `POST /api/bff/mcp/:name/auth/authenticate` | - | `AcceptedResponse` |
+| `POST /api/bff/mcp/:name/auth/callback` | `{ "code": string }` | `AcceptedResponse` |
+| `DELETE /api/bff/mcp/:name/auth` | - | `AcceptedResponse` |
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `servers` | `McpServer[]` | Every tool server the agent knows, and what state each is in |
+
+A `McpServer` is the versioned API's - there is one truth about what a tool
+server is:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `name` | `string` | The name it is configured under |
+| `state` | `McpServerState` | What state it is in |
+| `detail` | `string \| null` | What went wrong, when the agent said anything |
+| `kind` | `"local" \| "remote" \| null` | Whether it runs here as a command, or somewhere else by address |
+| `command` | `string[] \| null` | The command it runs, when it runs here |
+| `url` | `string \| null` | The address it answers on, when it is somewhere else |
+| `oauth` | `{ scope, clientId } \| null` | What it wants to be authorized for |
+
+The client used to ask the agent about these itself: for the state of each
+server, and for the document the servers are written down in. That document is
+also where the credentials of every model provider on the host live - so
+asking for it handed the browser the keys to every model this server can
+reach - and the secret that belongs to an OAuth client was in it too.
+
+So what comes back is the server rather than the document. The provider's
+credentials do not travel, and the OAuth secret does not either: a client that
+draws a list of servers has no reason to hold one. The manager reads that
+secret out of the configuration itself when a server asks to be authorized.
+
+A change to a server lands in a working directory when one is named, and a
+directory that is not the caller's is refused. A change with no directory is a
+change to the server as a whole - to every conversation on the host - so only
+the administrator may make one. Adding a server is always everybody's business,
+and so it is always the administrator's.
+
+A server the agent did not speak of is `unknown`: it is written down, and
+nobody has said whether it works.
 
 ### What hangs on a conversation
 

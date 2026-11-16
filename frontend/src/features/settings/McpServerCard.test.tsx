@@ -2,20 +2,32 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { McpServerCard } from './McpServerCard'
-import type { McpServerConfig, McpStatus } from '@/api/mcp'
+import type { McpServer } from '@/api/mcp'
 
 const serverId = 'my-test-server'
-const serverConfig: McpServerConfig = { type: 'remote', url: 'https://example.com/mcp' }
-const status: McpStatus = { status: 'connected' }
+
+/**
+ * The server is the versioned API's shape: what state it is in, and enough of
+ * its own shape to draw it. The document it is written down in is the
+ * manager's business, and it also holds the credentials of every model
+ * provider on the host - so it never travels.
+ */
+const server: McpServer = {
+  name: serverId,
+  state: 'connected',
+  detail: null,
+  kind: 'remote',
+  command: null,
+  url: 'https://example.com/mcp',
+  oauth: null,
+}
 
 describe('McpServerCard', () => {
   it('renders display name and description', () => {
     render(
       <McpServerCard
         serverId={serverId}
-        serverConfig={serverConfig}
-        status={status}
-        isConnected={true}
+        server={server}
         errorMessage={null}
         isAnyOperationPending={false}
         togglingServerId={null}
@@ -35,9 +47,7 @@ describe('McpServerCard', () => {
     render(
       <McpServerCard
         serverId={serverId}
-        serverConfig={serverConfig}
-        status={status}
-        isConnected={true}
+        server={server}
         errorMessage={null}
         isAnyOperationPending={false}
         togglingServerId={null}
@@ -56,9 +66,7 @@ describe('McpServerCard', () => {
     render(
       <McpServerCard
         serverId={serverId}
-        serverConfig={serverConfig}
-        status={status}
-        isConnected={true}
+        server={server}
         errorMessage={null}
         isAnyOperationPending={false}
         togglingServerId={null}
@@ -81,9 +89,7 @@ describe('McpServerCard', () => {
     render(
       <McpServerCard
         serverId={serverId}
-        serverConfig={serverConfig}
-        status={status}
-        isConnected={true}
+        server={server}
         errorMessage={null}
         isAnyOperationPending={false}
         togglingServerId={null}
@@ -100,5 +106,29 @@ describe('McpServerCard', () => {
 
     expect(onDeleteServer).toHaveBeenCalledTimes(1)
     expect(onDeleteServer).toHaveBeenCalledWith('my-test-server', 'My test server')
+  })
+
+  /**
+   * A server that is written down but that the agent has not spoken of is
+   * one whose state is unknown. Drawing it as "off" would be saying something
+   * nobody said.
+   */
+  it('draws a server nobody has spoken of as unknown', () => {
+    render(
+      <McpServerCard
+        serverId={serverId}
+        server={{ ...server, state: 'unknown', url: null }}
+        errorMessage={null}
+        isAnyOperationPending={false}
+        togglingServerId={null}
+        isRemovingAuth={false}
+        onToggleServer={vi.fn()}
+        onDeleteServer={vi.fn()}
+        onAuthenticate={vi.fn()}
+        onRemoveAuth={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
   })
 })

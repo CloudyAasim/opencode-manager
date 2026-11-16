@@ -33,7 +33,17 @@ describe('toggling an MCP server', () => {
     connect = vi.fn()
     connectAsync = vi.fn(() => new Promise<void>((r) => { release = r }))
     vi.mocked(useMcpServers).mockReturnValue({
-      status: { alpha: { status: 'disabled' } },
+      servers: [
+        {
+          name: 'alpha',
+          state: 'disabled',
+          detail: null,
+          kind: 'local',
+          command: ['serve'],
+          url: null,
+          oauth: null,
+        },
+      ],
       isLoading: false,
       refetch: vi.fn(),
       connect,

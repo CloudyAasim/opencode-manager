@@ -7,6 +7,9 @@ import type {
   MessageError,
   MessagePart,
   MessageWithParts,
+  McpServer,
+  McpServerConfig,
+  McpServerState,
   Model,
   ModelModality,
   PendingPermission,
@@ -801,10 +804,113 @@ export function toProvider(raw: unknown, connected: ReadonlySet<string>): Provid
   }
 }
 
+/**
+ * The states the agent names.
+ *
+ * A state it does not name is not one of these: the versioned dialect says
+ * "unknown" rather than pretending the server is in a state nobody reported.
+ */
+const MCP_STATES: readonly McpServerState[] = [
+  'connected',
+  'disabled',
+  'failed',
+  'needs_auth',
+  'needs_client_registration',
+]
+
+/**
+ * The command a tool server runs, when it runs one here.
+ *
+ * A server that does not say is not a server that runs nothing: it is one
+ * whose command nobody wrote down. So the difference between "no command" and
+ * "an empty command" is kept.
+ */
+function commandOf(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null
+  return value.filter((entry): entry is string => typeof entry === 'string')
+}
+
+/**
+ * One tool server, in the versioned dialect.
+ *
+ * The agent answers in two places: what state the server is in, and the way
+ * it is written down. The second is a document that also holds the
+ * credentials of every model provider on the host, so only the part about
+ * this server is read - and the secret that belongs to an OAuth client stays
+ * where it was written down, because a client that draws a list of servers
+ * has no reason to hold one.
+ */
+export function toMcpServer(name: string, status: unknown, config: unknown): McpServer {
+  const state = asString(asRecord(status)?.status)
+  const record = asRecord(config)
+  const kind = asString(record?.type)
+  const oauth = asRecord(record?.oauth)
+
+  return {
+    name,
+    state: MCP_STATES.includes(state as McpServerState)
+      ? (state as McpServerState)
+      : 'unknown',
+    detail: asString(asRecord(status)?.error),
+    kind: kind === 'local' || kind === 'remote' ? kind : null,
+    command: commandOf(record?.command),
+    url: asString(record?.url),
+    oauth: oauth
+      ? { scope: asString(oauth.scope), clientId: asString(oauth.clientId) }
+      : null,
+  }
+}
+
+/**
+ * The tool servers, from the agent's two answers.
+ *
+ * The two do not have to agree: a server may be running without being written
+ * down (one that was added while the agent was up), and it may be written
+ * down without being spoken of (one the agent has not picked up yet). So the
+ * answer is every name either of them knows.
+ */
+export function toMcpServers(statuses: unknown, config: unknown): McpServer[] {
+  const statusRecord = asRecord(statuses) ?? {}
+  const configRecord = asRecord(asRecord(config)?.mcp) ?? {}
+
+  const names = new Set([...Object.keys(statusRecord), ...Object.keys(configRecord)])
+  return [...names]
+    .sort()
+    .map((name) => toMcpServer(name, statusRecord[name], configRecord[name]))
+}
+
+/**
+ * How a tool server is to be run, in the agent's own words.
+ *
+ * The secret that belongs to an OAuth client is part of it - somebody typed
+ * it - but the agent's spelling of "authorize with this client" is an object
+ * with the three fields in it, and an object with none of them means the
+ * agent should register a client of its own.
+ */
+export function toAgentMcpConfig(config: McpServerConfig): Record<string, unknown> {
+  const raw: Record<string, unknown> = { type: config.kind }
+
+  if (config.enabled !== null) raw.enabled = config.enabled
+  if (config.command !== null) raw.command = config.command
+  if (config.url !== null) raw.url = config.url
+  if (config.environment !== null) raw.environment = config.environment
+  if (config.headers !== null) raw.headers = config.headers
+  if (config.timeout !== null) raw.timeout = config.timeout
+
+  if (config.oauth !== null) {
+    const oauth: Record<string, unknown> = {}
+    if (config.oauth.scope !== null) oauth.scope = config.oauth.scope
+    if (config.oauth.clientId !== null) oauth.clientId = config.oauth.clientId
+    if (config.oauth.clientSecret !== null) oauth.clientSecret = config.oauth.clientSecret
+    raw.oauth = Object.keys(oauth).length > 0 ? oauth : true
+  }
+
+  return raw
+}
+
 export interface OpenCodeProviderOptions {
   isReady?: () => boolean
 }
-
 export class OpenCodeProvider implements AgentProvider {
   readonly id = AGENT_ID
   readonly label = 'OpenCode'
@@ -1237,8 +1343,104 @@ export class OpenCodeProvider implements AgentProvider {
     return raw.filter((entry): entry is string => typeof entry === 'string')
   }
 
+  /**
+   * The tool servers the agent knows.
+   *
+   * Two answers are read and one is given: the state of each server, and the
+   * way it is written down. The second is a document that also holds the
+   * credentials of every model provider on the host, so only the servers are
+   * taken out of it - and the secret of an OAuth client is not one of them.
+   */
+  async listMcpServers(context: ProviderContext): Promise<McpServer[]> {
+    const statuses = await this.readJson<unknown>('/mcp', context)
+    const config = await this.readJson<unknown>('/config', context)
+    return toMcpServers(statuses, config)
+  }
+
+  /**
+   * Adding a tool server.
+   */
+  async addMcpServer(
+    name: string,
+    config: McpServerConfig,
+    context: ProviderContext,
+  ): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: '/mcp',
+      body: JSON.stringify({ name, config: toAgentMcpConfig(config) }),
+      headers: { 'Content-Type': 'application/json' },
+      context,
+    })
+  }
+
+  /**
+   * Starting a tool server.
+   */
+  async connectMcpServer(name: string, context: ProviderContext): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `${this.mcpPath(name)}/connect`,
+      context,
+    })
+  }
+
+  /**
+   * Stopping a tool server.
+   */
+  async disconnectMcpServer(name: string, context: ProviderContext): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `${this.mcpPath(name)}/disconnect`,
+      context,
+    })
+  }
+
+  /**
+   * Asking a tool server to authorize itself.
+   */
+  async authenticateMcpServer(name: string, context: ProviderContext): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `${this.mcpPath(name)}/auth/authenticate`,
+      context,
+    })
+  }
+
+  /**
+   * Taking the authorization away.
+   */
+  async removeMcpAuth(name: string, context: ProviderContext): Promise<void> {
+    await this.write({
+      method: 'DELETE',
+      path: `${this.mcpPath(name)}/auth`,
+      context,
+    })
+  }
+
+  /**
+   * Finishing an authorization.
+   */
+  async completeMcpAuth(
+    name: string,
+    code: string,
+    context: ProviderContext,
+  ): Promise<void> {
+    await this.write({
+      method: 'POST',
+      path: `${this.mcpPath(name)}/auth/callback`,
+      body: JSON.stringify({ code }),
+      headers: { 'Content-Type': 'application/json' },
+      context,
+    })
+  }
+
   private sessionPath(id: string): string {
     return `/session/${encodeURIComponent(id)}`
+  }
+
+  private mcpPath(name: string): string {
+    return `/mcp/${encodeURIComponent(name)}`
   }
 
   /**

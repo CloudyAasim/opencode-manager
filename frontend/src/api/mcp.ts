@@ -1,154 +1,134 @@
 import { fetchWrapper } from './fetchWrapper'
+import { createBffClient } from './bff'
 import { API_BASE_URL } from '@/config'
+import type { McpServer, McpServerConfig } from '@opencode-manager/shared/api/v1'
 
-export type McpStatus = 
-  | { status: 'connected' }
-  | { status: 'disabled' }
-  | { status: 'failed'; error: string }
-  | { status: 'needs_auth' }
-  | { status: 'needs_client_registration'; error: string }
+/**
+ * The tool servers.
+ *
+ * The client used to ask the agent about these itself: for the state of each
+ * server, and for the document the servers are written down in. That document
+ * is also where the credentials of every model provider on the host live, so
+ * asking for it handed the browser the keys to every model this server can
+ * reach.
+ *
+ * So the client asks the layer it talks to, and what comes back is the
+ * servers: their state, and enough of their shape to draw them. The document
+ * stays where it was written down.
+ */
+export type { McpServer, McpServerConfig }
 
-export type McpStatusMap = Record<string, McpStatus>
-
-export interface McpServerConfig {
-  type: 'local' | 'remote'
-  enabled?: boolean
-  command?: string[]
-  url?: string
-  environment?: Record<string, string>
-  headers?: Record<string, string>
-  timeout?: number
-  oauth?: boolean | {
-    clientId?: string
-    clientSecret?: string
-    scope?: string
-  }
-}
-
-export interface AddMcpServerRequest {
-  name: string
-  config: McpServerConfig
-}
+/** What state a server is in. */
+export type McpServerState = McpServer['state']
 
 export interface McpAuthStartResponse {
   authorizationUrl: string
   flowId: string
 }
 
-export type McpOAuthFlowStatus = 
+export type McpOAuthFlowStatus =
   | { status: 'pending' }
   | { status: 'completed'; serverName: string }
   | { status: 'failed'; error: string }
   | { status: 'unknown' }
 
+function client() {
+  return createBffClient(API_BASE_URL)
+}
+
+function scopeOf(directory?: string): string[] {
+  return directory ? [directory] : []
+}
+
 export const mcpApi = {
-  async getStatus(): Promise<McpStatusMap> {
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp`)
+  /**
+   * The servers, and what state each one is in.
+   *
+   * A working directory is named when the caller has one: the configuration of
+   * a project may add servers of its own, and the directory decides whose.
+   */
+  async listServers(directory?: string): Promise<McpServer[]> {
+    const answer = await client().listMcpServers(scopeOf(directory))
+    return answer.servers ?? []
   },
 
-  async addServer(name: string, config: McpServerConfig): Promise<McpStatusMap> {
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp`, {
+  /**
+   * Adding a server.
+   */
+  async addServer(name: string, config: McpServerConfig): Promise<void> {
+    await client().addMcpServer(name, config)
+  },
+
+  /**
+   * Starting a server.
+   */
+  async connect(name: string, directory?: string): Promise<void> {
+    await client().connectMcpServer(name, scopeOf(directory))
+  },
+
+  /**
+   * Stopping a server.
+   */
+  async disconnect(name: string, directory?: string): Promise<void> {
+    await client().disconnectMcpServer(name, scopeOf(directory))
+  },
+
+  /**
+   * Asking a server to authorize itself.
+   */
+  async authenticate(name: string, directory?: string): Promise<void> {
+    await client().authenticateMcpServer(name, scopeOf(directory))
+  },
+
+  /**
+   * Taking the authorization away.
+   */
+  async removeAuth(name: string, directory?: string): Promise<void> {
+    await client().removeMcpAuth(name, scopeOf(directory))
+  },
+
+  /**
+   * Finishing an authorization.
+   *
+   * A change lands in a working directory, so the directory it belongs to is
+   * named - otherwise it lands in the directory the server itself was started
+   * in, which belongs to nobody in particular.
+   */
+  async completeAuth(name: string, code: string, directory?: string): Promise<void> {
+    await client().completeMcpAuth(name, code, scopeOf(directory))
+  },
+
+  /**
+   * Starting an authorization.
+   *
+   * This one is not the agent's door: the flow is the manager's own work, and
+   * the manager is the one that holds the code and writes the tokens down.
+   *
+   * The secret that belongs to an OAuth client is not asked for. The person
+   * who draws the list of servers has no reason to hold one, and the manager
+   * can read it out of the configuration the server was written down in.
+   */
+  async startAuth(
+    name: string,
+    serverUrl: string,
+    scope?: string,
+    clientId?: string,
+    directory?: string,
+  ): Promise<McpAuthStartResponse> {
+    return fetchWrapper<McpAuthStartResponse>(`${API_BASE_URL}/api/mcp-oauth-proxy/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, config }),
-    })
-  },
-
-  async connect(name: string): Promise<boolean> {
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp/${encodeURIComponent(name)}/connect`, {
-      method: 'POST',
-    })
-  },
-
-  async disconnect(name: string): Promise<boolean> {
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp/${encodeURIComponent(name)}/disconnect`, {
-      method: 'POST',
-    })
-  },
-
-  async startAuth(name: string, serverUrl: string, scope?: string, clientId?: string, clientSecret?: string, directory?: string): Promise<McpAuthStartResponse> {
-    return fetchWrapper(`${API_BASE_URL}/api/mcp-oauth-proxy/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serverName: name, serverUrl, scope, clientId, clientSecret, directory }),
+      body: JSON.stringify({ serverName: name, serverUrl, scope, clientId, directory }),
     })
   },
 
   async checkFlowStatus(flowId: string): Promise<McpOAuthFlowStatus> {
     try {
-      return await fetchWrapper(`${API_BASE_URL}/api/mcp-oauth-proxy/status/${encodeURIComponent(flowId)}`)
+      return await fetchWrapper<McpOAuthFlowStatus>(
+        `${API_BASE_URL}/api/mcp-oauth-proxy/status/${encodeURIComponent(flowId)}`,
+      )
     } catch {
       return { status: 'unknown' }
     }
-  },
-
-  async completeAuth(name: string, code: string, directory?: string): Promise<McpStatus> {
-    // The directory says which working directory the flow belongs to. Without
-    // it the request lands on the server's own directory, which is nobody's
-    // - so a person who is not the administrator cannot finish a flow there.
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp/${encodeURIComponent(name)}/auth/callback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      params: { directory },
-      body: JSON.stringify({ code }),
-    })
-  },
-
-  async authenticate(name: string): Promise<McpStatus> {
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp/${encodeURIComponent(name)}/auth/authenticate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-  },
-
-  async removeAuth(name: string): Promise<{ success: true }> {
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp/${encodeURIComponent(name)}/auth`, {
-      method: 'DELETE',
-    })
-  },
-
-  async getStatusFor(directory: string): Promise<McpStatusMap> {
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/mcp`, {
-      params: { directory },
-    })
-  },
-
-  async getConfigForDirectory(directory: string): Promise<Record<string, unknown>> {
-    return fetchWrapper(`${API_BASE_URL}/api/opencode/config`, {
-      params: { directory },
-    })
-  },
-
-  async connectDirectory(name: string, directory: string): Promise<boolean> {
-    return fetchWrapper(`${API_BASE_URL}/api/settings/mcp/${encodeURIComponent(name)}/connectdirectory`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ directory }),
-    })
-  },
-
-  async disconnectDirectory(name: string, directory: string): Promise<boolean> {
-    return fetchWrapper(`${API_BASE_URL}/api/settings/mcp/${encodeURIComponent(name)}/disconnectdirectory`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ directory }),
-    })
-  },
-
-  async authenticateDirectory(name: string, directory: string): Promise<McpStatus> {
-    return fetchWrapper(`${API_BASE_URL}/api/settings/mcp/${encodeURIComponent(name)}/authdirectedir`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ directory }),
-    })
-  },
-
-  async removeAuthDirectory(name: string, directory: string): Promise<{ success: true }> {
-    return fetchWrapper(`${API_BASE_URL}/api/settings/mcp/${encodeURIComponent(name)}/authdir`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ directory }),
-    })
   },
 }

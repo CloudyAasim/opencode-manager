@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { RepoMcpServerList } from './RepoMcpServerList'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { McpOAuthDialog } from '@/features/settings/McpOAuthDialog'
-import { mcpApi, type McpStatus, type McpServerConfig, type McpAuthStartResponse } from '@/api/mcp'
+import { mcpApi, type McpServer, type McpAuthStartResponse } from '@/api/mcp'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { invalidateSessionCaches } from '@/lib/queryInvalidation'
 import { showToast } from '@/lib/toast'
@@ -15,31 +15,32 @@ interface RepoMcpDialogProps {
   directory: string | undefined
 }
 
+/**
+ * The tool servers of one working directory.
+ *
+ * The servers come from the layer the client talks to: the client used to
+ * ask the agent for the state of them and for the document they are written
+ * down in, and that document also holds the credentials of every model
+ * provider on the host.
+ */
 export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogProps) {
   const { t } = useI18n()
   const queryClient = useQueryClient()
-  const [localStatus, setLocalStatus] = useState<Record<string, McpStatus>>({})
-  const [mcpServers, setMcpServers] = useState<Record<string, McpServerConfig>>({})
+  const [servers, setServers] = useState<McpServer[]>([])
   const [isLoadingStatus, setIsLoadingStatus] = useState(false)
   const [statusError, setStatusError] = useState<Error | null>(null)
   const [hasFetchedStatus, setHasFetchedStatus] = useState(false)
   const [removeAuthConfirmServer, setRemoveAuthConfirmServer] = useState<string | null>(null)
   const [authDialogServerId, setAuthDialogServerId] = useState<string | null>(null)
-  
-  const serverIds = Object.keys(localStatus)
-  
+
   const fetchStatus = useCallback(async () => {
     if (!directory) return
-    
+
     setIsLoadingStatus(true)
     setStatusError(null)
     try {
-      const [status, config] = await Promise.all([
-        mcpApi.getStatusFor(directory),
-        mcpApi.getConfigForDirectory(directory),
-      ])
-      setLocalStatus(status)
-      setMcpServers((config.mcp as Record<string, McpServerConfig>) || {})
+      const answer = await mcpApi.listServers(directory)
+      setServers(answer)
       setHasFetchedStatus(true)
     } catch (error) {
       setStatusError(error instanceof Error ? error : new Error(String(error)))
@@ -47,21 +48,21 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
       setIsLoadingStatus(false)
     }
   }, [directory])
-  
+
   const toggleMutation = useMutation({
     mutationFn: async ({ serverId, enable }: { serverId: string; enable: boolean }) => {
       if (!directory) throw new Error(t('repo.mcp.noDirectory'))
-      
-      const currentStatus = localStatus[serverId]
-      
+
+      const currentServer = servers.find((server) => server.name === serverId)
+
       if (enable) {
-        if (currentStatus?.status === 'needs_auth') {
-          await mcpApi.authenticateDirectory(serverId, directory)
+        if (currentServer?.state === 'needs_auth') {
+          await mcpApi.authenticate(serverId, directory)
         } else {
-          await mcpApi.connectDirectory(serverId, directory)
+          await mcpApi.connect(serverId, directory)
         }
       } else {
-        await mcpApi.disconnectDirectory(serverId, directory)
+        await mcpApi.disconnect(serverId, directory)
       }
     },
     onSuccess: async () => {
@@ -77,7 +78,7 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
   const removeAuthMutation = useMutation({
     mutationFn: async (serverId: string) => {
       if (!directory) throw new Error(t('repo.mcp.noDirectory'))
-      await mcpApi.removeAuthDirectory(serverId, directory)
+      await mcpApi.removeAuth(serverId, directory)
     },
     onSuccess: async () => {
       showToast.success(t('repo.mcp.authRemoved'))
@@ -92,15 +93,13 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
 
   const handleOAuthStartAuth = async (): Promise<McpAuthStartResponse> => {
     if (!authDialogServerId) throw new Error(t('repo.mcp.noServerId'))
-    const serverConfig = mcpServers[authDialogServerId]
-    if (!serverConfig?.url) throw new Error(t('repo.mcp.serverUrlNotFound'))
-    const oauthConfig = typeof serverConfig.oauth === 'object' ? serverConfig.oauth : undefined
+    const server = servers.find((entry) => entry.name === authDialogServerId)
+    if (!server?.url) throw new Error(t('repo.mcp.serverUrlNotFound'))
     return await mcpApi.startAuth(
       authDialogServerId,
-      serverConfig.url,
-      oauthConfig?.scope,
-      oauthConfig?.clientId,
-      oauthConfig?.clientSecret,
+      server.url,
+      server.oauth?.scope ?? undefined,
+      server.oauth?.clientId ?? undefined,
       directory,
     )
   }
@@ -115,10 +114,10 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
 
   const handleOAuthCheckStatus = async (): Promise<boolean> => {
     if (!authDialogServerId || !directory) return false
-    const status = await mcpApi.getStatusFor(directory)
-    const serverStatus = status[authDialogServerId]
-    if (serverStatus?.status === 'connected') {
-      setLocalStatus(status)
+    const answer = await mcpApi.listServers(directory)
+    const server = answer.find((entry) => entry.name === authDialogServerId)
+    if (server?.state === 'connected') {
+      setServers(answer)
       return true
     }
     return false
@@ -128,7 +127,7 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
     fetchStatus()
     invalidateSessionCaches(queryClient)
   }
-  
+
   useEffect(() => {
     if (open && directory) {
       fetchStatus()
@@ -141,7 +140,7 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
   }
 
   if (!directory) return null
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
          <DialogContent height="short" width="md" mobileFullscreen className="sm:fixed sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:h-auto flex flex-col gap-0 sm:gap-4 pb-safe sm:pb-6">
@@ -156,10 +155,8 @@ export function RepoMcpDialog({ open, onOpenChange, directory }: RepoMcpDialogPr
           hasFetchedStatus={hasFetchedStatus}
           statusError={statusError}
           onRetry={() => { void fetchStatus() }}
-          serverIds={serverIds}
+          servers={servers}
           isLoadingStatus={isLoadingStatus}
-          localStatus={localStatus}
-          mcpServers={mcpServers}
           toggleMutation={toggleMutation}
           removeAuthMutation={removeAuthMutation}
           onAuthClick={setAuthDialogServerId}

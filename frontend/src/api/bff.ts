@@ -3,6 +3,8 @@ import type {
   Command,
   ConversationStatus,
   ForkRequest,
+  McpServer,
+  McpServerConfig,
   MessageWithParts,
   PendingPermission,
   PendingQuestion,
@@ -186,10 +188,32 @@ export interface BffProviderListResponse {
 }
 
 /**
+ * Where the tool servers live.
+ *
+ * The client used to ask the agent about these itself, at paths it built
+ * itself, and for the document they are written down in - which is also where
+ * the credentials of every model provider on the host live. Now it asks this
+ * layer, which asks the agent and hands back the servers.
+ */
+export const BFF_MCP_ENDPOINT = '/api/bff/mcp'
+
+/**
  * The files that match a word.
  */
 export interface BffFileSearchResponse {
   files: string[]
+}
+
+/**
+ * The tool servers the agent knows.
+ *
+ * The servers are the versioned API's - there is one truth about what a tool
+ * server is. What this layer adds is that they come for a working directory
+ * in one answer, and that what comes back is the server rather than the
+ * document the server was written down in.
+ */
+export interface BffMcpServerListResponse {
+  servers: McpServer[]
 }
 
 export class BffClient {
@@ -570,6 +594,113 @@ export class BffClient {
     }
     return fetchWrapper<BffFileSearchResponse>(
       `${this.baseURL}${BFF_FILES_ENDPOINT}/search?${params.toString()}`,
+    )
+  }
+
+  /**
+   * The tool servers the agent knows.
+   *
+   * A server belongs to a working directory in the sense that its
+   * configuration is read from there - so a directory is named, and it has to
+   * be the caller's.
+   */
+  async listMcpServers(directories: string[] = []): Promise<BffMcpServerListResponse> {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    const query = params.toString()
+    return fetchWrapper<BffMcpServerListResponse>(
+      `${this.baseURL}${BFF_MCP_ENDPOINT}` + (query ? `?${query}` : ''),
+    )
+  }
+
+  /**
+   * Adding a tool server.
+   */
+  async addMcpServer(name: string, config: McpServerConfig): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(`${this.baseURL}${BFF_MCP_ENDPOINT}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, config }),
+    })
+  }
+
+  /**
+   * Starting a tool server.
+   */
+  async connectMcpServer(name: string, directories: string[] = []): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.mcpUrl(name, 'connect', directories),
+      { method: 'POST' },
+    )
+  }
+
+  /**
+   * Stopping a tool server.
+   */
+  async disconnectMcpServer(
+    name: string,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.mcpUrl(name, 'disconnect', directories),
+      { method: 'POST' },
+    )
+  }
+
+  /**
+   * Asking a tool server to authorize itself.
+   */
+  async authenticateMcpServer(
+    name: string,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(
+      this.mcpUrl(name, 'auth/authenticate', directories),
+      { method: 'POST' },
+    )
+  }
+
+  /**
+   * Finishing an authorization.
+   */
+  async completeMcpAuth(
+    name: string,
+    code: string,
+    directories: string[] = [],
+  ): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(this.mcpUrl(name, 'auth/callback', directories), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+  }
+
+  /**
+   * Taking the authorization away.
+   */
+  async removeMcpAuth(name: string, directories: string[] = []): Promise<BffAcceptedResponse> {
+    return fetchWrapper<BffAcceptedResponse>(this.mcpUrl(name, 'auth', directories), {
+      method: 'DELETE',
+    })
+  }
+
+  /**
+   * The address of one tool server.
+   *
+   * The directories are the scope of the change: a change that lands in a
+   * working directory belongs to the person who owns it.
+   */
+  private mcpUrl(name: string, action: string, directories: string[]): string {
+    const params = new URLSearchParams()
+    for (const directory of directories) {
+      params.append('directories', directory)
+    }
+    const query = params.toString()
+    return (
+      `${this.baseURL}${BFF_MCP_ENDPOINT}/${encodeURIComponent(name)}/${action}` +
+      (query ? `?${query}` : '')
     )
   }
 

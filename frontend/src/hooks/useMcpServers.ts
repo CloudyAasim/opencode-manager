@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { mcpApi } from '@/api/mcp'
-import type { McpStatusMap, McpServerConfig } from '@/api/mcp'
+import type { McpServer, McpServerConfig } from '@/api/mcp'
 import { showToast as toast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
 import { messageOf } from '@/lib/messageOf'
@@ -11,13 +11,21 @@ const SESSION_QUERY_PREDICATE = (query: { queryKey: readonly unknown[] }) =>
   (query.queryKey[0] === 'opencode' &&
     (query.queryKey[1] === 'session' || query.queryKey[1] === 'messages'))
 
+/**
+ * The tool servers, and the changes that may be made to them.
+ *
+ * The servers come from the layer the client talks to, in the versioned
+ * dialect - the client used to ask the agent itself, and for the document the
+ * servers are written down in, which is also where the credentials of every
+ * model provider on the host live.
+ */
 export function useMcpServers() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
 
-  const statusQuery = useQuery({
-    queryKey: ['mcp-status'],
-    queryFn: () => mcpApi.getStatus(),
+  const serversQuery = useQuery({
+    queryKey: ['mcp', 'servers'],
+    queryFn: () => mcpApi.listServers(),
     refetchInterval: 15000,
     staleTime: 10000,
   })
@@ -26,7 +34,7 @@ export function useMcpServers() {
     mutationFn: ({ name, config }: { name: string; config: McpServerConfig }) =>
       mcpApi.addServer(name, config),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mcp-status'] })
+      queryClient.invalidateQueries({ queryKey: ['mcp', 'servers'] })
       queryClient.invalidateQueries({ predicate: SESSION_QUERY_PREDICATE })
       toast.success(t('settingsPanels.mcpManager.toast.added'))
     },
@@ -38,7 +46,7 @@ export function useMcpServers() {
   const connectMutation = useMutation({
     mutationFn: (name: string) => mcpApi.connect(name),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mcp-status'] })
+      queryClient.invalidateQueries({ queryKey: ['mcp', 'servers'] })
       queryClient.invalidateQueries({ predicate: SESSION_QUERY_PREDICATE })
       toast.success(t('settingsPanels.mcpManager.toast.connected'))
     },
@@ -50,7 +58,7 @@ export function useMcpServers() {
   const disconnectMutation = useMutation({
     mutationFn: (name: string) => mcpApi.disconnect(name),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mcp-status'] })
+      queryClient.invalidateQueries({ queryKey: ['mcp', 'servers'] })
       queryClient.invalidateQueries({ predicate: SESSION_QUERY_PREDICATE })
       toast.success(t('settingsPanels.mcpManager.toast.disconnected'))
     },
@@ -60,8 +68,8 @@ export function useMcpServers() {
   })
 
   const startAuthMutation = useMutation({
-    mutationFn: ({ name, serverUrl, scope, clientId, clientSecret, directory }: { name: string; serverUrl: string; scope?: string; clientId?: string; clientSecret?: string; directory?: string }) =>
-      mcpApi.startAuth(name, serverUrl, scope, clientId, clientSecret, directory),
+    mutationFn: ({ name, serverUrl, scope, clientId, directory }: { name: string; serverUrl: string; scope?: string; clientId?: string; directory?: string }) =>
+      mcpApi.startAuth(name, serverUrl, scope, clientId, directory),
     onError: (error: Error) => {
       toast.error(t('settingsPanels.mcpManager.toast.authStartFailed', { error: messageOf(error) }))
     },
@@ -71,7 +79,7 @@ export function useMcpServers() {
     mutationFn: ({ name, code }: { name: string; code: string }) =>
       mcpApi.completeAuth(name, code),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mcp-status'] })
+      queryClient.invalidateQueries({ queryKey: ['mcp', 'servers'] })
       toast.success(t('settingsPanels.mcpManager.toast.authCompleted'))
     },
     onError: (error: Error) => {
@@ -82,7 +90,7 @@ export function useMcpServers() {
   const removeAuthMutation = useMutation({
     mutationFn: (name: string) => mcpApi.removeAuth(name),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mcp-status'] })
+      queryClient.invalidateQueries({ queryKey: ['mcp', 'servers'] })
       queryClient.invalidateQueries({ predicate: SESSION_QUERY_PREDICATE })
       toast.success(t('settingsPanels.mcpManager.toast.authRemoved'))
     },
@@ -92,11 +100,11 @@ export function useMcpServers() {
   })
 
   return {
-    status: statusQuery.data as McpStatusMap | undefined,
-    isLoading: statusQuery.isLoading,
-    isError: statusQuery.isError,
-    error: statusQuery.error,
-    refetch: statusQuery.refetch,
+    servers: serversQuery.data as McpServer[] | undefined,
+    isLoading: serversQuery.isLoading,
+    isError: serversQuery.isError,
+    error: serversQuery.error,
+    refetch: serversQuery.refetch,
 
     addServer: addServerMutation.mutate,
     addServerAsync: addServerMutation.mutateAsync,

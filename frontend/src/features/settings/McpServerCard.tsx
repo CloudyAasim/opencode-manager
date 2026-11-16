@@ -4,15 +4,20 @@ import { Button } from '@/components/ui/button'
 import { SettingsListRow, type SettingsListRowAction } from '@/components/ui/settings-list'
 import { XCircle, AlertCircle, Key, Shield, Trash2, RefreshCw } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
-import type { McpStatus, McpServerConfig } from '@/api/mcp'
+import type { McpServer } from '@/api/mcp'
 
 type Translate = ReturnType<typeof useI18n>['t']
 
 interface McpServerCardProps {
   serverId: string
-  serverConfig: McpServerConfig
-  status?: McpStatus
-  isConnected: boolean
+  /**
+   * What the agent says about this server, when it has said anything.
+   *
+   * It may have said nothing: a server that is written down but has not been
+   * picked up yet is one whose state is unknown, and it is drawn as such
+   * rather than as a server that is not there.
+   */
+  server?: McpServer
   errorMessage: string | null
   isAnyOperationPending: boolean
   togglingServerId: string | null
@@ -23,8 +28,8 @@ interface McpServerCardProps {
   onDeleteServer: (serverId: string, serverName: string) => void
 }
 
-function getStatusBadge(status: McpStatus, t: Translate) {
-  switch (status.status) {
+function getStatusBadge(server: McpServer, t: Translate) {
+  switch (server.state) {
     case 'connected':
       return <Badge variant="success">{t('settingsPanels.mcpServerCard.connected')}</Badge>
     case 'disabled':
@@ -60,9 +65,9 @@ function getServerDisplayName(serverId: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1)
 }
 
-function getServerDescription(serverConfig: McpServerConfig, t: Translate): string {
-  if (serverConfig.type === 'local' && serverConfig.command) {
-    const command = serverConfig.command.join(' ')
+function getServerDescription(server: McpServer | undefined, t: Translate): string {
+  if (server?.kind === 'local' && server.command) {
+    const command = server.command.join(' ')
     if (command.includes('filesystem')) return t('settingsPanels.mcpServerCard.fsAccess')
     if (command.includes('git')) return t('settingsPanels.mcpServerCard.gitOps')
     if (command.includes('sqlite')) return t('settingsPanels.mcpServerCard.sqliteAccess')
@@ -74,17 +79,15 @@ function getServerDescription(serverConfig: McpServerConfig, t: Translate): stri
     if (command.includes('fetch')) return t('settingsPanels.mcpServerCard.httpRequests')
     if (command.includes('memory')) return t('settingsPanels.mcpServerCard.persistentMemory')
     return t('settingsPanels.mcpServerCard.localCommand', { command })
-  } else if (serverConfig.type === 'remote' && serverConfig.url) {
-    return t('settingsPanels.mcpServerCard.remoteServer', { url: serverConfig.url })
+  } else if (server?.kind === 'remote' && server.url) {
+    return t('settingsPanels.mcpServerCard.remoteServer', { url: server.url })
   }
   return t('settingsPanels.mcpServerCard.mcpServer')
 }
 
 export function McpServerCard({
   serverId,
-  serverConfig,
-  status,
-  isConnected,
+  server,
   errorMessage,
   isAnyOperationPending,
   togglingServerId,
@@ -95,13 +98,14 @@ export function McpServerCard({
   onDeleteServer
 }: McpServerCardProps) {
   const { t } = useI18n()
-  const needsAuth = status?.status === 'needs_auth'
-  const isRemote = serverConfig.type === 'remote'
-  const hasOAuthConfig = isRemote && !!serverConfig.oauth
-  const hasOAuthError = status?.status === 'failed' && isRemote && /oauth|auth.*state/i.test(status.error)
+  const needsAuth = server?.state === 'needs_auth'
+  const isRemote = server?.kind === 'remote'
+  const hasOAuthConfig = isRemote && !!server?.oauth
+  const hasOAuthError = server?.state === 'failed' && isRemote && /oauth|auth.*state/i.test(server.detail ?? '')
   const isOAuthServer = hasOAuthConfig || hasOAuthError || (needsAuth && isRemote)
+  const isConnected = server?.state === 'connected'
   const connectedWithOAuth = isOAuthServer && isConnected
-  const showAuthButton = needsAuth || (isOAuthServer && status?.status === 'failed')
+  const showAuthButton = needsAuth || (isOAuthServer && server?.state === 'failed')
   const displayName = getServerDisplayName(serverId)
 
   const actions: SettingsListRowAction[] = []
@@ -126,12 +130,12 @@ export function McpServerCard({
               <Shield className="size-3 text-muted-foreground" />
             </span>
           )}
-          {status ? getStatusBadge(status, t) : (
+          {server ? getStatusBadge(server, t) : (
             <Badge variant="outline">{t('settingsPanels.mcpServerCard.loading')}</Badge>
           )}
         </>
       }
-      description={getServerDescription(serverConfig, t)}
+      description={getServerDescription(server, t)}
       belowDescription={errorMessage ? (
         <div className="flex items-start gap-1.5 mt-1.5 text-xs text-destructive">
           <XCircle className="size-3 flex-shrink-0 mt-0.5" />

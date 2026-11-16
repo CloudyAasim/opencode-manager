@@ -858,3 +858,130 @@ describe('OpenCode 的找文件', () => {
     expect(await provider.searchFiles('index', { directory: '/work' })).toEqual([])
   })
 })
+
+describe('OpenCode 的工具服务器', () => {
+  it('两处答案合成一份：状态和它写在哪儿的', async () => {
+    const getJson = vi.fn(async (path: string) => {
+      if (path === '/mcp') {
+        return { alpha: { status: 'failed', error: 'it said no' } } as unknown
+      }
+      return {
+        mcp: {
+          alpha: { type: 'remote', url: 'https://mcp.example.com', oauth: { clientId: 'the-client', clientSecret: 'the-secret', scope: 'read things' } },
+        },
+      } as unknown
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const servers = await provider.listMcpServers({ directory: '/work' })
+
+    expect(getJson).toHaveBeenCalledWith('/mcp', { directory: '/work' })
+    expect(getJson).toHaveBeenCalledWith('/config', { directory: '/work' })
+    expect(servers).toEqual([
+      {
+        name: 'alpha',
+        state: 'failed',
+        detail: 'it said no',
+        kind: 'remote',
+        command: null,
+        url: 'https://mcp.example.com',
+        oauth: { scope: 'read things', clientId: 'the-client' },
+      },
+    ])
+  })
+
+  it('密钥不出这一层：OAuth 的那个秘密不跟着走', async () => {
+    // The document a server is written down in also holds the credentials of
+    // every model provider on the host. The secret that belongs to an OAuth
+    // client is one of them: the person who draws the list of servers has no
+    // reason to hold it.
+    const getJson = vi.fn(async (path: string) => {
+      if (path === '/mcp') return { alpha: { status: 'connected' } } as unknown
+      return {
+        mcp: {
+          alpha: {
+            type: 'remote',
+            url: 'https://mcp.example.com',
+            oauth: { clientId: 'the-client', clientSecret: 'the-secret' },
+          },
+        },
+        provider: { something: { options: { apiKey: 'sk-nope' } } },
+      } as unknown
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const servers = await provider.listMcpServers({})
+
+    expect(JSON.stringify(servers)).not.toContain('the-secret')
+    expect(JSON.stringify(servers)).not.toContain('sk-nope')
+  })
+
+  it('两处答案不一样时，两边都算数', async () => {
+    // A server that is running without being written down, and a server that
+    // is written down without being spoken of. Neither may be dropped.
+    const getJson = vi.fn(async (path: string) => {
+      if (path === '/mcp') return { running: { status: 'connected' } } as unknown
+      return { mcp: { written: { type: 'local', command: ['serve'] } } } as unknown
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const servers = await provider.listMcpServers({})
+
+    expect(servers.map((server) => server.name)).toEqual(['running', 'written'])
+    expect(servers.find((server) => server.name === 'written')?.state).toBe('unknown')
+  })
+
+  it('加一个服务器，配置是按上游的写法送过去的', async () => {
+    const forward = vi.fn(async (_request: { path: string; body?: string }) => new Response('{}', { status: 200 }))
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    await provider.addMcpServer(
+      'alpha',
+      {
+        kind: 'remote',
+        enabled: true,
+        command: null,
+        url: 'https://mcp.example.com',
+        environment: null,
+        headers: null,
+        timeout: 5000,
+        oauth: { enabled: true, scope: 'read things', clientId: 'the-client', clientSecret: 'the-secret' },
+      },
+      {},
+    )
+
+    const request = forward.mock.calls[0]![0]
+    expect(request.path).toBe('/mcp')
+    expect(JSON.parse(request.body ?? '{}')).toEqual({
+      name: 'alpha',
+      config: {
+        type: 'remote',
+        enabled: true,
+        url: 'https://mcp.example.com',
+        timeout: 5000,
+        oauth: { scope: 'read things', clientId: 'the-client', clientSecret: 'the-secret' },
+      },
+    })
+  })
+
+  it('连接、断开、授权、删授权、结束授权，走的都是上游自己的那几条路', async () => {
+    const forward = vi.fn(async (_request: { path: string; body?: string }) => new Response('{}', { status: 200 }))
+    const provider = new OpenCodeProvider(clientWith({ forward }))
+
+    await provider.connectMcpServer('alpha', { directory: '/work' })
+    await provider.disconnectMcpServer('alpha', { directory: '/work' })
+    await provider.authenticateMcpServer('alpha', { directory: '/work' })
+    await provider.removeMcpAuth('alpha', { directory: '/work' })
+    await provider.completeMcpAuth('alpha', 'the-code', { directory: '/work' })
+
+    const paths = forward.mock.calls.map((call) => call[0].path)
+    expect(paths).toEqual([
+      '/mcp/alpha/connect',
+      '/mcp/alpha/disconnect',
+      '/mcp/alpha/auth/authenticate',
+      '/mcp/alpha/auth',
+      '/mcp/alpha/auth/callback',
+    ])
+    expect(forward.mock.calls[4]![0].body).toBe(JSON.stringify({ code: 'the-code' }))
+  })
+})

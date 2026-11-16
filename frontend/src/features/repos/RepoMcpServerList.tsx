@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { XCircle, AlertCircle, Plug, Shield, Key, RefreshCw, ChevronDown } from 'lucide-react'
-import type { McpStatus, McpServerConfig } from '@/api/mcp'
+import type { McpServer } from '@/api/mcp'
 import { useI18n } from '@/lib/i18n'
 
 
@@ -14,10 +14,8 @@ interface RepoMcpServerListProps {
   hasFetchedStatus: boolean
   statusError: Error | null
   onRetry: () => void
-  serverIds: string[]
+  servers: McpServer[]
   isLoadingStatus: boolean
-  localStatus: Record<string, McpStatus>
-  mcpServers: Record<string, McpServerConfig>
   toggleMutation: {
     mutate: (variables: { serverId: string; enable: boolean }) => void
     isPending: boolean
@@ -34,10 +32,8 @@ export function RepoMcpServerList({
   hasFetchedStatus,
   statusError,
   onRetry,
-  serverIds,
+  servers,
   isLoadingStatus,
-  localStatus,
-  mcpServers,
   toggleMutation,
   removeAuthMutation,
   onAuthClick,
@@ -49,9 +45,9 @@ export function RepoMcpServerList({
     return name.charAt(0).toUpperCase() + name.slice(1)
   }
 
-  const getDescription = (serverConfig: McpServerConfig): string => {
-    if (serverConfig.type === 'local' && serverConfig.command) {
-      const command = serverConfig.command.join(' ')
+  const getDescription = (server: McpServer): string => {
+    if (server.kind === 'local' && server.command) {
+      const command = server.command.join(' ')
       if (command.includes('filesystem')) return t('repo.mcp.fileSystemAccess')
       if (command.includes('git')) return t('repo.mcp.gitRepositoryOperations')
       if (command.includes('sqlite')) return t('repo.mcp.sqliteAccess')
@@ -63,16 +59,14 @@ export function RepoMcpServerList({
       if (command.includes('fetch')) return t('repo.mcp.httpRequests')
       if (command.includes('memory')) return t('repo.mcp.persistentMemory')
       return t('repo.mcp.localCommand', { command })
-    } else if (serverConfig.type === 'remote' && serverConfig.url) {
-      return serverConfig.url
+    } else if (server.kind === 'remote' && server.url) {
+      return server.url
     }
     return t('repo.mcp.server')
   }
 
-  const getStatusBadge = (status?: McpStatus) => {
-    if (!status) return null
-
-    switch (status.status) {
+  const getStatusBadge = (server: McpServer) => {
+    switch (server.state) {
       case 'connected':
         return <Badge variant="success">{t('repo.mcp.connected')}</Badge>
       case 'disabled':
@@ -109,7 +103,7 @@ export function RepoMcpServerList({
             </Button>
           }
         />
-      ) : hasFetchedStatus && serverIds.length === 0 ? (
+      ) : hasFetchedStatus && servers.length === 0 ? (
         <PanelMessage
           icon={<Plug />}
           title={t('repo.mcp.noServers')}
@@ -120,15 +114,14 @@ export function RepoMcpServerList({
         <PanelLoading className="py-8" size="sm" label={t('repo.loading')} />
       ) : (
         <div className="space-y-3">
-          {serverIds.map((serverId) => {
-            const serverConfig = mcpServers[serverId]
-            const status = localStatus[serverId]
-            const isConnected = status?.status === 'connected'
-            const needsAuth = status?.status === 'needs_auth'
-            const failed = status?.status === 'failed'
-            const isRemote = serverConfig?.type === 'remote'
-            const hasOAuthConfig = isRemote && !!serverConfig?.oauth
-            const hasOAuthError = failed && isRemote && !!status?.error && /oauth|auth.*state/i.test(status.error)
+          {servers.map((server) => {
+            const serverId = server.name
+            const isConnected = server.state === 'connected'
+            const needsAuth = server.state === 'needs_auth'
+            const failed = server.state === 'failed'
+            const isRemote = server.kind === 'remote'
+            const hasOAuthConfig = isRemote && !!server.oauth
+            const hasOAuthError = failed && isRemote && !!server.detail && /oauth|auth.*state/i.test(server.detail)
             const isOAuthServer = hasOAuthConfig || hasOAuthError || (needsAuth && isRemote)
             const connectedWithOAuth = isOAuthServer && isConnected
             const showAuthButton = needsAuth || (isOAuthServer && failed)
@@ -151,17 +144,17 @@ export function RepoMcpServerList({
                             size="2xs"
                             title={t('repo.mcp.optionsTitle')}
                           >
-                            {status?.status === 'connected' && (
+                            {server.state === 'connected' && (
                               <span className="text-xs bg-success text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                                 {t('repo.mcp.connected')}<ChevronDown className="size-3" />
                               </span>
                             )}
-                            {status?.status === 'needs_auth' && (
+                            {server.state === 'needs_auth' && (
                               <span className="text-xs border border-warning text-warning px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                                 {t('repo.mcp.needsAuth')}<ChevronDown className="size-3" />
                               </span>
                             )}
-                            {status?.status === 'failed' && (
+                            {server.state === 'failed' && (
                               <span className="text-xs bg-destructive text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                                 <AlertCircle className="size-3" />{t('repo.mcp.failed')}<ChevronDown className="size-3" />
                               </span>
@@ -196,16 +189,16 @@ export function RepoMcpServerList({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : (
-                      getStatusBadge(status)
+                      getStatusBadge(server)
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
-                    {serverConfig ? getDescription(serverConfig) : t('repo.mcp.server')}
+                    {getDescription(server)}
                   </p>
-                  {failed && status.status === 'failed' && (
+                  {failed && server.detail && (
                     <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
                       <XCircle className="size-3 flex-shrink-0" />
-                      <span className="truncate">{status.error}</span>
+                      <span className="truncate">{server.detail}</span>
                     </div>
                   )}
                 </div>

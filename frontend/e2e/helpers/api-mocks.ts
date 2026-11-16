@@ -153,8 +153,13 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
   // answered with an empty list. An empty list would look like "there are no
   // models" about an agent that has thousands, and a test that cannot tell
   // the difference is a test that does not guard anything.
+  //
+  // The tool servers and the configuration they are written down in are
+  // refused for a sharper reason: that configuration also holds the
+  // credentials of every model provider on the host, so a mock that answered
+  // it would be handing the browser the keys.
   await page.route(
-    /.*\/api\/opencode\/(api\/)?(provider|config\/providers|find\/file)(\?.*)?$/,
+    /.*\/api\/opencode\/(api\/)?(provider|config|config\/providers|find\/file|mcp(\/.*)?)(\?.*)?$/,
     (route) =>
       route.fulfill({
         status: 501,
@@ -327,6 +332,28 @@ export async function installApiMocks(page: Page, overrides: Partial<MockState> 
   // a working directory, and it has to be the caller's.
   await page.route(/.*\/api\/bff\/files\/search(\?.*)?$/, (route) =>
     json(route, { files: ['src/index.ts', 'README.md'] }),
+  )
+
+  // The tool servers come from the layer too, in the versioned dialect: what
+  // state each is in, and enough of its shape to draw it. The secret that
+  // belongs to an OAuth client is not part of the answer.
+  await page.route(/.*\/api\/bff\/mcp(\?.*)?$/, (route) =>
+    json(route, {
+      servers: [
+        {
+          name: 'alpha',
+          state: 'connected',
+          detail: null,
+          kind: 'local',
+          command: ['serve'],
+          url: null,
+          oauth: null,
+        },
+      ],
+    }),
+  )
+  await page.route(/.*\/api\/bff\/mcp\/[^/?]+(\/.*)?(\?.*)?$/, (route) =>
+    json(route, { accepted: true }),
   )
 
   // What hangs on a conversation is asked of the layer, with the conversation

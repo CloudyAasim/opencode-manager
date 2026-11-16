@@ -45,7 +45,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
     mutationFn: async () => {
       const config = await settingsApi.getOpenCodeConfig()
       const currentMcp = (config.content.mcp as Record<string, unknown>) || {}
-      
+
       const mcpConfig: Record<string, unknown> = {
         type: serverType,
         enabled,
@@ -57,7 +57,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
           throw new Error(t('settingsPanels.addMcpServer.commandRequired'))
         }
         mcpConfig.command = commandArray
-        
+
         const envVars: Record<string, string> = {}
         environment.forEach(env => {
           if (env.key.trim() && env.value.trim()) {
@@ -72,7 +72,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
           throw new Error(t('settingsPanels.addMcpServer.urlRequired'))
         }
         mcpConfig.url = url.trim()
-        
+
         if (oauthEnabled) {
           const oauthConfig: Record<string, string> = {}
           if (oauthClientId.trim()) oauthConfig.clientId = oauthClientId.trim()
@@ -95,35 +95,40 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
       }
 
       await onUpdate(updatedConfig)
-      
-      if (enabled) {
-        const buildOauthField = () => {
-          if (serverType !== 'remote' || !oauthEnabled) return undefined
-          const cfg: Record<string, string> = {}
-          if (oauthClientId.trim()) cfg.clientId = oauthClientId.trim()
-          if (oauthClientSecret.trim()) cfg.clientSecret = oauthClientSecret.trim()
-          if (oauthScope.trim()) cfg.scope = oauthScope.trim()
-          return Object.keys(cfg).length > 0 ? cfg : true
-        }
 
-        await addServerAsync({ 
-          name: serverId, 
-          config: {
-            type: serverType,
-            enabled,
-            command: serverType === 'local' ? command.split(' ').filter(arg => arg.trim()) : undefined,
-            url: serverType === 'remote' ? url.trim() : undefined,
-            environment: serverType === 'local' && Object.keys(environment).length > 0 
-              ? environment.reduce((acc, env) => {
-                  if (env.key.trim() && env.value.trim()) {
-                    acc[env.key.trim()] = env.value.trim()
-                  }
-                  return acc
-                }, {} as Record<string, string>)
-              : undefined,
-            timeout: timeout && parseInt(timeout) ? parseInt(timeout) : undefined,
-            oauth: buildOauthField(),
+      if (enabled) {
+        // The document above is the agent's own spelling - it is the document
+        // the agent reads. The request below is this layer's spelling, and
+        // the layer is the one that translates it.
+        const commandArray = serverType === 'local'
+          ? command.split(' ').filter(arg => arg.trim())
+          : null
+        const envVars: Record<string, string> = {}
+        environment.forEach(env => {
+          if (env.key.trim() && env.value.trim()) {
+            envVars[env.key.trim()] = env.value.trim()
           }
+        })
+
+        await addServerAsync({
+          name: serverId,
+          config: {
+            kind: serverType,
+            enabled,
+            command: commandArray,
+            url: serverType === 'remote' ? url.trim() : null,
+            environment: Object.keys(envVars).length > 0 ? envVars : null,
+            headers: null,
+            timeout: timeout && parseInt(timeout) ? parseInt(timeout) : null,
+            oauth: serverType === 'remote' && oauthEnabled
+              ? {
+                  enabled: true,
+                  scope: oauthScope.trim() ? oauthScope.trim() : null,
+                  clientId: oauthClientId.trim() ? oauthClientId.trim() : null,
+                  clientSecret: oauthClientSecret.trim() ? oauthClientSecret.trim() : null,
+                }
+              : null,
+          },
         })
       }
     },

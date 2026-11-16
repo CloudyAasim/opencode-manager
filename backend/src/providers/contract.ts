@@ -7,6 +7,8 @@ import type {
   ConversationStatus,
   ForkRequest,
   MessageWithParts,
+  McpServer,
+  McpServerConfig,
   Model,
   PendingPermission,
   PendingQuestion,
@@ -37,6 +39,8 @@ export type {
   Command,
   ForkRequest,
   MessageWithParts,
+  McpServer,
+  McpServerConfig,
   Model,
   PendingPermission,
   PendingQuestion,
@@ -270,6 +274,53 @@ export interface AgentProvider {
    * directory that is full of them.
    */
   searchFiles(query: string, context: ProviderContext): Promise<string[]>
+  /**
+   * The tool servers the agent knows.
+   *
+   * A server is a server and not the document it was written down in: the
+   * document also holds the credentials of every model provider on the host,
+   * and a client that asked for the document asked for those too. So the
+   * answer is the servers, in the versioned dialect, without the secrets.
+   *
+   * An agent that cannot talk to tool servers at all says so by refusing: an
+   * empty list would claim "there are no servers" about an agent that has
+   * hundreds of them.
+   */
+  listMcpServers(context: ProviderContext): Promise<McpServer[]>
+  /**
+   * Adding a tool server.
+   *
+   * The configuration is the versioned API's: the agent is handed it in its
+   * own words.
+   */
+  addMcpServer(name: string, config: McpServerConfig, context: ProviderContext): Promise<void>
+  /**
+   * Starting a tool server.
+   */
+  connectMcpServer(name: string, context: ProviderContext): Promise<void>
+  /**
+   * Stopping a tool server.
+   */
+  disconnectMcpServer(name: string, context: ProviderContext): Promise<void>
+  /**
+   * Asking a tool server to authorize itself.
+   */
+  authenticateMcpServer(name: string, context: ProviderContext): Promise<void>
+  /**
+   * Taking the authorization away.
+   *
+   * The authorization is a secret the server was given, so removing it is a
+   * change like any other: the agent that keeps it says so rather than
+   * pretending the secret was never there.
+   */
+  removeMcpAuth(name: string, context: ProviderContext): Promise<void>
+  /**
+   * Finishing an authorization.
+   *
+   * The code comes back from the server that was asked to authorize, and the
+   * agent is the one that knows what to do with it.
+   */
+  completeMcpAuth(name: string, code: string, context: ProviderContext): Promise<void>
 }
 
 export class AgentNotFoundError extends Error {

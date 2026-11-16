@@ -15,6 +15,9 @@ import {
   MessageListResponseSchema,
   MessagePartSchema,
   MessageSchema,
+  McpServerConfigSchema,
+  McpServerSchema,
+  McpServerStateSchema,
   ModelModalitySchema,
   ModelSchema,
   PendingListResponseSchema,
@@ -86,6 +89,13 @@ export function buildV1JsonSchema(): Record<string, unknown> {
       ModelModality: z.toJSONSchema(ModelModalitySchema),
       Model: z.toJSONSchema(ModelSchema),
       Provider: z.toJSONSchema(ProviderSchema),
+      // The tool servers. Like the catalogue, they are the versioned API's
+      // language rather than one of its own endpoints - but a client that is
+      // told about a server and not about how it is run has been told half
+      // the truth.
+      McpServerState: z.toJSONSchema(McpServerStateSchema),
+      McpServer: z.toJSONSchema(McpServerSchema),
+      McpServerConfig: z.toJSONSchema(McpServerConfigSchema),
       SendCommandRequest: z.toJSONSchema(SendCommandRequestSchema),
       ShellRequest: z.toJSONSchema(ShellRequestSchema),
       ForkRequest: z.toJSONSchema(ForkRequestSchema),

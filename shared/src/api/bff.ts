@@ -3,6 +3,8 @@ import {
   AgentDefaultsSchema,
   CommandSchema,
   ConversationStatusSchema,
+  McpServerConfigSchema,
+  McpServerSchema,
   ProviderSchema,
   SessionSchema,
   WorkingModeSchema,
@@ -115,3 +117,43 @@ export const BffFileSearchResponseSchema = z.object({
   files: z.array(z.string()),
 })
 export type BffFileSearchResponse = z.infer<typeof BffFileSearchResponseSchema>
+
+/**
+ * The tool servers the agent knows.
+ *
+ * The servers themselves are the versioned API's - there is one truth about
+ * what a tool server is. What this layer adds is that they come for a working
+ * directory in one answer, and that what comes back is the server rather than
+ * the document the server was written down in.
+ *
+ * That last part is the whole point: the document holds the credentials of
+ * every model provider on the host, and a client that asked for the document
+ * asked for those too.
+ */
+export const BffMcpServerListResponseSchema = z.object({
+  servers: z.array(McpServerSchema),
+})
+export type BffMcpServerListResponse = z.infer<typeof BffMcpServerListResponseSchema>
+
+/**
+ * Something the agent has taken on.
+ *
+ * A change that has been accepted is not a change that has happened: the
+ * agent is asked afterwards, and the answer is the one that counts.
+ */
+export const BffAcceptedResponseSchema = z.object({
+  accepted: z.literal(true),
+})
+export type BffAcceptedResponse = z.infer<typeof BffAcceptedResponseSchema>
+
+/**
+ * Adding a tool server.
+ *
+ * The configuration is the versioned API's - the agent is handed it in its
+ * own words - so the client never has to know how the agent spells it.
+ */
+export const BffAddMcpServerRequestSchema = z.object({
+  name: z.string().min(1),
+  config: McpServerConfigSchema,
+})
+export type BffAddMcpServerRequest = z.infer<typeof BffAddMcpServerRequestSchema>

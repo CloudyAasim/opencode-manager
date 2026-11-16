@@ -8,24 +8,31 @@ import { mcpApi } from '@/api/mcp'
 
 vi.mock('@/api/mcp', () => ({
   mcpApi: {
-    getStatusFor: vi.fn(),
-    getConfigForDirectory: vi.fn(),
-    connectDirectory: vi.fn(),
-    disconnectDirectory: vi.fn(),
-    removeAuthDirectory: vi.fn(),
+    listServers: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    authenticate: vi.fn(),
+    removeAuth: vi.fn(),
     startAuth: vi.fn(),
     completeAuth: vi.fn(),
-    getStatus: vi.fn(),
   },
 }))
 
-const config = { mcp: { alpha: { type: 'local', command: ['serve'] } } }
+const alpha = {
+  name: 'alpha',
+  state: 'connected' as const,
+  detail: null,
+  kind: 'local' as const,
+  command: ['serve'],
+  url: null,
+  oauth: null,
+}
 
 /**
  * `fetchStatus` had a `try`/`finally` and no `catch`. When the status request
  * failed, `isLoadingStatus` went back to false, `hasFetchedStatus` stayed
- * false, and `serverIds` was an empty array - so the list fell through to
- * `serverIds.map` over nothing. The panel rendered a blank box: no spinner, no
+ * false, and the list was empty - so the list fell through to
+ * `servers.map` over nothing. The panel rendered a blank box: no spinner, no
  * empty state, no error, nothing to click. The rejection itself escaped into
  * three call sites (the open effect, two mutation onSuccess) as an unhandled
  * promise rejection.
@@ -44,8 +51,7 @@ describe('loading MCP servers for a location', () => {
   }
 
   it('says so when the request fails, and offers a way back', async () => {
-    vi.mocked(mcpApi.getStatusFor).mockRejectedValue(new Error('gateway timeout'))
-    vi.mocked(mcpApi.getConfigForDirectory).mockResolvedValue(config)
+    vi.mocked(mcpApi.listServers).mockRejectedValue(new Error('gateway timeout'))
     const unhandled = vi.fn()
     window.addEventListener('unhandledrejection', unhandled)
 
@@ -56,7 +62,7 @@ describe('loading MCP servers for a location', () => {
     const retry = screen.getByRole('button', { name: /retry|重试/i })
     expect(unhandled).not.toHaveBeenCalled()
 
-    vi.mocked(mcpApi.getStatusFor).mockResolvedValue({ alpha: { status: 'connected' } })
+    vi.mocked(mcpApi.listServers).mockResolvedValue([alpha])
     await userEvent.setup().click(retry)
 
     await waitFor(() =>

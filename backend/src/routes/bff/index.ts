@@ -11,6 +11,7 @@ import { createBffWorkingModeRoutes } from './working-modes'
 import { createBffDefaultRoutes } from './defaults'
 import { createBffProviderRoutes } from './providers'
 import { createBffFileRoutes } from './files'
+import { createBffMcpRoutes } from './mcp'
 import { fail } from '../api-v1/respond'
 
 /**
@@ -59,6 +60,7 @@ export function createBffRoutes(registry: ProviderRegistry, database: Database, 
   app.route('/defaults', createBffDefaultRoutes(registry, database))
   app.route('/providers', createBffProviderRoutes(registry, database))
   app.route('/files', createBffFileRoutes(registry, database))
+  app.route('/mcp', createBffMcpRoutes(registry, database))
 
   return app
 }

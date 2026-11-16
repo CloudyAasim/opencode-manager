@@ -86,6 +86,18 @@ async function readAuthFile(): Promise<Record<string, {
   }>
 }
 
+/**
+ * An agent that answers the configuration with one thing.
+ *
+ * The client's `getJson` is generic - it answers whatever shape the caller
+ * asked for - so the stub is cast once, here, rather than at every use.
+ */
+function agentWithConfiguration(config: unknown): OpenCodeClient {
+  return createStubOpenCodeClient({
+    getJson: vi.fn(async () => config) as unknown as OpenCodeClient['getJson'],
+  })
+}
+
 describe('mcp oauth proxy routes', () => {
   beforeEach(async () => {
     fetchMock.mockReset()
@@ -249,18 +261,77 @@ describe('mcp oauth proxy routes', () => {
       expect(registrationBody.token_endpoint_auth_method).toBe('none')
     })
 
-    it('registers with client_secret_post when a clientSecret is provided', async () => {
+    it('registers with client_secret_post when the configuration names a secret', async () => {
       fetchMock
         .mockResolvedValueOnce(jsonResponse(discoveryMetadata({ registration_endpoint: REGISTRATION_ENDPOINT })))
         .mockResolvedValueOnce(jsonResponse({ client_id: 'dynamic-client', client_secret: 'dynamic-secret' }))
 
-      const res = await startFlow(createApp(), { clientSecret: 'seed-secret' })
+      // The secret is read out of the configuration the person wrote it into,
+      // not out of the request: a client that draws a list of servers has no
+      // reason to hold one, and a client that could hand one over would be a
+      // place the secret could leak from.
+      const client = agentWithConfiguration({
+        mcp: {
+          'my-server': {
+            type: 'remote',
+            url: SERVER_URL,
+            oauth: { clientSecret: 'seed-secret' },
+          },
+        },
+      })
+
+      const res = await startFlow(createApp(client))
       const registrationCall = fetchMock.mock.calls[1]!
       const registrationInit = registrationCall[1] as RequestInit
       const registrationBody = JSON.parse(registrationInit.body as string) as Record<string, unknown>
 
       expect(res.status).toBe(200)
       expect(registrationBody.token_endpoint_auth_method).toBe('client_secret_post')
+    })
+
+    it('ignores a secret the caller brought along', async () => {
+      fetchMock
+        .mockResolvedValueOnce(jsonResponse(discoveryMetadata({ registration_endpoint: REGISTRATION_ENDPOINT })))
+        .mockResolvedValueOnce(jsonResponse({ client_id: 'dynamic-client', client_secret: 'dynamic-secret' }))
+
+      const client = agentWithConfiguration({
+        mcp: { 'my-server': { type: 'remote', url: SERVER_URL } },
+      })
+
+      const res = await startFlow(createApp(client), { clientSecret: 'smuggled-in' })
+      const registrationCall = fetchMock.mock.calls[1]!
+      const registrationInit = registrationCall[1] as RequestInit
+      const registrationBody = JSON.parse(registrationInit.body as string) as Record<string, unknown>
+
+      expect(res.status).toBe(200)
+      expect(registrationBody.token_endpoint_auth_method).toBe('none')
+    })
+
+    it('authorizes the server that is written down, not the one the caller named', async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(discoveryMetadata()))
+
+      const client = agentWithConfiguration({
+        mcp: {
+          'my-server': {
+            type: 'remote',
+            url: 'https://the-written-down-one.example.com',
+            oauth: { scope: 'read things' },
+          },
+        },
+      })
+
+      const res = await startFlow(createApp(client), {
+        serverUrl: 'https://somewhere-else.example.com',
+        clientId: 'the-client',
+      })
+      const json = await res.json() as { authorizationUrl: string }
+
+      expect(res.status).toBe(200)
+      expect(new URL(json.authorizationUrl).searchParams.get('scope')).toBe('read things')
+      // the metadata was looked up at the address that is written down
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(
+        'https://the-written-down-one.example.com/.well-known/oauth-authorization-server',
+      )
     })
 
     it('returns 500 when dynamic client registration responds with an error', async () => {

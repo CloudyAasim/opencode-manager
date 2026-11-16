@@ -796,6 +796,111 @@ export const ProviderSchema = z.object({
 export type Provider = z.infer<typeof ProviderSchema>
 
 /**
+ * The state a tool server is in.
+ *
+ * The agent names five of them and they mean five different things: a server
+ * that is connected is one that may be used, a disabled one is one that may
+ * not, a failed one is one that tried and could not, and the two that ask for
+ * something are waiting for the person to do it.
+ *
+ * The sixth is what is left when the agent did not say: a server that is
+ * written down but was not spoken of. It is not 'connected' and it is not
+ * 'failed' - nobody tried.
+ */
+export const McpServerStateSchema = z.enum([
+  'connected',
+  'disabled',
+  'failed',
+  'needs_auth',
+  'needs_client_registration',
+  'unknown',
+])
+export type McpServerState = z.infer<typeof McpServerStateSchema>
+
+/**
+ * A tool server the agent can talk to.
+ *
+ * What is here is what a person needs to draw the server and to decide what to
+ * do with it: what state it is in, what went wrong when something did, and
+ * enough of its shape to know whether it runs here or somewhere else.
+ *
+ * What is not here is the rest of the agent's configuration. The document a
+ * server is configured in also holds the credentials of every model provider
+ * on the host, and a client that asks for the document asks for those too.
+ * So the client asks for the servers instead, and the secret that belongs to
+ * one of them stays where it was written down.
+ */
+export const McpServerSchema = z.object({
+  /** The name the server is configured under. */
+  name: z.string(),
+  /** What state it is in. */
+  state: McpServerStateSchema,
+  /** What the agent said went wrong, when it said anything. */
+  detail: z.string().nullable(),
+  /** Whether it runs on this host as a command, or somewhere else by address. */
+  kind: z.enum(['local', 'remote']).nullable(),
+  /** The command it runs, when it runs on this host. */
+  command: z.array(z.string()).nullable(),
+  /** The address it answers on, when it is somewhere else. */
+  url: z.string().nullable(),
+  /**
+   * What it wants to be authorized for.
+   *
+   * The secret that goes with the client id is not here: the person who starts
+   * the authorization is the one who should not have to carry it.
+   */
+  oauth: z
+    .object({
+      scope: z.string().nullable(),
+      clientId: z.string().nullable(),
+    })
+    .nullable(),
+})
+export type McpServer = z.infer<typeof McpServerSchema>
+
+/**
+ * How a tool server is to be run.
+ *
+ * This is what a person says when they add one: a command to run here, or an
+ * address to call there. The secret that belongs to an OAuth client is part of
+ * it - it is something the person typed, not something the server read out of
+ * its own storage - but it is only ever read back out of the document the
+ * person wrote it into, and never handed to a client that did not write it.
+ */
+export const McpServerConfigSchema = z.object({
+  /** Whether it runs on this host as a command, or somewhere else by address. */
+  kind: z.enum(['local', 'remote']),
+  /** Whether it may be used at all. */
+  enabled: z.boolean().nullable(),
+  /** The command it runs, when it runs on this host. */
+  command: z.array(z.string()).nullable(),
+  /** The address it answers on, when it is somewhere else. */
+  url: z.string().nullable(),
+  /** The environment it runs in, when it runs on this host. */
+  environment: z.record(z.string(), z.string()).nullable(),
+  /** The headers it is called with, when it is somewhere else. */
+  headers: z.record(z.string(), z.string()).nullable(),
+  /** How long it may take, in milliseconds. */
+  timeout: z.number().nullable(),
+  /**
+   * What it wants to be authorized for.
+   *
+   * `enabled` says whether authorization is wanted at all; the rest says what
+   * it is wanted for. A client that wants a public server leaves the id and
+   * the secret out and lets the server register one.
+   */
+  oauth: z
+    .object({
+      enabled: z.boolean(),
+      scope: z.string().nullable(),
+      clientId: z.string().nullable(),
+      clientSecret: z.string().nullable(),
+    })
+    .nullable(),
+})
+export type McpServerConfig = z.infer<typeof McpServerConfigSchema>
+
+/**
  * A command to be run in a conversation.
  *
  * The words the person typed after the command's name travel with it, because
