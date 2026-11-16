@@ -157,10 +157,3 @@ export function getMarkdownUploadManifest(manifest: ReturnType<typeof parseUploa
   return manifest.filter(entry => entry.relativePath.toLowerCase().endsWith('.md'))
 }
 
-export async function extractOpenCodeError(response: Response, defaultError: string): Promise<string> {
-  const errorObj = await response.json().catch(() => null)
-  return (errorObj && typeof errorObj === 'object' && 'error' in errorObj)
-    ? String(errorObj.error)
-    : defaultError
-}
-

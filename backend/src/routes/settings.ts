@@ -24,7 +24,7 @@ export function createSettingsRoutes(
   app.route('/', createOpenCodeLifecycleRoutes(ctx))
   app.route('/', createConfigEditorRoutes(ctx))
   app.route('/', createSkillsRoutes(ctx))
-  app.route('/', createCredentialsRoutes(ctx))
+  app.route('/', createCredentialsRoutes())
   app.route('/', createSystemRoutes(ctx))
 
   return app

@@ -420,12 +420,6 @@ export const UpdateCustomCommandSchema = z.object({
   promptTemplate: z.string().min(1).max(10000),
 })
 
-export const ConnectMcpDirectorySchema = z.object({
-  directory: z.string().min(1),
-})
-
-export const McpAuthDirectorySchema = ConnectMcpDirectorySchema
-
 export const TestSSHConnectionSchema = z.object({
   host: z.string().min(1),
   sshPrivateKey: z.string().min(1),

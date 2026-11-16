@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { MiddlewareHandler } from 'hono'
 import type { Database } from 'bun:sqlite'
 import type { OpenCodeClient } from '../services/opencode/client'
+import type { ProviderRegistry } from '../providers/registry'
 import { principalFrom, principalIsAdmin, resolveAccessRoots } from '../auth/ownership'
 import { isWithinRoots } from '../auth/access-scope'
 import type { Session } from '../auth'
@@ -186,6 +187,7 @@ export function createMcpOauthProxyRoutes(
   openCodeClient: OpenCodeClient,
   requireAuth?: MiddlewareHandler,
   db?: Database,
+  registry?: ProviderRegistry,
 ) {
   const app = new Hono()
 
@@ -379,16 +381,16 @@ export function createMcpOauthProxyRoutes(
       markMcpOAuthFlowCompleted(state, flow.serverName)
 
       try {
-        await openCodeClient.forward({
-          method: 'POST',
-          path: `/mcp/${encodeURIComponent(flow.serverName)}/connect`,
-          directory: flow.directory,
-        })
-        if (flow.directory) {
-          await openCodeClient.forward({
-            method: 'POST',
-            path: `/mcp/${encodeURIComponent(flow.serverName)}/connect`,
-          })
+        // The tokens are written; now the server has to be told to use them.
+        // That is a tool server being connected, so it is asked for the way
+        // every other tool server is asked for - through the contract, not by
+        // spelling the agent's own path here.
+        const provider = registry?.resolve(registry.defaultAgentId)
+        if (provider) {
+          await provider.connectMcpServer(flow.serverName, flow.directory ? { directory: flow.directory } : {})
+          if (flow.directory) {
+            await provider.connectMcpServer(flow.serverName, {})
+          }
         }
       } catch {
         logger.warn(`Failed to trigger reconnect for ${flow.serverName}, may need manual reconnect`)

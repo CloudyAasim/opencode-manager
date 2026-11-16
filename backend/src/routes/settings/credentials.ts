@@ -1,40 +1,12 @@
 import { Hono } from 'hono'
-import type { Context } from 'hono'
 import { z } from 'zod'
 import { logger } from '../../utils/logger'
 import { spawnWithTimeout } from '../../utils/process'
 import { validateSSHPrivateKey } from '../../utils/ssh-validation'
-import type { SettingsRouteContext } from './context'
-import * as helpers from './helpers'
-import { TestSSHConnectionSchema, ConnectMcpDirectorySchema, McpAuthDirectorySchema } from '@opencode-manager/shared/schemas'
-import { resolveAccessRoots } from '../../auth/ownership'
-import { isWithinRoots } from '../../auth/access-scope'
+import { TestSSHConnectionSchema } from '@opencode-manager/shared/schemas'
 
-export function createCredentialsRoutes(ctx: SettingsRouteContext) {
-  const { openCodeClient } = ctx
+export function createCredentialsRoutes() {
   const app = new Hono()
-
-  /**
-   * The four MCP endpoints below take `directory` from the request body and
-   * hand it to `openCodeClient.forward`, which puts it straight into a query
-   * parameter - no validation of its own.
-   *
-   * The MCP server list, its connections and its OAuth state are all read per
-   * directory, so naming someone else's repository answered questions about
-   * their project: which MCP servers it has, what they are connected to, and
-   * (through the authenticate endpoint) a flow started in their context. It
-   * could also delete MCP auth belonging to a directory the caller does not own.
-   *
-   * The check is the same one `/skills` and the session list already use -
-   * `isWithinRoots` against the caller's own roots - so this is not a new rule,
-   * it is the existing one applied where it had been missed.
-   */
-  function directoryOutOfScope(c: Context, directory: string | undefined): boolean {
-    const principal = ctx.currentPrincipal(c)
-    if (!principal) return true
-    if (!directory) return false
-    return !isWithinRoots(directory, resolveAccessRoots(ctx.db, principal))
-  }
 
   app.post('/test-ssh', async (c) => {
     try {
@@ -149,126 +121,6 @@ export function createCredentialsRoutes(ctx: SettingsRouteContext) {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to test SSH connection'
       }, 500)
-    }
-  })
-
-  app.post('/mcp/:name/connectdirectory', async (c) => {
-    try {
-      const serverName = c.req.param('name')
-      const body = await c.req.json()
-      const { directory } = ConnectMcpDirectorySchema.parse(body)
-      if (directoryOutOfScope(c, directory)) {
-        return c.json({ error: 'Forbidden' }, 403)
-      }
-      
-      const response = await (openCodeClient).forward({
-        method: 'POST',
-        path: `/mcp/${encodeURIComponent(serverName)}/connect`,
-        directory,
-      })
-      
-      if (!response.ok) {
-        const errorMsg = await helpers.extractOpenCodeError(response, 'Failed to connect MCP server')
-        return c.json({ error: errorMsg }, 400)
-      }
-      
-      return c.json({ success: true })
-    } catch (error) {
-      logger.error('Failed to connect MCP server for directory:', error)
-      if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.issues }, 400)
-      }
-      return c.json({ error: 'Failed to connect MCP server' }, 500)
-    }
-  })
-
-  app.post('/mcp/:name/disconnectdirectory', async (c) => {
-    try {
-      const serverName = c.req.param('name')
-      const body = await c.req.json()
-      const { directory } = ConnectMcpDirectorySchema.parse(body)
-      if (directoryOutOfScope(c, directory)) {
-        return c.json({ error: 'Forbidden' }, 403)
-      }
-      
-      const response = await (openCodeClient).forward({
-        method: 'POST',
-        path: `/mcp/${encodeURIComponent(serverName)}/disconnect`,
-        directory,
-      })
-      
-      if (!response.ok) {
-        const errorMsg = await helpers.extractOpenCodeError(response, 'Failed to disconnect MCP server')
-        return c.json({ error: errorMsg }, 400)
-      }
-      
-      return c.json({ success: true })
-    } catch (error) {
-      logger.error('Failed to disconnect MCP server for directory:', error)
-      if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.issues }, 400)
-      }
-      return c.json({ error: 'Failed to disconnect MCP server' }, 500)
-    }
-  })
-
-  app.post('/mcp/:name/authdirectedir', async (c) => {
-    try {
-      const serverName = c.req.param('name')
-      const body = await c.req.json()
-      const { directory } = McpAuthDirectorySchema.parse(body)
-      if (directoryOutOfScope(c, directory)) {
-        return c.json({ error: 'Forbidden' }, 403)
-      }
-      
-      const response = await (openCodeClient).forward({
-        method: 'POST',
-        path: `/mcp/${encodeURIComponent(serverName)}/auth/authenticate`,
-        directory,
-      })
-      
-      if (!response.ok) {
-        const errorMsg = await helpers.extractOpenCodeError(response, 'Failed to authenticate MCP server')
-        return c.json({ error: errorMsg }, 400)
-      }
-      
-      return c.json(await response.json())
-    } catch (error) {
-      logger.error('Failed to authenticate MCP server for directory:', error)
-      if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.issues }, 400)
-      }
-      return c.json({ error: 'Failed to authenticate MCP server' }, 500)
-    }
-  })
-
-  app.delete('/mcp/:name/authdir', async (c) => {
-    try {
-      const serverName = c.req.param('name')
-      const body = await c.req.json()
-      const { directory } = ConnectMcpDirectorySchema.parse(body)
-      if (directoryOutOfScope(c, directory)) {
-        return c.json({ error: 'Forbidden' }, 403)
-      }
-      
-      const response = await (openCodeClient).forward({
-        method: 'DELETE',
-        path: `/mcp/${encodeURIComponent(serverName)}/auth`,
-        directory,
-      })
-      
-      if (!response.ok) {
-        const errorMsg = await helpers.extractOpenCodeError(response, 'Failed to remove MCP auth')
-        return c.json({ error: errorMsg }, 400)
-      }
-      
-      return c.json({ success: true })
-    } catch (error) {
-      logger.error('Failed to remove MCP auth for directory:', error)
-      if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.issues }, 400)
-      }
-      return c.json({ error: 'Failed to remove MCP auth' }, 500)
     }
   })
 

@@ -4,7 +4,9 @@ import { dirname, join } from 'path'
 import type { MiddlewareHandler } from 'hono'
 import type { Database } from 'bun:sqlite'
 import { createMcpOauthProxyRoutes } from '../../src/routes/mcp-oauth-proxy'
+import { ProviderRegistry } from '../../src/providers/registry'
 import { createStubOpenCodeClient } from '../helpers/stub-opencode-client'
+import { FakeAgentProvider } from '../helpers/fake-agent-provider'
 import { createTestDb } from '../helpers/assistant-workspace'
 import { getUserSettingPath } from '@opencode-manager/shared/config/env'
 import type { OpenCodeClient } from '../../src/services/opencode/client'
@@ -58,8 +60,23 @@ function createApp(
   client: OpenCodeClient = createStubOpenCodeClient(),
   requireAuth?: MiddlewareHandler,
   db?: Database,
+  registry?: ProviderRegistry,
 ) {
-  return createMcpOauthProxyRoutes(client, requireAuth, db)
+  return createMcpOauthProxyRoutes(client, requireAuth, db, registry)
+}
+
+/**
+ * A registry with one agent behind it.
+ *
+ * The reconnect at the end of an OAuth flow is a tool server being connected,
+ * so it is asked for through the contract. The fake provider records what it
+ * was asked, which lets the test read the working directory out of the
+ * request rather than out of the path it happened to travel by.
+ */
+function registryWith(provider: FakeAgentProvider): ProviderRegistry {
+  const registry = new ProviderRegistry()
+  registry.register(provider, { default: true })
+  return registry
 }
 
 async function startFlow(
@@ -474,8 +491,8 @@ describe('mcp oauth proxy routes', () => {
     })
 
     it('writes tokens to mcp-auth.json and reconnects with the directory', async () => {
-      const forward = vi.fn(async () => new Response('{}', { status: 200 }))
-      const app = createApp(createStubOpenCodeClient({ forward }))
+      const provider = new FakeAgentProvider({ id: 'fake' })
+      const app = createApp(createStubOpenCodeClient(), undefined, undefined, registryWith(provider))
       fetchMock.mockResolvedValueOnce(jsonResponse(discoveryMetadata()))
       const started = await startFlow(app, { clientId: 'client-123', directory: '/tmp/project' })
       const { flowId } = await started.json() as { flowId: string }
@@ -500,16 +517,15 @@ describe('mcp oauth proxy routes', () => {
       expect(auth['my-server']!.tokens.scope).toBe('read write')
       expect(auth['my-server']!.tokens.expiresAt).toBeGreaterThanOrEqual(before + 3600)
       expect(auth['my-server']!.clientInfo).toEqual({ clientId: 'client-123' })
-      expect(forward).toHaveBeenCalledTimes(2)
-      expect(forward).toHaveBeenNthCalledWith(1, {
-        method: 'POST',
-        path: '/mcp/my-server/connect',
-        directory: '/tmp/project',
-      })
-      expect(forward).toHaveBeenNthCalledWith(2, {
-        method: 'POST',
-        path: '/mcp/my-server/connect',
-      })
+      // The server is connected twice: once where the flow was authorized,
+      // and once where nobody named a directory - the agent keeps a copy of
+      // the server for the workspaces that do not name one.
+      const connects = provider.calls.filter((call) => call.method === 'connectMcpServer')
+      expect(connects).toHaveLength(2)
+      expect(connects[0]!.args).toEqual(['my-server'])
+      expect(connects[0]!.context).toEqual({ directory: '/tmp/project' })
+      expect(connects[1]!.args).toEqual(['my-server'])
+      expect(connects[1]!.context).toEqual({})
       expect(await statusRes.json()).toEqual({ status: 'completed', serverName: 'my-server' })
     })
 
@@ -532,10 +548,9 @@ describe('mcp oauth proxy routes', () => {
     })
 
     it('still reports success when the reconnect trigger fails', async () => {
-      const forward = vi.fn(async () => {
-        throw new Error('reconnect failed')
-      })
-      const app = createApp(createStubOpenCodeClient({ forward }))
+      const provider = new FakeAgentProvider({ id: 'fake' })
+      provider.failWith = new Error('reconnect failed')
+      const app = createApp(createStubOpenCodeClient(), undefined, undefined, registryWith(provider))
       fetchMock.mockResolvedValueOnce(jsonResponse(discoveryMetadata()))
       const started = await startFlow(app, { clientId: 'client-123' })
       const { flowId } = await started.json() as { flowId: string }
@@ -545,7 +560,7 @@ describe('mcp oauth proxy routes', () => {
 
       expect(res.status).toBe(200)
       expect(await res.text()).toContain('Authentication Successful')
-      expect(forward).toHaveBeenCalledTimes(1)
+      expect(provider.calls.filter((call) => call.method === 'connectMcpServer')).toHaveLength(1)
     })
 
     it('sends the client secret during token exchange when one was registered', async () => {

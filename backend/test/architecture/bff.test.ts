@@ -7,6 +7,15 @@ const BFF_DIR = path.join(repoRoot, 'backend/src/routes/bff')
 const BFF_DOC = path.join(repoRoot, 'docs/api/bff.md')
 const BFF_SHAPE_FILE = path.join(repoRoot, 'shared/src/api/bff.ts')
 const FRONTEND_DIR = path.join(repoRoot, 'frontend/src')
+const ROUTES_DIR = path.join(repoRoot, 'backend/src/routes')
+/**
+ * The list of what the browser may ask the agent for.
+ *
+ * It is the one place that knows the agent's paths on purpose: it knows them
+ * to refuse them. So it is not a door, and the gate about doors does not read
+ * it as one.
+ */
+const PROXY_POLICY_FILE = path.join(ROUTES_DIR, 'opencode-proxy-policy.ts')
 const MOUNT = '/api/bff'
 
 /**
@@ -117,6 +126,23 @@ function frontendSources(): string[] {
     }
   }
   walk(FRONTEND_DIR)
+  return found.sort()
+}
+
+/** Every route file the manager serves, the layer's own included. */
+function routeFiles(): string[] {
+  const found: string[] = []
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        walk(full)
+      } else if (/\.ts$/.test(entry.name) && !/\.(test|spec)\.ts$/.test(entry.name)) {
+        found.push(full)
+      }
+    }
+  }
+  walk(ROUTES_DIR)
   return found.sort()
 }
 
@@ -886,6 +912,51 @@ describe('给前端的那一层', () => {
         `前端还在自己挖待办：${offenders.join(', ')}`,
         '待办是版本化的话，写在写它的那次调用里：state.todos。',
         '要从 agent 留下的东西里挖，就等于又拿了一份 agent 的话。',
+      ].join('\n'),
+    ).toEqual([])
+  })
+
+  it('工具服务器这件事，manager 不许再自己开门', () => {
+    // Connecting a tool server, disconnecting it, asking it to authorize
+    // itself and taking that authorization away were four doors of the
+    // manager's own: they took the caller straight to the agent and answered
+    // in the manager's old words ({success: true}). This layer says the same
+    // four things in the versioned dialect - the same calls to the agent, the
+    // same rule about whose directory it lands in, and one more: a change
+    // with no directory is everybody's business, and only the administrator
+    // may make one.
+    //
+    // So neither of the two ways this could come back is allowed: the manager
+    // gets no door of its own for a tool server, and it does not spell the
+    // agent's path for one either. The path belongs to the contract.
+    //
+    // The proxy's list is not one of them: that list knows the agent's paths
+    // on purpose, because knowing them is how it refuses them.
+    const offenders: string[] = []
+
+    for (const file of routeFiles()) {
+      if (file === PROXY_POLICY_FILE) continue
+      const source = read(file)
+      source.split(/\r?\n/).forEach((line, index) => {
+        const door = line.match(/app\.(?:get|post|put|patch|delete)\(\s*'([^']*)'/)
+        if (door && /mcp/i.test(door[1]!)) {
+          offenders.push(`${path.relative(repoRoot, file)}:${index + 1} 还有一扇工具服务器的门：${door[1]}`)
+        }
+        // The agent's path is written with escaped slashes when it is a
+        // pattern, so the backslashes go before the path is looked for.
+        const spelled = line.replace(/\\\//g, '/')
+        if (/\/mcp\/.*(?:connect|disconnect|auth)/.test(spelled)) {
+          offenders.push(`${path.relative(repoRoot, file)}:${index + 1} 还在自己拼 agent 的工具服务器那条路`)
+        }
+      })
+    }
+
+    expect(
+      offenders,
+      [
+        `manager 的路由里还在自己开工具服务器的门：${offenders.join(', ')}`,
+        '工具服务器这件事是这一层的话：要问就问这一层，它用版本化的话回答。',
+        'agent 的那条路是契约那一头的事（provider.connectMcpServer 那一族）。',
       ].join('\n'),
     ).toEqual([])
   })
