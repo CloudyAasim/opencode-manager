@@ -24,7 +24,6 @@ import { Card } from '@/components/ui/card'
 
 interface ModelQuickSelectProps {
   serverUrl: string | null | undefined
-  opcodeUrl: string | null | undefined
   directory?: string
   disabled?: boolean
   children: React.ReactNode
@@ -198,7 +197,6 @@ function VirtualizedList<T>({
 
 export function ModelQuickSelect({
   serverUrl,
-  opcodeUrl,
   directory,
   disabled,
   children,
@@ -209,11 +207,11 @@ export function ModelQuickSelect({
   const deferredSearchQuery = useDeferredValue(searchQuery)
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null)
   const { t } = useI18n()
-  const { model, modelString, recentModels, favoriteModels, setModel, toggleFavorite, removeRecentModel } = useModelSelection(serverUrl, opcodeUrl, directory)
-  const { availableVariants, currentVariant, setVariant, clearVariant, hasVariants } = useVariants(serverUrl, opcodeUrl, directory)
+  const { model, modelString, recentModels, favoriteModels, setModel, toggleFavorite, removeRecentModel } = useModelSelection(serverUrl, directory)
+  const { availableVariants, currentVariant, setVariant, clearVariant, hasVariants } = useVariants(serverUrl, directory)
 
   const { data: providersData } = useQuery({
-    queryKey: providersQueryKey(serverUrl, directory),
+    queryKey: providersQueryKey(directory),
     queryFn: () => getProviders(directory),
     staleTime: 30000,
   })

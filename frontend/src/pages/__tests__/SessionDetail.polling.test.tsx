@@ -134,7 +134,7 @@ const findPendingActionsQuery = (queryClient: QueryClient): Query | undefined =>
   queryClient
     .getQueryCache()
     .getAll()
-    .find((query) => query.queryKey[1] === 'pending-actions')
+    .find((query) => query.queryKey[0] === 'pending-actions')
 
 const HEALTHY_REPO = {
   id: 1,

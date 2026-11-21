@@ -3,7 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useAgentDefaults } from './useOpenCode'
 import { useModelStore, modelExists, type ModelSelection } from '@/stores/modelStore'
 import { showErrorToast } from '@/lib/error-toast'
-import { stopQueries } from '@/lib/queryInvalidation'
+import { modelStateQueryKey, stopQueries } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
 import { addOpenCodeRecentModel, findSelectedModel, getOpenCodeModelState, getProviders, providersQueryKey, removeOpenCodeRecentModel, toggleOpenCodeFavoriteModel, type OpenCodeModelState } from '@/api/providers'
 
@@ -20,15 +20,12 @@ interface UseModelSelectionResult {
   isModelStateLoading: boolean
 }
 
-const modelStateQueryKey = ['opencode', 'model-state']
-
 const isSameModel = (left: ModelSelection, right: ModelSelection) => (
   left.providerID === right.providerID && left.modelID === right.modelID
 )
 
 export function useModelSelection(
   serverUrl: string | null | undefined,
-  opcodeUrl: string | null | undefined,
   directory?: string
 ): UseModelSelectionResult {
   const { data: defaults } = useAgentDefaults(serverUrl, directory)
@@ -36,7 +33,7 @@ export function useModelSelection(
   const { t } = useI18n()
 
   const { data: providersData } = useQuery({
-    queryKey: providersQueryKey(serverUrl, directory),
+    queryKey: providersQueryKey(directory),
     queryFn: () => getProviders(directory),
     enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 30000,
@@ -52,7 +49,7 @@ export function useModelSelection(
   } = useModelStore()
 
   const { data: modelState, isLoading: isModelStateLoading } = useQuery({
-    queryKey: [...modelStateQueryKey, opcodeUrl, directory],
+    queryKey: modelStateQueryKey(directory),
     queryFn: () => getOpenCodeModelState(),
     enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 30000,
@@ -63,8 +60,8 @@ export function useModelSelection(
     mutationFn: addOpenCodeRecentModel,
     onSuccess: (state) => {
       syncModelState(state)
-      queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], state)
-      queryClient.invalidateQueries({ queryKey: [...modelStateQueryKey, opcodeUrl, directory] })
+      queryClient.setQueryData(modelStateQueryKey(directory), state)
+      queryClient.invalidateQueries({ queryKey: modelStateQueryKey(directory) })
     },
     onError: (error) => {
       showErrorToast(error, t('misc.modelQuickSelect.addToFavoritesFailed'))
@@ -75,8 +72,8 @@ export function useModelSelection(
     mutationFn: toggleOpenCodeFavoriteModel,
     onSuccess: (state) => {
       syncModelState(state)
-      queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], state)
-      queryClient.invalidateQueries({ queryKey: [...modelStateQueryKey, opcodeUrl, directory] })
+      queryClient.setQueryData(modelStateQueryKey(directory), state)
+      queryClient.invalidateQueries({ queryKey: modelStateQueryKey(directory) })
     },
     onError: (error) => {
       showErrorToast(error, t('misc.modelQuickSelect.removeFromRecentFailed'))
@@ -86,7 +83,7 @@ export function useModelSelection(
   const removeRecentMutation = useMutation({
     mutationFn: removeOpenCodeRecentModel,
     onMutate: async (removedModel) => {
-      const queryKey = [...modelStateQueryKey, opcodeUrl, directory]
+      const queryKey = modelStateQueryKey(directory)
       await stopQueries(queryClient, { queryKey })
       const previousState = queryClient.getQueryData<OpenCodeModelState>(queryKey)
 
@@ -103,13 +100,13 @@ export function useModelSelection(
     },
     onSuccess: (state) => {
       syncModelState(state)
-      queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], state)
-      queryClient.invalidateQueries({ queryKey: [...modelStateQueryKey, opcodeUrl, directory] })
+      queryClient.setQueryData(modelStateQueryKey(directory), state)
+      queryClient.invalidateQueries({ queryKey: modelStateQueryKey(directory) })
     },
     onError: (_error, _removedModel, context) => {
       if (context?.previousState) {
         syncModelState(context.previousState)
-        queryClient.setQueryData([...modelStateQueryKey, opcodeUrl, directory], context.previousState)
+        queryClient.setQueryData(modelStateQueryKey(directory), context.previousState)
       }
     },
   })

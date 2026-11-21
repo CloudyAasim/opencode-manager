@@ -1080,12 +1080,12 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
   const appliedSessionModelRef = useRef<string | undefined>(undefined)
 
   const { data: providersData } = useQuery({
-    queryKey: providersQueryKey(API_BASE_URL, directory),
+    queryKey: providersQueryKey(directory),
     queryFn: () => getProviders(directory),
     staleTime: 30000,
   })
 
-  const { model, modelString, setModel: setStoredModel, restoreSessionModel } = useModelSelection(API_BASE_URL, opcodeUrl, directory)
+  const { model, modelString, setModel: setStoredModel, restoreSessionModel } = useModelSelection(API_BASE_URL, directory)
   const setStoreVariant = useModelStore((state) => state.setVariant)
   const clearStoreVariant = useModelStore((state) => state.clearVariant)
 
@@ -1123,7 +1123,7 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
   const isMobile = useMobile()
   const { setShowDialog, hasForSession: hasPermissionsForSession } = usePermissions()
   const hasPendingPermissionForSession = hasPermissionsForSession(sessionID)
-  const { hasVariants, currentVariant, cycleVariant } = useVariants(API_BASE_URL, opcodeUrl, directory)
+  const { hasVariants, currentVariant, cycleVariant } = useVariants(API_BASE_URL, directory)
   useShortcutAction('variantCycle', () => {
     if (hasVariants) {
       cycleVariant()
@@ -1360,7 +1360,6 @@ return (
                !hideSecondaryButtons && (
                   <ModelQuickSelect
                     serverUrl={API_BASE_URL}
-                    opcodeUrl={opcodeUrl}
                     directory={directory}
                   >
 <Button

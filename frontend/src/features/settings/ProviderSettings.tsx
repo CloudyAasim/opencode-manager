@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { Check, X, Shield, ChevronDown, ChevronRight, Key, Search, Pencil, Trash2, KeyRound, Plug, SearchX } from 'lucide-react'
 import { PanelMessage } from '@/components/ui/panel-message'
-import { providerCredentialsApi, getProviders, findProvider } from '@/api/providers'
+import { providerCredentialsApi, getProviders, findProvider, providersQueryKey } from '@/api/providers'
 import type { Provider } from '@/api/providers'
 import { oauthApi, type ProviderOAuthAuthorization } from '@/api/oauth'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -35,7 +35,7 @@ export function ProviderSettings() {
   const queryClient = useQueryClient()
 
   const { data: providersData, isLoading: providersLoading } = useQuery({
-    queryKey: ['providers'],
+    queryKey: providersQueryKey(),
     queryFn: () => getProviders(),
     staleTime: 300000,
   })

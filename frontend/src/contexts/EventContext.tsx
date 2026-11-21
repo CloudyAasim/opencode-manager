@@ -10,7 +10,7 @@ import { showToast } from '@/lib/toast'
 import { openCodeEventStream, type EventStreamHealthState } from '@/lib/opencode-event-stream'
 import { API_BASE_URL } from '@/config'
 import { addToSessionKeyedState, removeFromSessionKeyedState } from '@/lib/sessionKeyedState'
-import { invalidateRepoGitCachesDebounced, isSessionListQueryKey } from '@/lib/queryInvalidation'
+import { invalidateRepoGitCachesDebounced, isSessionListQueryKey, messagesQuerySession, sessionQuerySession } from '@/lib/queryInvalidation'
 import { optimisticallyErrorToolPart } from '@/lib/optimisticToolError'
 import { useI18n } from '@/lib/i18n'
 
@@ -206,7 +206,12 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
     for (const query of queries) {
       const key = query.queryKey
-      if (key[0] === 'opencode' && key[1] === 'session' && key.length >= 5) {
+      // The session is filed under the layer the client talks to. It used to
+      // be looked for under the agent's own name, which is where it went to
+      // be asked for before it moved to the layer - so this loop never found
+      // anything, and the directory of a session had to be found some other
+      // way or not at all.
+      if (sessionQuerySession(key) === sessionID) {
         const sessionData = query.state.data as { id: string } | undefined
         if (sessionData?.id === sessionID) {
           const directory = key[4] as string
@@ -532,16 +537,17 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
               event.properties.requestId as string,
               sessionID
             )
-            queryClient.invalidateQueries({ 
-              queryKey: ['opencode', 'messages'],
-              predicate: (query) => query.queryKey.includes(sessionID)
+            // The messages of that conversation have to be asked for again:
+            // the question was part of them, and it has just been answered.
+            //
+            // They used to be refreshed under the agent's own name, which is
+            // where they went to be asked for before they moved to the layer -
+            // so the refresh was landing on nothing, and the answer never
+            // showed up until the conversation was reloaded by hand.
+            queryClient.invalidateQueries({
+              predicate: (query) => messagesQuerySession(query.queryKey) === sessionID,
             })
           }
-          break
-        case 'lsp.updated':
-          queryClient.invalidateQueries({
-            queryKey: ['opencode', 'lsp']
-          })
           break
         case 'vcs.branch.updated': {
           const repo = reposRef.current?.find((candidate) => repoMatchesDirectory(candidate, event.directory))

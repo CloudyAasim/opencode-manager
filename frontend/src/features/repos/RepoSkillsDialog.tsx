@@ -10,7 +10,7 @@ import { SkillInstallDialog } from '@/features/settings/SkillInstallDialog'
 import { settingsApi } from '@/api/settings'
 import { useLoadSkill } from '@/hooks/useOpenCode'
 import { useDeleteSkill } from '@/hooks/useDeleteSkill'
-import { invalidateSkillCaches } from '@/lib/queryInvalidation'
+import { invalidateSkillCaches, skillsQueryKey } from '@/lib/queryInvalidation'
 import type { SkillFileInfo } from '@opencode-manager/shared'
 import { useI18n } from '@/lib/i18n'
 import { API_BASE_URL } from '@/config'
@@ -38,10 +38,10 @@ export function RepoSkillsDialog({
   const queryClient = useQueryClient()
   const [installDialogOpen, setInstallDialogOpen] = useState(false)
   const { deleteSkill, setDeleteSkill, confirmDelete, isDeleting } = useDeleteSkill()
-  const skillsQueryKey = directory ? ['settings', 'skills', 'directory', directory] : ['settings', 'skills', repoId]
+  const skillsKey = skillsQueryKey(repoId, directory)
 
   const { isLoading, data, error } = useQuery({
-    queryKey: skillsQueryKey,
+    queryKey: skillsKey,
     queryFn: () => settingsApi.listManagedSkills(repoId, directory),
     enabled: open && (!!repoId || !!directory),
     staleTime: 30000,

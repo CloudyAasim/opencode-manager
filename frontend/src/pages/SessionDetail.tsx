@@ -466,7 +466,7 @@ export function SessionDetail() {
     )
     return created.id
   }, [createSession, navigate, repoId, activeTab, isAssistantSession]);
-  const { model, modelString } = useModelSelection(API_BASE_URL, opcodeUrl, sessionDirectory);
+  const { model, modelString } = useModelSelection(API_BASE_URL, sessionDirectory);
   const isEditingMessage = useUIState((state) => state.isEditingMessage);
   const setActivePromptFileBasePath = useUIState((state) => state.setActivePromptFileBasePath);
   // The file browser itself is mounted once, by RepoOverlays; the page
@@ -561,7 +561,7 @@ export function SessionDetail() {
   }, [sessionDirectory, sessionId, syncPermissionsForSession, syncQuestionsForSession])
 
   useQuery({
-    queryKey: pendingActionsQueryKey(opcodeUrl, sessionId, sessionDirectory),
+    queryKey: pendingActionsQueryKey(sessionId, sessionDirectory),
     queryFn: async () => {
       await syncPendingActionsForSession()
       return null

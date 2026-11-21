@@ -3,6 +3,51 @@ import type { GitStatusResponse } from '@/types/git'
 import { PROVIDERS_QUERY_PREFIX } from '@/api/providers'
 
 /**
+ * The keys the client files things under.
+ *
+ * A key is a name, and a name that is written down in two places is two names
+ * waiting to drift apart. It happened: the messages used to be filed under the
+ * agent's own name, then the data moved to the layer the client talks to and
+ * the key moved with it - but three places kept the old spelling, and the
+ * invalidations that used those spellings went on refreshing nothing at all.
+ *
+ * So a key that more than one file has to agree on is written down here, once.
+ * The file that writes it and the file that refreshes it both take it from
+ * here, and a key that is written down twice cannot be written down twice.
+ *
+ * The first segment says which door the answer came out of. `bff` is the
+ * layer the client talks to; the rest are the manager's own doors, and some
+ * of them are about the agent's own files - `opencode-config` is the agent's
+ * configuration file, and it lives in the manager.
+ *
+ * A first segment that is just `opencode` would mean "the agent itself" -
+ * and the client stopped asking the agent itself, so a key that still says so
+ * is a key that was left behind when the data moved.
+ */
+
+/** The tool servers the manager knows about. */
+export const MCP_SERVERS_KEY = ['mcp', 'servers'] as const
+
+/** The commands the agent offers. They come from the layer, not from the agent. */
+export const COMMANDS_KEY_PREFIX = ['bff', 'commands'] as const
+
+/** The skills of a repository. */
+export const SKILLS_KEY_PREFIX = ['settings', 'skills'] as const
+
+/** The agent's instruction file. */
+export const AGENTS_MD_KEY = ['agents-md'] as const
+
+/**
+ * The model state - the recently used and favourite models the manager keeps.
+ *
+ * It used to be filed under the agent's name, with the agent's address in the
+ * key. The manager keeps it, and the agent's address says nothing about it:
+ * two clients pointed at two agents but one manager were looking at two slots
+ * for one answer.
+ */
+export const MODEL_STATE_KEY_PREFIX = ['model-state'] as const
+
+/**
  * Stop whatever is in flight for these queries, and do not treat it as a
  * failure when there was something to stop.
  *
@@ -67,8 +112,7 @@ const PROBE = '__probe__'
  * their call sites - three files' worth of a shape that had no owner.
  *
  * The conversation and its messages come from the layer the client talks to,
- * so they are filed under its name. The pending requests have not moved yet:
- * they are still the agent's, and they are still filed under its name.
+ * so they are filed under its name.
  */
 export function sessionQueryKey(
   serverUrl: string | null | undefined,
@@ -78,21 +122,61 @@ export function sessionQueryKey(
   return ['bff', 'session', serverUrl, sessionID, directory]
 }
 
+/**
+ * The pending requests of one conversation.
+ *
+ * They are asked of the layer the client talks to, so they are filed under
+ * its name. The agent's address used to be in the key, and the agent's
+ * address says nothing about them: two clients pointed at two agents but one
+ * manager were looking at two slots for one answer.
+ */
 export function pendingActionsQueryKey(
-  opcodeUrl: string | null | undefined,
   sessionID: string | null | undefined,
   directory: string | null | undefined,
 ) {
-  return ['opencode', 'pending-actions', opcodeUrl, sessionID, directory]
+  return ['pending-actions', sessionID, directory]
+}
+
+/**
+ * The model state, as it is cached.
+ *
+ * It is the manager's own, so it is filed under the manager's own name - and
+ * the agent's address is not part of it.
+ */
+export function modelStateQueryKey(directory: string | null | undefined) {
+  return [...MODEL_STATE_KEY_PREFIX, directory]
+}
+
+/**
+ * The commands of the agent, as they are cached.
+ *
+ * The commands come from the layer the client talks to, so they are filed
+ * under its name.
+ */
+export function commandsQueryKey(serverUrl: string | null | undefined, locale: string) {
+  return [...COMMANDS_KEY_PREFIX, serverUrl, locale]
+}
+
+/**
+ * The skills of a repository, as they are cached.
+ *
+ * A repository may be named by its directory or by its number; the two are
+ * different slots because they are different questions.
+ */
+export function skillsQueryKey(
+  repoId: number | null | undefined,
+  directory: string | null | undefined,
+) {
+  return directory
+    ? [...SKILLS_KEY_PREFIX, 'directory', directory]
+    : [...SKILLS_KEY_PREFIX, repoId]
 }
 
 export function invalidateProviderCaches(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['provider-credentials'] })
   queryClient.invalidateQueries({ queryKey: ['provider-auth-methods'] })
-  queryClient.invalidateQueries({ queryKey: ['providers'] })
   queryClient.invalidateQueries({ queryKey: ['providers-with-models'] })
   queryClient.invalidateQueries({ queryKey: [...PROVIDERS_QUERY_PREFIX] })
-  queryClient.invalidateQueries({ queryKey: ['providers-for-execution-model'] })
 }
 
 interface ConfigInvalidationOptions {
@@ -103,15 +187,18 @@ export function invalidateConfigCaches(
   queryClient: QueryClient,
   options: ConfigInvalidationOptions = {},
 ) {
-  queryClient.invalidateQueries({ queryKey: ['opencode', 'config'] })
-  queryClient.invalidateQueries({ queryKey: ['opencode', 'agents'] })
-  queryClient.invalidateQueries({ queryKey: ['opencode', 'commands'] })
+  // The commands of the agent come out of its configuration, so a change to
+  // the configuration has to refresh them. They used to be refreshed under the
+  // agent's own name, which is where they went to be asked for before they
+  // moved to the layer - so the refresh was landing on nothing, and the
+  // command list kept the commands of the old configuration.
+  queryClient.invalidateQueries({ queryKey: [...COMMANDS_KEY_PREFIX] })
   if (!options.skipOpenCodeConfig) {
     queryClient.invalidateQueries({ queryKey: ['opencode-config'] })
   }
   queryClient.invalidateQueries({ queryKey: ['health'] })
-  queryClient.invalidateQueries({ queryKey: ['mcp-status'] })
-  queryClient.invalidateQueries({ queryKey: ['opencode-skills'] })
+  queryClient.invalidateQueries({ queryKey: [...MCP_SERVERS_KEY] })
+  queryClient.invalidateQueries({ queryKey: [...SKILLS_KEY_PREFIX] })
   queryClient.invalidateQueries({ queryKey: ['managed-skills'] })
   queryClient.invalidateQueries({ queryKey: ['opencode-directory-files'] })
   invalidateProviderCaches(queryClient)
@@ -131,9 +218,8 @@ export function refreshOpenCodeServerCaches(queryClient: QueryClient, version?: 
 }
 
 export function invalidateSkillCaches(queryClient: QueryClient) {
-  queryClient.invalidateQueries({ queryKey: ['settings', 'skills'] })
+  queryClient.invalidateQueries({ queryKey: [...SKILLS_KEY_PREFIX] })
   queryClient.invalidateQueries({ queryKey: ['managed-skills'] })
-  queryClient.invalidateQueries({ queryKey: ['opencode-skills'] })
   queryClient.invalidateQueries({ queryKey: ['health'] })
 }
 

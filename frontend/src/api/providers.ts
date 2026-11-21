@@ -153,14 +153,19 @@ export interface ProvidersResult {
  * The catalogue comes from the layer the client talks to, so the slot is filed
  * under its name. It used to be filed under the agent's own name and address,
  * which is where it went to be asked for before it moved to the layer.
+ *
+ * The address is not part of the key any more, because the answer does not
+ * depend on it: the catalogue is asked of this machine, always. Two clients
+ * pointed at two agents but one manager were looking at two slots for one
+ * answer - and the check that asks whether a picked model is still there read
+ * one of them, so it could read a slot nobody had written.
  */
 export const PROVIDERS_QUERY_PREFIX = ["bff", "providers"] as const;
 
-export function providersQueryKey(
-  serverUrl: string | null | undefined,
-  directory: string | null | undefined,
-) {
-  return [...PROVIDERS_QUERY_PREFIX, serverUrl, directory];
+export function providersQueryKey(directory?: string | null) {
+  return directory
+    ? [...PROVIDERS_QUERY_PREFIX, directory]
+    : [...PROVIDERS_QUERY_PREFIX];
 }
 
 /**
@@ -178,10 +183,9 @@ export function providersQueryKey(
  */
 export function readCatalogue(
   queryClient: QueryClient,
-  serverUrl: string | null | undefined,
   directory: string | null | undefined,
 ): ProvidersResult | undefined {
-  return queryClient.getQueryData<ProvidersResult>(providersQueryKey(serverUrl, directory));
+  return queryClient.getQueryData<ProvidersResult>(providersQueryKey(directory));
 }
 
 /**

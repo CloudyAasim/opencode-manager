@@ -22,7 +22,7 @@ export const useContextUsage = (serverUrl: string | null | undefined, sessionID:
   // The key is the one the model pickers use, so that the catalogue is asked
   // for once rather than once per place that draws it.
   const { data: providersData } = useQuery({
-    queryKey: providersQueryKey(serverUrl, directory),
+    queryKey: providersQueryKey(directory),
     queryFn: () => getProviders(directory),
     enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 5 * 60 * 1000,

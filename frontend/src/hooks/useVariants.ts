@@ -16,14 +16,13 @@ export interface UseVariantsResult {
 
 export function useVariants(
   serverUrl: string | null | undefined,
-  opcodeUrl: string | null | undefined,
   directory?: string
 ): UseVariantsResult {
-  const { model } = useModelSelection(serverUrl, opcodeUrl, directory)
+  const { model } = useModelSelection(serverUrl, directory)
   const { setVariant: setStoreVariant, clearVariant: clearStoreVariant } = useModelStore()
 
    const { data: providersData, isLoading } = useQuery({
-     queryKey: providersQueryKey(serverUrl, directory),
+     queryKey: providersQueryKey(directory),
      queryFn: () => getProviders(directory),
      enabled: serverUrl !== undefined && serverUrl !== null,
      staleTime: 30000,

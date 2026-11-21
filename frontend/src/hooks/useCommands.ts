@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { currentLocale, useI18n } from '@/lib/i18n'
 import { createBffClient } from '@/api/bff'
 import type { Command } from '@opencode-manager/shared/api/v1'
+import { commandsQueryKey } from '@/lib/queryInvalidation'
 
 type CommandType = Command
 
@@ -199,7 +200,7 @@ export function useCommands(serverUrl: string | null) {
   const { data: loaded, isFetching, error } = useQuery({
     // locale is part of the key: these descriptions are translated, so a
     // cached list from the previous language would be rendered as-is
-    queryKey: ['bff', 'commands', serverUrl, locale],
+    queryKey: commandsQueryKey(serverUrl, locale),
     queryFn: async () => {
       const response = await createBffClient(serverUrl!).listCommands()
       const allCommands = [...builtins, ...response.commands]

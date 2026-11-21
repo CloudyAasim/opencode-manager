@@ -12,6 +12,7 @@ import { settingsApi } from '@/api/settings'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useI18n } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/error-toast'
+import { MCP_SERVERS_KEY } from '@/lib/queryInvalidation'
 
 interface AddMcpServerDialogProps {
   open: boolean
@@ -133,7 +134,10 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mcp-status'] })
+      // The servers live under the key the server list is written to. They
+      // used to be refreshed under the name of an older one, so adding a
+      // server left the list showing what it held before.
+      queryClient.invalidateQueries({ queryKey: MCP_SERVERS_KEY })
       handleClose()
     },
     // The validation above throws translated messages on purpose. Without

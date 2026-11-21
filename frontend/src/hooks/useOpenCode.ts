@@ -464,7 +464,7 @@ export const useSendPrompt = (serverUrl: string | null | undefined, directory?: 
           // it is megabytes long and it was just fetched. It is read in the
           // layer's own shape - the client keeps no shape of its own, so it
           // cannot answer with one that has gone out of date.
-          const catalogue = readCatalogue(queryClient, serverUrl, directory);
+          const catalogue = readCatalogue(queryClient, directory);
           if (catalogue?.providers) {
             const selected = findSelectedModel(
               catalogue.providers,

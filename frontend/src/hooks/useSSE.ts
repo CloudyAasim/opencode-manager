@@ -324,10 +324,12 @@ export const useSSE = (
       case 'todo.updated':
         if ('sessionId' in event.properties && 'todos' in event.properties) {
           const { sessionId, todos } = event.properties
+          // The todos are not in the query cache: they live in a store of their
+          // own, and the store is what the screen reads. There used to be an
+          // invalidation here as well, under the agent's own name - it was
+          // refreshing a slot nothing had ever written to, so it did nothing
+          // at all, and it looked like the todos were being refreshed.
           setSessionTodos(sessionId, todos)
-          queryClient.invalidateQueries({
-            queryKey: ['opencode', 'todos', opcodeUrl, sessionId, cacheDirectory]
-          })
         }
         break
 
@@ -394,7 +396,7 @@ export const useSSE = (
       default:
         break
     }
-  }, [t, queryClient, serverUrl, opcodeUrl, directorySet, resolveCacheDirectory, setSessionStatus, setSessionTodos, currentSessionId, handleRestartServer])
+  }, [t, queryClient, serverUrl, directorySet, resolveCacheDirectory, setSessionStatus, setSessionTodos, currentSessionId, handleRestartServer])
 
   const fetchInitialData = useCallback(async () => {
     if (!hasLayerAddress(serverUrl) || directoriesList.length === 0 || !mountedRef.current) return
@@ -433,9 +435,9 @@ export const useSSE = (
       queryKey: messagesQueryKey(serverUrl, sessionId, primaryDirectory),
     })
     queryClient.invalidateQueries({
-      queryKey: pendingActionsQueryKey(opcodeUrl, sessionId, primaryDirectory),
+      queryKey: pendingActionsQueryKey(sessionId, primaryDirectory),
     })
-  }, [queryClient, serverUrl, opcodeUrl, primaryDirectory])
+  }, [queryClient, serverUrl, primaryDirectory])
 
   useEffect(() => {
     mountedRef.current = true

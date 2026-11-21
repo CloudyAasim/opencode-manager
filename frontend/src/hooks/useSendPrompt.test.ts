@@ -129,7 +129,7 @@ describe('useSendPrompt', () => {
 
   it('throws FetchError with MODEL_UNAVAILABLE when model not in providers', async () => {
     queryClient.setQueryData(
-      providersQueryKey('http://localhost:5551', '/test'),
+      providersQueryKey('/test'),
       catalogueOf([
         {
           id: 'openai',
@@ -173,7 +173,7 @@ describe('useSendPrompt', () => {
 
   it('proceeds when model exists in providers', async () => {
     queryClient.setQueryData(
-      providersQueryKey('http://localhost:5551', '/test'),
+      providersQueryKey('/test'),
       catalogueOf([
         {
           id: 'anthropic',

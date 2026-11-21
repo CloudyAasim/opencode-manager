@@ -93,9 +93,16 @@ describe('用户会读到的提示必须跟着语言走', () => {
     // The descriptions are translated, so a cached list keyed without the
     // locale keeps being rendered after a switch. Nothing about this is a
     // string literal, which is why it needs its own assertion.
-    const source = read('hooks/useCommands.ts')
-    const key = /queryKey:\s*\[([^\]]*)\]/.exec(source)?.[1] ?? ''
-    expect(key, 'useCommands 的 queryKey 必须包含 locale').toContain('locale')
+    //
+    // The key is not written out at the call site any more - it is issued by
+    // the one that owns it - so the assertion follows the key to its owner.
+    const call = read('hooks/useCommands.ts')
+    expect(call, 'useCommands 的 queryKey 应当是那一层发号的那一把').toMatch(
+      /queryKey:\s*commandsQueryKey\(/,
+    )
+    const owner = read('lib/queryInvalidation.ts')
+    const key = /export function commandsQueryKey\([^)]*\)\s*\{[^}]*return\s*(\[[^\]]*\])/s.exec(owner)?.[1] ?? ''
+    expect(key, 'commandsQueryKey 发的这把钥匙必须带着 locale').toContain('locale')
   })
 })
 

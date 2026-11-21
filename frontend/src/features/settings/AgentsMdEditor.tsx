@@ -10,6 +10,7 @@ import { useFindInText } from '@/lib/useFindInText'
 import { settingsApi } from '@/api/settings'
 import { showToast } from '@/lib/toast'
 import { useI18n } from '@/lib/i18n'
+import { AGENTS_MD_KEY } from '@/lib/queryInvalidation'
 
 export function AgentsMdEditor() {
   const { t } = useI18n()
@@ -23,7 +24,7 @@ export function AgentsMdEditor() {
   savedContentRef.current = savedContent
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['agents-md'],
+    queryKey: AGENTS_MD_KEY,
     queryFn: () => settingsApi.getAgentsMd(),
   })
 
@@ -39,8 +40,7 @@ export function AgentsMdEditor() {
     mutationFn: (newContent: string) => settingsApi.updateAgentsMd(newContent),
     onSuccess: (_data, newContent) => {
       setSavedContent(newContent)
-      queryClient.invalidateQueries({ queryKey: ['agents-md'] })
-      queryClient.invalidateQueries({ queryKey: ['opencode', 'agents'] })
+      queryClient.invalidateQueries({ queryKey: AGENTS_MD_KEY })
       showToast.success(t('settingsPanels.agentsMd.saved'))
     },
     onError: () => {
@@ -55,7 +55,7 @@ export function AgentsMdEditor() {
       return defaultContent
     },
     onSuccess: (defaultContent) => {
-      queryClient.invalidateQueries({ queryKey: ['agents-md'] })
+      queryClient.invalidateQueries({ queryKey: AGENTS_MD_KEY })
       setContent(defaultContent)
       setSavedContent(defaultContent)
       showToast.success(t('settingsPanels.agentsMd.resetToDefault'))

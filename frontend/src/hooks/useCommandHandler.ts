@@ -45,7 +45,7 @@ export function useCommandHandler({
   const navigate = useNavigate()
   const { t } = useI18n()
   const createSession = useCreateSession(serverUrl, directory)
-  const { model } = useModelSelection(serverUrl, opcodeUrl, directory)
+  const { model } = useModelSelection(serverUrl, directory)
   const setSessionStatus = useSessionStatus((state) => state.setStatus)
   const [loading, setLoading] = useState(false)
 
