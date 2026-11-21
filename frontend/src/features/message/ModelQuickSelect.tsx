@@ -3,7 +3,8 @@ import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Search, Star, Tra
 import { PanelMessage } from '@/components/ui/panel-message'
 import { useModelSelection } from '@/hooks/useModelSelection'
 import { useVariants } from '@/hooks/useVariants'
-import { formatModelName, formatProviderName, findModel, getProviders } from '@/api/providers'
+import { formatModelName, formatProviderName, findProvider, findSelectedModel, getProviders, providersQueryKey } from '@/api/providers'
+
 import { useQuery } from '@tanstack/react-query'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import {
@@ -212,7 +213,7 @@ export function ModelQuickSelect({
   const { availableVariants, currentVariant, setVariant, clearVariant, hasVariants } = useVariants(serverUrl, opcodeUrl, directory)
 
   const { data: providersData } = useQuery({
-    queryKey: ['opencode', 'providers', opcodeUrl, directory],
+    queryKey: providersQueryKey(serverUrl, directory),
     queryFn: () => getProviders(directory),
     staleTime: 30000,
   })
@@ -227,14 +228,12 @@ export function ModelQuickSelect({
     return new Set(recentModels.map(getSelectionKey))
   }, [recentModels])
 
-  const { providerById, providerItems } = useMemo(() => {
-    const nextProviderById = new Map<string, Provider>()
+  const { providerItems } = useMemo(() => {
     const nextProviderItems: ProviderListItem[] = []
 
     for (const provider of providers) {
       const providerName = formatProviderName(provider)
       const count = provider.models.length
-      nextProviderById.set(provider.id, provider)
 
       if (count > 0) {
         nextProviderItems.push({
@@ -254,28 +253,24 @@ export function ModelQuickSelect({
       return a.label.localeCompare(b.label)
     })
 
-    return {
-      providerById: nextProviderById,
-      providerItems: nextProviderItems,
-    }
+    return { providerItems: nextProviderItems }
   }, [providers])
 
   const toModelListItem = useCallback((selection: { providerID: string, modelID: string }): ModelListItem => {
-    const provider = providerById.get(selection.providerID)
-    const providerModel = provider ? findModel(provider, selection.modelID) : undefined
+    const selected = findSelectedModel(providers, selection.providerID, selection.modelID)
 
-    if (!provider || !providerModel) {
+    if (!selected) {
       return createFallbackModelListItem(selection.providerID, selection.modelID)
     }
 
-    return createModelListItem(provider, selection.modelID, providerModel)
-  }, [providerById])
+    return createModelListItem(selected.provider, selection.modelID, selected.model)
+  }, [providers])
 
   const quickFallbackModels = useMemo(() => {
     const result: ModelListItem[] = []
 
     for (const providerItem of providerItems) {
-      const provider = providerById.get(providerItem.id)
+      const provider = findProvider(providers, providerItem.id)
       if (!provider) continue
 
       for (const providerModel of provider.models) {
@@ -285,7 +280,7 @@ export function ModelQuickSelect({
     }
 
     return result
-  }, [providerById, providerItems])
+  }, [providers, providerItems])
 
   const { allModels, modelsByProviderId } = useMemo(() => {
     if (!showAllModels) {

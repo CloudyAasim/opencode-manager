@@ -5,7 +5,7 @@ import { useModelStore, modelExists, type ModelSelection } from '@/stores/modelS
 import { showErrorToast } from '@/lib/error-toast'
 import { stopQueries } from '@/lib/queryInvalidation'
 import { useI18n } from '@/lib/i18n'
-import { addOpenCodeRecentModel, getOpenCodeModelState, getProviders, removeOpenCodeRecentModel, toggleOpenCodeFavoriteModel, type OpenCodeModelState } from '@/api/providers'
+import { addOpenCodeRecentModel, findSelectedModel, getOpenCodeModelState, getProviders, providersQueryKey, removeOpenCodeRecentModel, toggleOpenCodeFavoriteModel, type OpenCodeModelState } from '@/api/providers'
 
 interface UseModelSelectionResult {
   model: ModelSelection | null
@@ -36,7 +36,7 @@ export function useModelSelection(
   const { t } = useI18n()
 
   const { data: providersData } = useQuery({
-    queryKey: ['opencode', 'providers', opcodeUrl, directory],
+    queryKey: providersQueryKey(serverUrl, directory),
     queryFn: () => getProviders(directory),
     enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 30000,
@@ -164,11 +164,8 @@ export function useModelSelection(
     const providers = providersData?.providers
     if (!providers) return false
 
-    const isAvailable = providers.some(
-      (provider) =>
-        provider.id === nextModel.providerID &&
-        provider.models.some((m) => m.id === nextModel.modelID)
-    )
+    const isAvailable =
+      findSelectedModel(providers, nextModel.providerID, nextModel.modelID) !== undefined
 
     if (!isAvailable) return false
 

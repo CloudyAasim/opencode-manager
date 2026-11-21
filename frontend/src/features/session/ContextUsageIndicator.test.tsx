@@ -28,7 +28,7 @@ describe('ContextUsageIndicator', () => {
     useContextUsage.mockReturnValue(usage())
 
     render(
-      <ContextUsageIndicator opcodeUrl="http://x" sessionID="s1" isConnected isReconnecting={false} />,
+      <ContextUsageIndicator sessionID="s1" isConnected isReconnecting={false} />,
     )
 
     expect(screen.getByText('Context')).toBeInTheDocument()
@@ -40,7 +40,7 @@ describe('ContextUsageIndicator', () => {
     useContextUsage.mockReturnValue(usage({ contextLimit: null, usagePercentage: null }))
 
     render(
-      <ContextUsageIndicator opcodeUrl="http://x" sessionID="s1" isConnected isReconnecting={false} />,
+      <ContextUsageIndicator sessionID="s1" isConnected isReconnecting={false} />,
     )
 
     expect(screen.getByText('12,345')).toBeInTheDocument()
@@ -50,7 +50,7 @@ describe('ContextUsageIndicator', () => {
     useContextUsage.mockReturnValue(usage())
 
     render(
-      <ContextUsageIndicator opcodeUrl="http://x" sessionID="s1" isConnected={false} isReconnecting={false} />,
+      <ContextUsageIndicator sessionID="s1" isConnected={false} isReconnecting={false} />,
     )
 
     expect(screen.getByText('Disconnected')).toBeInTheDocument()
@@ -61,7 +61,7 @@ describe('ContextUsageIndicator', () => {
     useContextUsage.mockReturnValue(usage())
 
     render(
-      <ContextUsageIndicator opcodeUrl="http://x" sessionID="s1" isConnected isReconnecting />,
+      <ContextUsageIndicator sessionID="s1" isConnected isReconnecting />,
     )
 
     expect(screen.getByLabelText(/reconnect/i)).toBeInTheDocument()
@@ -73,7 +73,7 @@ describe('ContextUsageIndicator', () => {
     useContextUsage.mockReturnValue(usage())
 
     render(
-      <ContextUsageIndicator opcodeUrl="http://x" sessionID="s1" isConnected isReconnecting={false} />,
+      <ContextUsageIndicator sessionID="s1" isConnected isReconnecting={false} />,
     )
 
     expect(screen.getByLabelText(/12,345/)).toBeInTheDocument()

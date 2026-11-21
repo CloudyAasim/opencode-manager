@@ -5,7 +5,6 @@ import { useI18n } from '@/lib/i18n'
 import { API_BASE_URL } from '@/config'
 
 interface ContextUsageIndicatorProps {
-  opcodeUrl: string | null
   sessionID: string | undefined
   directory?: string
   isConnected: boolean
@@ -20,10 +19,10 @@ const getUsageTextColor = (percentage: number) => {
   return 'text-destructive'
 }
 
-export function ContextUsageIndicator({ opcodeUrl, sessionID, directory, isConnected, isReconnecting }: ContextUsageIndicatorProps) {
+export function ContextUsageIndicator({ sessionID, directory, isConnected, isReconnecting }: ContextUsageIndicatorProps) {
   const { t } = useI18n()
   const isRoomy = useMediaQuery(COMPACT_QUERY)
-  const { totalTokens, contextLimit, usagePercentage, isLoading } = useContextUsage(API_BASE_URL, opcodeUrl, sessionID, directory)
+  const { totalTokens, contextLimit, usagePercentage, isLoading } = useContextUsage(API_BASE_URL, sessionID, directory)
 
   if (isLoading) {
     if (!isRoomy) {

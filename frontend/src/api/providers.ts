@@ -4,6 +4,7 @@ import { fetchWrapper } from "./fetchWrapper";
 import { createBffClient } from "./bff";
 import type { OpenCodeConfigFile } from "./types/settings";
 import type { Model, Provider as VersionedProvider } from "@opencode-manager/shared/api/v1";
+import type { QueryClient } from "@tanstack/react-query";
 
 export type { Model };
 
@@ -89,6 +90,18 @@ function classifyProviderSource(providerId: string, isFromConfig: boolean): Prov
 }
 
 /**
+ * The provider with this name, if the catalogue has it.
+ *
+ * A provider is named by one thing and the catalogue is a list, so "which one
+ * is it" is one question with one answer. It is asked in one place because a
+ * client that asks it in eight places ends up with eight answers - and one of
+ * them was a dictionary lookup on a list, which never finds anything.
+ */
+export function findProvider(providers: Provider[], providerID: string): Provider | undefined {
+  return providers.find((provider) => provider.id === providerID);
+}
+
+/**
  * The model a provider knows by this name.
  *
  * A model has one name: the one it is known by inside its provider, which is
@@ -101,10 +114,74 @@ export function findModel(provider: Provider, modelID: string): Model | undefine
   return provider.models.find((model) => model.id === modelID);
 }
 
+/**
+ * The model a selection names, if the catalogue still has it.
+ *
+ * A selection names two things: the provider the model belongs to, and the name
+ * it is known by inside it. Both are needed to find it, and both are the
+ * layer's own words - the catalogue speaks them, so the client may not answer
+ * with a shape of its own.
+ *
+ * The answer carries the provider as well, because the places that ask for a
+ * model usually need to say which provider it belongs to.
+ */
+export interface SelectedModel {
+  provider: Provider;
+  model: Model;
+}
+
+export function findSelectedModel(
+  providers: Provider[],
+  providerID: string,
+  modelID: string,
+): SelectedModel | undefined {
+  const provider = findProvider(providers, providerID);
+  if (!provider) return undefined;
+  const model = findModel(provider, modelID);
+  return model ? { provider, model } : undefined;
+}
+
 export interface ProvidersResult {
   providers: Provider[];
   connected: string[];
   default: Record<string, string>;
+}
+
+/**
+ * Where the catalogue is filed.
+ *
+ * The catalogue comes from the layer the client talks to, so the slot is filed
+ * under its name. It used to be filed under the agent's own name and address,
+ * which is where it went to be asked for before it moved to the layer.
+ */
+export const PROVIDERS_QUERY_PREFIX = ["bff", "providers"] as const;
+
+export function providersQueryKey(
+  serverUrl: string | null | undefined,
+  directory: string | null | undefined,
+) {
+  return [...PROVIDERS_QUERY_PREFIX, serverUrl, directory];
+}
+
+/**
+ * The catalogue, as it is cached.
+ *
+ * The client asks for the catalogue in several places, and the one that checks
+ * whether a picked model is still available reads it out of the cache instead
+ * of asking again - it is megabytes long and it was just fetched.
+ *
+ * So the slot is read here, in the shape the layer speaks. A client that read
+ * it with a shape of its own could answer with one that has gone out of date,
+ * and did: the check looked the model up in a dictionary while the catalogue's
+ * models are a list, so it always answered "no" and refused every prompt sent
+ * with a model.
+ */
+export function readCatalogue(
+  queryClient: QueryClient,
+  serverUrl: string | null | undefined,
+  directory: string | null | undefined,
+): ProvidersResult | undefined {
+  return queryClient.getQueryData<ProvidersResult>(providersQueryKey(serverUrl, directory));
 }
 
 /**
@@ -280,10 +357,9 @@ export async function getModel(
   directory?: string,
 ): Promise<Model | null> {
   const providers = await getProvidersWithModels(directory);
-  const provider = providers.find((p) => p.id === providerId);
-  if (!provider) return null;
+  const found = findSelectedModel(providers, providerId, modelId);
 
-  return findModel(provider, modelId) ?? null;
+  return found?.model ?? null;
 }
 
 export function formatModelName(model: Model): string {

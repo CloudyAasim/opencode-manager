@@ -10,15 +10,21 @@ import type { ProviderOAuthAuthorization } from '@/api/oauth'
 import type { ReactNode } from 'react'
 import { showErrorToast } from '@/lib/error-toast'
 
-vi.mock('@/api/providers', () => ({
-  getProviders: vi.fn(),
-  providerCredentialsApi: {
-    list: vi.fn(),
-    getStatus: vi.fn(),
-    set: vi.fn(),
-    delete: vi.fn(),
-  },
-}))
+// The catalogue is mocked, the way the catalogue is looked up is not: the
+// component asks the layer's own module for it, and a mock that hid that
+// module would hide the question too.
+vi.mock('@/api/providers', async () => {
+  const actual = await vi.importActual<typeof import('@/api/providers')>('@/api/providers')
+  return {
+    ...actual,
+    getProviders: vi.fn(),
+    providerCredentialsApi: {
+      list: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+    },
+  }
+})
 
 vi.mock('@/lib/error-toast', () => ({
   showErrorToast: vi.fn(),

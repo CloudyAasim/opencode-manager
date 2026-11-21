@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { useProvidersWithModels } from '@/hooks/useProvidersWithModels'
+import { findProvider } from '@/api/providers'
 import { useI18n, i18n } from '@/lib/i18n'
 
 const agentFormSchema = z.object({
@@ -120,7 +121,7 @@ export function AgentDialog({ open, onOpenChange, onSubmit, editingAgent }: Agen
   const selectedProviderId = form.watch('providerId')
 
   const modelOptions: ComboboxOption[] = useMemo(() => {
-    const selectedProvider = providers.find(p => p.id === selectedProviderId)
+    const selectedProvider = findProvider(providers, selectedProviderId ?? '')
     if (selectedProvider && selectedProvider.models.length > 0) {
       return selectedProvider.models.map(m => ({
         value: m.id,

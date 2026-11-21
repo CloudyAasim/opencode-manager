@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Provider } from '@/api/providers'
+import { findSelectedModel, type Provider } from '@/api/providers'
 
 export interface ModelSelection {
   providerID: string
@@ -24,9 +24,7 @@ interface ModelStore {
 
 export function modelExists(model: ModelSelection | null, providers: Provider[]): boolean {
   if (!model) return false
-  return providers.some(
-    (p) => p.id === model.providerID && p.models.some((m) => m.id === model.modelID)
-  )
+  return findSelectedModel(providers, model.providerID, model.modelID) !== undefined
 }
 
 function parseModelString(model: string): ModelSelection | null {

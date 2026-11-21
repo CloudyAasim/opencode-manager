@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { GitStatusResponse } from '@/types/git'
+import { PROVIDERS_QUERY_PREFIX } from '@/api/providers'
 
 /**
  * Stop whatever is in flight for these queries, and do not treat it as a
@@ -90,7 +91,7 @@ export function invalidateProviderCaches(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['provider-auth-methods'] })
   queryClient.invalidateQueries({ queryKey: ['providers'] })
   queryClient.invalidateQueries({ queryKey: ['providers-with-models'] })
-  queryClient.invalidateQueries({ queryKey: ['opencode', 'providers'] })
+  queryClient.invalidateQueries({ queryKey: [...PROVIDERS_QUERY_PREFIX] })
   queryClient.invalidateQueries({ queryKey: ['providers-for-execution-model'] })
 }
 

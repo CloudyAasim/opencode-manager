@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useMessages } from './useOpenCode'
 import { useQuery } from '@tanstack/react-query'
-import { getProviders } from '@/api/providers'
+import { findSelectedModel, getProviders, providersQueryKey } from '@/api/providers'
 
 interface ContextUsage {
   totalTokens: number
@@ -11,7 +11,7 @@ interface ContextUsage {
   isLoading: boolean
 }
 
-export const useContextUsage = (serverUrl: string | null | undefined, opcodeUrl: string | null | undefined, sessionID: string | undefined, directory?: string): ContextUsage => {
+export const useContextUsage = (serverUrl: string | null | undefined, sessionID: string | undefined, directory?: string): ContextUsage => {
   const { data: messages, isLoading: messagesLoading } = useMessages(serverUrl, sessionID, directory)
 
   // The catalogue comes from the layer the client talks to, like everything
@@ -22,7 +22,7 @@ export const useContextUsage = (serverUrl: string | null | undefined, opcodeUrl:
   // The key is the one the model pickers use, so that the catalogue is asked
   // for once rather than once per place that draws it.
   const { data: providersData } = useQuery({
-    queryKey: ['opencode', 'providers', opcodeUrl, directory],
+    queryKey: providersQueryKey(serverUrl, directory),
     queryFn: () => getProviders(directory),
     enabled: serverUrl !== undefined && serverUrl !== null,
     staleTime: 5 * 60 * 1000,
@@ -65,8 +65,8 @@ export const useContextUsage = (serverUrl: string | null | undefined, opcodeUrl:
 
       // The list of providers may be missing from the answer, and a page that
       // cannot say how much of the context is used is still a page.
-      const provider = (providersData.providers ?? []).find(p => p.id === providerId)
-      const model = provider?.models.find(m => m.id === modelId)
+      const selected = findSelectedModel(providersData.providers ?? [], providerId, modelId)
+      const model = selected?.model
       if (model?.limit) {
         contextLimit = model.limit.context
       }

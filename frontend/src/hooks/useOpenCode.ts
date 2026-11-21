@@ -15,6 +15,7 @@ import { useI18n } from "../lib/i18n";
 import { useSendErrorStore } from "../stores/sendErrorStore";
 import { useSessionStatus } from "../stores/sessionStatusStore";
 import { invalidateSessionListCaches, messagesQueryKey, sessionListQueryKey, sessionQueryKey, sessionQuerySession, stopQueries } from "../lib/queryInvalidation";
+import { findSelectedModel, readCatalogue } from "../api/providers";
 import { reconcileConfirmedPrompt } from "../lib/sendErrorReconcile";
 import { buildSessionKey } from "../lib/sessionKey";
 import { toggleSessionPin } from "../api/sessionPins";
@@ -401,11 +402,11 @@ const getPromptText = (prompt: string | undefined, parts: ContentPart[] | undefi
  * with them, and the model and the agent that should answer all travel
  * together - so the conversation is answered the way it was asked.
  *
- * The agent's address is still known here for one reason only: the list of
- * models that may be picked is still the agent's, and the check that the
- * picked model is still on that list reads the agent's own cache.
+ * The client no longer knows any address but the layer's: the list of models
+ * that may be picked is the layer's catalogue now, and the check that the
+ * picked model is still on that list reads it out of the layer's own cache.
  */
-export const useSendPrompt = (serverUrl: string | null | undefined, opcodeUrl: string | null | undefined, directory?: string) => {
+export const useSendPrompt = (serverUrl: string | null | undefined, directory?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -459,14 +460,18 @@ export const useSendPrompt = (serverUrl: string | null | undefined, opcodeUrl: s
       if (model) {
         const parsedModel = parseModelString(model);
         if (parsedModel) {
-          const cachedProviders = queryClient.getQueryData<{
-            providers: Array<{ id: string; models: Record<string, unknown> }>;
-          }>(['opencode', 'providers', opcodeUrl, directory]);
-          if (cachedProviders?.providers) {
-            const provider = cachedProviders.providers.find(
-              (p) => p.id === parsedModel.providerID,
+          // The catalogue is read out of the cache rather than asked for again:
+          // it is megabytes long and it was just fetched. It is read in the
+          // layer's own shape - the client keeps no shape of its own, so it
+          // cannot answer with one that has gone out of date.
+          const catalogue = readCatalogue(queryClient, serverUrl, directory);
+          if (catalogue?.providers) {
+            const selected = findSelectedModel(
+              catalogue.providers,
+              parsedModel.providerID,
+              parsedModel.modelID,
             );
-            if (!provider || !(parsedModel.modelID in provider.models)) {
+            if (!selected) {
               throw new FetchError(
                 'Selected model is no longer available. Pick a different model.',
                 409,

@@ -21,9 +21,16 @@ vi.mock('@/hooks/usePromptTemplates', () => ({
   useDeletePromptTemplate: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
-vi.mock('@/api/providers', () => ({
-  getProvidersWithModels: mockGetProvidersWithModels,
-}))
+// The catalogue is mocked, the way the catalogue is looked up is not: the
+// component asks the layer's own module for it, and a mock that hid that
+// module would hide the question too.
+vi.mock('@/api/providers', async () => {
+  const actual = await vi.importActual<typeof import('@/api/providers')>('@/api/providers')
+  return {
+    ...actual,
+    getProvidersWithModels: mockGetProvidersWithModels,
+  }
+})
 
 vi.mock('@/api/opencode', () => ({
   createOpenCodeClient: () => ({

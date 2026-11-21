@@ -4,6 +4,7 @@ import type { CreateScheduleJobRequest, PromptTemplate, ScheduleJob } from '@ope
 import { useScheduleModels } from '@/hooks/useScheduleModels'
 import { resolveScheduleModel } from '@/lib/schedules/schedule-model'
 import { createBffClient } from '@/api/bff'
+import { findSelectedModel } from '@/api/providers'
 import { settingsApi } from '@/api/settings'
 import { listRepos, listBranches } from '@/api/repos'
 import type { Repo } from '@/api/types'
@@ -159,8 +160,7 @@ export function ScheduleJobDialog({ open, onOpenChange, job, isSaving, onSubmit,
     if (configDefaultModel) {
       const [providerId, ...modelParts] = configDefaultModel.split('/')
       const modelId = modelParts.join('/')
-      const provider = providerModels.find((p) => p.id === providerId)
-      const providerModel = provider?.models.find((m) => m.id === modelId)
+      const providerModel = findSelectedModel(providerModels, providerId, modelId)?.model
       configuredValues.add(configDefaultModel)
       if (providerModel) {
         configuredValues.add(`${providerId}/${providerModel.id}`)

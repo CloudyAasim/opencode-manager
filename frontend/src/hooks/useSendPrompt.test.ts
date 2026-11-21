@@ -5,6 +5,26 @@ import { createElement } from 'react'
 import { useSendPrompt } from './useOpenCode'
 import { FetchError } from '../api/fetchWrapper'
 import { messagesQueryKey } from '../lib/queryInvalidation'
+import { providersQueryKey, type ProvidersResult } from '../api/providers'
+import { ProviderSchema } from '@opencode-manager/shared/api/v1'
+
+/**
+ * A catalogue, in the layer's own words.
+ *
+ * The shape is checked with the layer's own schema, so a fixture written in
+ * the old dialect - the models as a dictionary - is a failing test rather
+ * than a passing one. The check that asks whether a picked model is still
+ * available used to read such a dictionary while the catalogue's models are
+ * a list, and it refused every prompt sent with a model.
+ */
+function catalogueOf(providers: unknown[]): ProvidersResult {
+  const parsed = ProviderSchema.array().parse(providers)
+  return {
+    providers: parsed,
+    connected: parsed.filter((provider) => provider.connected).map((provider) => provider.id),
+    default: {},
+  }
+}
 
 const mockSendPrompt = vi.fn()
 const mockSetOptimisticActive = vi.fn()
@@ -81,9 +101,8 @@ describe('useSendPrompt', () => {
 
   const renderHookWithProviders = () =>
     renderHook(
-      // The layer the client talks to, the agent's address (still known for
-      // the list of models that may be picked), and the working directory.
-      () => useSendPrompt('http://localhost:5551', 'http://localhost:5551', '/test'),
+      // The layer the client talks to, and the working directory.
+      () => useSendPrompt('http://localhost:5551', '/test'),
       {
         wrapper: ({ children }) =>
           createElement(QueryClientProvider, { client: queryClient }, children),
@@ -110,21 +129,26 @@ describe('useSendPrompt', () => {
 
   it('throws FetchError with MODEL_UNAVAILABLE when model not in providers', async () => {
     queryClient.setQueryData(
-      ['opencode', 'providers', 'http://localhost:5551', '/test'],
-      {
-        providers: [
-          {
-            id: 'openai',
-            name: 'OpenAI',
-            models: {
-              'gpt-4': { id: 'gpt-4', name: 'GPT-4' },
+      providersQueryKey('http://localhost:5551', '/test'),
+      catalogueOf([
+        {
+          id: 'openai',
+          name: 'OpenAI',
+          env: [],
+          models: [
+            {
+              id: 'gpt-4',
+              name: 'GPT-4',
+              limit: null,
+              cost: null,
+              capabilities: null,
+              modalities: null,
+              variants: null,
             },
-            isConnected: true,
-          },
-        ],
-        connected: ['openai'],
-        default: {},
-      }
+          ],
+          connected: true,
+        },
+      ]),
     )
 
     const { result } = renderHookWithProviders()
@@ -149,21 +173,26 @@ describe('useSendPrompt', () => {
 
   it('proceeds when model exists in providers', async () => {
     queryClient.setQueryData(
-      ['opencode', 'providers', 'http://localhost:5551', '/test'],
-      {
-        providers: [
-          {
-            id: 'anthropic',
-            name: 'Anthropic',
-            models: {
-              'claude-sonnet-4': { id: 'claude-sonnet-4', name: 'Claude Sonnet 4' },
+      providersQueryKey('http://localhost:5551', '/test'),
+      catalogueOf([
+        {
+          id: 'anthropic',
+          name: 'Anthropic',
+          env: [],
+          models: [
+            {
+              id: 'claude-sonnet-4',
+              name: 'Claude Sonnet 4',
+              limit: null,
+              cost: null,
+              capabilities: null,
+              modalities: null,
+              variants: null,
             },
-            isConnected: true,
-          },
-        ],
-        connected: ['anthropic'],
-        default: {},
-      }
+          ],
+          connected: true,
+        },
+      ]),
     )
 
     const { result } = renderHookWithProviders()

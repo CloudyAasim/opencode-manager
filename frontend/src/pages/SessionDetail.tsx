@@ -847,7 +847,6 @@ export function SessionDetail() {
                 only way out of a long conversation is the bar at the very top. */}
             <SessionMoreButton />
             <ContextUsageIndicator
-              opcodeUrl={opcodeUrl}
               sessionID={sessionId}
               directory={sessionDirectory}
               isConnected={isConnected}

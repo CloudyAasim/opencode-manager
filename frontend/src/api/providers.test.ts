@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { getProvidersWithModels } from './providers'
+import { findProvider, getProvidersWithModels } from './providers'
 import { makeOpenCodeConfigFile } from '@/test/fixtures/opencode-config'
 
 const { mockGetOpenCodeConfig, mockFetchWrapper } = vi.hoisted(() => ({
@@ -88,7 +88,7 @@ describe('getProvidersWithModels', () => {
 
     const providers = await getProvidersWithModels(undefined, config)
 
-    const anthropic = providers.find((provider) => provider.id === 'anthropic')
+    const anthropic = findProvider(providers, 'anthropic')
     expect(anthropic?.source).toBe('builtin')
     expect(anthropic?.connected).toBe(true)
     expect(anthropic?.models.map((model) => model.id)).toEqual(['claude-sonnet-4'])

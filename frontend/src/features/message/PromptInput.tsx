@@ -34,7 +34,8 @@ import { VoiceStatusOverlay, type VoiceStatusOverlayState } from './VoiceStatusO
 import { detectMentionTrigger, parsePromptToParts, getFilename, filterAgentsByQuery } from '@/lib/promptParser'
 import { randomId } from '@/lib/utils'
 import { showToast } from '@/lib/toast'
-import { formatModelName, getProviders } from '@/api/providers'
+import { findSelectedModel, formatModelName, getProviders, providersQueryKey } from '@/api/providers'
+
 import { useQuery } from '@tanstack/react-query'
 
 
@@ -225,7 +226,7 @@ export const PromptInput = memo(forwardRef<PromptInputHandle, PromptInputProps>(
   const sessionAgent = useSessionAgent(API_BASE_URL, sessionID, directory)
   const currentMode = localMode ?? sessionAgent.agent
   const setStoredAgent = useSessionAgentStore((s) => s.setAgent)
-  const sendPrompt = useSendPrompt(API_BASE_URL, opcodeUrl, directory)
+  const sendPrompt = useSendPrompt(API_BASE_URL, directory)
   const sendShell = useSendShell(API_BASE_URL, directory)
   const isPromptSubmitPending = sendPrompt.isPending || sendShell.isPending
   const abortSession = useAbortSession(API_BASE_URL, directory, sessionID)
@@ -1079,7 +1080,7 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
   const appliedSessionModelRef = useRef<string | undefined>(undefined)
 
   const { data: providersData } = useQuery({
-    queryKey: ['opencode', 'providers', opcodeUrl, directory],
+    queryKey: providersQueryKey(API_BASE_URL, directory),
     queryFn: () => getProviders(directory),
     staleTime: 30000,
   })
@@ -1114,8 +1115,8 @@ if (isIOS && isSecureContext && navigator.clipboard && navigator.clipboard.read)
       return currentModel
     }
 
-    const provider = providersData?.providers.find((item) => item.id === model.providerID)
-    const modelData = provider?.models.find((item) => item.id === model.modelID)
+    const selected = findSelectedModel(providersData?.providers ?? [], model.providerID, model.modelID)
+    const modelData = selected?.model
 
     return modelData ? formatModelName(modelData) : model.modelID || currentModel
   }, [currentModel, model, providersData])
