@@ -13,11 +13,27 @@ import { z } from 'zod'
 
 export const API_V1_VERSION = 'v1'
 
+/**
+ * The words a failure is said in.
+ *
+ * The vocabulary is small on purpose: a client that has to learn a code per
+ * kind of failure has to learn a lot to say little. What the code cannot say
+ * - which thing was missing, under which name - is said in the message, and
+ * in the details when a program needs to read it.
+ *
+ * `not_found` is the conversation that is not there, and `agent_not_found` is
+ * the agent that is not registered. `resource_not_found` is for everything
+ * else that can be named and then not be there: a tool server, a permission
+ * that somebody else answered, a question that was withdrawn. It was given a
+ * code of its own rather than sharing `not_found` because a client that was
+ * told "no conversation" would go looking for the conversation.
+ */
 export const ApiErrorCodeSchema = z.enum([
   'bad_request',
   'unauthorized',
   'forbidden',
   'not_found',
+  'resource_not_found',
   'agent_not_found',
   'agent_unavailable',
   'upstream_error',
@@ -33,6 +49,21 @@ export const ApiErrorSchema = z.object({
   }),
 })
 export type ApiError = z.infer<typeof ApiErrorSchema>
+
+/**
+ * What was missing, when what is missing is a thing that has a name.
+ *
+ * The kind of thing is this dialect's word for it, not the agent's: the agent
+ * calls its tool servers "mcp servers", and a client that has to learn two
+ * names for one thing has to learn one of them twice.
+ */
+export const MissingResourceSchema = z.object({
+  /** This dialect's word for the kind of thing that is not there. */
+  resource: z.string(),
+  /** The name it was known by, when it was known by one. */
+  id: z.string().optional(),
+})
+export type MissingResource = z.infer<typeof MissingResourceSchema>
 
 export const AgentKindSchema = z.enum(['server', 'cli'])
 export type AgentKind = z.infer<typeof AgentKindSchema>

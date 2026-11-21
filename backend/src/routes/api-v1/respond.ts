@@ -9,6 +9,7 @@ import {
   ProviderProtocolError,
   ProviderUnavailableError,
   ProviderUpstreamError,
+  ResourceNotFoundError,
   SessionNotFoundError,
 } from '../../providers/contract'
 
@@ -43,6 +44,16 @@ export function failFromError(c: Context, error: unknown): Response {
   }
   if (error instanceof SessionNotFoundError) {
     return fail(c, 404, 'not_found', error.message)
+  }
+  if (error instanceof ResourceNotFoundError) {
+    // The thing that is not there is named in the message, because the message
+    // is what a person reads; the details carry the same name in a shape a
+    // program can read, so that a client does not have to read English to know
+    // which thing went missing.
+    return fail(c, 404, 'resource_not_found', error.message, {
+      resource: error.resource,
+      ...(error.id !== undefined ? { id: error.id } : {}),
+    })
   }
   if (error instanceof ProviderUnavailableError) {
     return fail(c, 503, 'agent_unavailable', error.message)

@@ -41,6 +41,7 @@ import {
   ProviderAuthError,
   ProviderProtocolError,
   ProviderUpstreamError,
+  ResourceNotFoundError,
   SessionNotFoundError,
   type AgentCapability,
   type AgentKind,
@@ -991,6 +992,50 @@ export function toAgentMcpConfig(config: McpServerConfig): Record<string, unknow
 export interface OpenCodeProviderOptions {
   isReady?: () => boolean
 }
+
+/**
+ * What a call was about.
+ *
+ * The words for a missing thing depend on what was being asked for, so every
+ * call that can be answered with "not there" has to say what it asked for.
+ * A conversation is one kind of thing and the one the versioned dialect has a
+ * code of its own for; anything else that the path names - a tool server, a
+ * permission, a question - is named in this layer's words. And when a call
+ * names nothing at all, a "not there" is not a missing thing: it is the agent
+ * saying it does not have that door.
+ */
+type Asked =
+  | { readonly kind: 'conversation'; readonly id: string }
+  | { readonly kind: 'thing'; readonly name: string; readonly id?: string }
+  | { readonly kind: 'unnamed' }
+
+/** A conversation, by the name it is known by here. */
+function conversation(id: string): Asked {
+  return { kind: 'conversation', id }
+}
+
+/**
+ * Something else that has a name, in this layer's word for it.
+ *
+ * The word is this layer's, not the agent's: the agent calls its tool servers
+ * "mcp servers", and a client that has to learn two names for one thing has
+ * to learn one of them twice.
+ */
+function thing(name: string, id?: string): Asked {
+  return { kind: 'thing', name, id }
+}
+
+/**
+ * A call that names nothing.
+ *
+ * The agent answering "not there" about one of these is not saying that
+ * something is missing - it is saying that it does not have the door the call
+ * asked through, and that is the agent's problem, not a missing thing.
+ */
+function unnamed(): Asked {
+  return { kind: 'unnamed' }
+}
+
 export class OpenCodeProvider implements AgentProvider {
   readonly id = AGENT_ID
   readonly label = 'OpenCode'
@@ -1024,7 +1069,7 @@ export class OpenCodeProvider implements AgentProvider {
   }
 
   async listSessions(context: ProviderContext, params: ListSessionsParams = {}): Promise<SessionPage> {
-    const raw = await this.readJson<unknown>(this.sessionsPath(params), context)
+    const raw = await this.readJson<unknown>(this.sessionsPath(params), context, unnamed())
     const page = toSessionPage(raw, this.id, context.directory)
     const statuses = await this.readStatuses(context)
     return {
@@ -1038,7 +1083,7 @@ export class OpenCodeProvider implements AgentProvider {
 
   async getSession(id: string, context: ProviderContext): Promise<Session | null> {
     try {
-      const raw = await this.readJson<unknown>(this.sessionPath(id), context, id)
+      const raw = await this.readJson<unknown>(this.sessionPath(id), context, conversation(id))
       return toSession(raw, this.id, 'unknown', context.directory)
     } catch (error) {
       if (error instanceof SessionNotFoundError) return null
@@ -1052,7 +1097,7 @@ export class OpenCodeProvider implements AgentProvider {
     try {
       raw = await this.client.postJson<unknown>('/session', body, { directory: input.directory })
     } catch (error) {
-      throw this.translate(error)
+      throw this.translate(error, unnamed())
     }
     return toSession(raw, this.id, 'unknown', input.directory)
   }
@@ -1064,7 +1109,7 @@ export class OpenCodeProvider implements AgentProvider {
       body: JSON.stringify({ title }),
       headers: { 'Content-Type': 'application/json' },
       context,
-      sessionId: id,
+      about: conversation(id),
     })
     return toSession(raw, this.id, 'unknown', context.directory)
   }
@@ -1096,7 +1141,7 @@ export class OpenCodeProvider implements AgentProvider {
       if (workspaceId && (await this.removeWorkspace(workspaceId, context))) return
     }
 
-    throw this.translate(new UpstreamError(status, body), id)
+    throw this.translate(new UpstreamError(status, body), conversation(id))
   }
 
   /**
@@ -1104,7 +1149,7 @@ export class OpenCodeProvider implements AgentProvider {
    */
   private async workspaceIdOf(id: string, context: ProviderContext): Promise<string | null> {
     try {
-      const raw = await this.readJson<unknown>(this.sessionPath(id), context, id)
+      const raw = await this.readJson<unknown>(this.sessionPath(id), context, conversation(id))
       const record = asRecord(raw)
       const location = asRecord(record?.location)
       return asString(location?.workspaceID) ?? asString(record?.workspaceID) ?? null
@@ -1134,7 +1179,11 @@ export class OpenCodeProvider implements AgentProvider {
   }
 
   async listMessages(sessionId: string, context: ProviderContext): Promise<MessageWithParts[]> {
-    const raw = await this.readJson<unknown>(`${this.sessionPath(sessionId)}/message`, context, sessionId)
+    const raw = await this.readJson<unknown>(
+      `${this.sessionPath(sessionId)}/message`,
+      context,
+      conversation(sessionId),
+    )
     const items = Array.isArray(raw) ? raw : []
     return items.map((item) => toMessageWithParts(item, this.id))
   }
@@ -1155,7 +1204,7 @@ export class OpenCodeProvider implements AgentProvider {
       }),
       headers: { 'Content-Type': 'application/json' },
       context,
-      sessionId,
+      about: conversation(sessionId),
     })
   }
 
@@ -1164,7 +1213,7 @@ export class OpenCodeProvider implements AgentProvider {
       method: 'POST',
       path: `${this.sessionPath(sessionId)}/abort`,
       context,
-      sessionId,
+      about: conversation(sessionId),
     })
   }
 
@@ -1184,7 +1233,7 @@ export class OpenCodeProvider implements AgentProvider {
       }),
       headers: { 'Content-Type': 'application/json' },
       context,
-      sessionId: id,
+      about: conversation(id),
     })
 
     const session = await this.getSession(id, context)
@@ -1193,13 +1242,13 @@ export class OpenCodeProvider implements AgentProvider {
   }
 
   async listPendingPermissions(context: ProviderContext): Promise<PendingPermission[]> {
-    const raw = await this.readJson<unknown>('/permission', context)
+    const raw = await this.readJson<unknown>('/permission', context, unnamed())
     const items = Array.isArray(raw) ? raw : []
     return items.map((item) => toPendingPermission(item, this.id, context.directory))
   }
 
   async listPendingQuestions(context: ProviderContext): Promise<PendingQuestion[]> {
-    const raw = await this.readJson<unknown>('/question', context)
+    const raw = await this.readJson<unknown>('/question', context, unnamed())
     const items = Array.isArray(raw) ? raw : []
     return items.map((item) => toPendingQuestion(item, this.id, context.directory))
   }
@@ -1234,6 +1283,7 @@ export class OpenCodeProvider implements AgentProvider {
       body: JSON.stringify({ reply: response }),
       headers: { 'Content-Type': 'application/json' },
       context,
+      about: thing('permission', id),
     })
   }
 
@@ -1244,6 +1294,7 @@ export class OpenCodeProvider implements AgentProvider {
       body: JSON.stringify({ answers }),
       headers: { 'Content-Type': 'application/json' },
       context,
+      about: thing('question', id),
     })
   }
 
@@ -1252,6 +1303,7 @@ export class OpenCodeProvider implements AgentProvider {
       method: 'POST',
       path: `/question/${encodeURIComponent(id)}/reject`,
       context,
+      about: thing('question', id),
     })
   }
 
@@ -1263,7 +1315,7 @@ export class OpenCodeProvider implements AgentProvider {
    * to do must not answer "nothing", which is a different and wrong answer.
    */
   async listCommands(context: ProviderContext): Promise<Command[]> {
-    const raw = await this.readJson<unknown>('/command', context)
+    const raw = await this.readJson<unknown>('/command', context, unnamed())
     const items = Array.isArray(raw) ? raw : []
     return items.map(toCommand)
   }
@@ -1290,7 +1342,7 @@ export class OpenCodeProvider implements AgentProvider {
       }),
       headers: { 'Content-Type': 'application/json' },
       context,
-      sessionId,
+      about: conversation(sessionId),
     })
   }
 
@@ -1311,7 +1363,7 @@ export class OpenCodeProvider implements AgentProvider {
       }),
       headers: { 'Content-Type': 'application/json' },
       context,
-      sessionId,
+      about: conversation(sessionId),
     })
   }
 
@@ -1328,7 +1380,7 @@ export class OpenCodeProvider implements AgentProvider {
       body: JSON.stringify(fork.messageId ? { messageID: fork.messageId } : {}),
       headers: { 'Content-Type': 'application/json' },
       context,
-      sessionId,
+      about: conversation(sessionId),
     })
     return toSession(raw, this.id, 'unknown', context.directory)
   }
@@ -1350,7 +1402,7 @@ export class OpenCodeProvider implements AgentProvider {
       }),
       headers: { 'Content-Type': 'application/json' },
       context,
-      sessionId,
+      about: conversation(sessionId),
     })
   }
 
@@ -1358,7 +1410,7 @@ export class OpenCodeProvider implements AgentProvider {
    * The ways of working a conversation can be had in.
    */
   async listWorkingModes(context: ProviderContext): Promise<WorkingMode[]> {
-    const raw = await this.readJson<unknown>('/agent', context)
+    const raw = await this.readJson<unknown>('/agent', context, unnamed())
     const items = Array.isArray(raw) ? raw : []
     return items.map(toWorkingMode)
   }
@@ -1367,7 +1419,7 @@ export class OpenCodeProvider implements AgentProvider {
    * What this agent does by default.
    */
   async getDefaults(context: ProviderContext): Promise<AgentDefaults> {
-    const raw = await this.readJson<unknown>('/config', context)
+    const raw = await this.readJson<unknown>('/config', context, unnamed())
     return toAgentDefaults(raw)
   }
 
@@ -1388,7 +1440,7 @@ export class OpenCodeProvider implements AgentProvider {
       return held.answer
     }
 
-    const raw = await this.readJson<unknown>('/provider', context)
+    const raw = await this.readJson<unknown>('/provider', context, unnamed())
     const record = asRecord(raw)
     const all = Array.isArray(record?.all) ? record.all : []
     const connected = new Set(stringArrayOf(record?.connected))
@@ -1418,6 +1470,7 @@ export class OpenCodeProvider implements AgentProvider {
     const raw = await this.readJson<unknown>(
       `/find/file?query=${encodeURIComponent(query)}`,
       context,
+      unnamed(),
     )
     if (!Array.isArray(raw)) return []
     return raw.filter((entry): entry is string => typeof entry === 'string')
@@ -1431,7 +1484,7 @@ export class OpenCodeProvider implements AgentProvider {
    * whichever agent is behind it.
    */
   async listProviderAuthMethods(context: ProviderContext): Promise<ProviderAuthMethods> {
-    const raw = await this.readJson<unknown>('/provider/auth', context)
+    const raw = await this.readJson<unknown>('/provider/auth', context, unnamed())
     return toProviderAuthMethods(raw)
   }
 
@@ -1525,8 +1578,8 @@ export class OpenCodeProvider implements AgentProvider {
    * taken out of it - and the secret of an OAuth client is not one of them.
    */
   async listMcpServers(context: ProviderContext): Promise<McpServer[]> {
-    const statuses = await this.readJson<unknown>('/mcp', context)
-    const config = await this.readJson<unknown>('/config', context)
+    const statuses = await this.readJson<unknown>('/mcp', context, unnamed())
+    const config = await this.readJson<unknown>('/config', context, unnamed())
     return toMcpServers(statuses, config)
   }
 
@@ -1544,6 +1597,7 @@ export class OpenCodeProvider implements AgentProvider {
       body: JSON.stringify({ name, config: toAgentMcpConfig(config) }),
       headers: { 'Content-Type': 'application/json' },
       context,
+      about: unnamed(),
     })
   }
 
@@ -1555,6 +1609,7 @@ export class OpenCodeProvider implements AgentProvider {
       method: 'POST',
       path: `${this.mcpPath(name)}/connect`,
       context,
+      about: thing('tool server', name),
     })
   }
 
@@ -1566,6 +1621,7 @@ export class OpenCodeProvider implements AgentProvider {
       method: 'POST',
       path: `${this.mcpPath(name)}/disconnect`,
       context,
+      about: thing('tool server', name),
     })
   }
 
@@ -1577,6 +1633,7 @@ export class OpenCodeProvider implements AgentProvider {
       method: 'POST',
       path: `${this.mcpPath(name)}/auth/authenticate`,
       context,
+      about: thing('tool server', name),
     })
   }
 
@@ -1588,6 +1645,7 @@ export class OpenCodeProvider implements AgentProvider {
       method: 'DELETE',
       path: `${this.mcpPath(name)}/auth`,
       context,
+      about: thing('tool server', name),
     })
   }
 
@@ -1605,6 +1663,7 @@ export class OpenCodeProvider implements AgentProvider {
       body: JSON.stringify({ code }),
       headers: { 'Content-Type': 'application/json' },
       context,
+      about: thing('tool server', name),
     })
   }
 
@@ -1629,11 +1688,11 @@ export class OpenCodeProvider implements AgentProvider {
     return `/api/session?${query.toString()}`
   }
 
-  private async readJson<T>(path: string, context: ProviderContext, sessionId?: string): Promise<T> {
+  private async readJson<T>(path: string, context: ProviderContext, about: Asked): Promise<T> {
     try {
       return await this.client.getJson<T>(path, { directory: context.directory })
     } catch (error) {
-      throw this.translate(error, sessionId)
+      throw this.translate(error, about)
     }
   }
 
@@ -1643,7 +1702,8 @@ export class OpenCodeProvider implements AgentProvider {
     body?: string
     headers?: Record<string, string>
     context: ProviderContext
-    sessionId?: string
+    /** What this call is about, so that a missing thing can be named. */
+    about: Asked
   }): Promise<unknown> {
     const response = await this.client.forward({
       method: request.method,
@@ -1656,7 +1716,7 @@ export class OpenCodeProvider implements AgentProvider {
     if (!response.ok) {
       throw this.translate(
         new UpstreamError(response.status, await response.text().catch(() => '')),
-        request.sessionId,
+        request.about,
       )
     }
 
@@ -1669,10 +1729,27 @@ export class OpenCodeProvider implements AgentProvider {
     }
   }
 
-  private translate(error: unknown, sessionId?: string): Error {
+  /**
+   * The words for a failure.
+   *
+   * The agent answers with a status and a body, and neither of those is a
+   * dialect this layer speaks: "404" says that something is not there, and
+   * what it is depends on what was asked for. So the caller says what it asked
+   * for, and this says the sentence that fits.
+   */
+  private translate(error: unknown, about: Asked): Error {
     if (error instanceof UpstreamError) {
       if (error.status === 404) {
-        return new SessionNotFoundError(sessionId ?? '*')
+        if (about.kind === 'conversation') return new SessionNotFoundError(about.id)
+        if (about.kind === 'thing') return new ResourceNotFoundError(about.name, about.id)
+        // A call that named nothing was not asking about a thing that could
+        // be missing, so "not there" is the agent saying it does not have the
+        // door - which is the agent's problem, and not a missing thing.
+        return new ProviderUpstreamError(
+          this.id,
+          error.status,
+          'The agent does not have the door we asked it for',
+        )
       }
       return new ProviderUpstreamError(
         this.id,

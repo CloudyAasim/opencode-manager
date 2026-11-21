@@ -17,6 +17,7 @@
                 "unauthorized",
                 "forbidden",
                 "not_found",
+                "resource_not_found",
                 "agent_not_found",
                 "agent_unavailable",
                 "upstream_error",

@@ -337,6 +337,16 @@ and so it is always the administrator's.
 A server the agent did not speak of is `unknown`: it is written down, and
 nobody has said whether it works.
 
+A server that is not there at all is said by its name, and not by the name of
+something else. The agent says "there is no such server", and this layer used
+to answer "there is no such session" - a sentence about a different thing,
+which sent the client looking for a conversation:
+
+```json
+{ "error": { "code": "resource_not_found", "message": "No tool server is known under \"probe-server\"",
+             "details": { "resource": "tool server", "id": "probe-server" } } }
+```
+
 ### How a model gets logged in
 
 | Endpoint | Body | Answer |

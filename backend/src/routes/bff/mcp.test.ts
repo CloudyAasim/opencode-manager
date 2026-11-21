@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createBffRoutes } from './index'
 import { ProviderRegistry } from '../../providers/registry'
+import { ResourceNotFoundError } from '../../providers/contract'
 import type { AuthInstance } from '../../auth'
 import { FakeAgentProvider } from '../../../test/helpers/fake-agent-provider'
 import { migrate } from '../../db/migration-runner'
@@ -83,12 +84,12 @@ function createApp(
 }
 
 function json(res: Response): Promise<{
-  error?: { code: string }
+  error?: { code: string; message?: string; details?: unknown }
   servers?: McpServer[]
   accepted?: boolean
 }> {
   return res.json() as Promise<{
-    error?: { code: string }
+    error?: { code: string; message?: string; details?: unknown }
     servers?: McpServer[]
     accepted?: boolean
   }>
@@ -284,5 +285,22 @@ describe('这一层出的改动', () => {
     expect(res.status).toBe(200)
     expect(text).not.toContain('clientSecret')
     expect(text).not.toContain('sk-')
+  })
+
+  it('服务器不在了，说的是没有这个服务器，不是没有会话', async () => {
+    // The agent says "there is no such server", and this layer used to answer
+    // "there is no such session" - a sentence about a different thing, which
+    // sent the client looking for a conversation that was never in question.
+    const provider = new FakeAgentProvider({ mcpServers: [] })
+    provider.failWith = new ResourceNotFoundError('tool server', 'probe-server')
+    const { app } = createApp([provider], asAdmin)
+
+    const res = await app.request('/api/bff/mcp/probe-server/connect', { method: 'POST' })
+
+    expect(res.status).toBe(404)
+    const body = await json(res)
+    expect(body.error?.code).toBe('resource_not_found')
+    expect(body.error?.message).toBe('No tool server is known under "probe-server"')
+    expect(body.error?.details).toEqual({ resource: 'tool server', id: 'probe-server' })
   })
 })

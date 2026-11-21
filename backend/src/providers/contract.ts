@@ -384,6 +384,31 @@ export class SessionNotFoundError extends Error {
 }
 
 /**
+ * Something that was named is not there.
+ *
+ * A conversation is not the only thing that can be missing. A tool server can
+ * be gone, a permission can have been answered by somebody else, a question
+ * can have been withdrawn - and saying "no session" about any of those is a
+ * sentence about a different thing. A client that is told the conversation is
+ * gone goes looking for the conversation.
+ *
+ * The name of the thing is this layer's word for it, not the provider's: the
+ * provider calls its tool servers "mcp servers", and a client that has to
+ * learn two names for one thing has to learn one of them twice.
+ */
+export class ResourceNotFoundError extends Error {
+  constructor(
+    /** This layer's word for what is missing. */
+    public readonly resource: string,
+    /** What it was known by, when it was known by something. */
+    public readonly id?: string,
+  ) {
+    super(id ? `No ${resource} is known under "${id}"` : `No ${resource} is known`)
+    this.name = 'ResourceNotFoundError'
+  }
+}
+
+/**
  * A provider refused to let anybody in.
  *
  * The reason is this layer's own word for what went wrong - "the code is

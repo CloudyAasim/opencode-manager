@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { UpstreamError, type OpenCodeClient } from '../../services/opencode/client'
-import { ProviderProtocolError, ProviderUpstreamError, SessionNotFoundError } from '../contract'
+import { ProviderProtocolError, ProviderUpstreamError, ResourceNotFoundError, SessionNotFoundError } from '../contract'
 import {
   OpenCodeProvider,
   toAgentDefaults,
@@ -1162,5 +1162,106 @@ describe('模型怎么登录：agent 的话，翻译成这一层的话', () => {
       reason: 'code_missing',
       detail: 'no code',
     })
+  })
+})
+
+describe('上游说「没有」的时候，这层说的是不是问的那件事', () => {
+  /** The failure a call came back with, as a thing to look at. */
+  async function failureOf(run: () => Promise<unknown>): Promise<Error> {
+    try {
+      await run()
+    } catch (error) {
+      return error as Error
+    }
+    throw new Error('这一次调用没有失败，所以没有什么可看的')
+  }
+
+  function notFoundClient(): OpenCodeClient {
+    return clientWith({
+      getJson: vi.fn(async () => {
+        throw new UpstreamError(404, 'not found')
+      }),
+      forward: vi.fn(async () => new Response('not found', { status: 404 })),
+    })
+  }
+
+  it('问的是会话，说的是没有会话', async () => {
+    const provider = new OpenCodeProvider(notFoundClient())
+
+    // The messages of a conversation that is not there: reading them is a
+    // question about that conversation, so the answer is about it too.
+    const failure = await failureOf(() => provider.listMessages('ses_x', {}))
+
+    expect(failure).toBeInstanceOf(SessionNotFoundError)
+    expect(failure.message).toBe('No session is known under "ses_x"')
+  })
+
+  it('问的是工具服务器，说的是没有工具服务器，不是没有会话', async () => {
+    const provider = new OpenCodeProvider(notFoundClient())
+
+    const failure = await failureOf(() => provider.connectMcpServer('probe-server', {}))
+
+    expect(failure).toBeInstanceOf(ResourceNotFoundError)
+    expect(failure.message).toBe('No tool server is known under "probe-server"')
+    expect(failure.message).not.toMatch(/session/i)
+  })
+
+  it('问的是待办许可，说的是没有许可', async () => {
+    const provider = new OpenCodeProvider(notFoundClient())
+
+    const failure = await failureOf(() =>
+      provider.respondToPermission('perm_1', 'once', {}),
+    )
+
+    expect(failure).toBeInstanceOf(ResourceNotFoundError)
+    expect(failure.message).toBe('No permission is known under "perm_1"')
+  })
+
+  it('问的是问题，说的是没有问题', async () => {
+    const provider = new OpenCodeProvider(notFoundClient())
+
+    const failure = await failureOf(() => provider.replyToQuestion('q_1', [['yes']], {}))
+
+    expect(failure).toBeInstanceOf(ResourceNotFoundError)
+    expect(failure.message).toBe('No question is known under "q_1"')
+  })
+
+  it('问的是一份清单，说的是那扇门没有，不是没有会话，也不是这里空空的', async () => {
+    const provider = new OpenCodeProvider(notFoundClient())
+
+    const failure = await failureOf(() => provider.listCommands({}))
+
+    expect(failure).toBeInstanceOf(ProviderUpstreamError)
+    expect(failure.message).toBe('The agent does not have the door we asked it for')
+    expect(failure.message).not.toMatch(/session/i)
+  })
+
+  it('不许再说「不知道是哪一次会话」', async () => {
+    // The old words said "no session is known under *" - and a client that
+    // was told a conversation was gone would go looking for it. Every 404 now
+    // says which thing is missing, and the missing thing is never a guess.
+    const provider = new OpenCodeProvider(notFoundClient())
+
+    const failures = await Promise.all([
+      failureOf(() => provider.connectMcpServer('probe-server', {})),
+      failureOf(() => provider.listCommands({})),
+      failureOf(() => provider.listMcpServers({})),
+    ])
+
+    for (const failure of failures) {
+      expect(failure.message).not.toContain('*')
+    }
+  })
+
+  it('上游答不上来的时候，还是上游答不上来', async () => {
+    const getJson = vi.fn(async () => {
+      throw new UpstreamError(500, 'boom')
+    })
+    const provider = new OpenCodeProvider(clientWith({ getJson }))
+
+    const failure = await failureOf(() => provider.listCommands({}))
+
+    expect(failure).toBeInstanceOf(ProviderUpstreamError)
+    expect(failure.message).toBe('The agent answered with 500')
   })
 })
