@@ -7,8 +7,8 @@ import type { OpenCodeConfigFile } from '@/api/types/settings'
 import { makeOpenCodeConfigFile, makeOpenCodeConfigSource } from '@/test/fixtures/opencode-config'
 
 const {
-  mockGetOpenCodeConfig,
-  mockUpdateOpenCodeConfig,
+  mockGetConfiguration,
+  mockUpdateConfiguration,
   mockRestartOpenCodeServer,
   mockGetActiveOpenCodeSessions,
   mockGetOpenCodeImportStatus,
@@ -18,8 +18,8 @@ const {
   mockAddServerAsync,
   healthState,
 } = vi.hoisted(() => ({
-  mockGetOpenCodeConfig: vi.fn(),
-  mockUpdateOpenCodeConfig: vi.fn(),
+  mockGetConfiguration: vi.fn(),
+  mockUpdateConfiguration: vi.fn(),
   mockRestartOpenCodeServer: vi.fn(),
   mockGetActiveOpenCodeSessions: vi.fn(),
   mockGetOpenCodeImportStatus: vi.fn(),
@@ -68,8 +68,6 @@ vi.mock('@/lib/toast', () => ({
 
 vi.mock('@/api/settings', () => ({
   settingsApi: {
-    getOpenCodeConfig: mockGetOpenCodeConfig,
-    updateOpenCodeConfig: mockUpdateOpenCodeConfig,
     restartOpenCodeServer: mockRestartOpenCodeServer,
     getActiveOpenCodeSessions: mockGetActiveOpenCodeSessions,
     getOpenCodeImportStatus: mockGetOpenCodeImportStatus,
@@ -78,6 +76,13 @@ vi.mock('@/api/settings', () => ({
     getAgentsMd: mockGetAgentsMd,
     syncOpenCodeImport: vi.fn(),
     upgradeOpenCode: vi.fn(),
+  },
+}))
+
+vi.mock('@/api/config', () => ({
+  configApi: {
+    getConfiguration: mockGetConfiguration,
+    updateConfiguration: mockUpdateConfiguration,
   },
 }))
 
@@ -112,7 +117,7 @@ describe('OpenCodeConfigManager', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     healthState.data = { opencode: 'healthy', opencodeRestartPending: false }
-    mockGetOpenCodeConfig.mockResolvedValue(defaultConfig)
+    mockGetConfiguration.mockResolvedValue(defaultConfig)
     mockGetOpenCodeImportStatus.mockResolvedValue({})
     mockGetAgentsMd.mockResolvedValue({ content: '# Agent Instructions' })
     mockListManagedSkills.mockResolvedValue([])
@@ -120,7 +125,7 @@ describe('OpenCodeConfigManager', () => {
       if (kind === 'commands') return Promise.resolve([])
       return Promise.resolve([])
     })
-    mockUpdateOpenCodeConfig.mockResolvedValue(defaultConfig)
+    mockUpdateConfiguration.mockResolvedValue(defaultConfig)
     mockRestartOpenCodeServer.mockResolvedValue({ success: true, message: 'ok' })
     mockGetActiveOpenCodeSessions.mockResolvedValue({ count: 2, sessions: [] })
     mockAddServerAsync.mockResolvedValue(undefined)
@@ -152,7 +157,7 @@ describe('OpenCodeConfigManager', () => {
   })
 
   it('optimistic delete saves without eager restart modal', async () => {
-    mockUpdateOpenCodeConfig.mockResolvedValueOnce({ ...defaultConfig, restartRequired: true })
+    mockUpdateConfiguration.mockResolvedValueOnce({ ...defaultConfig, restartRequired: true })
 
     const user = userEvent.setup()
     renderWithQuery(<OpenCodeConfigManager />)
@@ -164,8 +169,8 @@ describe('OpenCodeConfigManager', () => {
     await user.click(screen.getByLabelText('Actions for GPT-4o'))
     await user.click(screen.getByText('Delete'))
 
-    expect(mockUpdateOpenCodeConfig).toHaveBeenCalledTimes(1)
-    const [payload] = mockUpdateOpenCodeConfig.mock.calls[0]
+    expect(mockUpdateConfiguration).toHaveBeenCalledTimes(1)
+    const [payload] = mockUpdateConfiguration.mock.calls[0]
     expect(payload.content.provider.openai.models).not.toHaveProperty('gpt-4o')
 
     expect(screen.queryByText('Restart OpenCode Server?')).not.toBeInTheDocument()
@@ -187,7 +192,7 @@ describe('OpenCodeConfigManager', () => {
   })
 
   it('rollback on failure', async () => {
-    mockUpdateOpenCodeConfig.mockRejectedValueOnce(new Error('boom'))
+    mockUpdateConfiguration.mockRejectedValueOnce(new Error('boom'))
 
     const user = userEvent.setup()
     renderWithQuery(<OpenCodeConfigManager />)
@@ -199,7 +204,7 @@ describe('OpenCodeConfigManager', () => {
     await user.click(screen.getByLabelText('Actions for GPT-4o'))
     await user.click(screen.getByText('Delete'))
 
-    expect(mockUpdateOpenCodeConfig).toHaveBeenCalledTimes(1)
+    expect(mockUpdateConfiguration).toHaveBeenCalledTimes(1)
 
     const { showToast } = await import('@/lib/toast')
     await vi.waitFor(() => {
@@ -270,14 +275,14 @@ describe('OpenCodeConfigManager', () => {
       ...defaultConfig,
       rawContent: '{\n  "theme": "system"\n}',
     }
-    mockGetOpenCodeConfig.mockResolvedValueOnce(configWithRaw)
+    mockGetConfiguration.mockResolvedValueOnce(configWithRaw)
     const savedConfig: OpenCodeConfigFile = {
       ...configWithRaw,
       rawContent: '{\n  "theme": "dark"\n}',
       revision: 'rev-2',
       updatedAt: 2,
     }
-    mockUpdateOpenCodeConfig.mockResolvedValue(savedConfig)
+    mockUpdateConfiguration.mockResolvedValue(savedConfig)
 
     const user = userEvent.setup()
     const { container, queryClient } = renderWithQuery(<OpenCodeConfigManager />)
@@ -293,7 +298,7 @@ describe('OpenCodeConfigManager', () => {
     await user.click(screen.getByRole('button', { name: 'Update' }))
 
     await waitFor(() => {
-      expect(mockUpdateOpenCodeConfig).toHaveBeenCalledWith({
+      expect(mockUpdateConfiguration).toHaveBeenCalledWith({
         content: next,
         source: 'opencode.json',
         expectedRevision: 'rev-1',
@@ -336,7 +341,7 @@ describe('OpenCodeConfigManager', () => {
       ],
       updatedAt: 2,
     }
-    mockGetOpenCodeConfig.mockResolvedValue(refreshedConfig)
+    mockGetConfiguration.mockResolvedValue(refreshedConfig)
 
     await act(async () => {
       await queryClient.invalidateQueries({ queryKey: ['opencode-config', 'file'] })
@@ -345,7 +350,7 @@ describe('OpenCodeConfigManager', () => {
     await waitFor(() => {
       expect(screen.getByText(`Updated: ${new Date(2).toLocaleString()}`)).toBeInTheDocument()
     })
-    expect(mockGetOpenCodeConfig).toHaveBeenCalledTimes(2)
+    expect(mockGetConfiguration).toHaveBeenCalledTimes(2)
     expect(textarea).toHaveValue(draft)
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -366,7 +371,7 @@ describe('OpenCodeConfigManager', () => {
   })
 
   it('sends the expected revision for structured updates', async () => {
-    mockUpdateOpenCodeConfig.mockResolvedValueOnce({ ...defaultConfig, restartRequired: true })
+    mockUpdateConfiguration.mockResolvedValueOnce({ ...defaultConfig, restartRequired: true })
 
     const user = userEvent.setup()
     renderWithQuery(<OpenCodeConfigManager />)
@@ -378,8 +383,8 @@ describe('OpenCodeConfigManager', () => {
     await user.click(screen.getByLabelText('Actions for GPT-4o'))
     await user.click(screen.getByText('Delete'))
 
-    await waitFor(() => expect(mockUpdateOpenCodeConfig).toHaveBeenCalledTimes(1))
-    const [payload] = mockUpdateOpenCodeConfig.mock.calls[0]
+    await waitFor(() => expect(mockUpdateConfiguration).toHaveBeenCalledTimes(1))
+    const [payload] = mockUpdateConfiguration.mock.calls[0]
     expect(payload.expectedRevision).toBe('rev-1')
     expect(payload.source).toBeUndefined()
     expect(payload.content.provider.openai.models).not.toHaveProperty('gpt-4o')
@@ -389,11 +394,11 @@ describe('OpenCodeConfigManager', () => {
     const cachedConfig = { ...defaultConfig, revision: 'rev-A' }
     const dialogFetchedConfig = { ...defaultConfig, revision: 'rev-B' }
     let configRequests = 0
-    mockGetOpenCodeConfig.mockImplementation(() => {
+    mockGetConfiguration.mockImplementation(() => {
       configRequests += 1
       return Promise.resolve(configRequests === 1 ? cachedConfig : dialogFetchedConfig)
     })
-    mockUpdateOpenCodeConfig.mockResolvedValue({ ...cachedConfig, restartRequired: true })
+    mockUpdateConfiguration.mockResolvedValue({ ...cachedConfig, restartRequired: true })
 
     const user = userEvent.setup()
     renderWithQuery(<OpenCodeConfigManager />)
@@ -405,8 +410,8 @@ describe('OpenCodeConfigManager', () => {
     await user.type(screen.getByLabelText('Command'), 'npx server-filesystem /tmp')
     await user.click(screen.getByRole('button', { name: 'Add MCP Server' }))
 
-    await waitFor(() => expect(mockUpdateOpenCodeConfig).toHaveBeenCalledTimes(1))
-    const [payload] = mockUpdateOpenCodeConfig.mock.calls[0]
+    await waitFor(() => expect(mockUpdateConfiguration).toHaveBeenCalledTimes(1))
+    const [payload] = mockUpdateConfiguration.mock.calls[0]
     expect(payload.expectedRevision).toBe('rev-A')
     expect(mockAddServerAsync).toHaveBeenCalledTimes(1)
   })
@@ -428,7 +433,7 @@ describe('OpenCodeConfigManager', () => {
       rawContent: JSON.stringify(twoModelsContent, null, 2),
       content: twoModelsContent,
     })
-    mockGetOpenCodeConfig.mockResolvedValue(twoModelsConfig)
+    mockGetConfiguration.mockResolvedValue(twoModelsConfig)
 
     const afterFirstDelete = {
       ...twoModelsConfig,
@@ -445,7 +450,7 @@ describe('OpenCodeConfigManager', () => {
       revision: 'rev-2',
     }
     const afterSecondDelete = { ...afterFirstDelete, revision: 'rev-3' }
-    mockUpdateOpenCodeConfig
+    mockUpdateConfiguration
       .mockResolvedValueOnce(afterFirstDelete)
       .mockResolvedValueOnce(afterSecondDelete)
 
@@ -457,13 +462,13 @@ describe('OpenCodeConfigManager', () => {
 
     await user.click(screen.getByLabelText('Actions for GPT-4o'))
     await user.click(screen.getByText('Delete'))
-    await waitFor(() => expect(mockUpdateOpenCodeConfig).toHaveBeenCalledTimes(1))
-    expect(mockUpdateOpenCodeConfig.mock.calls[0][0].expectedRevision).toBe('rev-1')
+    await waitFor(() => expect(mockUpdateConfiguration).toHaveBeenCalledTimes(1))
+    expect(mockUpdateConfiguration.mock.calls[0][0].expectedRevision).toBe('rev-1')
 
     await user.click(screen.getByLabelText('Actions for GPT-3.5'))
     await user.click(screen.getByText('Delete'))
-    await waitFor(() => expect(mockUpdateOpenCodeConfig).toHaveBeenCalledTimes(2))
-    expect(mockUpdateOpenCodeConfig.mock.calls[1][0].expectedRevision).toBe('rev-2')
+    await waitFor(() => expect(mockUpdateConfiguration).toHaveBeenCalledTimes(2))
+    expect(mockUpdateConfiguration.mock.calls[1][0].expectedRevision).toBe('rev-2')
   })
 
   it('reports a comment-only raw save as applied without a restart', async () => {
@@ -471,8 +476,8 @@ describe('OpenCodeConfigManager', () => {
       ...defaultConfig,
       rawContent: '{\n  // comment only\n  "theme": "system"\n}',
     }
-    mockGetOpenCodeConfig.mockResolvedValue(configWithRaw)
-    mockUpdateOpenCodeConfig.mockResolvedValue({ ...configWithRaw, restartRequired: false, revision: 'rev-2' })
+    mockGetConfiguration.mockResolvedValue(configWithRaw)
+    mockUpdateConfiguration.mockResolvedValue({ ...configWithRaw, restartRequired: false, revision: 'rev-2' })
 
     const user = userEvent.setup()
     const { container } = renderWithQuery(<OpenCodeConfigManager />)
@@ -491,7 +496,7 @@ describe('OpenCodeConfigManager', () => {
   })
 
   it('asks for a restart after a semantic structured change', async () => {
-    mockUpdateOpenCodeConfig.mockResolvedValueOnce({ ...defaultConfig, restartRequired: true })
+    mockUpdateConfiguration.mockResolvedValueOnce({ ...defaultConfig, restartRequired: true })
 
     const user = userEvent.setup()
     renderWithQuery(<OpenCodeConfigManager />)
@@ -509,6 +514,57 @@ describe('OpenCodeConfigManager', () => {
     })
   })
 
+  it('names the credentials whose edit did not happen', async () => {
+    // 服务端把自己的值放回去了，那一次改动就没有发生。人不被说一声就会
+    // 以为凭据改了——而它没改。
+    mockUpdateConfiguration.mockResolvedValue({
+      ...defaultConfig,
+      restartRequired: false,
+      overriddenCredentials: ['provider.openai.options.apiKey'],
+    })
+
+    const user = userEvent.setup()
+    const { container } = renderWithQuery(<OpenCodeConfigManager />)
+
+    await screen.findByText('GPT-4o')
+    const editIcon = container.querySelector('.lucide-square-pen') as SVGElement
+    await user.click(editIcon.closest('button') as HTMLButtonElement)
+
+    const textarea = await screen.findByLabelText('Config content') as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: defaultConfig.rawContent + '\n// another\n' } })
+    await user.click(screen.getByRole('button', { name: 'Update' }))
+
+    const { showToast } = await import('@/lib/toast')
+    await waitFor(() => {
+      expect(showToast.warning).toHaveBeenCalledWith(
+        'These credentials were kept as the server has them, so your edit did not happen: provider.openai.options.apiKey. Remove the provider to remove its key.',
+      )
+    })
+  })
+
+  it('says nothing about credentials when there are none to say', async () => {
+    mockUpdateConfiguration.mockResolvedValue({
+      ...defaultConfig,
+      restartRequired: false,
+      overriddenCredentials: [],
+    })
+
+    const user = userEvent.setup()
+    const { container } = renderWithQuery(<OpenCodeConfigManager />)
+
+    await screen.findByText('GPT-4o')
+    const editIcon = container.querySelector('.lucide-square-pen') as SVGElement
+    await user.click(editIcon.closest('button') as HTMLButtonElement)
+
+    const textarea = await screen.findByLabelText('Config content') as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: defaultConfig.rawContent + '\n// another\n' } })
+    await user.click(screen.getByRole('button', { name: 'Update' }))
+
+    const { showToast } = await import('@/lib/toast')
+    await waitFor(() => expect(showToast.success).toHaveBeenCalledWith('Configuration updated'))
+    expect(showToast.warning).not.toHaveBeenCalled()
+  })
+
   it('does not reset an in-flight save when the config query refreshes in the background', async () => {
     const user = userEvent.setup()
     const { container, queryClient } = renderWithQuery(<OpenCodeConfigManager />)
@@ -523,7 +579,7 @@ describe('OpenCodeConfigManager', () => {
     fireEvent.change(textarea, { target: { value: draft } })
 
     let resolveSave!: (value: OpenCodeConfigFile) => void
-    mockUpdateOpenCodeConfig.mockReturnValueOnce(
+    mockUpdateConfiguration.mockReturnValueOnce(
       new Promise<OpenCodeConfigFile>((resolve) => {
         resolveSave = resolve
       }),
@@ -540,7 +596,7 @@ describe('OpenCodeConfigManager', () => {
       rawContent: JSON.stringify(refreshedContent, null, 2),
       updatedAt: 2,
     }
-    mockGetOpenCodeConfig.mockResolvedValue(refreshedConfig)
+    mockGetConfiguration.mockResolvedValue(refreshedConfig)
 
     await act(async () => {
       await queryClient.invalidateQueries({ queryKey: ['opencode-config', 'file'] })
@@ -610,7 +666,7 @@ describe('OpenCodeConfigManager', () => {
   })
 
   it('shows the config file name and an invalid badge when the file is invalid', async () => {
-    mockGetOpenCodeConfig.mockResolvedValue({
+    mockGetConfiguration.mockResolvedValue({
       ...defaultConfig,
       isValid: false,
       validationIssues: [{ path: 'model', message: 'Expected string' }],
@@ -641,7 +697,7 @@ describe('OpenCodeConfigManager', () => {
         makeOpenCodeConfigSource({ name: 'opencode.jsonc', path: '/workspace/.config/opencode/opencode.jsonc' }),
       ],
     })
-    mockGetOpenCodeConfig.mockResolvedValue(multiSourceConfig)
+    mockGetConfiguration.mockResolvedValue(multiSourceConfig)
 
     renderWithQuery(<OpenCodeConfigManager />)
 

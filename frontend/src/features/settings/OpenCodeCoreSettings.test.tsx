@@ -3,17 +3,17 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { OpenCodeCoreSettings } from './OpenCodeCoreSettings'
-import { settingsApi } from '@/api/settings'
+import { configApi } from '@/api/config'
 import type { OpenCodeConfigFile } from '@/api/types/settings'
 
 // Radix Select's item handler calls `hasPointerCapture` on whatever the pointer
 // landed on, and jsdom has no pointer capture at all.
 Element.prototype.hasPointerCapture ??= () => false
 
-vi.mock('@/api/settings', () => ({
-  settingsApi: {
-    getOpenCodeConfig: vi.fn(),
-    updateOpenCodeConfig: vi.fn(),
+vi.mock('@/api/config', () => ({
+  configApi: {
+    getConfiguration: vi.fn(),
+    updateConfiguration: vi.fn(),
   },
 }))
 
@@ -50,14 +50,14 @@ function renderPanel() {
 }
 
 function savedRequest(index = 0) {
-  return vi.mocked(settingsApi.updateOpenCodeConfig).mock.calls[index][0]
+  return vi.mocked(configApi.updateConfiguration).mock.calls[index][0]
 }
 
 describe('OpenCodeCoreSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture())
-    vi.mocked(settingsApi.updateOpenCodeConfig).mockResolvedValue({ success: true })
+    vi.mocked(configApi.getConfiguration).mockResolvedValue(configFixture())
+    vi.mocked(configApi.updateConfiguration).mockResolvedValue({ success: true })
   })
 
   it('shows what the document already says', async () => {
@@ -69,7 +69,7 @@ describe('OpenCodeCoreSettings', () => {
   })
 
   it('reads the existing default model into the field', async () => {
-    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(
+    vi.mocked(configApi.getConfiguration).mockResolvedValue(
       configFixture({ model: 'anthropic/claude-sonnet-4-5', small_model: 'anthropic/claude-haiku-4-5' }),
     )
     renderPanel()
@@ -89,7 +89,7 @@ describe('OpenCodeCoreSettings', () => {
     await user.type(await screen.findByLabelText('Default model'), 'anthropic/claude-sonnet-4-5')
     await user.click(screen.getByRole('button', { name: 'Save models' }))
 
-    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(configApi.updateConfiguration).toHaveBeenCalledTimes(1))
     const request = savedRequest()
 
     expect(request.expectedRevision).toBe('rev-1')
@@ -107,7 +107,7 @@ describe('OpenCodeCoreSettings', () => {
     await user.type(await screen.findByLabelText('Default model'), 'anthropic/claude-sonnet-4-5')
     await user.click(screen.getByRole('button', { name: 'Save models' }))
 
-    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(configApi.updateConfiguration).toHaveBeenCalledTimes(1))
     const content = savedRequest().content as Record<string, unknown>
 
     expect(content).toMatchObject({
@@ -119,7 +119,7 @@ describe('OpenCodeCoreSettings', () => {
   })
 
   it('removes the key when the field is cleared, instead of writing an empty one', async () => {
-    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture({ model: 'a/b' }))
+    vi.mocked(configApi.getConfiguration).mockResolvedValue(configFixture({ model: 'a/b' }))
     const user = userEvent.setup()
     renderPanel()
 
@@ -128,7 +128,7 @@ describe('OpenCodeCoreSettings', () => {
     await user.clear(field)
     await user.click(screen.getByRole('button', { name: 'Save models' }))
 
-    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(configApi.updateConfiguration).toHaveBeenCalledTimes(1))
     const content = savedRequest().content as Record<string, unknown>
 
     // An empty string is a value. `delete` is the only thing that reads as
@@ -145,7 +145,7 @@ describe('OpenCodeCoreSettings', () => {
     await user.click(screen.getByRole('option', { name: 'Deny' }))
     await user.click(screen.getByRole('button', { name: 'Save permissions' }))
 
-    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(configApi.updateConfiguration).toHaveBeenCalledTimes(1))
     expect(savedRequest().content).toMatchObject({
       permission: { edit: 'allow', bash: 'deny', aToolFromTheFuture: 'deny' },
     })
@@ -160,7 +160,7 @@ describe('OpenCodeCoreSettings', () => {
     await user.click(screen.getByRole('option', { name: 'OpenCode default' }))
     await user.click(screen.getByRole('button', { name: 'Save permissions' }))
 
-    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(configApi.updateConfiguration).toHaveBeenCalledTimes(1))
     const permission = (savedRequest().content as Record<string, Record<string, unknown>>).permission
 
     // `null` would be a value OpenCode has to parse; absence is what
@@ -178,7 +178,7 @@ describe('OpenCodeCoreSettings', () => {
     await user.type(screen.getByLabelText('Default model'), 'anthropic/claude-sonnet-4-5')
     await user.click(screen.getByRole('button', { name: 'Save models' }))
 
-    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(configApi.updateConfiguration).toHaveBeenCalledTimes(1))
 
     // Saving refetches the document, which is what used to reset every field
     // on the page back to what was on disk.
@@ -194,7 +194,7 @@ describe('OpenCodeCoreSettings', () => {
   })
 
   it('shows an absent compaction flag as absent rather than as off', async () => {
-    vi.mocked(settingsApi.getOpenCodeConfig).mockResolvedValue(configFixture({ compaction: {} }))
+    vi.mocked(configApi.getConfiguration).mockResolvedValue(configFixture({ compaction: {} }))
     renderPanel()
 
     await screen.findByLabelText('Default model')
@@ -213,7 +213,7 @@ describe('OpenCodeCoreSettings', () => {
     await user.type(field, 'openai\nanthropic\n')
     await user.click(screen.getByRole('button', { name: 'Save provider lists' }))
 
-    await waitFor(() => expect(settingsApi.updateOpenCodeConfig).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(configApi.updateConfiguration).toHaveBeenCalledTimes(1))
     expect(savedRequest().content).toMatchObject({
       disabled_providers: ['openai', 'anthropic'],
     })

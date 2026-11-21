@@ -65,6 +65,8 @@ export const settingsPanels = {
     updateConfigFailed: 'Failed to update config',
     configurationSaved: 'Configuration saved. Restart the server to apply changes.',
     configurationUpdated: 'Configuration updated',
+    credentialsOverridden:
+      'These credentials were kept as the server has them, so your edit did not happen: {{paths}}. Remove the provider to remove its key.',
   },
   coreConfig: {
     pageTitle: 'OpenCode configuration',

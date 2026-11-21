@@ -64,6 +64,8 @@ export const settingsPanels = {
     updateConfigFailed: '更新配置失败',
     configurationSaved: '配置已保存。重启服务器以应用更改。',
     configurationUpdated: '配置已更新',
+    credentialsOverridden:
+      '这几处凭据仍按服务端自己的值保留，你的改动没有发生：{{paths}}。要移除某个密钥，请把它的 provider 整个删掉。',
   },
   coreConfig: {
     pageTitle: 'OpenCode 配置',

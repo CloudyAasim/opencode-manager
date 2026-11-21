@@ -1,4 +1,5 @@
 import type {
+  AgentConfiguration,
   AgentDefaults,
   Command,
   ConversationStatus,
@@ -293,6 +294,19 @@ export class HermesProvider implements AgentProvider {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot look through its working directory`,
+    )
+  }
+
+  /**
+   * The configuration the agent is running with.
+   *
+   * The API server this adapter talks to does not say, so it says so: an
+   * empty configuration would claim there is nothing configured.
+   */
+  async getEffectiveConfiguration(): Promise<AgentConfiguration> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what configuration it is running with`,
     )
   }
 

@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
-import { createOpenCodeConfigRoutes } from '../opencode-config'
 import type { GitCredential } from '@opencode-manager/shared'
 import { logger } from '../../utils/logger'
 import { ValidationError } from '../../utils/errors'
@@ -13,7 +12,7 @@ import type { SettingsRouteContext } from './context'
 import { UpdateSettingsSchema } from '@opencode-manager/shared/schemas'
 
 export function createPreferencesRoutes(ctx: SettingsRouteContext) {
-  const { openCodeClient, settingsService, currentUserId } = ctx
+  const { settingsService, currentUserId } = ctx
   const app = new Hono()
   app.get('/', async (c) => {
     try {
@@ -116,7 +115,13 @@ export function createPreferencesRoutes(ctx: SettingsRouteContext) {
     }
   })
 
-  app.route('/opencode-config', createOpenCodeConfigRoutes(settingsService, openCodeClient, ctx.db))
+  // The configuration the agent runs with used to be answered here, and this
+  // is where the browser asked for it. That document holds the credentials of
+  // every model provider on the host, so it was handed to the browser with the
+  // keys in it - four of them, on a server with four providers. The document
+  // is asked for now at the layer the browser is supposed to be talking to,
+  // and it travels with the credentials behind a word. The door that the
+  // agent's own plugin uses is a different one and is still where it was.
 
   return app
 }

@@ -7,9 +7,9 @@ import { makeOpenCodeConfigFile } from '@/test/fixtures/opencode-config'
 
 Element.prototype.scrollIntoView = vi.fn()
 
-const { mockGetProvidersWithModels, mockGetOpenCodeConfig } = vi.hoisted(() => ({
+const { mockGetProvidersWithModels, mockGetConfiguration } = vi.hoisted(() => ({
   mockGetProvidersWithModels: vi.fn(),
-  mockGetOpenCodeConfig: vi.fn(),
+  mockGetConfiguration: vi.fn(),
 }))
 
 vi.mock('@/hooks/usePromptTemplates', () => ({
@@ -32,8 +32,13 @@ vi.mock('@/api/opencode', () => ({
 
 vi.mock('@/api/settings', () => ({
   settingsApi: {
-    getOpenCodeConfig: mockGetOpenCodeConfig,
     listManagedSkills: () => Promise.resolve([]),
+  },
+}))
+
+vi.mock('@/api/config', () => ({
+  configApi: {
+    getConfiguration: mockGetConfiguration,
   },
 }))
 
@@ -48,7 +53,7 @@ describe('ScheduleJobDialog — shared config query', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetProvidersWithModels.mockResolvedValue([])
-    mockGetOpenCodeConfig.mockResolvedValue(config)
+    mockGetConfiguration.mockResolvedValue(config)
   })
 
   it('feeds the cached shared config into the provider listing', async () => {
@@ -75,6 +80,6 @@ describe('ScheduleJobDialog — shared config query', () => {
 
     await waitFor(() => expect(mockGetProvidersWithModels).toHaveBeenCalled())
     expect(mockGetProvidersWithModels).toHaveBeenCalledWith(undefined, config)
-    expect(mockGetOpenCodeConfig).not.toHaveBeenCalled()
+    expect(mockGetConfiguration).not.toHaveBeenCalled()
   })
 })

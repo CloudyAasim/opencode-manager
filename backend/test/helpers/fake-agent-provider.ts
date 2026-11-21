@@ -1,4 +1,5 @@
 import type {
+  AgentConfiguration,
   AgentDefaults,
   Command,
   ConversationStatus,
@@ -50,6 +51,7 @@ export interface FakeProviderOptions {
   providerList?: ProviderList
   files?: string[]
   mcpServers?: McpServer[]
+  effectiveConfiguration?: AgentConfiguration
   providerAuthMethods?: ProviderAuthMethods
   providerAuthorization?: ProviderOAuthAuthorization
 }
@@ -95,6 +97,7 @@ export class FakeAgentProvider implements AgentProvider {
   providerList: ProviderList
   files: string[]
   mcpServers: McpServer[]
+  effectiveConfiguration: AgentConfiguration
   providerAuthMethods: ProviderAuthMethods
   providerAuthorization: ProviderOAuthAuthorization
 
@@ -115,6 +118,7 @@ export class FakeAgentProvider implements AgentProvider {
     this.providerList = options.providerList ?? { providers: [], default: {} }
     this.files = options.files ?? []
     this.mcpServers = options.mcpServers ?? []
+    this.effectiveConfiguration = options.effectiveConfiguration ?? {}
     this.providerAuthMethods = options.providerAuthMethods ?? {}
     this.providerAuthorization = options.providerAuthorization ?? {
       url: 'https://example.invalid/authorize',
@@ -321,6 +325,18 @@ export class FakeAgentProvider implements AgentProvider {
   async listMcpServers(context: ProviderContext): Promise<McpServer[]> {
     this.recordAbout('listMcpServers', context, [])
     return this.mcpServers
+  }
+
+  /**
+   * The configuration the agent is running with.
+   *
+   * Answered from what the test put in, so that a test can say what the agent
+   * is running with - and can say it with a credential in it, to see whether
+   * the layer above hides it.
+   */
+  async getEffectiveConfiguration(context: ProviderContext): Promise<AgentConfiguration> {
+    this.recordAbout('getEffectiveConfiguration', context, [])
+    return this.effectiveConfiguration
   }
 
   async addMcpServer(

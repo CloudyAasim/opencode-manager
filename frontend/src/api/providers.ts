@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "@/config";
-import { settingsApi } from "./settings";
 import { fetchWrapper } from "./fetchWrapper";
 import { createBffClient } from "./bff";
+import { configApi } from "./config";
 import type { OpenCodeConfigFile } from "./types/settings";
 import type { Model, Provider as VersionedProvider } from "@opencode-manager/shared/api/v1";
 import type { QueryClient } from "@tanstack/react-query";
@@ -319,7 +319,7 @@ export async function getProvidersWithModels(directory?: string, config?: OpenCo
   // read fails rather than losing the list entirely.
   const [builtin, resolvedConfig] = await Promise.all([
     getProviders(directory),
-    config ? Promise.resolve(config) : settingsApi.getOpenCodeConfig().catch(() => null),
+    config ? Promise.resolve(config) : configApi.getConfiguration().catch(() => null),
   ]);
   const { providers: builtinProviders, connected } = builtin;
   const connectedIds = new Set(connected);

@@ -6,11 +6,11 @@ import {
   getPreferredOpenCodeConfigSource,
 } from '@/api/types/settings'
 import { useI18n } from '@/lib/i18n'
-import type { OpenCodeConfigFile, OpenCodeConfigSourceName } from '@/api/types/settings'
+import type { OpenCodeConfigFile } from '@/api/types/settings'
 
 interface OpenCodeConfigSourcesNoticeProps {
   config: OpenCodeConfigFile
-  targetName?: OpenCodeConfigSourceName
+  targetName?: string
 }
 
 export function OpenCodeConfigSourcesNotice({ config, targetName }: OpenCodeConfigSourcesNoticeProps) {

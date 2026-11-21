@@ -10,10 +10,7 @@ import {
   selectPreferredOpenCodeConfigSourceName,
   type TTSConfig,
   type STTConfig,
-  type OpenCodeConfigFile,
-  type OpenCodeConfigSourceFile,
   type OpenCodeConfigSourceName,
-  type UpdateOpenCodeConfigRequest,
   type ModelConfig,
   type ProviderConfig,
   type SkillFileInfo,
@@ -24,9 +21,26 @@ import {
   type InstallSkillResponse,
 } from '@opencode-manager/shared'
 import type { NotificationPreferences } from '@opencode-manager/shared/types'
+import type { BffConfigurationDocument, BffConfigurationSource } from '@/api/bff'
 import { saveFile } from '@/lib/download'
 
-export type { TTSConfig, STTConfig, OpenCodeConfigFile, OpenCodeConfigSourceFile, OpenCodeConfigSourceName, UpdateOpenCodeConfigRequest, ModelConfig, ProviderConfig, NotificationPreferences, SkillFileInfo, CreateSkillRequest, UpdateSkillRequest, SkillScope, InstallSkillFromGithubRequest, InstallSkillResponse }
+/**
+ * The configuration, as the client holds it.
+ *
+ * It is the layer's own document, not the manager's: the client asks the
+ * layer for the configuration and the layer says what the configuration is.
+ * The two were the same thing only because both doors answered with the same
+ * file - and the file holds the credentials of every model provider on the
+ * host, so the door that answers with it is a door worth watching.
+ */
+export type OpenCodeConfigFile = BffConfigurationDocument
+
+/**
+ * One file the configuration is written down in.
+ */
+export type OpenCodeConfigSourceFile = BffConfigurationSource
+
+export type { TTSConfig, STTConfig, OpenCodeConfigSourceName, ModelConfig, ProviderConfig, NotificationPreferences, SkillFileInfo, CreateSkillRequest, UpdateSkillRequest, SkillScope, InstallSkillFromGithubRequest, InstallSkillResponse }
 export { DEFAULT_TTS_CONFIG, DEFAULT_STT_CONFIG, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_DIRECT_SHORTCUTS, DEFAULT_USER_PREFERENCES, DEFAULT_LEADER_KEY, BLOCKED_SERVER_ENV_KEYS, DEFAULT_SERVER_ENV_VARS }
 export { isOpenCodeConfigSourceName } from '@opencode-manager/shared'
 
@@ -106,6 +120,16 @@ export interface UpdateSettingsRequest {
 
 export interface OpenCodeConfigSaveResponse extends OpenCodeConfigFile {
   restartRequired?: boolean
+  /**
+   * The places where the client tried to change a credential and the server's
+   * own value went back there instead.
+   *
+   * The client never saw a key, so it never wrote one - but it may have
+   * written a value of its own or removed the line altogether, and both of
+   * those are edits that did not happen. They are named so that the person can
+   * be told.
+   */
+  overriddenCredentials?: string[]
 }
 
 export interface OpenCodeImportStatus {

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useMcpServers } from '@/hooks/useMcpServers'
-import { settingsApi } from '@/api/settings'
+import { configApi } from '@/api/config'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useI18n } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/error-toast'
@@ -44,7 +44,7 @@ export function AddMcpServerDialog({ open, onOpenChange, onUpdate }: AddMcpServe
 
   const addMcpServerMutation = useMutation({
     mutationFn: async () => {
-      const config = await settingsApi.getOpenCodeConfig()
+      const config = await configApi.getConfiguration()
       const currentMcp = (config.content.mcp as Record<string, unknown>) || {}
 
       const mcpConfig: Record<string, unknown> = {

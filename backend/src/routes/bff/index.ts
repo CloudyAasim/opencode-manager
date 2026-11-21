@@ -13,6 +13,7 @@ import { createBffProviderRoutes } from './providers'
 import { createBffFileRoutes } from './files'
 import { createBffMcpRoutes } from './mcp'
 import { createBffProviderAuthRoutes } from './provider-auth'
+import { createBffConfigurationRoutes } from './config'
 import { fail } from '../api-v1/respond'
 
 /**
@@ -71,6 +72,7 @@ export function createBffRoutes(registry: ProviderRegistry, database: Database, 
   app.route('/files', createBffFileRoutes(registry, database))
   app.route('/mcp', createBffMcpRoutes(registry, database))
   app.route('/provider-auth', createBffProviderAuthRoutes(registry, options.afterAuthorization))
+  app.route('/config', createBffConfigurationRoutes(registry, database))
 
   return app
 }

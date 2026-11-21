@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { findProvider, getProvidersWithModels } from './providers'
 import { makeOpenCodeConfigFile } from '@/test/fixtures/opencode-config'
 
-const { mockGetOpenCodeConfig, mockFetchWrapper } = vi.hoisted(() => ({
-  mockGetOpenCodeConfig: vi.fn(),
+const { mockGetConfiguration, mockFetchWrapper } = vi.hoisted(() => ({
+  mockGetConfiguration: vi.fn(),
   mockFetchWrapper: vi.fn(),
 }))
 
-vi.mock('./settings', () => ({
-  settingsApi: {
-    getOpenCodeConfig: mockGetOpenCodeConfig,
+vi.mock('./config', () => ({
+  configApi: {
+    getConfiguration: mockGetConfiguration,
   },
 }))
 
@@ -41,21 +41,21 @@ describe('getProvidersWithModels', () => {
   it('uses the supplied config instead of re-reading it', async () => {
     const providers = await getProvidersWithModels(undefined, config)
 
-    expect(mockGetOpenCodeConfig).not.toHaveBeenCalled()
+    expect(mockGetConfiguration).not.toHaveBeenCalled()
     expect(providers.map((provider) => provider.id)).toEqual(['openai'])
   })
 
   it('reads the config when none is supplied', async () => {
-    mockGetOpenCodeConfig.mockResolvedValue(config)
+    mockGetConfiguration.mockResolvedValue(config)
 
     const providers = await getProvidersWithModels(undefined)
 
-    expect(mockGetOpenCodeConfig).toHaveBeenCalledTimes(1)
+    expect(mockGetConfiguration).toHaveBeenCalledTimes(1)
     expect(providers.map((provider) => provider.id)).toEqual(['openai'])
   })
 
   it('degrades to no configured providers when the config read fails', async () => {
-    mockGetOpenCodeConfig.mockRejectedValue(new Error('no config file'))
+    mockGetConfiguration.mockRejectedValue(new Error('no config file'))
 
     const providers = await getProvidersWithModels(undefined)
 

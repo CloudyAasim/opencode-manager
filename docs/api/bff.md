@@ -73,6 +73,9 @@ seventy-five, and it still gets seventy-five.
 | `GET` | `/api/bff/provider-auth/credentials` | The providers that have credentials | `BffProviderCredentialListResponse` |
 | `POST` | `/api/bff/provider-auth/credentials/:providerId` | Writing a credential down | `AcceptedResponse` |
 | `DELETE` | `/api/bff/provider-auth/credentials/:providerId` | Taking a credential away | `AcceptedResponse` |
+| `GET` | `/api/bff/config` | The configuration the agent runs with | `BffConfigurationResponse` |
+| `PUT` | `/api/bff/config` | Writing the configuration | `BffConfigurationSaveResponse` |
+| `GET` | `/api/bff/config/effective` | What the agent is actually running with | `BffEffectiveConfigurationResponse` |
 
 ## The shapes
 
@@ -472,6 +475,101 @@ A part of a conversation that arrives in a kind this layer does not know is not
 dropped and not turned into text: it is called `other` and keeps whatever words
 it had.
 
+### The configuration
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `GET /api/bff/config` | - | `BffConfigurationResponse` |
+| `PUT /api/bff/config` | `BffConfigurationUpdateRequest` | `BffConfigurationSaveResponse` |
+| `GET /api/bff/config/effective` | - | `BffEffectiveConfigurationResponse` |
+
+The configuration is the agent's own face - the last of it - and it is the one
+document that holds the credentials of every model provider on the host. The
+client used to ask the manager's own door for it, and that door answered with
+the document as it is written down: four keys went into the browser that way,
+on a server with four providers.
+
+So the document is asked for here, and it travels with holes in it. Every
+credential is the word that stands for one, and the path it was at is kept:
+
+```json
+{
+  "configuration": {
+    "path": "/workspace/.config/opencode/opencode.jsonc",
+    "content": {
+      "provider": { "acme": { "options": { "apiKey": "***", "baseURL": "https://acme.test" } } }
+    },
+    "rawContent": "{\n  \"provider\": { \"acme\": { \"options\": { \"apiKey\": \"***\" } } }\n}",
+    "isValid": true,
+    "updatedAt": 1730000000000,
+    "sources": [],
+    "revision": "9f2c…"
+  }
+}
+```
+
+A credential is a string under a name that says what it is - `apiKey`,
+`clientSecret`, `token`, `password`. A name that does not say it is not a
+credential, and it is said in the document as it is.
+
+The document is the agent's, so the layer does not rename what is in it: the
+shape of the document is the agent's shape. What the layer does is keep the
+secrets out of it.
+
+Writing it back is where the second rule lives. **This layer manages the
+configuration, not the credentials.** A client that writes a different value at
+a credential path is not changing a key - the server's own value goes back
+there. A client that takes the provider away takes the key with it: the
+container decides, and the container is the provider.
+
+| Body | Meaning |
+| --- | --- |
+| `content` | The whole document as a document, or the text of one source file as it is written down |
+| `source` | Which file to write, when the client says |
+| `expectedRevision` | The revision the client read, so that two writers cannot both win |
+
+The text form is what a person edits, and editing it keeps the comments and
+the formatting. The server edits the text where it lies rather than
+re-serializing it, and it puts its own credentials back in the text as well.
+
+`restartRequired` says that the agent is not running the configuration that
+was just written down: the change is on disk, and the agent has not read it
+again yet.
+
+An edit at a credential path that did not happen is named in the answer.
+`overriddenCredentials` holds the paths where the client tried to change a
+credential - by writing a value of its own, or by removing the line - and the
+server's own value went back there instead:
+
+```json
+{
+  "configuration": { "…": "…" },
+  "restartRequired": true,
+  "overriddenCredentials": ["provider.acme.options.apiKey"]
+}
+```
+
+The write is not refused: everything else in it is applied. But it is not
+silent either. A person who believes they revoked a key, and did not, is worse
+off than one whose write was refused - so the places are named, and the way to
+remove a key is to remove the provider it belonged to.
+
+A write that somebody else made first is a `409` with the code `conflict` -
+the request was fine, the world moved under it:
+
+```json
+{ "error": { "code": "conflict", "message": "The configuration was changed by another writer",
+             "details": { "expectedRevision": "9f2c…", "actualRevision": "41ab…" } } }
+```
+
+The configuration is everybody's - every conversation on the host reads it -
+so it is the administrator's to read and to write. Everybody else is refused
+with a `403`, and the refusal happens before anything is read.
+
+The effective configuration is the agent's own answer rather than the file:
+the environment is expanded and the projects are merged into it. The keys are
+in there too - expanded, but still keys - so it travels masked like the rest.
+
 ### What it refuses
 
 - **No session, no list.** The same rule the rest of the server uses - one
@@ -483,6 +581,8 @@ it had.
   whose conversations those are is answered here.
 - **A pending request that is not yours.** A permission belongs to a
   conversation, so the conversation decides whose request it is.
+- **A configuration that is not yours to change.** The configuration is the
+  whole host's, so only the administrator may read it or write it.
 
 A conversation that is not yours is answered exactly like one that does not
 exist: `404`, with the same words. A caller who may not have it should not be

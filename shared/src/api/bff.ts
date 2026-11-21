@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  AgentConfigurationSchema,
   AgentDefaultsSchema,
   CommandSchema,
   ConversationStatusSchema,
@@ -198,3 +199,122 @@ export const BffProviderCredentialListResponseSchema = z.object({
 export type BffProviderCredentialListResponse = z.infer<
   typeof BffProviderCredentialListResponseSchema
 >
+
+/**
+ * A thing wrong with the configuration.
+ */
+export const BffConfigurationValidationIssueSchema = z.object({
+  path: z.string(),
+  message: z.string(),
+})
+export type BffConfigurationValidationIssue = z.infer<
+  typeof BffConfigurationValidationIssueSchema
+>
+
+/**
+ * One file the configuration is written down in.
+ *
+ * Which files those are is the agent's business, so the layer says "a source"
+ * and not a file name: a client that has to learn the file names of every
+ * agent has to learn them again for each one.
+ */
+export const BffConfigurationSourceSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  /**
+   * The file as it is written down, with every credential behind a word.
+   */
+  rawContent: z.string(),
+  /**
+   * The same file, read as a document, with every credential behind a word.
+   */
+  content: z.record(z.string(), z.unknown()),
+  isValid: z.boolean(),
+  validationIssues: z.array(BffConfigurationValidationIssueSchema).optional(),
+  updatedAt: z.number(),
+})
+export type BffConfigurationSource = z.infer<typeof BffConfigurationSourceSchema>
+
+/**
+ * The configuration, as this layer says it.
+ *
+ * This is the agent's own face - the last of it - and it is the one document
+ * that holds the credentials of every model provider on the host. So it
+ * travels with holes in it: every credential is the word that stands for one,
+ * and the path it was at is kept, because the server puts its own value back
+ * where its own value was.
+ *
+ * The revision is the revision of the document on disk, not of the masked one:
+ * a client that sends it back is saying "this is what I read", and the
+ * server has to be able to tell whether what is on disk is still that.
+ */
+export const BffConfigurationDocumentSchema = z.object({
+  path: z.string(),
+  content: z.record(z.string(), z.unknown()),
+  rawContent: z.string(),
+  isValid: z.boolean(),
+  validationIssues: z.array(BffConfigurationValidationIssueSchema).optional(),
+  updatedAt: z.number(),
+  sources: z.array(BffConfigurationSourceSchema),
+  revision: z.string(),
+})
+export type BffConfigurationDocument = z.infer<typeof BffConfigurationDocumentSchema>
+
+export const BffConfigurationResponseSchema = z.object({
+  configuration: BffConfigurationDocumentSchema,
+})
+export type BffConfigurationResponse = z.infer<typeof BffConfigurationResponseSchema>
+
+/**
+ * The configuration after a change.
+ *
+ * `restartRequired` says that the agent is not running the configuration that
+ * was just written down - the change is on disk, and the agent has not read
+ * it again yet.
+ *
+ * `overriddenCredentials` names the places where the client tried to change a
+ * credential - by writing a value of its own, or by removing the line - and the
+ * server's own value went back there instead. They are named so that the
+ * person can be told: an edit that quietly does not happen is worse than one
+ * that is refused, because the person believes they changed something and they
+ * did not.
+ */
+export const BffConfigurationSaveResponseSchema = z.object({
+  configuration: BffConfigurationDocumentSchema,
+  restartRequired: z.boolean().optional(),
+  overriddenCredentials: z.array(z.string()).optional(),
+})
+export type BffConfigurationSaveResponse = z.infer<
+  typeof BffConfigurationSaveResponseSchema
+>
+
+/**
+ * The configuration the agent is actually running with.
+ *
+ * It is the agent's own answer, so it is the agent's own shape - and it
+ * holds the credentials too, so it travels masked like the rest.
+ */
+export const BffEffectiveConfigurationResponseSchema = z.object({
+  configuration: AgentConfigurationSchema,
+})
+export type BffEffectiveConfigurationResponse = z.infer<
+  typeof BffEffectiveConfigurationResponseSchema
+>
+
+/**
+ * A change to the configuration.
+ *
+ * The content is either the whole document as a document, or the text of one
+ * source file as it is written down. The text is what a person edits, and
+ * editing it keeps the comments and the formatting - which is why the server
+ * edits the text in place rather than re-serialising it.
+ */
+export const BffConfigurationUpdateRequestSchema = z.object({
+  content: z.union([z.record(z.string(), z.unknown()), z.string()]),
+  source: z.string().optional(),
+  expectedRevision: z.string().optional(),
+})
+export type BffConfigurationUpdateRequest = z.infer<
+  typeof BffConfigurationUpdateRequestSchema
+>
+

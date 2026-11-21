@@ -18,6 +18,7 @@ import { OpenCodeModelsEditor, type ConfigProvider } from './OpenCodeModelsEdito
 import { scrollSectionIntoView } from '@/lib/settingsScroll'
 import { VersionSelectDialog } from './VersionSelectDialog'
 import { settingsApi } from '@/api/settings'
+import { configApi } from '@/api/config'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useServerHealth } from '@/hooks/useServerHealth'
 import { useOpenCodeServerActions } from '@/hooks/useOpenCodeServerActions'
@@ -169,6 +170,16 @@ export function OpenCodeConfigManager() {
     } else {
       showToast.success(t('settingsPanels.configManager.configurationUpdated'))
     }
+    // A credential is not the browser's to change, and the server keeps its
+    // own value. When the client tried anyway, the answer names the places
+    // where the edit did not happen - otherwise the person walks away
+    // believing they changed a key that never changed.
+    const overridden = result.overriddenCredentials ?? []
+    if (overridden.length > 0) {
+      showToast.warning(
+        t('settingsPanels.configManager.credentialsOverridden', { paths: overridden.join(', ') }),
+      )
+    }
     invalidateConfigCaches(queryClient, { skipOpenCodeConfig: true })
   }
 
@@ -176,7 +187,7 @@ export function OpenCodeConfigManager() {
     const expectedRevision = queryClient.getQueryData<OpenCodeConfigFile>(
       OPEN_CODE_CONFIG_QUERY_KEY,
     )?.revision
-    const result = await settingsApi.updateOpenCodeConfig({
+    const result = await configApi.updateConfiguration({
       content: newContent,
       expectedRevision,
     })
@@ -314,7 +325,7 @@ export function OpenCodeConfigManager() {
             isOpen={isEditDialogOpen}
             onClose={() => setIsEditDialogOpen(false)}
             onUpdate={async ({ content, source, expectedRevision }) => {
-              const result = await settingsApi.updateOpenCodeConfig({
+              const result = await configApi.updateConfiguration({
                 content,
                 source,
                 expectedRevision,

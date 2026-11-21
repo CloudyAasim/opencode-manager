@@ -21,7 +21,7 @@ import {
   getPreferredOpenCodeConfigSource,
   isOpenCodeConfigSourceName,
 } from '@/api/types/settings'
-import type { OpenCodeConfigFile, OpenCodeConfigSourceFile, OpenCodeConfigSourceName } from '@/api/types/settings'
+import type { OpenCodeConfigFile, OpenCodeConfigSourceFile } from '@/api/types/settings'
 
 type ValidationIssue = {
   path: string
@@ -33,7 +33,7 @@ interface OpenCodeConfigEditorProps {
   config: OpenCodeConfigFile | null
   isOpen: boolean
   onClose: () => void
-  onUpdate: (request: { content: string; source: OpenCodeConfigSourceName; expectedRevision?: string }) => Promise<void>
+  onUpdate: (request: { content: string; source: string; expectedRevision?: string }) => Promise<void>
 }
 
 export function OpenCodeConfigEditor({
@@ -73,7 +73,7 @@ export function OpenCodeConfigEditor({
     setActiveLine(null)
   }, [])
 
-  const selectSource = useCallback((name: OpenCodeConfigSourceName) => {
+  const selectSource = useCallback((name: string) => {
     if (!config) return
     const next = sources.find((source) => source.name === name)
     if (!next) return

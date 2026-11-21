@@ -228,6 +228,19 @@ export interface BffMcpServerListResponse {
 export const BFF_PROVIDER_AUTH_ENDPOINT = '/api/bff/provider-auth'
 
 /**
+ * Where the configuration lives.
+ *
+ * The client used to ask the manager's own door for this, and that door
+ * answered with the document as it is written down - which is where the
+ * credentials of every model provider on the host live. Four keys went into
+ * the browser that way.
+ *
+ * The document is asked for here now, and it travels with the credentials
+ * behind a word.
+ */
+export const BFF_CONFIG_ENDPOINT = '/api/bff/config'
+
+/**
  * How each provider may be logged in.
  *
  * The ways themselves are the versioned API's - there is one truth about what
@@ -249,6 +262,83 @@ export interface BffProviderOAuthAuthorizationResponse {
  */
 export interface BffProviderCredentialListResponse {
   credentials: string[]
+}
+
+/**
+ * One file the configuration is written down in.
+ *
+ * Which files those are is the agent's business, so the name is a name and
+ * not something the client has to know the list of.
+ */
+export interface BffConfigurationSource {
+  name: string
+  path: string
+  /** The file as it is written down, with every credential behind a word. */
+  rawContent: string
+  /** The same file, read as a document, with every credential behind a word. */
+  content: Record<string, unknown>
+  isValid: boolean
+  validationIssues?: Array<{ path: string; message: string }>
+  updatedAt: number
+}
+
+/**
+ * The configuration, as the layer says it.
+ *
+ * The document is the agent's own face, and it holds the credentials of every
+ * model provider on the host - so it travels with holes in it. The revision is
+ * the revision of the document on disk, not of the masked one: a client that
+ * sends it back is saying "this is what I read".
+ */
+export interface BffConfigurationDocument {
+  path: string
+  content: Record<string, unknown>
+  rawContent: string
+  isValid: boolean
+  validationIssues?: Array<{ path: string; message: string }>
+  updatedAt: number
+  sources: BffConfigurationSource[]
+  revision: string
+}
+
+export interface BffConfigurationResponse {
+  configuration: BffConfigurationDocument
+}
+
+/**
+ * The configuration after a change.
+ *
+ * `restartRequired` says that the agent is not running the configuration that
+ * was just written down.
+ *
+ * `overriddenCredentials` names the places where the client tried to change a
+ * credential and the server's own value went back there instead. They are
+ * named because an edit that quietly does not happen is worse than one that is
+ * refused: the person believes they changed something, and they did not.
+ */
+export interface BffConfigurationSaveResponse {
+  configuration: BffConfigurationDocument
+  restartRequired?: boolean
+  overriddenCredentials?: string[]
+}
+
+/**
+ * The configuration the agent is actually running with.
+ */
+export interface BffEffectiveConfigurationResponse {
+  configuration: Record<string, unknown>
+}
+
+/**
+ * A change to the configuration.
+ *
+ * The content is either the whole document as a document, or the text of one
+ * source file as it is written down.
+ */
+export interface BffConfigurationUpdateRequest {
+  content: Record<string, unknown> | string
+  source?: string
+  expectedRevision?: string
 }
 
 export class BffClient {
@@ -816,14 +906,54 @@ export class BffClient {
   }
 
   /**
+   * The configuration the agent runs with.
+   *
+   * Every credential in it is the word that stands for one: the browser gets
+   * to read the configuration and to write the configuration, and the keys
+   * are not part of that bargain.
+   */
+  async getConfiguration(): Promise<BffConfigurationResponse> {
+    return fetchWrapper<BffConfigurationResponse>(`${this.baseURL}${BFF_CONFIG_ENDPOINT}`)
+  }
+
+  /**
+   * Writing the configuration.
+   *
+   * What lands on disk is the client's document with the server's own
+   * credentials in it - the client may not change a key, and it may not
+   * remove one either, except by removing the provider the key belonged to.
+   */
+  async updateConfiguration(
+    request: BffConfigurationUpdateRequest,
+  ): Promise<BffConfigurationSaveResponse> {
+    return fetchWrapper<BffConfigurationSaveResponse>(`${this.baseURL}${BFF_CONFIG_ENDPOINT}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    })
+  }
+
+  /**
+   * What the agent is actually running with.
+   *
+   * The agent's own answer rather than the file: the environment is expanded
+   * and the projects are merged into it. The keys are in there too -
+   * expanded, but still keys - so this travels masked like the rest.
+   */
+  async getEffectiveConfiguration(): Promise<BffEffectiveConfigurationResponse> {
+    return fetchWrapper<BffEffectiveConfigurationResponse>(
+      `${this.baseURL}${BFF_CONFIG_ENDPOINT}/effective`,
+    )
+  }
+
+  /**
    * The address of one conversation.
    *
    * The directories are a fallback, not the answer: the layer finds the
    * conversation without them whenever the ledger or the agent knows where
    * it lives.
    */
-  private sessionUrl(sessionId: string, directories: string[], action?: string): string {
-    const params = new URLSearchParams()
+  private sessionUrl(sessionId: string, directories: string[], action?: string): string {    const params = new URLSearchParams()
     for (const directory of directories) {
       params.append('directories', directory)
     }

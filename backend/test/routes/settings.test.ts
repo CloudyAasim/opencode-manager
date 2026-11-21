@@ -15,13 +15,11 @@ const {
   mockDeleteOpenCodeConfigFile,
   mockArchiveBrokenOpenCodeConfigFile,
   mockRestoreOpenCodeConfigSnapshot,
-  mockApplyOpenCodeConfigUpdate,
 } = vi.hoisted(() => ({
   mockReadOpenCodeConfigFile: vi.fn(),
   mockDeleteOpenCodeConfigFile: vi.fn(),
   mockArchiveBrokenOpenCodeConfigFile: vi.fn(),
   mockRestoreOpenCodeConfigSnapshot: vi.fn(),
-  mockApplyOpenCodeConfigUpdate: vi.fn(),
 }))
 
 vi.mock('fs', () => ({
@@ -174,14 +172,6 @@ vi.mock('../../src/services/opencode-config-file', async (importOriginal) => {
     archiveBrokenOpenCodeConfigFile: mockArchiveBrokenOpenCodeConfigFile,
     restoreOpenCodeConfigSnapshot: mockRestoreOpenCodeConfigSnapshot,
     withOpenCodeConfigLock: (fn: () => Promise<unknown>) => fn(),
-  }
-})
-
-vi.mock('../../src/services/opencode-config-apply', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/services/opencode-config-apply')>()
-  return {
-    ...actual,
-    applyOpenCodeConfigUpdate: mockApplyOpenCodeConfigUpdate,
   }
 })
 
@@ -345,7 +335,6 @@ describe('Settings Routes - OpenCode Upgrade', () => {
     mockDeleteOpenCodeConfigFile.mockReset()
     mockArchiveBrokenOpenCodeConfigFile.mockReset()
     mockRestoreOpenCodeConfigSnapshot.mockReset()
-    mockApplyOpenCodeConfigUpdate.mockReset()
     
     testDb = {} as any
     settingsApp = withSessionUser(testDb, 'admin')
@@ -372,204 +361,7 @@ describe('Settings Routes - OpenCode Upgrade', () => {
     })
   })
 
-  describe('OpenCode config routes', () => {
-    it('refuses every route to a signed-in non-admin', async () => {
-      const app = withSessionUser(testDb, 'user')
-
-      const get = await app.fetch(new Request('http://localhost/opencode-config'))
-      const effective = await app.fetch(new Request('http://localhost/opencode-config/effective'))
-      const put = await app.fetch(new Request('http://localhost/opencode-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: { provider: { mine: { options: { baseURL: 'https://x' } } } } }),
-      }))
-
-      expect([get.status, effective.status, put.status]).toEqual([403, 403, 403])
-      // The refusal has to happen before the body is even looked at: a route
-      // that validated first would still tell a stranger whether their payload
-      // was well formed.
-      expect((await put.json() as { error: string }).error).toBe('Forbidden')
-      expect(mockReadOpenCodeConfigFile).not.toHaveBeenCalled()
-      expect(mockApplyOpenCodeConfigUpdate).not.toHaveBeenCalled()
-    })
-
-    it('carries the caller and their address into the apply so the write can be attributed', async () => {
-      const config = {
-        path: '/tmp/test-workspace/.config/opencode.json',
-        content: { theme: 'light' },
-        rawContent: '{"theme":"light"}',
-        isValid: true,
-        updatedAt: 4,
-        sources: [],
-        revision: 'rev-1',
-      }
-      mockApplyOpenCodeConfigUpdate.mockResolvedValueOnce({ status: 'applied', config })
-      const app = withSessionUser(testDb, 'admin')
-
-      await app.fetch(new Request('http://localhost/opencode-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'user-agent': 'vitest', 'x-real-ip': '203.0.113.9' },
-        body: JSON.stringify({ content: { theme: 'light' } }),
-      }))
-
-      expect(mockApplyOpenCodeConfigUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          actor: {
-            userId: 'me',
-            userEmail: 'me@example.com',
-            // The suite runs without TRUST_PROXY, so a forwarded address is
-            // not believed. Recording it anyway would let anyone who can reach
-            // the app forge the address on a row that is meant to say where the
-            // write came from.
-            ipAddress: null,
-            userAgent: 'vitest',
-          },
-        }),
-      )
-    })
-
-    it('returns the on-disk config state from GET /opencode-config', async () => {
-      const fileState = {
-        path: '/tmp/test-workspace/.config/opencode.json',
-        content: { theme: 'dark' },
-        rawContent: '{"theme":"dark"}',
-        isValid: true,
-        updatedAt: 1,
-      }
-      mockReadOpenCodeConfigFile.mockResolvedValueOnce(fileState)
-
-      const res = await settingsApp.fetch(new Request('http://localhost/opencode-config'))
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json).toEqual(fileState)
-    })
-
-    it('returns 404 from GET /opencode-config when no config file exists', async () => {
-      mockReadOpenCodeConfigFile.mockResolvedValueOnce(null)
-
-      const res = await settingsApp.fetch(new Request('http://localhost/opencode-config'))
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(404)
-      expect(json.error).toBe('No OpenCode config file found')
-    })
-
-    it('maps a restart-pending apply result to 200 with restartRequired', async () => {
-      const config = {
-        path: '/tmp/test-workspace/.config/opencode.json',
-        content: { plugin: ['evil-plugin'] },
-        rawContent: '{"plugin":["evil-plugin"]}',
-        isValid: true,
-        updatedAt: 2,
-      }
-      mockApplyOpenCodeConfigUpdate.mockResolvedValueOnce({ status: 'restart_pending', config })
-
-      const res = await settingsApp.fetch(new Request('http://localhost/opencode-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: '{"plugin":["evil-plugin"]}' }),
-      }))
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json).toEqual({ ...config, restartRequired: true })
-      expect(mockApplyOpenCodeConfigUpdate).toHaveBeenCalledWith({
-        content: '{"plugin":["evil-plugin"]}',
-        source: undefined,
-        expectedRevision: undefined,
-        settingsService: expect.anything(),
-        db: testDb,
-        actor: {
-          userId: 'me',
-          userEmail: 'me@example.com',
-          ipAddress: null,
-          userAgent: null,
-        },
-      })
-    })
-
-    it('maps an unchanged applied result to 200 without requesting a restart', async () => {
-      const config = {
-        path: '/tmp/test-workspace/.config/opencode.json',
-        content: { theme: 'light' },
-        rawContent: '{"theme":"light"}',
-        isValid: true,
-        updatedAt: 3,
-      }
-      mockApplyOpenCodeConfigUpdate.mockResolvedValueOnce({ status: 'applied', config })
-
-      const res = await settingsApp.fetch(new Request('http://localhost/opencode-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: { theme: 'light' } }),
-      }))
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(200)
-      expect(json).toEqual(config)
-      expect(mockApplyOpenCodeConfigUpdate).toHaveBeenCalledWith({
-        content: { theme: 'light' },
-        source: undefined,
-        expectedRevision: undefined,
-        settingsService: expect.anything(),
-        db: testDb,
-        actor: expect.objectContaining({ userId: 'me' }),
-      })
-    })
-
-    it('returns 400 when the PUT body fails schema validation', async () => {
-      const res = await settingsApp.fetch(new Request('http://localhost/opencode-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: 123 }),
-      }))
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(400)
-      expect(json.error).toBe('Invalid config data')
-      expect(mockApplyOpenCodeConfigUpdate).not.toHaveBeenCalled()
-    })
-
-    it('returns 400 when the PUT body is malformed JSON', async () => {
-      const res = await settingsApp.fetch(new Request('http://localhost/opencode-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{',
-      }))
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(400)
-      expect(json.error).toBe('Invalid JSON')
-      expect(mockApplyOpenCodeConfigUpdate).not.toHaveBeenCalled()
-    })
-
-    it('returns 400 when the PUT body is empty', async () => {
-      const res = await settingsApp.fetch(new Request('http://localhost/opencode-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      }))
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(400)
-      expect(json.error).toBe('Invalid JSON')
-      expect(mockApplyOpenCodeConfigUpdate).not.toHaveBeenCalled()
-    })
-
-    it('returns 500 when applying the config fails', async () => {
-      mockApplyOpenCodeConfigUpdate.mockRejectedValueOnce(new Error('write failed'))
-
-      const res = await settingsApp.fetch(new Request('http://localhost/opencode-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: '{"theme":"light"}' }),
-      }))
-      const json = await res.json() as Record<string, unknown>
-
-      expect(res.status).toBe(500)
-      expect(json.error).toBe('Failed to update OpenCode config')
-    })
-
+  describe('OpenCode rollback routes', () => {
     it('writes the last known good config and restarts on rollback', async () => {
       mockGetLastKnownGoodConfig.mockReturnValueOnce('{"theme":"dark"}')
       mockRestoreOpenCodeConfigSnapshot.mockResolvedValueOnce({

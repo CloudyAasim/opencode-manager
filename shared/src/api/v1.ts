@@ -27,6 +27,11 @@ export const API_V1_VERSION = 'v1'
  * that somebody else answered, a question that was withdrawn. It was given a
  * code of its own rather than sharing `not_found` because a client that was
  * told "no conversation" would go looking for the conversation.
+ *
+ * `conflict` is for a change that cannot be made because the world moved
+ * under it: somebody else wrote the same thing first. It has a code of its
+ * own because the way out of it is not to fix the request - the request was
+ * fine - but to read again and try once more.
  */
 export const ApiErrorCodeSchema = z.enum([
   'bad_request',
@@ -36,6 +41,7 @@ export const ApiErrorCodeSchema = z.enum([
   'resource_not_found',
   'agent_not_found',
   'agent_unavailable',
+  'conflict',
   'upstream_error',
   'internal_error',
 ])
@@ -1158,6 +1164,22 @@ export const SummarizeRequestSchema = z.object({
   model: PromptModelSchema,
 })
 export type SummarizeRequest = z.infer<typeof SummarizeRequestSchema>
+
+/**
+ * The configuration an agent is running with.
+ *
+ * The document is the agent's own, so its shape is the agent's: a bag of
+ * settings this layer does not get a vote on. What the layer does have a vote
+ * on is the credentials in it - they are masked on the way out, and the
+ * server's own values win on the way back in.
+ *
+ * It is a bag and not an object with named keys on purpose. A named key would
+ * be a promise that every agent has that key, and the moment a second agent
+ * arrives with a key nobody thought of, the promise would be a lie the second
+ * agent's clients believed.
+ */
+export const AgentConfigurationSchema = z.record(z.string(), z.unknown())
+export type AgentConfiguration = z.infer<typeof AgentConfigurationSchema>
 
 export const ApiDescriptorSchema = z.object({
   api: z.literal(API_V1_VERSION),

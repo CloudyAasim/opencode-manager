@@ -9,9 +9,9 @@ import type { ScheduleJob } from '@opencode-manager/shared/types'
 
 Element.prototype.scrollIntoView = vi.fn()
 
-const { mockGetProvidersWithModels, mockGetOpenCodeConfig } = vi.hoisted(() => ({
+const { mockGetProvidersWithModels, mockGetConfiguration } = vi.hoisted(() => ({
   mockGetProvidersWithModels: vi.fn(),
-  mockGetOpenCodeConfig: vi.fn(),
+  mockGetConfiguration: vi.fn(),
 }))
 
 vi.mock('@/hooks/usePromptTemplates', () => ({
@@ -41,8 +41,13 @@ vi.mock('@/api/opencode', () => ({
 
 vi.mock('@/api/settings', () => ({
   settingsApi: {
-    getOpenCodeConfig: mockGetOpenCodeConfig,
     listManagedSkills: () => Promise.resolve([]),
+  },
+}))
+
+vi.mock('@/api/config', () => ({
+  configApi: {
+    getConfiguration: mockGetConfiguration,
   },
 }))
 
@@ -105,7 +110,7 @@ describe('ScheduleJobDialog — model fallback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetProvidersWithModels.mockResolvedValue(providers)
-    mockGetOpenCodeConfig.mockResolvedValue(config)
+    mockGetConfiguration.mockResolvedValue(config)
   })
 
   it('prefills the config default when the stored model no longer exists', async () => {
@@ -174,7 +179,7 @@ describe('ScheduleJobDialog — model fallback', () => {
         isConnected: true,
       },
     ])
-    mockGetOpenCodeConfig.mockResolvedValue(makeOpenCodeConfigFile({
+    mockGetConfiguration.mockResolvedValue(makeOpenCodeConfigFile({
       content: { model: 'openai/gpt-5-2025-08-07' },
     }))
 

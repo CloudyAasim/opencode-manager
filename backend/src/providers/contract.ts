@@ -1,6 +1,7 @@
 import type {
   Agent,
   AgentCapability,
+  AgentConfiguration,
   AgentDefaults,
   AgentKind,
   Command,
@@ -39,6 +40,7 @@ import type {
 export type {
   Agent,
   AgentCapability,
+  AgentConfiguration,
   AgentDefaults,
   AgentKind,
   Command,
@@ -284,6 +286,21 @@ export interface AgentProvider {
    * directory that is full of them.
    */
   searchFiles(query: string, context: ProviderContext): Promise<string[]>
+  /**
+   * The configuration the agent is actually running with.
+   *
+   * The document the agent is configured by holds the credentials of every
+   * model provider on the host, so this is the one answer of the agent's that
+   * cannot be handed over as it is. The layer above masks the credentials on
+   * the way out and puts its own values back on the way in - and this contract
+   * says nothing about that, because it is not the agent's business: the
+   * agent is saying what it is running with, not who may see it.
+   *
+   * An agent that keeps no such document says so by refusing: an empty
+   * configuration would claim "there is nothing configured" about an agent
+   * that is running with hundreds of settings.
+   */
+  getEffectiveConfiguration(context: ProviderContext): Promise<AgentConfiguration>
   /**
    * The tool servers the agent knows.
    *

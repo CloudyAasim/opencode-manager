@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { settingsApi } from '@/api/settings'
+import { configApi } from '@/api/config'
 import { useOpenCodeConfigFile, OPEN_CODE_CONFIG_QUERY_KEY } from '@/hooks/useOpenCodeConfigFile'
 import { invalidateConfigCaches } from '@/lib/queryInvalidation'
 import { showErrorToast } from '@/lib/error-toast'
@@ -109,7 +109,7 @@ export function OpenCodeCoreSettings() {
       if (!current) {
         throw new Error('opencode-config-not-loaded')
       }
-      return settingsApi.updateOpenCodeConfig({
+      return configApi.updateConfiguration({
         content: applyPatch(current.content, patch) as OpenCodeConfigContent,
         expectedRevision: current.revision,
       })

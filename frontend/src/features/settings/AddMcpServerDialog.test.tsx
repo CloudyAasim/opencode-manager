@@ -7,19 +7,19 @@ import { makeOpenCodeConfigFile } from '@/test/fixtures/opencode-config'
 import { showErrorToast } from '@/lib/error-toast'
 
 const {
-  mockGetOpenCodeConfig,
-  mockUpdateOpenCodeConfig,
+  mockGetConfiguration,
+  mockUpdateConfiguration,
   mockAddServerAsync,
 } = vi.hoisted(() => ({
-  mockGetOpenCodeConfig: vi.fn(),
-  mockUpdateOpenCodeConfig: vi.fn(),
+  mockGetConfiguration: vi.fn(),
+  mockUpdateConfiguration: vi.fn(),
   mockAddServerAsync: vi.fn(),
 }))
 
-vi.mock('@/api/settings', () => ({
-  settingsApi: {
-    getOpenCodeConfig: mockGetOpenCodeConfig,
-    updateOpenCodeConfig: mockUpdateOpenCodeConfig,
+vi.mock('@/api/config', () => ({
+  configApi: {
+    getConfiguration: mockGetConfiguration,
+    updateConfiguration: mockUpdateConfiguration,
   },
 }))
 
@@ -49,8 +49,8 @@ function renderDialog(onUpdate: (content: Record<string, unknown>) => Promise<vo
 describe('AddMcpServerDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetOpenCodeConfig.mockResolvedValue(config)
-    mockUpdateOpenCodeConfig.mockResolvedValue(config)
+    mockGetConfiguration.mockResolvedValue(config)
+    mockUpdateConfiguration.mockResolvedValue(config)
     mockAddServerAsync.mockResolvedValue(undefined)
   })
 
@@ -64,7 +64,7 @@ describe('AddMcpServerDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Add MCP Server' }))
 
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1))
-    expect(mockUpdateOpenCodeConfig).not.toHaveBeenCalled()
+    expect(mockUpdateConfiguration).not.toHaveBeenCalled()
     expect(onUpdate).toHaveBeenCalledWith({
       mcp: {
         filesystem: {
@@ -79,7 +79,7 @@ describe('AddMcpServerDialog', () => {
 
   it('passes only the merged content to onUpdate', async () => {
     const fetched = makeOpenCodeConfigFile({ revision: 'rev-B' })
-    mockGetOpenCodeConfig.mockResolvedValue(fetched)
+    mockGetConfiguration.mockResolvedValue(fetched)
     const onUpdate = vi.fn<(content: Record<string, unknown>) => Promise<void>>().mockResolvedValue(undefined)
     const user = userEvent.setup()
     renderDialog(onUpdate)
@@ -92,7 +92,7 @@ describe('AddMcpServerDialog', () => {
     const [content] = onUpdate.mock.calls[0]
     expect(onUpdate.mock.calls[0]).toHaveLength(1)
     expect((content.mcp as Record<string, unknown>).filesystem).toBeDefined()
-    expect(mockUpdateOpenCodeConfig).not.toHaveBeenCalled()
+    expect(mockUpdateConfiguration).not.toHaveBeenCalled()
   })
 
   it('shows the validation error it throws instead of throwing it into nowhere', async () => {

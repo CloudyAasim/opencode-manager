@@ -1,9 +1,6 @@
-import type { 
-  SettingsResponse, 
-  UpdateSettingsRequest, 
-  OpenCodeConfigFile,
-  OpenCodeConfigSaveResponse,
-  UpdateOpenCodeConfigRequest,
+import type {
+  SettingsResponse,
+  UpdateSettingsRequest,
   OpenCodeImportStatus,
   SyncOpenCodeImportResponse,
   SkillFileInfo,
@@ -56,20 +53,6 @@ export const settingsApi = {
     return fetchWrapper(`${API_BASE_URL}/api/settings`, {
       method: 'DELETE',
       params: { userId },
-    })
-  },
-
-  getOpenCodeConfig: async (): Promise<OpenCodeConfigFile> => {
-    return fetchWrapper(`${API_BASE_URL}/api/settings/opencode-config`)
-  },
-
-  updateOpenCodeConfig: async (
-    request: UpdateOpenCodeConfigRequest
-  ): Promise<OpenCodeConfigSaveResponse> => {
-    return fetchWrapper(`${API_BASE_URL}/api/settings/opencode-config`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
     })
   },
 

@@ -1,4 +1,5 @@
 import type {
+  AgentConfiguration,
   AgentDefaults,
   Command,
   ConversationStatus,
@@ -268,6 +269,21 @@ export abstract class CliAgentProvider implements AgentProvider {
     throw new ProviderUnavailableError(
       this.id,
       `${this.label} cannot look through its working directory`,
+    )
+  }
+
+  /**
+   * The configuration the program is running with.
+   *
+   * A program in a terminal is configured by the shell it was started in and
+   * by the files in its working directory, and this adapter reads neither of
+   * them. An empty configuration would claim "there is nothing configured"
+   * about a program that is running with hundreds of settings.
+   */
+  async getEffectiveConfiguration(): Promise<AgentConfiguration> {
+    throw new ProviderUnavailableError(
+      this.id,
+      `${this.label} cannot say what configuration it is running with`,
     )
   }
 

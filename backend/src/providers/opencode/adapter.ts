@@ -1,4 +1,5 @@
 import type {
+  AgentConfiguration,
   AgentDefaults,
   Command,
   ConversationStatus,
@@ -1421,6 +1422,27 @@ export class OpenCodeProvider implements AgentProvider {
   async getDefaults(context: ProviderContext): Promise<AgentDefaults> {
     const raw = await this.readJson<unknown>('/config', context, unnamed())
     return toAgentDefaults(raw)
+  }
+
+  /**
+   * The configuration this agent is running with.
+   *
+   * The global one, and not the one of a working directory: the question is
+   * what the host is set up with, and a directory's configuration is that
+   * directory's business. The answer holds the keys of every model provider
+   * on the host - the agent has expanded the environment they came from - so
+   * the layer above masks them, and the agent says nothing about that.
+   */
+  async getEffectiveConfiguration(_context: ProviderContext): Promise<AgentConfiguration> {
+    try {
+      // Asked without a working directory on purpose. The question is what
+      // the host is set up with, and a directory's configuration is that
+      // directory's business - asking with one would answer a different
+      // question than the one that was asked.
+      return await this.client.getJson<Record<string, unknown>>('/global/config')
+    } catch (error) {
+      throw this.translate(error, unnamed())
+    }
   }
 
   /**
